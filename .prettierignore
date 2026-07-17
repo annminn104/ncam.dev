@@ -1,0 +1,34 @@
+# Dependencies
+node_modules
+
+# Build output / generated
+**/dist
+**/.output
+**/.vinxi
+**/.nitro
+**/.turbo
+**/.vercel
+**/.mf
+**/@mf-types
+**/routeTree.gen.ts
+**/*.gen.ts
+
+# Lockfiles & data
+pnpm-lock.yaml
+
+# Env + non-JS config (no prettier parser)
+.env
+.env.*
+**/*.conf
+Dockerfile
+
+# Binary / assets
+**/*.png
+**/*.jpg
+**/*.jpeg
+**/*.gif
+**/*.ico
+**/*.webp
+**/*.mp4
+**/*.woff
+**/*.woff2
