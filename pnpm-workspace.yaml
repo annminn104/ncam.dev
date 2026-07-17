@@ -5,9 +5,14 @@ allowBuilds:
   '@parcel/watcher': true
   esbuild: true
 # Security overrides: pin patched transitive versions (GitHub Dependabot / pnpm audit).
-# - @tanstack/start-server-core: >=1.167.30 fixes the middleware-on-prefix-routes advisory.
-# - @tanstack/start-server-core>h3: force the SSE/request-smuggling-patched h3 v2 (rc.16 -> rc.25),
-#   scoped so it does NOT touch the unrelated h3 v1 line elsewhere in the tree.
+# - h3: force the SSE-injection / request-smuggling / path-traversal-patched h3 v2
+#   (rc.16 -> rc.25). Safe as a global override because removing `vinxi` eliminated the
+#   only h3 v1 consumers, so the whole tree is on h3 v2 now. We do NOT bump
+#   @tanstack/start-server-core itself: its only patched release (1.167.30) is incompatible
+#   with the pinned 1.167.x Start family (the "#tanstack-start-plugin-adapters" import moved),
+#   which breaks the SSR build.
 overrides:
-  '@tanstack/start-server-core': '1.167.30'
-  '@tanstack/start-server-core>h3': '2.0.1-rc.25'
+  h3: '2.0.1-rc.25'
+  # start-server-core pulls h3 under the alias `h3-v2: npm:h3@...`, so it needs its own
+  # override entry — a plain `h3` override does not reach an aliased dependency.
+  h3-v2: 'npm:h3@2.0.1-rc.25'
