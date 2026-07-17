@@ -18,6 +18,13 @@ updates:
     cooldown:
       default-days: 7
       semver-patch-days: 3
+    ignore:
+      # TypeScript 7.x is the new Go-based compiler; typescript-eslint 8.x declares
+      # peer `typescript >=4.8.4 <6.1.0`, so its parser crashes on TS 7 internals
+      # ("Cannot read properties of undefined (reading 'Cjs')"). Stay on TS 5.x until
+      # typescript-eslint supports TS 7, then drop this ignore.
+      - dependency-name: 'typescript'
+        update-types: ['version-update:semver-major']
     groups:
       # The TanStack Start family versions in lockstep and MUST move together —
       # a partial bump broke the SSR build (h3 / start-server-core incident).
