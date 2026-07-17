@@ -1,0 +1,38 @@
+{
+  "name": "@ncam/mindloop",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Mindloop — a dark monochrome newsletter/content landing page, packaged as a React Module Federation remote.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@fontsource/inter": "^5.2.8",
+    "@fontsource/instrument-serif": "^5.2.8",
+    "@ncam/logger": "workspace:*",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "framer-motion": "^12.42.2",
+    "hls.js": "^1.6.16",
+    "lucide-react": "^1.24.0",
+    "react": "19.0.0",
+    "react-dom": "19.0.0",
+    "tailwind-merge": "^3.6.0"
+  },
+  "devDependencies": {
+    "@ncam/mf-remote": "workspace:*",
+    "@ncam/tsconfig": "workspace:*",
+    "@tailwindcss/vite": "^4.3.2",
+    "@types/node": "^26.1.1",
+    "@types/react": "19.0.0",
+    "@types/react-dom": "19.0.0",
+    "@vitejs/plugin-react": "^6.0.3",
+    "tailwindcss": "^4.3.2",
+    "typescript": "^5.9.0",
+    "vite": "^8.1.4"
+  }
+}
