@@ -1,0 +1,10 @@
+{
+  "name": "Immersive Ocean",
+  "short_name": "Immersive Ocean",
+  "description": "A creative studio for brand & visual storytelling.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#05161f",
+  "theme_color": "#05161f",
+  "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

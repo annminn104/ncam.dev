@@ -1,0 +1,28 @@
+@import 'tailwindcss';
+
+/* Geist is loaded via @fontsource (see fonts.ts). @fontsource/geist-sans
+   registers the family as "Geist Sans"; keep "Geist" as a fallback name. */
+@theme {
+  --font-geist: 'Geist Sans', 'Geist', sans-serif;
+}
+
+@keyframes fadeSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* NOTE: no bare `* { margin:0; padding:0 }` reset here — Tailwind v4's preflight
+   already does that inside @layer base. An UNLAYERED `*` rule outranks every
+   @layer, so it would override all padding/margin utilities (px-*, py-*, m-*…). */
+@layer base {
+  body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
