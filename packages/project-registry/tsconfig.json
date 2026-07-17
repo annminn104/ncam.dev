@@ -1,0 +1,4 @@
+{
+  "extends": "@ncam/tsconfig/base.json",
+  "include": ["src"]
+}
