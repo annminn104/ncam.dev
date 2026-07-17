@@ -1,0 +1,59 @@
+version: 2
+
+# Automated dependency-update PRs, grouped so related packages move together.
+# Dependabot reads pnpm-lock.yaml for the npm ecosystem.
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
+    versioning-strategy: increase
+    groups:
+      # The TanStack Start family versions in lockstep and MUST move together —
+      # a partial bump broke the SSR build (h3 / start-server-core incident).
+      tanstack:
+        patterns:
+          - '@tanstack/*'
+      react:
+        patterns:
+          - 'react'
+          - 'react-dom'
+          - '@types/react'
+          - '@types/react-dom'
+      module-federation:
+        patterns:
+          - '@module-federation/*'
+      lint-and-format:
+        patterns:
+          - 'eslint*'
+          - '@eslint/*'
+          - 'prettier*'
+          - 'typescript-eslint'
+          - '@commitlint/*'
+          - 'husky'
+          - 'lint-staged'
+      dev-dependencies:
+        dependency-type: development
+        patterns:
+          - '*'
+    commit-message:
+      prefix: 'fix(deps)'
+      prefix-development: 'chore(deps-dev)'
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    commit-message:
+      prefix: 'ci'
+
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    commit-message:
+      prefix: 'build'

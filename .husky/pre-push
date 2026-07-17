@@ -1,0 +1,5 @@
+# Gate pushes on a full typecheck + build so build breaks are caught locally,
+# not in CI (the "#tanstack-start-plugin-adapters" SSR break slipped through
+# because only lint/typecheck ran before pushing). Turbo caches, so repeat runs
+# are fast. Bypass in a pinch with:  git push --no-verify
+pnpm exec turbo run typecheck build

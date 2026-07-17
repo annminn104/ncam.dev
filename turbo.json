@@ -1,13 +1,16 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "ui": "stream",
+  "globalDependencies": [".env", ".env.local", ".nvmrc", "tsconfig*.json"],
+  "globalEnv": ["NODE_ENV", "CI"],
   "tasks": {
     "assets": {
       "cache": false
     },
     "build": {
       "dependsOn": ["^build", "assets"],
-      "outputs": ["dist/**", ".output/**", ".vinxi/**", ".nitro/**"]
+      "outputs": ["dist/**", ".output/**", ".vinxi/**", ".nitro/**"],
+      "env": ["*_REMOTE_URL", "*_PORT", "*_BASE", "PORTFOLIO_PORT"]
     },
     "dev": {
       "dependsOn": ["assets"],
@@ -35,6 +38,9 @@
         ".prettierignore",
         "**/*.{ts,tsx,js,mjs,cjs,json,css,md,yml,yaml,html}"
       ]
+    },
+    "//#test": {
+      "inputs": ["vitest.config.ts", "packages/**/*.{ts,tsx}", "apps/**/*.{ts,tsx}"]
     }
   }
 }
