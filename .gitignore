@@ -38,7 +38,9 @@ yarn-error.log*
 .env.*.local
 
 # ---- editors ----
-.vscode/
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
 .idea/
 *.suo
 *.ntvs*

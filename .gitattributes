@@ -1,0 +1,20 @@
+# Normalise line endings to LF for text; let Git detect text vs binary otherwise.
+* text=auto eol=lf
+
+# Treat binary assets as binary (no eol munging, no textual diff).
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.avif binary
+*.mp4 binary
+*.woff binary
+*.woff2 binary
+*.node binary
+
+# Generated / vendored files: collapse in diffs and exclude from language stats.
+pnpm-lock.yaml linguist-generated=true -diff
+**/routeTree.gen.ts linguist-generated=true -diff
+**/*.gen.ts linguist-generated=true
