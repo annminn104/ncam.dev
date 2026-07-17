@@ -4,3 +4,10 @@ packages:
 allowBuilds:
   '@parcel/watcher': true
   esbuild: true
+# Security overrides: pin patched transitive versions (GitHub Dependabot / pnpm audit).
+# - @tanstack/start-server-core: >=1.167.30 fixes the middleware-on-prefix-routes advisory.
+# - @tanstack/start-server-core>h3: force the SSE/request-smuggling-patched h3 v2 (rc.16 -> rc.25),
+#   scoped so it does NOT touch the unrelated h3 v1 line elsewhere in the tree.
+overrides:
+  '@tanstack/start-server-core': '1.167.30'
+  '@tanstack/start-server-core>h3': '2.0.1-rc.25'
