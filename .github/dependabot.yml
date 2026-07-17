@@ -10,6 +10,14 @@ updates:
       day: monday
     open-pull-requests-limit: 10
     versioning-strategy: increase
+    # Wait before opening a PR for a freshly published release. pnpm v11 enforces a
+    # default `minimumReleaseAge` of 1 day, so a same-day bump (e.g. the
+    # @module-federation/vite 1.18.1 PR) fails `pnpm install --frozen-lockfile` in CI
+    # until the package ages out. A 7-day cooldown keeps PRs comfortably past that gate
+    # (patch: 3 days). Security updates ignore cooldown, so fixes still land fast.
+    cooldown:
+      default-days: 7
+      semver-patch-days: 3
     groups:
       # The TanStack Start family versions in lockstep and MUST move together —
       # a partial bump broke the SSR build (h3 / start-server-core incident).
