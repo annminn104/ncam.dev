@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Project Showcase">
+  <rect x="2" y="2" width="60" height="60" rx="16" fill="#14141f" />
+  <circle cx="24" cy="24" r="8" fill="#F4845F" />
+  <circle cx="40" cy="24" r="8" fill="#6BBF7A" />
+  <circle cx="24" cy="40" r="8" fill="#E882B4" />
+  <circle cx="40" cy="40" r="8" fill="#6EB5FF" />
+</svg>
