@@ -1,0 +1,58 @@
+# ---- dependencies ----
+# (matches apps/*/node_modules and packages/*/node_modules too)
+node_modules/
+.pnpm-store/
+
+# ---- build output ----
+dist/
+dist-ssr/
+build/
+.output/
+
+# ---- caches / task runners ----
+.turbo/
+.vite/
+.cache/
+*.tsbuildinfo
+.eslintcache
+
+# ---- vite temp files ----
+vite.config.*.timestamp-*
+vite.config.*.mjs.timestamp-*
+*.local
+
+# ---- test / coverage ----
+coverage/
+
+# ---- logs ----
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ---- env ----
+# `.env` is committed: non-secret defaults (ports / hostnames / remote URLs).
+# Local overrides live in `.env.local` (ignored by the `*.local` rule above);
+# put any secret-bearing values there or in `.env.*.local`, never in `.env`.
+.env.*.local
+
+# ---- editors ----
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# ---- OS ----
+.DS_Store
+.DS_Store?
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.vinxi/
+.nitro/
+.tanstack/
+.vercel/
+.mf/

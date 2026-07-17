@@ -1,0 +1,40 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "ui": "stream",
+  "tasks": {
+    "assets": {
+      "cache": false
+    },
+    "build": {
+      "dependsOn": ["^build", "assets"],
+      "outputs": ["dist/**", ".output/**", ".vinxi/**", ".nitro/**"]
+    },
+    "dev": {
+      "dependsOn": ["assets"],
+      "cache": false,
+      "persistent": true
+    },
+    "preview": {
+      "dependsOn": ["build"],
+      "cache": false,
+      "persistent": true
+    },
+    "typecheck": {
+      "dependsOn": ["^build"]
+    },
+    "//#lint": {
+      "inputs": [
+        "eslint.config.mjs",
+        "apps/**/*.{ts,tsx,js,mjs,cjs}",
+        "packages/**/*.{ts,tsx,js,mjs,cjs}"
+      ]
+    },
+    "//#format:check": {
+      "inputs": [
+        ".prettierrc.json",
+        ".prettierignore",
+        "**/*.{ts,tsx,js,mjs,cjs,json,css,md,yml,yaml,html}"
+      ]
+    }
+  }
+}

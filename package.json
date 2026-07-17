@@ -1,0 +1,48 @@
+{
+  "name": "ncam",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Turborepo monorepo: a shell host that renders project mini-apps as micro-frontends via Module Federation.",
+  "packageManager": "pnpm@11.13.0",
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "preview": "turbo run preview",
+    "typecheck": "turbo run typecheck",
+    "assets": "turbo run assets",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "ci": "turbo run lint format:check typecheck build",
+    "skills:add": "bash scripts/add-agent-skills.sh",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^19.8.1",
+    "@commitlint/config-conventional": "^19.8.1",
+    "@eslint/js": "^9.0.0",
+    "eslint": "^9.0.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "globals": "^16.0.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.5.2",
+    "prettier": "^3.9.5",
+    "turbo": "^2.10.5",
+    "typescript": "^5.9.0",
+    "typescript-eslint": "^8.64.0"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx,mjs,cjs}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,jsonc,css,md,mdx,html,yml,yaml}": [
+      "prettier --write"
+    ]
+  }
+}
