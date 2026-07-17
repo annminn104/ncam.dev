@@ -1,0 +1,27 @@
+{
+  "name": "@ncam/toonhub",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "TOONHUB collectible-figurine hero — a framework-free Module Federation remote exposing mount().",
+  "scripts": {
+    "assets": "node scripts/download-assets.mjs",
+    "predev": "node scripts/download-assets.mjs",
+    "prebuild": "node scripts/download-assets.mjs",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ncam/logger": "workspace:*",
+    "lucide-static": "^1.24.0"
+  },
+  "devDependencies": {
+    "@ncam/mf-remote": "workspace:*",
+    "@ncam/tsconfig": "workspace:*",
+    "@types/node": "^26.1.1",
+    "typescript": "^5.9.0",
+    "vite": "^8.1.4"
+  }
+}

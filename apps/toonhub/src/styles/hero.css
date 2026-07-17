@@ -1,0 +1,1126 @@
+/* Scoped reset — the app no longer relies on a global Tailwind preflight, so
+   the hero carries just enough reset for its own subtree (micro-frontend safe). */
+.toonhub-hero,
+.toonhub-hero *,
+.toonhub-hero *::before,
+.toonhub-hero *::after {
+  box-sizing: border-box;
+}
+.toonhub-hero img,
+.toonhub-hero svg {
+  display: block;
+  max-width: 100%;
+}
+.toonhub-hero button {
+  margin: 0;
+  padding: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+.toonhub-hero a {
+  color: inherit;
+}
+.toon-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.toonhub-hero {
+  --toonhub-bg: #f4845f;
+  --toonhub-panel: #f79b7f;
+  --toonhub-transition: 650ms;
+  --toon-autoplay: 5500ms;
+  --toon-entry-delay: 120ms;
+  --pointer-x: 0.5;
+  --pointer-y: 0.5;
+  --cursor-x: 50%;
+  --cursor-y: 50%;
+  --ghost-parallax: 0px;
+  --toon-progress-play: running;
+
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  height: 100svh;
+  min-height: 620px;
+  overflow: hidden;
+  background: var(--toonhub-bg);
+  color: #fff;
+  font-family: 'Inter', sans-serif;
+  isolation: isolate;
+  outline: none;
+  transition:
+    background-color var(--toonhub-transition) cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 600ms ease;
+  touch-action: pan-y;
+}
+
+.toonhub-hero:focus-visible {
+  box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.55);
+}
+
+/* Entry: hide only when JS is driving the animation (keeps no-JS visible). */
+.toonhub-hero[data-js='true']:not([data-entered='true']) {
+  opacity: 0;
+}
+
+/* ---------------- Grain ---------------- */
+.toon-grain {
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  pointer-events: none;
+  opacity: 0.4;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='toonNoise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23toonNoise)' opacity='0.08'/%3E%3C/svg%3E");
+  background-size: 200px 200px;
+  mix-blend-mode: soft-light;
+}
+
+/* ---------------- Ambient glow ---------------- */
+.toon-ambient {
+  position: absolute;
+  z-index: 1;
+  top: 50%;
+  left: 50%;
+  width: 92vmax;
+  height: 92vmax;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(circle, var(--toonhub-panel) 0%, transparent 62%);
+  opacity: 0.5;
+  filter: blur(70px);
+  transform: translate3d(
+    calc(-50% + (var(--pointer-x) - 0.5) * 70px),
+    calc(-46% + (var(--pointer-y) - 0.5) * 50px),
+    0
+  );
+  transition:
+    opacity var(--toonhub-transition) ease,
+    transform 240ms ease-out;
+}
+.toonhub-hero[data-navigating='true'] .toon-ambient {
+  opacity: 0.3;
+}
+
+/* ---------------- Aurora mesh blobs ---------------- */
+.toon-aurora {
+  position: absolute;
+  inset: -12%;
+  z-index: 1;
+  pointer-events: none;
+  overflow: hidden;
+  filter: blur(72px) saturate(1.2);
+  opacity: 0.85;
+  /* Whole field drifts subtly with the pointer (vars set by the controller). */
+  transform: translate3d(
+    calc((var(--pointer-x) - 0.5) * 34px),
+    calc((var(--pointer-y) - 0.5) * 34px),
+    0
+  );
+  transition: transform 400ms ease-out;
+}
+.toon-aurora__blob {
+  position: absolute;
+  width: 60vmax;
+  height: 60vmax;
+  border-radius: 50%;
+  mix-blend-mode: screen;
+  will-change: transform;
+}
+.toon-aurora__blob--1 {
+  top: -18%;
+  left: -12%;
+  background: radial-gradient(circle at 50% 50%, var(--toonhub-panel) 0%, transparent 60%);
+  animation: toon-drift-1 26s ease-in-out infinite;
+}
+.toon-aurora__blob--2 {
+  right: -14%;
+  bottom: -20%;
+  opacity: 0.6;
+  background: radial-gradient(circle at 50% 50%, #ffffff 0%, transparent 62%);
+  animation: toon-drift-2 32s ease-in-out infinite;
+}
+.toon-aurora__blob--3 {
+  top: 14%;
+  right: 6%;
+  width: 46vmax;
+  height: 46vmax;
+  background: radial-gradient(circle at 50% 50%, var(--toonhub-bg) 0%, transparent 58%);
+  animation: toon-drift-3 38s ease-in-out infinite;
+}
+
+/* ---------------- Halftone dot grid ---------------- */
+.toon-grid {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0.5;
+  background-image: radial-gradient(circle, rgba(255, 255, 255, 0.16) 1.4px, transparent 1.6px);
+  background-size: 26px 26px;
+  -webkit-mask-image: radial-gradient(ellipse 82% 72% at 50% 58%, transparent 22%, #000 78%);
+  mask-image: radial-gradient(ellipse 82% 72% at 50% 58%, transparent 22%, #000 78%);
+  animation: toon-grid-pan 42s linear infinite;
+}
+
+/* ---------------- Light sweep ---------------- */
+.toon-sheen {
+  position: absolute;
+  top: -50%;
+  left: 0;
+  width: 42%;
+  height: 200%;
+  z-index: 6;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.1) 50%,
+    transparent 100%
+  );
+  mix-blend-mode: soft-light;
+  transform: translateX(-80vw) rotate(18deg);
+  animation: toon-sheen-sweep 11s ease-in-out infinite;
+}
+
+/* ---------------- Vignette ---------------- */
+.toon-vignette {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse 92% 82% at 50% 42%,
+    transparent 45%,
+    rgba(0, 0, 0, 0.28) 100%
+  );
+}
+
+/* ---------------- Cursor glow ---------------- */
+.toon-cursor-glow {
+  position: absolute;
+  z-index: 40;
+  top: 0;
+  left: 0;
+  width: 230px;
+  height: 230px;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.6) 0%, transparent 70%);
+  mix-blend-mode: soft-light;
+  filter: blur(32px);
+  opacity: 0;
+  transform: translate3d(calc(var(--cursor-x) - 50%), calc(var(--cursor-y) - 50%), 0);
+  transition: opacity 260ms ease;
+}
+.toon-cursor-glow[data-visible='true'] {
+  opacity: 1;
+}
+
+/* ---------------- Ghost text ---------------- */
+.toon-ghost {
+  position: absolute;
+  inset-inline: 0;
+  top: 18%;
+  z-index: 2;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  pointer-events: none;
+  user-select: none;
+  transform: translate3d(var(--ghost-parallax, 0px), 0, 0);
+  will-change: transform;
+}
+.toon-ghost__text {
+  font-family: 'Anton', sans-serif;
+  font-size: clamp(90px, 28vw, 380px);
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: #fff;
+  opacity: 1;
+  transform: scale(1);
+  transition:
+    transform var(--toonhub-transition) cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 700ms ease;
+}
+.toonhub-hero[data-js='true']:not([data-entered='true']) .toon-ghost__text {
+  opacity: 0;
+  transform: scale(0.98);
+}
+.toonhub-hero[data-navigating='true'] .toon-ghost__text {
+  transform: scale(0.985);
+}
+
+/* ---------------- Brand ---------------- */
+.toon-brand {
+  position: absolute;
+  top: 1.5rem;
+  left: max(1rem, env(safe-area-inset-left));
+  z-index: 60;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.4rem 0.2rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #fff;
+  opacity: 0.9;
+  background: none;
+  border: none;
+  transition:
+    opacity 500ms ease,
+    transform 600ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.toon-brand:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+.toon-brand__dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--toonhub-panel);
+  box-shadow: 0 0 10px 1px var(--toonhub-panel);
+  animation: toon-pulse 2.4s ease-in-out infinite;
+  transition: background-color var(--toonhub-transition) ease;
+}
+.toonhub-hero[data-navigating='true'] .toon-brand__dot {
+  animation-duration: 0.9s;
+}
+@media (min-width: 768px) {
+  .toon-brand {
+    top: 2rem;
+    left: max(2rem, env(safe-area-inset-left));
+  }
+}
+
+/* ---------------- Top-right controls ---------------- */
+.toon-controls {
+  position: absolute;
+  top: 1.25rem;
+  right: max(1rem, env(safe-area-inset-right));
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+@media (min-width: 768px) {
+  .toon-controls {
+    top: 1.75rem;
+    right: max(2rem, env(safe-area-inset-right));
+  }
+}
+.toon-ctrl {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: #fff;
+  transition:
+    background-color 150ms ease,
+    transform 150ms ease;
+}
+.toon-ctrl:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+.toon-ctrl:active {
+  transform: scale(0.94);
+}
+.toon-ctrl:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+.toon-icon {
+  display: inline-flex;
+  width: 20px;
+  height: 20px;
+}
+.toon-icon svg {
+  width: 100%;
+  height: 100%;
+  stroke: currentColor;
+}
+.toon-ctrl .toon-icon {
+  display: none;
+}
+.toon-ctrl[data-state='unmuted'] .toon-icon[data-icon='unmuted'],
+.toon-ctrl[data-state='muted'] .toon-icon[data-icon='muted'],
+.toon-ctrl[data-state='playing'] .toon-icon[data-icon='playing'],
+.toon-ctrl[data-state='paused'] .toon-icon[data-icon='paused'] {
+  display: inline-flex;
+}
+.toon-counter {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 44px;
+  padding: 0 0.85rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------------- Carousel ---------------- */
+.toon-carousel {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+}
+.toon-item {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  aspect-ratio: 0.6 / 1;
+  pointer-events: none;
+  user-select: none;
+  will-change: transform, filter, opacity;
+  transform: translateX(-50%) scale(1);
+  transition:
+    transform var(--toonhub-transition) cubic-bezier(0.4, 0, 0.2, 1),
+    filter var(--toonhub-transition) cubic-bezier(0.4, 0, 0.2, 1),
+    opacity var(--toonhub-transition) cubic-bezier(0.4, 0, 0.2, 1),
+    left var(--toonhub-transition) cubic-bezier(0.4, 0, 0.2, 1),
+    height var(--toonhub-transition) cubic-bezier(0.4, 0, 0.2, 1),
+    bottom var(--toonhub-transition) cubic-bezier(0.4, 0, 0.2, 1);
+}
+.toon-item__tilt {
+  width: 100%;
+  height: 100%;
+  transform: perspective(1000px) rotateY(var(--tilt-x, 0deg)) rotateX(var(--tilt-y, 0deg));
+  transform-style: preserve-3d;
+  transition: transform 240ms ease-out;
+}
+.toon-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: bottom center;
+  user-select: none;
+  -webkit-user-drag: none;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Role placement — desktop defaults */
+.toon-item[data-role='center'] {
+  left: 50%;
+  height: 92%;
+  bottom: 0;
+  transform: translateX(calc(-50% + var(--drag-x, 0px))) scale(1.68);
+  filter: blur(0);
+  opacity: 1;
+  z-index: 20;
+}
+.toon-item[data-role='left'] {
+  left: 30%;
+  height: 28%;
+  bottom: 12%;
+  transform: translateX(-50%) scale(1);
+  filter: blur(2px);
+  opacity: 0.85;
+  z-index: 10;
+}
+.toon-item[data-role='right'] {
+  left: 70%;
+  height: 28%;
+  bottom: 12%;
+  transform: translateX(-50%) scale(1);
+  filter: blur(2px);
+  opacity: 0.85;
+  z-index: 10;
+}
+.toon-item[data-role='back'] {
+  left: 50%;
+  height: 22%;
+  bottom: 12%;
+  transform: translateX(-50%) scale(1);
+  filter: blur(4px);
+  opacity: 1;
+  z-index: 5;
+}
+.toon-item[data-role='hidden'] {
+  left: 50%;
+  height: 22%;
+  bottom: 12%;
+  transform: translateX(-50%) scale(0.9);
+  filter: blur(6px);
+  opacity: 0;
+  z-index: 1;
+}
+
+.toonhub-hero[data-dragging='true'] .toon-item[data-role='center'] {
+  transition: none;
+}
+
+/* ---------------- Floor shadow ---------------- */
+.toon-floor {
+  position: absolute;
+  left: 50%;
+  bottom: 3%;
+  z-index: 4;
+  width: 360px;
+  height: 50px;
+  transform: translateX(-50%) scale(1);
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(0, 0, 0, 0.32) 0%,
+    rgba(0, 0, 0, 0.18) 45%,
+    transparent 72%
+  );
+  filter: blur(12px);
+  opacity: 0.7;
+  pointer-events: none;
+  transition:
+    transform var(--toonhub-transition) cubic-bezier(0.4, 0, 0.2, 1),
+    opacity var(--toonhub-transition) ease,
+    filter var(--toonhub-transition) ease;
+}
+.toonhub-hero[data-navigating='true'] .toon-floor {
+  transform: translateX(-50%) scale(1.12);
+  filter: blur(16px);
+  opacity: 0.85;
+}
+
+/* ---------------- Bottom-left content ---------------- */
+.toon-content {
+  position: absolute;
+  bottom: max(1.5rem, env(safe-area-inset-bottom));
+  left: max(1rem, env(safe-area-inset-left));
+  z-index: 60;
+  max-width: 320px;
+  transition:
+    opacity 600ms ease,
+    transform 600ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+@media (min-width: 768px) {
+  .toon-content {
+    bottom: 5rem;
+    left: 6rem;
+  }
+}
+.toon-heading {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: #fff;
+  opacity: 0.95;
+}
+@media (min-width: 768px) {
+  .toon-heading {
+    font-size: 22px;
+  }
+}
+.toon-desc {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #fff;
+  opacity: 0.85;
+}
+
+/* ---------------- Navigation buttons ---------------- */
+.toon-nav {
+  position: absolute;
+  top: 50%;
+  z-index: 60;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 9999px;
+  border: 2px solid #fff;
+  background: transparent;
+  color: #fff;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  transform: translateY(-50%);
+  transition:
+    transform 150ms ease,
+    background-color 150ms ease,
+    opacity 150ms ease;
+}
+.toon-nav .toon-icon {
+  width: 22px;
+  height: 22px;
+}
+.toon-nav:hover {
+  background: rgba(255, 255, 255, 0.12);
+  transform: translateY(-50%) scale(1.08);
+}
+.toon-nav:active {
+  transform: translateY(-50%) scale(0.96);
+}
+.toon-nav:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+}
+.toon-nav--prev {
+  left: max(1rem, env(safe-area-inset-left));
+}
+.toon-nav--next {
+  right: max(1rem, env(safe-area-inset-right));
+}
+.toonhub-hero[data-locked='true'] .toon-nav {
+  opacity: 0.55;
+}
+@media (min-width: 768px) {
+  .toon-nav {
+    width: 64px;
+    height: 64px;
+  }
+  .toon-nav .toon-icon {
+    width: 28px;
+    height: 28px;
+  }
+  .toon-nav--prev {
+    left: 2rem;
+  }
+  .toon-nav--next {
+    right: 2rem;
+  }
+}
+
+/* ---------------- Metadata ---------------- */
+.toon-metadata {
+  position: absolute;
+  right: max(1rem, env(safe-area-inset-right));
+  bottom: 4.25rem;
+  z-index: 60;
+  text-align: right;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-size: 0.66rem;
+  line-height: 1.5;
+  opacity: 0.9;
+  transition:
+    opacity 600ms ease,
+    transform 600ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+@media (min-width: 768px) {
+  .toon-metadata {
+    right: 2.5rem;
+    bottom: 9rem;
+  }
+}
+.toon-metadata__row1 {
+  font-weight: 600;
+}
+.toon-metadata__row2 {
+  opacity: 0.7;
+}
+.toon-metadata__edition {
+  font-family: 'Anton', sans-serif;
+  letter-spacing: 0.04em;
+}
+.toon-metadata[data-fade='true'] {
+  animation: toon-fade 320ms ease;
+}
+
+/* ---------------- Progress ---------------- */
+.toon-progress {
+  position: absolute;
+  left: 50%;
+  bottom: max(1.5rem, env(safe-area-inset-bottom));
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transform: translateX(-50%);
+  transition:
+    opacity 600ms ease,
+    transform 600ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+@media (min-width: 768px) {
+  .toon-progress {
+    bottom: 2.25rem;
+  }
+}
+.toon-progress__seg {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 42px;
+  height: 20px;
+  padding: 8px 0;
+  background: transparent;
+  border: none;
+}
+.toon-progress__track {
+  position: relative;
+  width: 100%;
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.3);
+  overflow: hidden;
+}
+.toon-progress__fill {
+  position: absolute;
+  inset: 0;
+  border-radius: 2px;
+  background: #fff;
+  transform: scaleX(0);
+  transform-origin: left;
+}
+.toon-progress__seg[data-active='false'] .toon-progress__fill {
+  transform: scaleX(0);
+  transition: transform 300ms ease;
+}
+.toonhub-hero[data-autoplay-on='true']
+  .toon-progress__seg[data-active='true']
+  .toon-progress__fill {
+  animation: toon-progress var(--toon-autoplay) linear forwards;
+  animation-play-state: var(--toon-progress-play, running);
+}
+.toonhub-hero[data-autoplay-on='false']
+  .toon-progress__seg[data-active='true']
+  .toon-progress__fill {
+  transform: scaleX(1);
+  transition: transform 300ms ease;
+}
+.toon-progress__seg:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+/* ---------------- CTA ---------------- */
+.toon-cta {
+  position: absolute;
+  right: max(1rem, env(safe-area-inset-right));
+  bottom: max(1.5rem, env(safe-area-inset-bottom));
+  z-index: 60;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: 'Anton', sans-serif;
+  font-size: clamp(20px, 4vw, 56px);
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: #fff;
+  opacity: 0.95;
+  transition:
+    opacity 300ms ease,
+    transform 600ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+@media (min-width: 768px) {
+  .toon-cta {
+    right: 2.5rem;
+    bottom: 5rem;
+  }
+}
+.toon-cta:hover {
+  opacity: 1;
+}
+.toon-cta__label {
+  position: relative;
+}
+.toon-cta__label::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: -2px;
+  width: 100%;
+  height: 2px;
+  background: #fff;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 300ms ease;
+}
+.toon-cta:hover .toon-cta__label::after,
+.toon-cta:focus-visible .toon-cta__label::after {
+  transform: scaleX(1);
+}
+.toon-cta__arrow {
+  display: inline-flex;
+  transition: transform 250ms ease;
+}
+.toon-cta__arrow svg {
+  width: 0.9em;
+  height: 0.9em;
+  stroke: currentColor;
+}
+.toon-cta:hover .toon-cta__arrow {
+  transform: translateX(6px);
+}
+.toonhub-hero[data-navigating='true'] .toon-cta__arrow {
+  transform: translateX(3px);
+}
+.toon-cta:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+
+/* ---------------- Particles ---------------- */
+.toon-particles {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  overflow: hidden;
+  pointer-events: none;
+}
+.toon-particle {
+  position: absolute;
+  pointer-events: none;
+  transform: translate3d(
+    calc((var(--pointer-x) - 0.5) * var(--p-depth, -20px)),
+    calc((var(--pointer-y) - 0.5) * var(--p-depth, -20px)),
+    0
+  );
+  transition: transform 350ms ease-out;
+}
+.toon-particle__inner {
+  display: block;
+  width: var(--p-size, 24px);
+  height: var(--p-size, 24px);
+  opacity: 0.16;
+  animation: toon-float var(--p-dur, 14s) ease-in-out infinite;
+  animation-delay: var(--p-delay, 0s);
+}
+.toon-particle--circle .toon-particle__inner {
+  border-radius: 50%;
+  background: #fff;
+}
+.toon-particle--ring .toon-particle__inner {
+  border-radius: 50%;
+  border: 3px solid #fff;
+  background: transparent;
+}
+.toon-particle--square .toon-particle__inner {
+  border-radius: 7px;
+  background: var(--toonhub-panel);
+  opacity: 0.22;
+  transition: background-color var(--toonhub-transition) ease;
+}
+.toon-particle--dot .toon-particle__inner {
+  border-radius: 50%;
+  background: #fff;
+  opacity: 0.28;
+}
+.toon-particle--cross .toon-particle__inner {
+  position: relative;
+  background: transparent;
+}
+.toon-particle--cross .toon-particle__inner::before,
+.toon-particle--cross .toon-particle__inner::after {
+  content: '';
+  position: absolute;
+  background: #fff;
+  border-radius: 2px;
+}
+.toon-particle--cross .toon-particle__inner::before {
+  top: 0;
+  left: 50%;
+  width: 3px;
+  height: 100%;
+  transform: translateX(-50%);
+}
+.toon-particle--cross .toon-particle__inner::after {
+  top: 50%;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  transform: translateY(-50%);
+}
+.toonhub-hero[data-party='true'] .toon-particle__inner {
+  animation-duration: 5.5s;
+  opacity: 0.32;
+}
+
+/* ---------------- Entry stagger ---------------- */
+.toonhub-hero[data-js='true']:not([data-entered='true']) .toon-brand {
+  opacity: 0;
+  transform: translateY(-14px);
+}
+.toonhub-hero[data-js='true']:not([data-entered='true']) .toon-item[data-role='center'] img {
+  opacity: 0;
+  transform: translateY(40px);
+}
+.toonhub-hero[data-js='true']:not([data-entered='true']) .toon-item[data-role='left'] img,
+.toonhub-hero[data-js='true']:not([data-entered='true']) .toon-item[data-role='right'] img,
+.toonhub-hero[data-js='true']:not([data-entered='true']) .toon-item[data-role='back'] img {
+  opacity: 0;
+  transform: translateY(20px);
+}
+.toonhub-hero[data-js='true']:not([data-entered='true']) .toon-content,
+.toonhub-hero[data-js='true']:not([data-entered='true']) .toon-cta,
+.toonhub-hero[data-js='true']:not([data-entered='true']) .toon-progress,
+.toonhub-hero[data-js='true']:not([data-entered='true']) .toon-controls,
+.toonhub-hero[data-js='true']:not([data-entered='true']) .toon-metadata {
+  opacity: 0;
+  transform: translateY(16px);
+}
+.toonhub-hero[data-entered='true'] .toon-item img {
+  transition:
+    opacity 700ms ease,
+    transform 800ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.toonhub-hero[data-entered='true'] .toon-item[data-role='center'] img {
+  transition-delay: var(--toon-entry-delay);
+}
+.toonhub-hero[data-entered='true'] .toon-item[data-role='left'] img {
+  transition-delay: calc(var(--toon-entry-delay) * 2);
+}
+.toonhub-hero[data-entered='true'] .toon-item[data-role='right'] img {
+  transition-delay: calc(var(--toon-entry-delay) * 2.5);
+}
+.toonhub-hero[data-entered='true'] .toon-item[data-role='back'] img {
+  transition-delay: calc(var(--toon-entry-delay) * 3);
+}
+.toonhub-hero[data-entered='true'] .toon-content {
+  transition-delay: calc(var(--toon-entry-delay) * 3);
+}
+.toonhub-hero[data-entered='true'] .toon-metadata {
+  transition-delay: calc(var(--toon-entry-delay) * 3.5);
+}
+.toonhub-hero[data-entered='true'] .toon-progress {
+  transition-delay: calc(var(--toon-entry-delay) * 4);
+}
+.toonhub-hero[data-entered='true'] .toon-cta {
+  transition-delay: calc(var(--toon-entry-delay) * 4.5);
+}
+
+/* ---------------- Keyframes ---------------- */
+@keyframes toon-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+  50% {
+    transform: scale(1.35);
+    opacity: 0.5;
+  }
+}
+@keyframes toon-progress {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+@keyframes toon-float {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-22px) rotate(8deg);
+  }
+}
+@keyframes toon-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 0.9;
+  }
+}
+@keyframes toon-drift-1 {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(8%, 6%) scale(1.15);
+  }
+}
+@keyframes toon-drift-2 {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(-7%, -5%) scale(1.2);
+  }
+}
+@keyframes toon-drift-3 {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(6%, -8%) scale(0.9);
+  }
+}
+@keyframes toon-grid-pan {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: 26px 52px;
+  }
+}
+@keyframes toon-sheen-sweep {
+  0% {
+    transform: translateX(-80vw) rotate(18deg);
+    opacity: 0;
+  }
+  12% {
+    opacity: 0.9;
+  }
+  45% {
+    opacity: 0.9;
+  }
+  58%,
+  100% {
+    transform: translateX(180vw) rotate(18deg);
+    opacity: 0;
+  }
+}
+
+/* ---------------- Mobile ---------------- */
+@media (max-width: 640px) {
+  .toon-item[data-role='center'] {
+    height: 60%;
+    bottom: 22%;
+    transform: translateX(calc(-50% + var(--drag-x, 0px))) scale(1.25);
+  }
+  .toon-item[data-role='left'] {
+    left: 20%;
+    height: 16%;
+    bottom: 32%;
+  }
+  .toon-item[data-role='right'] {
+    left: 80%;
+    height: 16%;
+    bottom: 32%;
+  }
+  .toon-item[data-role='back'] {
+    height: 13%;
+    bottom: 32%;
+  }
+  .toon-desc {
+    display: none;
+  }
+  .toon-particles {
+    display: none;
+  }
+  .toon-aurora {
+    filter: blur(60px);
+    opacity: 0.7;
+  }
+  .toon-sheen {
+    display: none;
+  }
+  .toon-floor {
+    width: 180px;
+    height: 28px;
+    bottom: 20%;
+  }
+  .toon-metadata {
+    font-size: 0.58rem;
+    bottom: 4rem;
+  }
+}
+
+/* ---------------- Short viewport ---------------- */
+@media (max-height: 700px) {
+  .toon-ghost {
+    top: 9%;
+  }
+  .toon-ghost__text {
+    font-size: clamp(70px, 20vw, 240px);
+  }
+  .toon-item[data-role='center'] {
+    height: 86%;
+    transform: translateX(calc(-50% + var(--drag-x, 0px))) scale(1.42);
+  }
+  .toon-nav {
+    width: 48px;
+    height: 48px;
+  }
+  .toon-content {
+    bottom: 1.25rem;
+  }
+  .toon-desc {
+    line-height: 1.4;
+  }
+  .toon-metadata {
+    font-size: 0.58rem;
+    bottom: 7rem;
+  }
+}
+
+/* ---------------- Reduced motion ---------------- */
+@media (prefers-reduced-motion: reduce) {
+  .toonhub-hero,
+  .toon-item,
+  .toon-item img,
+  .toon-content,
+  .toon-cta,
+  .toon-progress,
+  .toon-controls,
+  .toon-metadata,
+  .toon-brand,
+  .toon-ghost__text,
+  .toon-floor,
+  .toon-ambient {
+    transition-duration: 150ms !important;
+  }
+  .toon-item__tilt {
+    transform: none !important;
+    transition: none !important;
+  }
+  .toon-brand__dot,
+  .toon-particle__inner,
+  .toon-aurora__blob,
+  .toon-grid {
+    animation: none !important;
+  }
+  .toon-ambient,
+  .toon-cursor-glow,
+  .toon-particle,
+  .toon-aurora {
+    transform: none !important;
+    transition: none !important;
+  }
+  .toon-sheen {
+    display: none !important;
+  }
+  .toonhub-hero[data-autoplay-on='true']
+    .toon-progress__seg[data-active='true']
+    .toon-progress__fill {
+    animation: none !important;
+    transform: scaleX(1) !important;
+  }
+}

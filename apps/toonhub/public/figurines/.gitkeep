@@ -1,0 +1,2 @@
+# Figurine images are downloaded here by `npm run assets`
+# (also runs automatically before `dev` / `build`).
