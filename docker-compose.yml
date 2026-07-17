@@ -1,0 +1,105 @@
+name: ncam
+
+# One image (built once by the `portfolio` service) is reused by every service;
+# each service just runs a different command. Bring the stack up with:
+#   docker compose up --build
+#
+# SSR of remotes works here because every remote's entry URL uses a
+# `*.localhost` hostname that resolves the SAME in both places:
+#   - in the browser, `*.localhost` resolves to loopback (127.0.0.1) → published port
+#   - inside the host container, the docker network `aliases` below make
+#     `<name>.localhost` resolve to the remote container
+# So the host can fetch `remoteEntry.ssr.js` server-side (SSR) AND the browser
+# can fetch `remoteEntry.js` — one baked URL, both contexts.
+#
+# The entry URLs are baked at BUILD time (host vite.config reads them), so they
+# are passed as build args, not runtime env.
+#
+# Opt-in gateway (nginx reverse proxy):
+#   docker compose --profile gateway up --build
+# It fronts the SSR host on port 80 (http://localhost, http://ncam.localhost) and
+# can proxy each remote on its *.localhost subdomain (see nginx/nginx.conf). For a
+# full single-origin deploy where remotes are proxied too, rebuild the host with
+# port-80 remote URLs, e.g. TOONHUB_REMOTE_URL=http://toonhub.localhost/remoteEntry.js.
+
+services:
+  portfolio:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NODE_VERSION: '22'
+        TOONHUB_REMOTE_URL: http://toonhub.localhost:9001/remoteEntry.js
+        MINDLOOP_REMOTE_URL: http://mindloop.localhost:9002/remoteEntry.js
+        IMMERSIVE_OCEAN_REMOTE_URL: http://immersive-ocean.localhost:9003/remoteEntry.js
+    image: ncam-monorepo:latest
+    command: ['node', 'apps/portfolio/.output/server/index.mjs']
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: '9000'
+    ports:
+      - '9000:9000'
+    depends_on:
+      - toonhub
+      - mindloop
+      - immersive-ocean
+
+  toonhub:
+    image: ncam-monorepo:latest
+    command: ['pnpm', '--filter', '@ncam/toonhub', 'preview', '--host', '0.0.0.0', '--port', '9001']
+    ports:
+      - '9001:9001'
+    networks:
+      default:
+        aliases:
+          - toonhub.localhost
+
+  mindloop:
+    image: ncam-monorepo:latest
+    command:
+      ['pnpm', '--filter', '@ncam/mindloop', 'preview', '--host', '0.0.0.0', '--port', '9002']
+    ports:
+      - '9002:9002'
+    networks:
+      default:
+        aliases:
+          - mindloop.localhost
+
+  immersive-ocean:
+    image: ncam-monorepo:latest
+    command:
+      [
+        'pnpm',
+        '--filter',
+        '@ncam/immersive-ocean',
+        'preview',
+        '--host',
+        '0.0.0.0',
+        '--port',
+        '9003',
+      ]
+    ports:
+      - '9003:9003'
+    networks:
+      default:
+        aliases:
+          - immersive-ocean.localhost
+
+  # ── Optional reverse proxy — only runs with `--profile gateway` ──────────
+  gateway:
+    profiles: ['gateway']
+    image: nginx:1.27-alpine
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - '80:80'
+    depends_on:
+      - portfolio
+      - toonhub
+      - mindloop
+      - immersive-ocean
+    networks:
+      default:
+        aliases:
+          - ncam.localhost

@@ -1,0 +1,30 @@
+# VCS
+.git
+.gitignore
+
+# Dependencies (installed inside the image)
+**/node_modules
+.pnpm-store
+
+# Build output / caches
+**/dist
+**/.output
+**/.vinxi
+**/.nitro
+**/.turbo
+**/.vercel
+**/.mf
+**/@mf-types
+
+# Local / editor / OS
+**/.DS_Store
+**/*.log
+.env
+.env.*
+
+# CI / docker / docs (not needed in the build context)
+.github
+Dockerfile
+.dockerignore
+docker-compose.yml
+README.md
