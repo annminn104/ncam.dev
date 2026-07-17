@@ -21,7 +21,7 @@
   "devDependencies": {
     "@ncam/tsconfig": "workspace:*",
     "@types/node": "^26.1.1",
-    "typescript": "^5.9.0",
+    "typescript": "^7.0.2",
     "vite": "^8.1.0"
   }
 }
