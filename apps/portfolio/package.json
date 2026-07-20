@@ -22,7 +22,7 @@
     "react-dom": "19.2.7"
   },
   "devDependencies": {
-    "@module-federation/vite": "1.17.0",
+    "@module-federation/vite": "1.17.1",
     "@ncam/mf-remote": "workspace:*",
     "@ncam/tsconfig": "workspace:*",
     "@types/node": "^26.1.1",
