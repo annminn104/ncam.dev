@@ -1,0 +1,171 @@
+@import 'tailwindcss';
+
+/* ── Custom font ──────────────────────────────────────────────────────── */
+@theme {
+  --font-figtree: 'Figtree', sans-serif;
+}
+
+/* ── Custom ease ─────────────────────────────────────────────────────── */
+:root {
+  --ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ── Custom breakpoint variants (desktop-first, max-width) ───────────── */
+@variant mobile {
+  @media (max-width: 809.98px) {
+    @slot;
+  }
+}
+
+@variant md-tablet {
+  @media (min-width: 810px) and (max-width: 1199.98px) {
+    @slot;
+  }
+}
+
+/* ── Keyframes ────────────────────────────────────────────────────────── */
+@keyframes videoFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes revealUp {
+  from {
+    opacity: 0;
+    transform: translateY(80px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes revealRight {
+  from {
+    opacity: 0;
+    transform: translateX(100px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes dotPulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.45;
+    transform: scale(1.45);
+  }
+}
+
+/* ── Reveal animation helpers ────────────────────────────────────────── */
+.reveal-up {
+  opacity: 0;
+  transform: translateY(80px);
+}
+.reveal-up.is-visible {
+  animation: revealUp 0.9s var(--ease-spring) both;
+}
+
+.reveal-right {
+  opacity: 0;
+  transform: translateX(100px);
+}
+.reveal-right.is-visible {
+  animation: revealRight 0.9s var(--ease-spring) both;
+}
+
+/* ── Navbar underline hover ──────────────────────────────────────────── */
+.nav-link-underline {
+  position: relative;
+}
+.nav-link-underline::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: right;
+  transition: transform 0.35s var(--ease-spring);
+}
+.nav-link-underline:hover::after {
+  transform: scaleX(1);
+  transform-origin: left;
+}
+
+/* ── Video switcher role-link ────────────────────────────────────────── */
+.role-link {
+  transition: transform 0.3s var(--ease-spring);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.role-link:hover {
+  transform: translateX(4px);
+}
+
+/* ── CTA button fill-up hover ────────────────────────────────────────── */
+.cta-btn {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+.cta-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: #f598f2;
+  transform: translateY(101%);
+  transition: transform 0.4s var(--ease-spring);
+  z-index: -1;
+}
+.cta-btn:hover::before {
+  transform: translateY(0);
+}
+.cta-btn:hover .cta-btn-label {
+  color: #000;
+}
+.cta-btn:hover {
+  border-color: #f598f2 !important;
+}
+
+/* ── Reduced motion ──────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .reveal-up,
+  .reveal-right {
+    opacity: 1;
+    transform: none;
+  }
+  .reveal-up.is-visible,
+  .reveal-right.is-visible {
+    animation: none;
+  }
+}
+
+/* ── Base layer ──────────────────────────────────────────────────────── */
+@layer base {
+  body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
