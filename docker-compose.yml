@@ -32,6 +32,7 @@ services:
         TOONHUB_REMOTE_URL: http://toonhub.localhost:9001/remoteEntry.js
         MINDLOOP_REMOTE_URL: http://mindloop.localhost:9002/remoteEntry.js
         IMMERSIVE_OCEAN_REMOTE_URL: http://immersive-ocean.localhost:9003/remoteEntry.js
+        VIKTOR_REMOTE_URL: http://viktor.localhost:9004/remoteEntry.js
     image: ncam-monorepo:latest
     command: ['node', 'apps/portfolio/.output/server/index.mjs']
     environment:
@@ -44,6 +45,7 @@ services:
       - toonhub
       - mindloop
       - immersive-ocean
+      - viktor
 
   toonhub:
     image: ncam-monorepo:latest
@@ -86,6 +88,16 @@ services:
         aliases:
           - immersive-ocean.localhost
 
+  viktor:
+    image: ncam-monorepo:latest
+    command: ['pnpm', '--filter', '@ncam/viktor', 'preview', '--host', '0.0.0.0', '--port', '9004']
+    ports:
+      - '9004:9004'
+    networks:
+      default:
+        aliases:
+          - viktor.localhost
+
   # ── Optional reverse proxy — only runs with `--profile gateway` ──────────
   gateway:
     profiles: ['gateway']
@@ -99,6 +111,7 @@ services:
       - toonhub
       - mindloop
       - immersive-ocean
+      - viktor
     networks:
       default:
         aliases:
