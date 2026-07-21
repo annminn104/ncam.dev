@@ -60,6 +60,19 @@ export const projects: ProjectEntry[] = [
     module: './mount',
     status: 'live',
   },
+  {
+    id: 'viktor',
+    name: 'Viktor.',
+    tagline: 'Creative portfolio hero',
+    description:
+      'A full-screen portfolio hero with crossfade video switcher, Figtree font, animated "Viktor." name reveal, availability dot with pink glow accent, and a fill-up CTA button.',
+    accent: '#F598F2',
+    thumbnail: '/thumbnails/viktor.png',
+    // Single-word name → already a valid identifier (no underscore/kebab split).
+    remote: 'viktor',
+    module: './mount',
+    status: 'live',
+  },
 ];
 
 export function getProject(id: string): ProjectEntry | undefined {

@@ -14,6 +14,7 @@ const IMMERSIVE_OCEAN_REMOTE = env(
   'IMMERSIVE_OCEAN_REMOTE_URL',
   'http://localhost:9003/remoteEntry.js',
 );
+const VIKTOR_REMOTE = env('VIKTOR_REMOTE_URL', 'http://localhost:9004/remoteEntry.js');
 const PORTFOLIO_PORT = Number(env('PORTFOLIO_PORT', '9000'));
 
 let buildExitTimer: ReturnType<typeof setTimeout> | undefined;
@@ -51,6 +52,11 @@ export default defineConfig({
           type: 'module',
           name: 'immersive_ocean',
           entry: IMMERSIVE_OCEAN_REMOTE,
+        },
+        viktor: {
+          type: 'module',
+          name: 'viktor',
+          entry: VIKTOR_REMOTE,
         },
       },
       shared: {
