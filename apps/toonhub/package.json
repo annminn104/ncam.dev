@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "@ncam/logger": "workspace:*",
-    "lucide-static": "^1.24.0"
+    "lucide-static": "^1.25.0"
   },
   "devDependencies": {
     "@ncam/mf-remote": "workspace:*",
