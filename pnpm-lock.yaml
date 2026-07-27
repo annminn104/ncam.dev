@@ -116,8 +116,8 @@ importers:
         specifier: ^5.2.8
         version: 5.2.8
       '@fontsource/inter':
-        specifier: ^5.2.8
-        version: 5.2.8
+        specifier: ^5.3.0
+        version: 5.3.0
       '@ncam/logger':
         specifier: workspace:*
         version: link:../../packages/logger
@@ -686,8 +686,8 @@ packages:
   '@fontsource/instrument-serif@5.2.8':
     resolution: {integrity: sha512-s+bkz+syj2rO00Rmq9g0P+PwuLig33DR1xDR8pTWmovH1pUjwnncrFk++q9mmOex8fUQ7oW80gPpPDaw7V1MMw==}
 
-  '@fontsource/inter@5.2.8':
-    resolution: {integrity: sha512-P6r5WnJoKiNVV+zvW2xM13gNdFhAEpQ9dQJHt3naLvfg+LkF2ldgSLiF4T41lf1SQCM9QmkqPTn4TH568IRagg==}
+  '@fontsource/inter@5.3.0':
+    resolution: {integrity: sha512-RofMylZmjlJEfELXeNHFWBRcSs75rGU/6bV2S2jfnvv/3rPXPGe0LgUJTklcHZ9lM4OZmAVFhcJPnACfb91A3g==}
 
   '@humanfs/core@0.19.2':
     resolution: {integrity: sha512-UhXNm+CFMWcbChXywFwkmhqjs3PRCmcSa/hfBgLIb7oQ5HNb1wS0icWsGtSAUNgefHeI+eBrA8I1fxmbHsGdvA==}
@@ -3156,7 +3156,7 @@ snapshots:
 
   '@fontsource/instrument-serif@5.2.8': {}
 
-  '@fontsource/inter@5.2.8': {}
+  '@fontsource/inter@5.3.0': {}
 
   '@humanfs/core@0.19.2':
     dependencies:
