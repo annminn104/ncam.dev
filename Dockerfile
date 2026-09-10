@@ -13,7 +13,10 @@ WORKDIR /app
 
 # ---- deps: fetch packages into the pnpm store (cached on the lockfile) ----
 FROM base AS deps
-COPY pnpm-lock.yaml ./
+# `pnpm fetch` needs more than the lockfile: package.json pins pnpm for corepack
+# (`packageManager`), and pnpm-workspace.yaml + .npmrc carry the overrides and
+# settings the lockfile was resolved with — a frozen fetch rejects a mismatch.
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm fetch
 
 # ---- build: install offline from the store, then build the whole monorepo ----

@@ -2,6 +2,8 @@ import { federation } from '@module-federation/vite';
 import { env } from '@ncam/mf-remote';
 import { tanstackStart } from '@tanstack/react-start/plugin/vite';
 import react from '@vitejs/plugin-react';
+import { existsSync, statSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { nitro } from 'nitro/vite';
 import { defineConfig } from 'vite';
 
@@ -17,7 +19,38 @@ const IMMERSIVE_OCEAN_REMOTE = env(
 const VIKTOR_REMOTE = env('VIKTOR_REMOTE_URL', 'http://localhost:9004/remoteEntry.js');
 const PORTFOLIO_PORT = Number(env('PORTFOLIO_PORT', '9000'));
 
+// Nitro leaves a handle open after its build, so `vite build` never exits on its
+// own. Exiting on a fixed delay after `writeBundle` raced the SSR + Nitro server
+// build on slow machines (an emulated Docker VM shipped an image with an empty
+// .output/server). Nitro writes its manifest last, so exit only once a manifest
+// newer than this build exists alongside the server entry.
+const OUTPUT_DIR = fileURLToPath(new URL('./.output/', import.meta.url));
+const NITRO_MANIFEST = `${OUTPUT_DIR}nitro.json`;
+const SERVER_ENTRY = `${OUTPUT_DIR}server/index.mjs`;
+const BUILD_EXIT_POLL_MS = 500;
+const BUILD_EXIT_MAX_MS = 30 * 60_000;
+const buildStartedAt = Date.now();
 let buildExitTimer: ReturnType<typeof setTimeout> | undefined;
+
+function exitWhenNitroHasWritten() {
+  if (buildExitTimer) clearTimeout(buildExitTimer);
+  buildExitTimer = setTimeout(() => {
+    const done =
+      existsSync(SERVER_ENTRY) &&
+      existsSync(NITRO_MANIFEST) &&
+      statSync(NITRO_MANIFEST).mtimeMs > buildStartedAt;
+    if (done) {
+      // Let the last file handles flush, then leave.
+      setTimeout(() => process.exit(0), 1000);
+      return;
+    }
+    if (Date.now() - buildStartedAt > BUILD_EXIT_MAX_MS) {
+      console.error(`[tanstack-build-exit] ${SERVER_ENTRY} never appeared; giving up.`);
+      process.exit(1);
+    }
+    exitWhenNitroHasWritten();
+  }, BUILD_EXIT_POLL_MS);
+}
 
 export default defineConfig({
   nitro: {
@@ -68,12 +101,11 @@ export default defineConfig({
     react(),
     nitro(),
     {
-      // Nitro can leave a handle open during closeBundle; exit once writes settle.
+      // See exitWhenNitroHasWritten(): exit once Nitro's server bundle is on disk.
       name: 'tanstack-build-exit',
       apply: 'build',
       writeBundle() {
-        if (buildExitTimer) clearTimeout(buildExitTimer);
-        buildExitTimer = setTimeout(() => process.exit(0), 1000);
+        exitWhenNitroHasWritten();
       },
     },
   ],
