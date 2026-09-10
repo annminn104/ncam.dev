@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { getProject, projects } from './index';
 
 describe('project-registry', () => {
-  it('exposes the three live projects in gallery order', () => {
-    expect(projects.map((p) => p.id)).toEqual(['toonhub', 'mindloop', 'immersive-ocean']);
+  it('exposes the live projects in gallery order', () => {
+    expect(projects.map((p) => p.id)).toEqual(['toonhub', 'mindloop', 'immersive-ocean', 'viktor']);
   });
 
   it('getProject() finds by id and returns undefined for unknown ids', () => {
@@ -20,7 +20,8 @@ describe('project-registry', () => {
       expect(p.remote).toBeTruthy();
       expect(p.module).toBe('./mount');
       expect(p.accent).toMatch(/^#[0-9a-f]{6}$/i);
-      expect(p.thumbnail).toMatch(/^\/thumbnails\/.+\.png$/);
+      // capture-thumbnails.mjs picks the encoder from this extension
+      expect(p.thumbnail).toMatch(/^\/thumbnails\/.+\.(jpg|png)$/);
       expect(['live', 'coming-soon']).toContain(p.status);
     }
   });

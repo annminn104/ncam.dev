@@ -48,6 +48,21 @@ mini-apps (remotes) at runtime. React 19.
 - Pinned TanStack/nitro/vinxi versions matter (MF + TanStack Router had version
   breaks). Change deliberately and re-verify.
 
+## Thumbnails
+
+`public/thumbnails/<id>.jpg` are **generated, not designed**: each is a 1200×630
+Playwright capture of `/projects/<id>` on the running host with the fixed
+`.stage__back` button hidden (`scripts/capture-thumbnails.mjs`). The same file
+is the page's og:image. Regenerate after a remote's hero changes:
+
+```bash
+pnpm dev                    # host + remotes must be up
+pnpm thumbnails             # all live projects; or `pnpm thumbnails viktor`
+```
+
+Needs a Playwright Chromium once: `pnpm --filter @ncam/portfolio exec playwright install chromium`.
+Don't hand-edit the images; change the remote (or the script) and re-run.
+
 ## Deploy
 
 SSR — deploys as a **server** (Nitro), not static. On Vercel, Nitro auto-detects

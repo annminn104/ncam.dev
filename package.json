@@ -10,6 +10,7 @@
     "preview": "turbo run preview",
     "typecheck": "turbo run typecheck",
     "assets": "turbo run assets",
+    "thumbnails": "pnpm --filter @ncam/portfolio thumbnails",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",

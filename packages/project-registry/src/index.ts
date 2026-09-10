@@ -13,7 +13,10 @@ export interface ProjectEntry {
   description: string;
   /** Brand accent colour (used for the gallery card). */
   accent: string;
-  /** Gallery card thumbnail (served from the host's /public), also used as OG image. */
+  /**
+   * Gallery card thumbnail (served from the host's /public), also used as OG image.
+   * A 1200×630 capture of the project page — regenerate with `pnpm thumbnails`.
+   */
   thumbnail?: string;
   /** Module Federation remote name, e.g. 'toonhub'. */
   remote: string;
@@ -30,7 +33,7 @@ export const projects: ProjectEntry[] = [
     description:
       'A premium interactive collectible-figurine carousel hero — bold, playful, cinematic, with autoplay, swipe, ambient effects and music.',
     accent: '#F4845F',
-    thumbnail: '/thumbnails/toonhub.png',
+    thumbnail: '/thumbnails/toonhub.jpg',
     remote: 'toonhub',
     module: './mount',
     status: 'live',
@@ -42,7 +45,7 @@ export const projects: ProjectEntry[] = [
     description:
       'A dark monochrome landing page for a newsletter & content platform — React, Framer Motion, liquid-glass UI, scroll-driven reveals and video + HLS backgrounds.',
     accent: '#62837C',
-    thumbnail: '/thumbnails/mindloop.png',
+    thumbnail: '/thumbnails/mindloop.jpg',
     remote: 'mindloop',
     module: './mount',
     status: 'live',
@@ -54,7 +57,7 @@ export const projects: ProjectEntry[] = [
     description:
       'A fullscreen creative-studio landing page — looping ocean video background, responsive navbar with an animated mobile menu, and staggered CSS entrance animations. React + Tailwind + Geist.',
     accent: '#2C7DA0',
-    thumbnail: '/thumbnails/immersive-ocean.png',
+    thumbnail: '/thumbnails/immersive-ocean.jpg',
     // MF remote name must be a valid identifier → underscore (route id stays kebab).
     remote: 'immersive_ocean',
     module: './mount',
@@ -67,7 +70,7 @@ export const projects: ProjectEntry[] = [
     description:
       'A full-screen portfolio hero with crossfade video switcher, Figtree font, animated "Viktor." name reveal, availability dot with pink glow accent, and a fill-up CTA button.',
     accent: '#F598F2',
-    thumbnail: '/thumbnails/viktor.png',
+    thumbnail: '/thumbnails/viktor.jpg',
     // Single-word name → already a valid identifier (no underscore/kebab split).
     remote: 'viktor',
     module: './mount',

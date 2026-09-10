@@ -63,6 +63,9 @@ pnpm assets     # downloads project image assets where apps define it
    entry in `apps/portfolio/src/main.ts` (`loaders`) — the import specifier must be
    static so the federation plugin can transform it.
 4. Add its metadata to `packages/project-registry` so the gallery shows it.
+5. With `pnpm dev` running, generate its gallery thumbnail: `pnpm thumbnails <id>`
+   (a 1200×630 capture of the project page, minus the host's back button — see
+   `apps/portfolio/scripts/capture-thumbnails.mjs`).
 
 ## Turborepo notes
 
