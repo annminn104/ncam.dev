@@ -25,9 +25,11 @@ FROM deps AS build
 ARG TOONHUB_REMOTE_URL=http://toonhub.localhost:9001/remoteEntry.js
 ARG MINDLOOP_REMOTE_URL=http://mindloop.localhost:9002/remoteEntry.js
 ARG IMMERSIVE_OCEAN_REMOTE_URL=http://immersive-ocean.localhost:9003/remoteEntry.js
+ARG VIKTOR_REMOTE_URL=http://viktor.localhost:9004/remoteEntry.js
 ENV TOONHUB_REMOTE_URL=$TOONHUB_REMOTE_URL \
     MINDLOOP_REMOTE_URL=$MINDLOOP_REMOTE_URL \
-    IMMERSIVE_OCEAN_REMOTE_URL=$IMMERSIVE_OCEAN_REMOTE_URL
+    IMMERSIVE_OCEAN_REMOTE_URL=$IMMERSIVE_OCEAN_REMOTE_URL \
+    VIKTOR_REMOTE_URL=$VIKTOR_REMOTE_URL
 COPY . .
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile --offline
 RUN pnpm build
@@ -39,7 +41,7 @@ ENV NODE_ENV=production
 # `vite preview` for the static remotes).
 COPY --from=build /app ./
 # host (SSR) + remotes (static)
-EXPOSE 9000 9001 9002 9003
+EXPOSE 9000 9001 9002 9003 9004
 # Default: run the portfolio SSR host. docker-compose overrides the command
 # for the remote services (see docker-compose.yml).
 CMD ["node", "apps/portfolio/.output/server/index.mjs"]
