@@ -19,6 +19,9 @@ export default tseslint.config(
       '**/routeTree.gen.ts',
       '**/*.gen.ts',
       'apps/*/public/**',
+      // Vendored agent skills (installed by scripts/add-agent-skills.sh) — third-party
+      // scripts, not held to this repo's lint rules.
+      '.claude/**',
     ],
   },
 

@@ -16,3 +16,12 @@ overrides:
   # start-server-core pulls h3 under the alias `h3-v2: npm:h3@...`, so it needs its own
   # override entry — a plain `h3` override does not reach an aliased dependency.
   h3-v2: 'npm:h3@2.0.1-rc.25'
+  # High-severity advisories in transitive deps (`pnpm audit --audit-level high` gates CI).
+  # Each override is scoped to the affected major so unrelated majors keep their own range.
+  'js-yaml@4': '4.3.2' # GHSA-5p4m-2wfm-xmqj, GHSA-2883-xcg3-v3hh (commitlint, tanstack start)
+  'nanoid@3': '3.3.18' # GHSA-2v37-7h3g-55p8 (postcss via vite / vitest)
+  'brace-expansion@5': '5.0.9' # GHSA-mh99-v99m-4gvg, GHSA-rgw5-rvv9-x895 (eslint / minimatch)
+  'browserslist@4': '4.28.9' # GHSA-c83g-rgw3-j3cx, GHSA-73wf-gq98-2v4g (babel, tanstack start)
+  'fast-uri@3': '3.1.7' # GHSA-v2hh-gcrm-f6hx … GHSA-jqff-g426-hqxp (commitlint)
+  'undici@7': '7.29.1' # GHSA-4cwx-7wf7-3272 (@module-federation/dts-plugin)
+  adm-zip: '0.6.0' # GHSA-xcpc-8h2w-3j85 (@module-federation/dts-plugin)
