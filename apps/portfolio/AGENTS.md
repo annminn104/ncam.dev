@@ -22,6 +22,11 @@ mini-apps (remotes) at runtime. React 19.
     server-side via MF), returns `{ html, css }`; the component inlines them
     (`<style>` + `dangerouslySetInnerHTML`), then a `useEffect` calls
     `import('<remote>/hydrate')` → `hydrate(el)` to attach interactivity.
+    The loader reads the module from the MF runtime (the plugin's import
+    wrapper rejects forever after one failed attempt) and, when a load fails,
+    resets that remote's runtime + SSR-loader caches so a remote that was down
+    when the host booted recovers on the next request instead of after a
+    restart. Failures log `project.ssr-fallback` at warn level (client mount).
 - `src/router.tsx` (`getRouter`) + `src/client.tsx` (hydrates `<StartClient>`).
 - `src/routeTree.gen.ts` is **generated** by the router plugin — committed, do
   not hand-edit.
