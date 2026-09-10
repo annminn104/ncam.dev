@@ -1,94 +1,189 @@
-# ncam.dev (Turborepo + Module Federation)
+# ncam.dev
 
-A Turborepo monorepo. A **TanStack Start (SSR)** host renders project mini-apps as
-micro-frontends at runtime via Module Federation.
+[![CI](https://github.com/annminn104/ncam.dev/actions/workflows/ci.yml/badge.svg)](https://github.com/annminn104/ncam.dev/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/annminn104/ncam.dev/actions/workflows/codeql.yml/badge.svg)](https://github.com/annminn104/ncam.dev/actions/workflows/codeql.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-- `apps/portfolio` — TanStack Start (SSR) host / gallery (dev: http://localhost:9000)
-- `apps/toonhub` — TOONHUB hero, a federated remote (dev: http://localhost:9001)
-- `packages/*` — shared registry + TS config
+Personal portfolio built as a **micro-frontend showcase**. A server-rendered
+**TanStack Start** host renders a gallery of projects and mounts each one at
+runtime through **Module Federation**. Every project is its own Vite app: built,
+tested and deployable on its own, yet rendered inside the host at
+`https://ncam.dev/projects/<id>`.
+
+Turborepo + pnpm workspaces, TypeScript everywhere.
+
+## Layout
+
+| Path                   | What it is                                                                                                    | Dev URL                 |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------- | ----------------------- |
+| `apps/portfolio`       | **Host.** TanStack Start (SSR, Nitro) + TanStack Router, React 19. Gallery + `/projects/$projectId` stage.    | `http://localhost:9000` |
+| `apps/toonhub`         | TOONHUB — collectible-figurine carousel hero. Framework-free TypeScript remote.                               | `http://localhost:9001` |
+| `apps/mindloop`        | Mindloop — dark newsletter landing page. React 19, Tailwind v4, framer-motion, hls.js.                        | `http://localhost:9002` |
+| `apps/immersive-ocean` | Immersive Ocean — creative-studio hero with looping video background. React 19, Tailwind v4.                  | `http://localhost:9003` |
+| `apps/viktor`          | Viktor. — portfolio hero with crossfade video switcher. React 19, Tailwind v4.                                | `http://localhost:9004` |
+| `packages/*`           | `project-registry` (typed project list), `mf-remote` (`defineRemote()` + `.env` reader), `logger`, `tsconfig` | —                       |
+
+Each app and package carries its own `AGENTS.md` with the rules for that unit;
+the root [`AGENTS.md`](AGENTS.md) covers cross-cutting concerns.
+
+## How a project renders
+
+1. `@ncam/project-registry` is the single source of truth: id, copy, accent,
+   thumbnail, remote name. The host's gallery is server-rendered from it.
+2. Opening `/projects/<id>` runs the route loader on the server, which imports
+   the remote's **`./ssr`** module and inlines the returned `{ html, css }`.
+3. In the browser the host imports **`./hydrate`** to attach interactivity
+   (falls back to **`./mount`** for pure client rendering).
+4. Remotes are **self-contained**: each bundles its own runtime (including React
+   where used) and exposes `mount` / `ssr` / `hydrate`. Nothing is shared across
+   the host↔remote boundary, so a remote behaves identically standalone and
+   mounted. `packages/mf-remote` encapsulates that Vite config.
 
 ## Prerequisites
 
-- **Node.js ≥ 18**
-- **pnpm** — this repo requires pnpm (it uses `workspace:*` and a pnpm lockfile).
-  `npm` / `yarn` will not work.
+- **Node 22** (see `.nvmrc`; `pnpm thumbnails` needs ≥ 22.18).
+- **pnpm** — required (`workspace:*` protocol + pnpm lockfile). Easiest:
 
-Enable pnpm (recommended, uses the version pinned in `package.json`):
+  ```bash
+  corepack enable
+  ```
 
-```bash
-corepack enable
-```
+  This picks up the version pinned in `package.json` (`packageManager`).
 
-Or install it globally:
-
-```bash
-npm install -g pnpm
-```
-
-Verify: `pnpm -v` should print a version.
-
-## Run
+## Quick start
 
 ```bash
-pnpm install      # install all workspaces
-pnpm dev          # start shell (:9000) + toonhub (:9001) via Turbo
+pnpm install
+pnpm dev          # host :9000 + every remote :9001–:9004 via Turbo
 ```
 
-Open http://localhost:9000, then click **TOONHUB** — the shell loads the remote
-at runtime. Both servers must be running (that's what `pnpm dev` does).
+Open http://localhost:9000 and click a project — the host loads that remote at
+runtime, so the remote's dev server must be up (that is what `pnpm dev` does).
 
-### Run one app without Turbo (fallback)
-
-Two terminals:
+Run a single workspace when iterating on one app:
 
 ```bash
-pnpm --filter @ncam/toonhub dev   # http://localhost:9001 (standalone)
-pnpm --filter @ncam/portfolio dev         # http://localhost:9000
+pnpm --filter @ncam/viktor dev        # remote alone, standalone dev page on :9004
+pnpm --filter @ncam/portfolio dev     # host alone (projects fail to load until their remote runs)
 ```
 
-## Build
+## Scripts (repo root)
+
+| Command                   | Does                                                                               |
+| ------------------------- | ---------------------------------------------------------------------------------- |
+| `pnpm dev`                | All dev servers (Turbo, persistent).                                               |
+| `pnpm build`              | Build every workspace. Host → `.output/` (Nitro server), remotes → `dist/`.        |
+| `pnpm preview`            | Serve the production builds locally.                                               |
+| `pnpm typecheck`          | `tsc --noEmit` everywhere.                                                         |
+| `pnpm lint` / `lint:fix`  | ESLint (flat config).                                                              |
+| `pnpm format` / `:check`  | Prettier.                                                                          |
+| `pnpm test` / `:watch`    | Vitest (shared packages).                                                          |
+| `pnpm ci`                 | lint + format check + typecheck + test + build — same as GitHub Actions.           |
+| `pnpm assets`             | Download self-hosted assets where an app defines it (currently toonhub figurines). |
+| `pnpm thumbnails [id...]` | Regenerate gallery thumbnails (see below).                                         |
+| `pnpm skills:add`         | Install the agent skills listed in `scripts/add-agent-skills.sh`.                  |
+
+## Configuration
+
+Non-secret defaults live in the committed **`.env`**; machine-specific overrides
+go in **`.env.local`** (gitignored). Precedence, highest first: the real
+environment, then `.env.local`, then `.env`. Never put secrets in `.env`.
+
+| Variable                                                                                       | Purpose                                                                  |
+| ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| `PORTFOLIO_PORT`, `TOONHUB_PORT`, `MINDLOOP_PORT`, `IMMERSIVE_OCEAN_PORT`, `VIKTOR_PORT`       | Dev / preview ports.                                                     |
+| `TOONHUB_REMOTE_URL`, `MINDLOOP_REMOTE_URL`, `IMMERSIVE_OCEAN_REMOTE_URL`, `VIKTOR_REMOTE_URL` | `remoteEntry.js` URL the host loads for each remote. **Baked at build.** |
+| `TOONHUB_BASE`, `MINDLOOP_BASE`, `IMMERSIVE_OCEAN_BASE`, `VIKTOR_BASE`                         | Public base path per remote (default `/`).                               |
+
+## Thumbnails
+
+Gallery cards and each project's `og:image` are **generated**, not designed:
+1200×630 Playwright captures of `/projects/<id>` on the running host with the
+host's back button hidden (`apps/portfolio/scripts/capture-thumbnails.mjs`).
 
 ```bash
-pnpm build        # builds every app (shell + toonhub emit dist/, incl. remoteEntry.js)
-pnpm typecheck
+pnpm --filter @ncam/portfolio exec playwright install chromium   # once
+pnpm dev                                                         # host + remotes up
+pnpm thumbnails                                                  # or: pnpm thumbnails viktor
 ```
 
-## Common issue: `cannot find binary path` when running dev
+Output: `apps/portfolio/public/thumbnails/<id>.jpg`, paths declared in the
+registry. Re-run whenever a remote's hero changes.
 
-That error is Turbo not finding the **pnpm** binary. Install pnpm (see
-Prerequisites) and run `pnpm dev` — do not use `npm run dev`.
+## Adding a project
 
-## Deploy to Vercel (Turborepo monorepo)
+1. `apps/<project>/` — a Vite app exposing `./mount`, `./ssr`, `./hydrate`
+   through `defineRemote()` from `@ncam/mf-remote` (copy `apps/viktor`).
+2. Give it an `AGENTS.md`, a `vercel.json` (see any remote) and add its
+   `<NAME>_PORT` / `<NAME>_REMOTE_URL` / `<NAME>_BASE` to `.env`.
+3. Host: add the remote in `apps/portfolio/vite.config.ts` and one static
+   `import('<remote>/ssr' | '/hydrate' | '/mount')` per loader map in
+   `apps/portfolio/src/routes/projects/$projectId.tsx`, plus a `.d.ts` in
+   `src/types/remote/`.
+4. Register it in `packages/project-registry` (the tests there enforce the shape).
+5. `pnpm thumbnails <id>` with `pnpm dev` running.
 
-Each app deploys as its **own Vercel project** (micro-frontends deploy
-independently). Vercel has first-class Turborepo + Vite support; the `vercel.json`
-in each app pins the framework/build/output, and the toonhub remote adds the CORS
-header the shell needs to load it cross-origin.
+Details and rules: root `AGENTS.md` → "Adding a new project".
 
-1. **toonhub remote** — new Vercel project, Root Directory `apps/toonhub`.
-   - `apps/toonhub/vercel.json` sets `framework: vite`, build `pnpm build`
-     (runs the asset download), output `dist`, and
-     `Access-Control-Allow-Origin: *` so the shell can fetch `remoteEntry.js`
-     from another origin. Note its deployed URL, e.g. `https://toonhub.vercel.app`.
-2. **shell host** — new Vercel project, Root Directory `apps/portfolio`.
-   - Set env var `TOONHUB_REMOTE_URL=https://<toonhub-domain>/remoteEntry.js`.
-   - Update `SITE.url` in `apps/portfolio/src/gallery.ts` to the shell's domain
-     (canonical/OG/sitemap/robots derive from it).
+## Quality gates
 
-Vercel auto-installs from the workspace root (pnpm) and, because `turbo.json`
-is present, uses Turborepo-aware builds. Optionally skip unaffected builds with
-an Ignored Build Step of `npx turbo-ignore`.
+- **Husky**: `pre-commit` runs lint-staged (ESLint `--fix` + Prettier),
+  `commit-msg` runs commitlint (**Conventional Commits**, e.g.
+  `feat(portfolio): …`), `pre-push` runs `turbo run typecheck build`.
+  Bypass in a pinch with `git push --no-verify`.
+- **CI** (`.github/workflows/ci.yml`): lint, format check, typecheck, test and
+  build on every push to `main` and every PR, with the Turbo cache persisted
+  between runs; PR commit messages are validated with commitlint.
+- **CodeQL** weekly + on push/PR; **Dependabot** opens grouped update PRs.
+- Vulnerability reports: see [`SECURITY.md`](SECURITY.md).
 
-### Turborepo Remote Caching (optional)
+## Deploy
 
-Speed up CI/local builds by sharing the cache via Vercel Remote Cache:
+### Vercel (one project per app)
+
+Remotes are static Vite builds; the host is a Nitro server. Each app has its
+own `vercel.json`, so create one Vercel project per app with the matching
+**Root Directory**:
+
+1. **Remotes** (`apps/toonhub`, `apps/mindloop`, `apps/immersive-ocean`,
+   `apps/viktor`): `framework: vite`, `pnpm build`, output `dist`, and an
+   `Access-Control-Allow-Origin: *` header so the host can fetch
+   `remoteEntry.js` cross-origin. Note each deployed URL.
+2. **Host** (`apps/portfolio`): set `TOONHUB_REMOTE_URL`, `MINDLOOP_REMOTE_URL`,
+   `IMMERSIVE_OCEAN_REMOTE_URL`, `VIKTOR_REMOTE_URL` to
+   `https://<remote-domain>/remoteEntry.js`. Nitro detects Vercel and emits the
+   Build Output; `vercel.json` just runs `pnpm build`.
+3. Own domain? Update the `SITE_URL` constants in
+   `apps/portfolio/src/routes/index.tsx` and `routes/projects/$projectId.tsx`
+   (canonical / OG / JSON-LD) plus `public/robots.txt` and `public/sitemap.xml`.
+
+Optional: skip unaffected builds with an Ignored Build Step of
+`npx turbo-ignore`, and share the Turbo cache with `npx turbo login && npx turbo link`.
+
+### Docker
+
+One multi-stage image builds the whole monorepo; `docker-compose.yml` runs the
+SSR host and each remote (static preview) from that same image:
 
 ```bash
-npx turbo login
-npx turbo link
+docker compose up --build            # host http://localhost:9000, remotes :9001–:9004
+docker compose --profile gateway up --build   # + nginx on :80 → http://ncam.localhost
 ```
 
-Any static host works too — build with `pnpm build` and serve each app's
-`dist/`, keeping the toonhub remote's CORS + the shell's `TOONHUB_REMOTE_URL`.
+Remote entry URLs use `*.localhost` hostnames so the **same URL** resolves in
+the browser (loopback) and inside the host container (compose network aliases)
+— that is what lets the host resolve remotes server-side. They are build args,
+not runtime env, because the host bakes them in at build time.
 
-See `AGENTS.md` (root and per-app) for architecture and contribution rules.
+## Troubleshooting
+
+- **`cannot find binary path`** on `pnpm dev` — Turbo can't find pnpm. Install
+  pnpm (see Prerequisites); don't use `npm run dev`.
+- **"Couldn't load <project>"** in the host — that remote's dev server isn't
+  running, or its `*_REMOTE_URL` points elsewhere. Run `pnpm dev` at the root.
+- **`pnpm thumbnails` fails** — needs the dev servers up, Node ≥ 22.18 and a
+  Playwright Chromium (`pnpm --filter @ncam/portfolio exec playwright install chromium`).
+
+## License
+
+[MIT](LICENSE)
