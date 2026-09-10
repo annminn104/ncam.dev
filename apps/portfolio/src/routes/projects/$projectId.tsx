@@ -10,11 +10,18 @@ const SITE_URL = 'https://ncam.dev';
 // Static import specifiers so the Module Federation plugin can transform them.
 // `./ssr` is server-safe (loader); `./hydrate` / `./mount` are client-only.
 type SsrResult = { html: string; css: string };
-type SsrModule = {
-  renderHeroSSR: (opts?: {
-    config?: unknown;
-    assetBase?: string;
-  }) => SsrResult | Promise<SsrResult>;
+type RenderHeroSSR = (opts?: {
+  config?: unknown;
+  assetBase?: string;
+}) => SsrResult | Promise<SsrResult>;
+type SsrExports = { renderHeroSSR?: RenderHeroSSR };
+// In the production server bundle `import('<remote>/ssr')` resolves to the
+// federation plugin's wrapper, not the remote itself: the real module arrives
+// on `__mf_remote_pending` (and is mirrored into the live `__moduleExports`).
+// Reading `renderHeroSSR` off the wrapper synchronously yields `undefined`.
+type SsrModule = SsrExports & {
+  __mf_remote_pending?: Promise<SsrExports | undefined>;
+  __moduleExports?: SsrExports;
 };
 type HydrateModule = { hydrate: (target: HTMLElement) => () => void };
 type MountModule = { mount: (el: HTMLElement, config?: unknown) => () => void };
@@ -55,13 +62,20 @@ export const Route = createFileRoute('/projects/$projectId')({
     // may hang), so always fall back to the reliable client mount there.
     if (!load || !import.meta.env.PROD) return { html: null, css: '' };
     try {
-      const { renderHeroSSR } = await load();
+      const wrapper = await load();
+      // Wait for the federated module to actually load (see SsrModule above).
+      const remote = (await wrapper.__mf_remote_pending) ?? wrapper.__moduleExports ?? wrapper;
+      const renderHeroSSR = remote.renderHeroSSR ?? wrapper.__moduleExports?.renderHeroSSR;
+      if (typeof renderHeroSSR !== 'function') {
+        throw new Error(`${project.remote}/ssr does not export renderHeroSSR`);
+      }
       const { html, css } = await renderHeroSSR({ assetBase: import.meta.env.VITE_TOONHUB_ORIGIN });
       log.debug('project.ssr', { id: project.id });
       return { html, css };
-    } catch {
-      // SSR remote resolution unavailable (e.g. vite dev) → client-side mount.
-      log.debug('project.ssr-fallback', { id: project.id });
+    } catch (error) {
+      // SSR remote resolution unavailable → client-side mount. Loud on purpose:
+      // a silent fallback hid a broken SSR path in production for months.
+      log.warn('project.ssr-fallback', { id: project.id, error: String(error) });
       return { html: null, css: '' };
     }
   },
