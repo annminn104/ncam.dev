@@ -116,9 +116,35 @@ html {
   list-style: none;
   overflow-x: auto;
   scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
 }
 .hnav__links::-webkit-scrollbar {
   display: none;
+}
+/* The <nav> is a flex item: without min-width: 0 it refuses to shrink below its
+   content, so the list never overflows and never scrolls — it just gets cut. */
+.hnav__inner > nav {
+  min-width: 0;
+  display: flex;
+  justify-content: flex-end;
+}
+.hnav__links {
+  max-width: 100%;
+}
+/* Items must not shrink, or the labels get clipped instead of the row scrolling. */
+.hnav__links li {
+  flex: 0 0 auto;
+}
+@media (max-width: 899px) {
+  .hnav__inner {
+    gap: 1rem;
+  }
+  /* Fade the right edge so a horizontally scrollable row reads as scrollable. */
+  .hnav__links {
+    padding-right: 1.5rem;
+    -webkit-mask-image: linear-gradient(90deg, #000 88%, transparent);
+    mask-image: linear-gradient(90deg, #000 88%, transparent);
+  }
 }
 .hnav__link {
   position: relative;
