@@ -1,0 +1,10 @@
+{
+  "name": "Bali Adventure",
+  "short_name": "Bali Adventure",
+  "description": "Luxury, fully private Bali itineraries designed by local guides.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#050B0D",
+  "theme_color": "#050B0D",
+  "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

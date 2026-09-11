@@ -1,0 +1,241 @@
+@import 'tailwindcss';
+
+/* ── Design tokens (spec: jungle-black / tropical-lime / text-gray / text-white) ──
+   The two text colours are named soft-gray / off-white so the utilities read as
+   `text-soft-gray` / `text-off-white` instead of `text-text-gray`. */
+@theme {
+  --color-jungle-black: #050b0d;
+  --color-tropical-lime: #c4d52a;
+  --color-soft-gray: #a0aab2;
+  --color-off-white: #eaeaea;
+  /* Glass surfaces (navbar pill, modals) */
+  --color-glass: #071014;
+
+  --font-sans: 'Outfit Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-serif: 'Playfair Display Variable', Georgia, 'Times New Roman', serif;
+  --font-display: 'Anton', Impact, 'Arial Narrow Bold', sans-serif;
+
+  --shadow-lime: 0 0 40px rgba(196, 213, 42, 0.35);
+  --shadow-lime-lg: 0 0 80px rgba(196, 213, 42, 0.45);
+  --ease-cinematic: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ── Base ─────────────────────────────────────────────────────────────── */
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    /* Hero copy is hidden inline and revealed by GSAP; GSAP is skipped under
+       reduced motion, so show it outright. */
+    [data-hero-content] {
+      opacity: 1 !important;
+      visibility: visible !important;
+      transform: none !important;
+    }
+  }
+}
+
+/* ── Components ───────────────────────────────────────────────────────── */
+@layer components {
+  .glass {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+  }
+
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: var(--color-tropical-lime);
+  }
+  .eyebrow::before {
+    content: '';
+    width: 2rem;
+    height: 1px;
+    background: currentColor;
+    opacity: 0.7;
+  }
+
+  .btn-lime {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 9999px;
+    background: var(--color-tropical-lime);
+    color: var(--color-jungle-black);
+    padding: 0.875rem 1.75rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    transition:
+      transform 0.35s var(--ease-cinematic),
+      box-shadow 0.35s var(--ease-cinematic),
+      filter 0.35s var(--ease-cinematic);
+  }
+  .btn-lime:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.08);
+    box-shadow: var(--shadow-lime);
+  }
+  .btn-lime:focus-visible {
+    outline: 2px solid var(--color-off-white);
+    outline-offset: 3px;
+  }
+
+  .btn-outline {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 9999px;
+    border: 1px solid rgba(234, 234, 234, 0.3);
+    color: var(--color-off-white);
+    padding: 0.875rem 1.75rem;
+    font-weight: 600;
+    background: rgba(5, 11, 13, 0.35);
+    backdrop-filter: blur(8px);
+    transition:
+      border-color 0.35s var(--ease-cinematic),
+      color 0.35s var(--ease-cinematic),
+      transform 0.35s var(--ease-cinematic),
+      background-color 0.35s var(--ease-cinematic);
+  }
+  .btn-outline:hover {
+    border-color: var(--color-tropical-lime);
+    color: var(--color-tropical-lime);
+    background: rgba(196, 213, 42, 0.06);
+    transform: translateY(-2px);
+  }
+  .btn-outline:focus-visible {
+    outline: 2px solid var(--color-tropical-lime);
+    outline-offset: 3px;
+  }
+
+  /* Navbar links: lime bottom border that grows in from the left. */
+  .nav-link {
+    position: relative;
+    padding-block: 0.25rem;
+    color: var(--color-soft-gray);
+    transition: color 0.3s var(--ease-cinematic);
+  }
+  .nav-link::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -2px;
+    height: 1.5px;
+    background: var(--color-tropical-lime);
+    transform: scaleX(0);
+    transform-origin: right;
+    transition: transform 0.4s var(--ease-cinematic);
+  }
+  .nav-link:hover,
+  .nav-link:focus-visible {
+    color: var(--color-off-white);
+    outline: none;
+  }
+  .nav-link:hover::after,
+  .nav-link:focus-visible::after {
+    transform: scaleX(1);
+    transform-origin: left;
+  }
+
+  /* Form controls (booking + newsletter) */
+  .field {
+    width: 100%;
+    border-radius: 0.875rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.04);
+    padding: 0.875rem 1rem;
+    color: var(--color-off-white);
+    color-scheme: dark;
+    transition:
+      border-color 0.3s var(--ease-cinematic),
+      box-shadow 0.3s var(--ease-cinematic),
+      background-color 0.3s var(--ease-cinematic);
+  }
+  .field::placeholder {
+    color: rgba(160, 170, 178, 0.6);
+  }
+  .field:focus {
+    outline: none;
+    border-color: rgba(196, 213, 42, 0.7);
+    background: rgba(196, 213, 42, 0.04);
+    box-shadow: 0 0 0 4px rgba(196, 213, 42, 0.12);
+  }
+  select.field option {
+    background: var(--color-glass);
+    color: var(--color-off-white);
+  }
+
+  /* Soft lime radial glow used as section ambience. */
+  .glow-lime {
+    background: radial-gradient(circle at center, rgba(196, 213, 42, 0.16), transparent 62%);
+  }
+}
+
+/* ── Keyframes ────────────────────────────────────────────────────────── */
+@keyframes pulseRing {
+  0% {
+    transform: scale(1);
+    opacity: 0.55;
+  }
+  100% {
+    transform: scale(1.9);
+    opacity: 0;
+  }
+}
+
+@keyframes scrollHint {
+  0%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.4;
+  }
+  50% {
+    transform: translateY(6px);
+    opacity: 1;
+  }
+}
+
+.pulse-ring::before,
+.pulse-ring::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  border: 1px solid rgba(196, 213, 42, 0.6);
+  animation: pulseRing 2.4s var(--ease-cinematic) infinite;
+}
+.pulse-ring::after {
+  animation-delay: 1.2s;
+}
+
+.scroll-hint {
+  animation: scrollHint 1.8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pulse-ring::before,
+  .pulse-ring::after,
+  .scroll-hint {
+    animation: none;
+  }
+}
