@@ -33,18 +33,21 @@ const ssrLoaders: Record<string, () => Promise<unknown>> = {
   mindloop: () => import('mindloop/ssr'),
   immersive_ocean: () => import('immersive_ocean/ssr'),
   viktor: () => import('viktor/ssr'),
+  bali: () => import('bali/ssr'),
 };
 const hydrateLoaders: Record<string, () => Promise<HydrateModule>> = {
   toonhub: () => import('toonhub/hydrate'),
   mindloop: () => import('mindloop/hydrate'),
   immersive_ocean: () => import('immersive_ocean/hydrate'),
   viktor: () => import('viktor/hydrate'),
+  bali: () => import('bali/hydrate'),
 };
 const mountLoaders: Record<string, () => Promise<MountModule>> = {
   toonhub: () => import('toonhub/mount'),
   mindloop: () => import('mindloop/mount'),
   immersive_ocean: () => import('immersive_ocean/mount'),
   viktor: () => import('viktor/mount'),
+  bali: () => import('bali/mount'),
 };
 
 interface LoaderData {

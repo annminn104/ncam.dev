@@ -3,7 +3,13 @@ import { getProject, projects } from './index';
 
 describe('project-registry', () => {
   it('exposes the live projects in gallery order', () => {
-    expect(projects.map((p) => p.id)).toEqual(['toonhub', 'mindloop', 'immersive-ocean', 'viktor']);
+    expect(projects.map((p) => p.id)).toEqual([
+      'toonhub',
+      'mindloop',
+      'immersive-ocean',
+      'viktor',
+      'bali',
+    ]);
   });
 
   it('getProject() finds by id and returns undefined for unknown ids', () => {

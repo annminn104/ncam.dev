@@ -17,6 +17,7 @@ const IMMERSIVE_OCEAN_REMOTE = env(
   'http://localhost:9003/remoteEntry.js',
 );
 const VIKTOR_REMOTE = env('VIKTOR_REMOTE_URL', 'http://localhost:9004/remoteEntry.js');
+const BALI_REMOTE = env('BALI_REMOTE_URL', 'http://localhost:9005/remoteEntry.js');
 const PORTFOLIO_PORT = Number(env('PORTFOLIO_PORT', '9000'));
 
 // Nitro leaves a handle open after its build, so `vite build` never exits on its
@@ -90,6 +91,11 @@ export default defineConfig({
           type: 'module',
           name: 'viktor',
           entry: VIKTOR_REMOTE,
+        },
+        bali: {
+          type: 'module',
+          name: 'bali',
+          entry: BALI_REMOTE,
         },
       },
       shared: {

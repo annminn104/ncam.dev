@@ -76,6 +76,19 @@ export const projects: ProjectEntry[] = [
     module: './mount',
     status: 'live',
   },
+  {
+    id: 'bali',
+    name: 'Bali Adventure',
+    tagline: 'Luxury travel landing page',
+    description:
+      'A cinematic dark-mode travel agency site for private Bali journeys — GSAP pinned 3-layer parallax hero, horizontal-scroll itinerary, clip-path reveals, framer-motion modals and glassmorphic UI. React + Tailwind v4 + GSAP.',
+    accent: '#C4D52A',
+    thumbnail: '/thumbnails/bali.jpg',
+    // Single-word name → already a valid identifier.
+    remote: 'bali',
+    module: './mount',
+    status: 'live',
+  },
 ];
 
 export function getProject(id: string): ProjectEntry | undefined {

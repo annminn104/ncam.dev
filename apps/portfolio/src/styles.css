@@ -190,6 +190,10 @@ body {
   min-height: 100vh;
   overflow-x: hidden;
   background: var(--bg);
+  /* Contract with remotes: a fixed top-of-page element (e.g. bali's centred
+     navbar pill) offsets itself by `var(--stage-top-inset, <standalone value>)`
+     so it clears the host's fixed "← Projects" button below. */
+  --stage-top-inset: 4.25rem;
 }
 .stage__mount {
   /* Natural height — each remote sizes itself (min-h-screen / 100svh); the page
