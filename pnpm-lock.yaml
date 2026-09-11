@@ -253,9 +253,21 @@ importers:
 
   apps/portfolio:
     dependencies:
+      '@fontsource-variable/inter':
+        specifier: ^5.3.0
+        version: 5.3.0
+      '@fontsource-variable/jetbrains-mono':
+        specifier: ^5.3.0
+        version: 5.3.0
+      '@fontsource-variable/syne':
+        specifier: ^5.3.0
+        version: 5.3.0
       '@module-federation/runtime':
         specifier: 2.7.0
         version: 2.7.0
+      '@ncam/design-tokens':
+        specifier: workspace:*
+        version: link:../../packages/design-tokens
       '@ncam/logger':
         specifier: workspace:*
         version: link:../../packages/logger
@@ -271,6 +283,9 @@ importers:
       '@tanstack/start-plugin-core':
         specifier: 1.171.20
         version: 1.171.20(@tanstack/react-router@1.170.18(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(crossws@0.4.10(srvx@0.11.22))(esbuild@0.28.1)(rolldown@1.1.5)(rollup@4.62.2)(vite@8.1.4(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.49.0)(tsx@4.23.1)(yaml@2.9.0))
+      gsap:
+        specifier: ^3.15.0
+        version: 3.15.0
       react:
         specifier: 19.2.7
         version: 19.2.7
@@ -310,6 +325,64 @@ importers:
         version: 5.9.3
       vite:
         specifier: ^8.1.0
+        version: 8.1.4(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.49.0)(tsx@4.23.1)(yaml@2.9.0)
+
+  apps/profile:
+    dependencies:
+      '@ncam/design-tokens':
+        specifier: workspace:*
+        version: link:../../packages/design-tokens
+      '@ncam/logger':
+        specifier: workspace:*
+        version: link:../../packages/logger
+      '@ncam/project-registry':
+        specifier: workspace:*
+        version: link:../../packages/project-registry
+      gsap:
+        specifier: ^3.15.0
+        version: 3.15.0
+      lucide-react:
+        specifier: ^1.24.0
+        version: 1.24.0(react@19.2.7)
+      react:
+        specifier: 19.2.7
+        version: 19.2.7
+      react-dom:
+        specifier: 19.2.7
+        version: 19.2.7(react@19.2.7)
+    devDependencies:
+      '@fontsource-variable/inter':
+        specifier: ^5.3.0
+        version: 5.3.0
+      '@fontsource-variable/jetbrains-mono':
+        specifier: ^5.3.0
+        version: 5.3.0
+      '@fontsource-variable/syne':
+        specifier: ^5.3.0
+        version: 5.3.0
+      '@ncam/mf-remote':
+        specifier: workspace:*
+        version: link:../../packages/mf-remote
+      '@ncam/tsconfig':
+        specifier: workspace:*
+        version: link:../../packages/tsconfig
+      '@types/node':
+        specifier: ^26.1.1
+        version: 26.1.1
+      '@types/react':
+        specifier: 19.2.17
+        version: 19.2.17
+      '@types/react-dom':
+        specifier: 19.2.3
+        version: 19.2.3(@types/react@19.2.17)
+      '@vitejs/plugin-react':
+        specifier: ^6.0.3
+        version: 6.0.3(vite@8.1.4(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.49.0)(tsx@4.23.1)(yaml@2.9.0))
+      typescript:
+        specifier: ^5.9.0
+        version: 5.9.3
+      vite:
+        specifier: ^8.1.4
         version: 8.1.4(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.49.0)(tsx@4.23.1)(yaml@2.9.0)
 
   apps/toonhub:
@@ -391,6 +464,8 @@ importers:
       vite:
         specifier: ^8.1.4
         version: 8.1.4(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.49.0)(tsx@4.23.1)(yaml@2.9.0)
+
+  packages/design-tokens: {}
 
   packages/logger:
     devDependencies:
@@ -812,11 +887,20 @@ packages:
     resolution: {integrity: sha512-+CNAzxglkrpNf/kKywqQfk74QjtceuOE7Qm+AF8miRvPF/wmmK5+OJOgVh3AVTT3RP2mH3+FOaxlE5v72owk0A==}
     engines: {node: ^20.19.0 || ^22.13.0 || >=24}
 
+  '@fontsource-variable/inter@5.3.0':
+    resolution: {integrity: sha512-OupL48va4JNofb97w6NYeF9S7W/kHNKM0Er8Dem5nqi4jeOLrVJDoE8tZEpnMJmtkvNbB1EIPPwHcdkF6b1oUA==}
+
+  '@fontsource-variable/jetbrains-mono@5.3.0':
+    resolution: {integrity: sha512-F32xpS2NsGYoQi2ADSkKTgpJj7ozajsGgDJ8woTnqjmIB+dxDIqImjl4pXZVEExu8UFZ2ndhmX18EBS/hdz3Lw==}
+
   '@fontsource-variable/outfit@5.3.0':
     resolution: {integrity: sha512-fPb5XnYK0k7SbR++HEmm4+ZqDszmLKQ+sPRUr8oQ/KNC0vy6r6hazJFe8iYozv4cqlHbvJ/JECkJWrfDodUMVQ==}
 
   '@fontsource-variable/playfair-display@5.3.0':
     resolution: {integrity: sha512-IHdzTvE8eGIXHteZql7KXoqdc3Gfm+Zs1u4XlSC3MeplkwviT3sx/P6gI0tLwg/xIYLF4ZJYveZ5V+bl9cnDwA==}
+
+  '@fontsource-variable/syne@5.3.0':
+    resolution: {integrity: sha512-GUNH65fUfWHQcX7bO0BGgScE465gawpTId45aDfhHcVj/upbb6b+2d++5keKP128vK8+LtE4dvLkKTsxoh7TwA==}
 
   '@fontsource/anton@5.3.0':
     resolution: {integrity: sha512-OR1D5n124n2XRs66SbX7IjcOSptljEJE8FcDNnlni2y1/M6KpTx7cU2PIWzTSsBj4WFkHPw24On8qw3qkQZuTw==}
@@ -3315,9 +3399,15 @@ snapshots:
       '@eslint/core': 1.2.1
       levn: 0.4.1
 
+  '@fontsource-variable/inter@5.3.0': {}
+
+  '@fontsource-variable/jetbrains-mono@5.3.0': {}
+
   '@fontsource-variable/outfit@5.3.0': {}
 
   '@fontsource-variable/playfair-display@5.3.0': {}
+
+  '@fontsource-variable/syne@5.3.0': {}
 
   '@fontsource/anton@5.3.0': {}
 
