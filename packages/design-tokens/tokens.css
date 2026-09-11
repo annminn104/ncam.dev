@@ -1,0 +1,28 @@
+/* ncam.dev design tokens — imported by the host (apps/portfolio/src/app.css) and
+   by the profile remote (apps/profile/src/styles/profile.css) so both sides of
+   the federation boundary agree on colour, type, layout and easing. */
+:root {
+  --bg: #0b0b12;
+  --surface: #14141f;
+  --surface-2: #1c1c2b;
+  --text: #f4f4f8;
+  --text-muted: #a2a2b8;
+  --border: rgba(255, 255, 255, 0.09);
+
+  --font-display: 'Syne Variable', 'Syne', ui-sans-serif, system-ui, sans-serif;
+  --font-body: 'Inter Variable', 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono Variable', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --accent: #8b7cff;
+  --accent-soft: rgba(139, 124, 255, 0.16);
+  --amber: #ffb457;
+  --mint: #5be49b;
+  --line: rgba(255, 255, 255, 0.08);
+  --line-strong: rgba(255, 255, 255, 0.16);
+
+  /* Host shell geometry the remote's section layout aligns to. */
+  --nav-h: 64px;
+  --rail-w: 232px;
+  --gutter: clamp(1.25rem, 4vw, 3rem);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+}
