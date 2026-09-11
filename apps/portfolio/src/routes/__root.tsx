@@ -1,10 +1,14 @@
 import { createRootRoute, HeadContent, Outlet, Scripts } from '@tanstack/react-router';
 import type { ReactNode } from 'react';
-import '../styles.css';
+// The stylesheet is linked from head() via `?url` (the TanStack Start pattern) so
+// the server-rendered HTML is styled on first paint. A plain side-effect import
+// would only attach the CSS once the client bundle runs (flash of unstyled page).
+// app.css @imports the self-hosted fonts, styles.css (base + stage) and home.css.
+import appCss from '../app.css?url';
 
-const TITLE = 'ncam.dev — Projects';
+const TITLE = 'Matthew (Minh Nguyen) — Frontend Developer · ncam.dev';
 const DESCRIPTION =
-  'Personal portfolio of Nguyen Cao Anh Minh — projects built as independent micro-frontends.';
+  'Detail-oriented Frontend Developer with 5 years of experience building responsive, high-performance web apps in React, Next.js, Remix and Angular. Every project on this site is an independent app mounted at runtime via Module Federation.';
 
 export const Route = createRootRoute({
   head: () => ({
@@ -24,13 +28,8 @@ export const Route = createRootRoute({
       { name: 'twitter:image', content: '/og.png' },
     ],
     links: [
+      { rel: 'stylesheet', href: appCss },
       { rel: 'icon', href: '/favicon.svg', type: 'image/svg+xml' },
-      { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
-      { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossOrigin: 'anonymous' },
-      {
-        rel: 'stylesheet',
-        href: 'https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700&display=swap',
-      },
     ],
   }),
   component: RootComponent,

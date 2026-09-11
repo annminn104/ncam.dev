@@ -1,0 +1,282 @@
+/* ======================================================================
+   ncam.dev — home page SHELL (src/routes/index.tsx): `.home`, the nav, the
+   manifest rail and the module slots. The six sections themselves are
+   federated modules of the `profile` remote and ship their own CSS
+   (apps/profile/src/styles/profile.css). Tokens: @ncam/design-tokens (app.css).
+   Class names are namespaced — remotes' Tailwind utilities never collide.
+   ====================================================================== */
+
+html {
+  scroll-behavior: smooth;
+}
+
+.home {
+  --page-bg: var(--bg);
+  position: relative;
+  min-height: 100vh;
+  background: var(--page-bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  overflow-x: clip;
+}
+
+/* Mount slots: `display: contents` so a module's <section> is laid out as a
+   direct child of <main> (the sticky hero needs the page as its containing
+   block, not a wrapper exactly as tall as itself). */
+.mf-slot {
+  display: contents;
+}
+.mf-slot__error {
+  position: relative;
+  z-index: 1;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: clamp(3rem, 8vw, 6rem) var(--gutter);
+  background: var(--page-bg);
+}
+@media (min-width: 1240px) {
+  .mf-slot__error {
+    max-width: 1480px;
+    padding-left: calc(var(--rail-w) + 5rem);
+  }
+}
+.mf-slot__error-card {
+  padding: 1.5rem 1.75rem;
+  border: 1px dashed color-mix(in srgb, #ff6b6b 50%, transparent);
+  border-radius: 20px;
+  background: color-mix(in srgb, #ff6b6b 6%, transparent);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  line-height: 1.7;
+  color: var(--text-muted);
+}
+.mf-slot__error-card strong {
+  color: var(--text);
+  font-weight: 600;
+}
+.mf-slot__error-card code {
+  color: #ff9b9b;
+}
+
+/* ---------------- Nav ---------------- */
+.hnav {
+  position: fixed;
+  inset: 0 0 auto 0;
+  z-index: 50;
+  height: var(--nav-h);
+  background: color-mix(in srgb, var(--page-bg) 72%, transparent);
+  border-bottom: 1px solid var(--line);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+.hnav__progress {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 2px;
+  transform: scaleX(0);
+  transform-origin: left;
+  background: linear-gradient(90deg, var(--accent), var(--amber));
+}
+.hnav__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  height: 100%;
+  max-width: 1480px;
+  margin: 0 auto;
+  padding: 0 var(--gutter);
+}
+.hnav__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--text);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.hnav__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--mint);
+  box-shadow: 0 0 0 4px rgba(91, 228, 155, 0.18);
+}
+.hnav__links {
+  display: flex;
+  gap: clamp(0.9rem, 2vw, 1.75rem);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.hnav__links::-webkit-scrollbar {
+  display: none;
+}
+.hnav__link {
+  position: relative;
+  display: inline-block;
+  padding: 0.5rem 0;
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--text-muted);
+  text-decoration: none;
+  transition: color 0.3s var(--ease-out);
+}
+.hnav__link::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: var(--accent);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.4s var(--ease-out);
+}
+.hnav__link:hover,
+.hnav__link[data-active] {
+  color: var(--text);
+}
+.hnav__link:hover::after,
+.hnav__link[data-active]::after {
+  transform: scaleX(1);
+}
+.hnav__link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ---------------- Manifest rail (signature) ----------------
+   Every section is a federated module; the rail shows its REAL lifecycle:
+   idle → loading → loaded → mounted (in view) → cached (seen), or failed. */
+.rail {
+  display: none;
+}
+@media (min-width: 1240px) {
+  .rail {
+    display: block;
+    position: fixed;
+    left: var(--gutter);
+    top: 50%;
+    z-index: 40;
+    width: var(--rail-w);
+    transform: translateY(-50%);
+    font-family: var(--font-mono);
+  }
+}
+.rail__title {
+  margin: 0 0 0.9rem;
+  font-size: 0.66rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.rail__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-left: 1px solid var(--line);
+}
+.rail__item a {
+  display: grid;
+  grid-template-columns: 10px 1fr auto;
+  align-items: center;
+  gap: 0.6rem;
+  margin-left: -1px;
+  padding: 0.5rem 0 0.5rem 0.9rem;
+  border-left: 1px solid transparent;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  text-decoration: none;
+  transition:
+    color 0.35s var(--ease-out),
+    border-color 0.35s var(--ease-out);
+}
+.rail__item a:hover {
+  color: var(--text);
+}
+.rail__item a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.rail__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.35;
+  transition:
+    background 0.35s,
+    box-shadow 0.35s,
+    opacity 0.35s;
+}
+.rail__status {
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+.rail__item[data-state='loading'] .rail__dot {
+  background: var(--amber);
+  opacity: 1;
+  animation: railPulse 0.9s ease-in-out infinite;
+}
+.rail__item[data-state='loaded'] .rail__dot {
+  background: var(--text-muted);
+  opacity: 0.8;
+}
+.rail__item[data-state='cached'] a {
+  color: color-mix(in srgb, var(--text) 70%, transparent);
+}
+.rail__item[data-state='cached'] .rail__dot {
+  background: var(--amber);
+  opacity: 0.9;
+}
+.rail__item[data-state='mounted'] a {
+  color: var(--text);
+  border-left-color: var(--accent);
+}
+.rail__item[data-state='mounted'] .rail__dot {
+  background: var(--mint);
+  opacity: 1;
+  box-shadow: 0 0 10px var(--mint);
+}
+.rail__item[data-state='error'] a {
+  color: #ff9b9b;
+}
+.rail__item[data-state='error'] .rail__dot {
+  background: #ff6b6b;
+  opacity: 1;
+}
+@keyframes railPulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* ---------------- Reduced motion ---------------- */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .home *,
+  .home *::before,
+  .home *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

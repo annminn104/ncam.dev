@@ -1,0 +1,9 @@
+/* The one stylesheet the host links from src/routes/__root.tsx (via `?url`), so
+   server-rendered HTML is styled on first paint. Vite inlines these @imports
+   (and rebases the font-file URLs) into a single hashed asset at build time. */
+@import '@fontsource-variable/syne/index.css';
+@import '@fontsource-variable/inter/index.css';
+@import '@fontsource-variable/jetbrains-mono/index.css';
+@import '@ncam/design-tokens/tokens.css';
+@import './styles.css';
+@import './home.css';

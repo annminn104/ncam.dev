@@ -1,14 +1,12 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { useEffect, useRef, useState } from 'react';
-import type { ModuleFederation } from '@module-federation/runtime';
 import { getProject, type ProjectEntry } from '@ncam/project-registry';
 import { createLogger } from '@ncam/logger';
+import { loadRemoteModuleSSR } from '../../lib/federation';
 
 const log = createLogger({ scope: 'portfolio' });
 
 const SITE_URL = 'https://ncam.dev';
-/** Federation host name — must match `federation({ name })` in vite.config.ts. */
-const HOST_NAME = 'portfolio';
 
 // Static import specifiers so the Module Federation plugin can transform them.
 // `./ssr` is server-safe (loader); `./hydrate` / `./mount` are client-only.
@@ -56,63 +54,20 @@ interface LoaderData {
 }
 const NO_SSR: LoaderData = { html: null, css: '' };
 
-async function getHostRuntime(): Promise<ModuleFederation> {
-  const { getInstance } = await import('@module-federation/runtime');
-  const runtime = getInstance((instance) => instance.name === HOST_NAME) ?? getInstance();
-  if (!runtime) throw new Error('federation host runtime is not initialised');
-  return runtime;
-}
-
 /**
- * Make a remote loadable again after a failed attempt (typically: the remote
- * was not up yet when the host booted). Two caches remember the failure and
- * never expire on their own — runtime-core keeps the rejected entry-load
- * promise, and the vite plugin's SSR loader caches its (null) SSR-entry
- * resolution — so without this the remote stays un-renderable until restart.
- */
-async function forgetFailedRemote(runtime: ModuleFederation, name: string): Promise<void> {
-  const remote = runtime.options.remotes.find((candidate) => candidate.name === name);
-  if (!remote) {
-    log.warn('project.ssr-forget-skipped', {
-      remote: name,
-      known: runtime.options.remotes.map((candidate) => candidate.name),
-    });
-    return;
-  }
-  // Re-registering with `force` drops the remote's module and its cached entry load.
-  runtime.registerRemotes([{ ...remote }], { force: true });
-  if ('entry' in remote && remote.entry) {
-    const { revalidate } = await import('@module-federation/vite/ssrEntryLoader');
-    revalidate(remote.entry);
-  }
-  log.info('project.ssr-remote-reset', { remote: name });
-}
-
-/**
- * Resolve a remote's `./ssr` module on the server. The transformed import
- * (see `ssrLoaders`) is only awaited for its side effect — booting the host
- * runtime and attempting the load; its stale rejection must not decide the
- * outcome, so the module is always taken from the runtime itself.
+ * Resolve a project remote's `./ssr` module on the server through the shared
+ * federation helper (runtime read + failed-remote reset, see lib/federation.ts).
  */
 async function loadSsrExports(
   project: ProjectEntry,
   load: () => Promise<unknown>,
 ): Promise<{ renderHeroSSR: RenderHeroSSR }> {
-  await load().catch(() => undefined);
-  const runtime = await getHostRuntime();
-  try {
-    const exports = await runtime.loadRemote<SsrExports>(`${project.remote}/ssr`);
-    const renderHeroSSR = exports?.renderHeroSSR;
-    if (typeof renderHeroSSR !== 'function') {
-      throw new Error(`${project.remote}/ssr does not export renderHeroSSR`);
-    }
-    return { renderHeroSSR };
-  } catch (error) {
-    await forgetFailedRemote(runtime, project.remote).catch((cleanupError: unknown) => {
-      log.warn('project.ssr-forget-failed', { id: project.id, error: String(cleanupError) });
-    });
-    throw error;
+  const exports = await loadRemoteModuleSSR<SsrExports>(project.remote, 'ssr', load);
+  const renderHeroSSR = exports.renderHeroSSR;
+  if (typeof renderHeroSSR !== 'function') {
+    throw new Error(`${project.remote}/ssr does not export renderHeroSSR`);
   }
+  return { renderHeroSSR };
 }
 
 export const Route = createFileRoute('/projects/$projectId')({

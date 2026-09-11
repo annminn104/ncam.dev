@@ -18,6 +18,8 @@ const IMMERSIVE_OCEAN_REMOTE = env(
 );
 const VIKTOR_REMOTE = env('VIKTOR_REMOTE_URL', 'http://localhost:9004/remoteEntry.js');
 const BALI_REMOTE = env('BALI_REMOTE_URL', 'http://localhost:9005/remoteEntry.js');
+// The home page's own sections live in the `profile` remote (one module each).
+const PROFILE_REMOTE = env('PROFILE_REMOTE_URL', 'http://localhost:9006/remoteEntry.js');
 const PORTFOLIO_PORT = Number(env('PORTFOLIO_PORT', '9000'));
 
 // Nitro leaves a handle open after its build, so `vite build` never exits on its
@@ -97,11 +99,22 @@ export default defineConfig({
           name: 'bali',
           entry: BALI_REMOTE,
         },
+        profile: {
+          type: 'module',
+          name: 'profile',
+          entry: PROFILE_REMOTE,
+        },
       },
       shared: {
         react: { singleton: true, requiredVersion: '^19.0.0' },
         'react-dom': { singleton: true, requiredVersion: '^19.0.0' },
       },
+      // `loaded-first`: resolve shared packages from what is already loaded (the
+      // host's React) instead of `version-first`, which eagerly loads EVERY
+      // registered remote's entry at host init to negotiate versions. On the
+      // server that init hangs forever if a single remote is unreachable, taking
+      // every SSR request down with it. Remotes bundle their own React anyway.
+      shareStrategy: 'loaded-first',
     }),
     tanstackStart(),
     react(),
