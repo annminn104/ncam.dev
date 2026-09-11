@@ -54,9 +54,11 @@ shaped `{ ssr(), hydrate(el), mount(el) }`.
 - Route `loader` (prod server only): `loadRemoteModuleSSR('profile', module,
 loader)` for the six modules **sequentially** → `mod.ssr()` →
   `{ html: {module: html}, css }` (~250 ms cold, ~10 ms warm). Any module that
-  fails or times out (8 s, `SSR_LOAD_TIMEOUT_MS`) is simply client-mounted. In
-  `vite dev` everything client-mounts (federated SSR is production-only, as for
-  the project route).
+  fails or times out (8 s, `SSR_LOAD_TIMEOUT_MS`) is simply client-mounted, and
+  the whole loop shares a 4 s page budget (`SSR_PAGE_BUDGET_MS`) so a serverless
+  host with a 10 s cap (Vercel Hobby) always gets a response. In `vite dev`
+  everything client-mounts (federated SSR is production-only, as for the project
+  route).
 - **Federation runtime robustness** (learned the hard way, keep both):
   - `shareStrategy: 'loaded-first'` in `vite.config.ts`. `version-first` makes
     the host runtime load EVERY registered remote's entry at init to negotiate

@@ -4,7 +4,7 @@ import { createLogger } from '@ncam/logger';
 import { HomeNav } from '../components/home/nav';
 import { ManifestRail, type LoadState } from '../components/home/manifest-rail';
 import { sections, type SectionMeta } from '../data/sections';
-import { loadRemoteModuleSSR } from '../lib/federation';
+import { loadRemoteModuleSSR, SSR_LOAD_TIMEOUT_MS } from '../lib/federation';
 import { ScrollTrigger } from '../lib/gsap';
 import { useSectionTracker } from '../lib/use-section-tracker';
 
@@ -13,6 +13,8 @@ const log = createLogger({ scope: 'portfolio' });
 const SITE_URL = 'https://ncam.dev';
 /** The remote that exposes the home-page sections (see apps/profile). */
 const REMOTE = 'profile';
+/** Total server-side budget for rendering the home sections (see the loader). */
+const SSR_PAGE_BUDGET_MS = 4_000;
 
 // Public facts for SEO (the full content lives in the remote's data file).
 const PERSON = {
@@ -82,14 +84,27 @@ export const Route = createFileRoute('/')({
   loader: async (): Promise<LoaderData> => {
     if (!import.meta.env.PROD || !import.meta.env.SSR) return NO_SSR;
     const data: LoaderData = { html: {}, css: '' };
+    // One budget for the whole page: serverless hosts cap a request (Vercel Hobby:
+    // 10 s), so a slow remote must cost sections their SSR, never the response.
+    const deadline = Date.now() + SSR_PAGE_BUDGET_MS;
     // Sequential on purpose: the first federated import also boots the host's MF
     // runtime for this process, and kicking six of those off concurrently
     // deadlocks the runtime's init. Later modules reuse the cached remote entry.
     for (const section of sections) {
       const load = loaders[section.module];
       if (!load) continue;
+      const remaining = deadline - Date.now();
+      if (remaining < 250) {
+        log.warn('home.ssr-budget-exhausted', { module: section.module });
+        continue;
+      }
       try {
-        const mod = await loadRemoteModuleSSR<SectionModule>(REMOTE, section.module, load);
+        const mod = await loadRemoteModuleSSR<SectionModule>(
+          REMOTE,
+          section.module,
+          load,
+          Math.min(SSR_LOAD_TIMEOUT_MS, remaining),
+        );
         if (typeof mod.ssr !== 'function') {
           throw new Error(`${REMOTE}/${section.module} does not export ssr()`);
         }

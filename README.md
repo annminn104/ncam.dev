@@ -145,27 +145,55 @@ Details and rules: root `AGENTS.md` → "Adding a new project".
 
 ## Deploy
 
-### Vercel (one project per app)
+### Vercel (one project per app — works on the free Hobby plan)
 
 Remotes are static Vite builds; the host is a Nitro server. Each app has its
-own `vercel.json`, so create one Vercel project per app with the matching
-**Root Directory**:
+own `vercel.json` (build command, output dir, CORS header for the remotes, and
+`ignoreCommand: npx turbo-ignore` so a push only rebuilds the apps it touched),
+so create **one Vercel project per app** from this repo with the matching
+**Root Directory**. Suggested project names (all free on `*.vercel.app` as of
+Sep 2026; `ncam.vercel.app` itself is taken):
 
-1. **Remotes** (`apps/toonhub`, `apps/mindloop`, `apps/immersive-ocean`,
-   `apps/viktor`, `apps/bali`, `apps/profile`): `framework: vite`, `pnpm build`,
-   output `dist`, and an `Access-Control-Allow-Origin: *` header so the host can
-   fetch `remoteEntry.js` cross-origin. Note each deployed URL.
-2. **Host** (`apps/portfolio`): set `TOONHUB_REMOTE_URL`, `MINDLOOP_REMOTE_URL`,
-   `IMMERSIVE_OCEAN_REMOTE_URL`, `VIKTOR_REMOTE_URL`, `BALI_REMOTE_URL`,
-   `PROFILE_REMOTE_URL` to
-   `https://<remote-domain>/remoteEntry.js`. Nitro detects Vercel and emits the
-   Build Output; `vercel.json` just runs `pnpm build`.
-3. Own domain? Update the `SITE_URL` constants in
-   `apps/portfolio/src/routes/index.tsx` and `routes/projects/$projectId.tsx`
-   (canonical / OG / JSON-LD) plus `public/robots.txt` and `public/sitemap.xml`.
+| Project                | Root Directory         | Production URL                             |
+| ---------------------- | ---------------------- | ------------------------------------------ |
+| `ncam-dev`             | `apps/portfolio`       | `https://ncam-dev.vercel.app` (→ ncam.dev) |
+| `ncam-toonhub`         | `apps/toonhub`         | `https://ncam-toonhub.vercel.app`          |
+| `ncam-mindloop`        | `apps/mindloop`        | `https://ncam-mindloop.vercel.app`         |
+| `ncam-immersive-ocean` | `apps/immersive-ocean` | `https://ncam-immersive-ocean.vercel.app`  |
+| `ncam-viktor`          | `apps/viktor`          | `https://ncam-viktor.vercel.app`           |
+| `ncam-bali`            | `apps/bali`            | `https://ncam-bali.vercel.app`             |
+| `ncam-profile`         | `apps/profile`         | `https://ncam-profile.vercel.app`          |
 
-Optional: skip unaffected builds with an Ignored Build Step of
-`npx turbo-ignore`, and share the Turbo cache with `npx turbo login && npx turbo link`.
+1. **Remotes first** (the six `ncam-*` projects): framework Vite, everything else
+   comes from `vercel.json`. Deploy and note each production URL.
+2. **Host** (`ncam-dev`, root `apps/portfolio`): add these Production environment
+   variables — they are baked into the build, so redeploy the host after changing
+   one:
+
+   ```
+   TOONHUB_REMOTE_URL=https://ncam-toonhub.vercel.app/remoteEntry.js
+   MINDLOOP_REMOTE_URL=https://ncam-mindloop.vercel.app/remoteEntry.js
+   IMMERSIVE_OCEAN_REMOTE_URL=https://ncam-immersive-ocean.vercel.app/remoteEntry.js
+   VIKTOR_REMOTE_URL=https://ncam-viktor.vercel.app/remoteEntry.js
+   BALI_REMOTE_URL=https://ncam-bali.vercel.app/remoteEntry.js
+   PROFILE_REMOTE_URL=https://ncam-profile.vercel.app/remoteEntry.js
+   ```
+
+   Nitro detects Vercel and emits the Build Output; SSR runs in a serverless
+   function (Hobby: 10 s max). The home loader keeps a 4 s total budget for the
+   six profile modules and each federated load times out individually, so a slow
+   or missing remote costs its section SSR, never the response.
+
+3. Own domain? Point `ncam.dev` at the host project and update the `SITE_URL`
+   constants in `apps/portfolio/src/routes/index.tsx` and
+   `routes/projects/$projectId.tsx` (canonical / OG / JSON-LD) plus
+   `public/robots.txt` and `public/sitemap.xml`. Remotes can stay on
+   `*.vercel.app`.
+
+Hobby notes: one concurrent build (a push touching everything builds the seven
+projects one after another, ~10 min; `turbo-ignore` skips the untouched ones),
+non-commercial use only, share the Turbo cache with
+`npx turbo login && npx turbo link`.
 
 ### Docker
 
