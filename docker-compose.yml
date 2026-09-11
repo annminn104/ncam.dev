@@ -33,6 +33,7 @@ services:
         MINDLOOP_REMOTE_URL: http://mindloop.localhost:9002/remoteEntry.js
         IMMERSIVE_OCEAN_REMOTE_URL: http://immersive-ocean.localhost:9003/remoteEntry.js
         VIKTOR_REMOTE_URL: http://viktor.localhost:9004/remoteEntry.js
+        BALI_REMOTE_URL: http://bali.localhost:9005/remoteEntry.js
     image: ncam-monorepo:latest
     command: ['node', 'apps/portfolio/.output/server/index.mjs']
     environment:
@@ -46,6 +47,7 @@ services:
       - mindloop
       - immersive-ocean
       - viktor
+      - bali
 
   toonhub:
     image: ncam-monorepo:latest
@@ -98,6 +100,16 @@ services:
         aliases:
           - viktor.localhost
 
+  bali:
+    image: ncam-monorepo:latest
+    command: ['pnpm', '--filter', '@ncam/bali', 'preview', '--host', '0.0.0.0', '--port', '9005']
+    ports:
+      - '9005:9005'
+    networks:
+      default:
+        aliases:
+          - bali.localhost
+
   # ── Optional reverse proxy — only runs with `--profile gateway` ──────────
   gateway:
     profiles: ['gateway']
@@ -112,6 +124,7 @@ services:
       - mindloop
       - immersive-ocean
       - viktor
+      - bali
     networks:
       default:
         aliases:
