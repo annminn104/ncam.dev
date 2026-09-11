@@ -14,15 +14,16 @@ Turborepo + pnpm workspaces, TypeScript everywhere.
 
 ## Layout
 
-| Path                   | What it is                                                                                                       | Dev URL                 |
-| ---------------------- | ---------------------------------------------------------------------------------------------------------------- | ----------------------- |
-| `apps/portfolio`       | **Host.** TanStack Start (SSR, Nitro) + TanStack Router, React 19. Gallery + `/projects/$projectId` stage.       | `http://localhost:9000` |
-| `apps/toonhub`         | TOONHUB — collectible-figurine carousel hero. Framework-free TypeScript remote.                                  | `http://localhost:9001` |
-| `apps/mindloop`        | Mindloop — dark newsletter landing page. React 19, Tailwind v4, framer-motion, hls.js.                           | `http://localhost:9002` |
-| `apps/immersive-ocean` | Immersive Ocean — creative-studio hero with looping video background. React 19, Tailwind v4.                     | `http://localhost:9003` |
-| `apps/viktor`          | Viktor. — portfolio hero with crossfade video switcher. React 19, Tailwind v4.                                   | `http://localhost:9004` |
-| `apps/bali`            | Bali Adventure — cinematic luxury-travel landing page. React 19, Tailwind v4, GSAP ScrollTrigger, framer-motion. | `http://localhost:9005` |
-| `packages/*`           | `project-registry` (typed project list), `mf-remote` (`defineRemote()` + `.env` reader), `logger`, `tsconfig`    | —                       |
+| Path                   | What it is                                                                                                                     | Dev URL                 |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------ | ----------------------- |
+| `apps/portfolio`       | **Host.** TanStack Start (SSR, Nitro) + TanStack Router, React 19. Home shell + `/projects/$projectId` stage.                  | `http://localhost:9000` |
+| `apps/profile`         | The home page's six sections (hero, stacks, experience, projects, blog, contact), one federated module each.                   | `http://localhost:9006` |
+| `apps/toonhub`         | TOONHUB — collectible-figurine carousel hero. Framework-free TypeScript remote.                                                | `http://localhost:9001` |
+| `apps/mindloop`        | Mindloop — dark newsletter landing page. React 19, Tailwind v4, framer-motion, hls.js.                                         | `http://localhost:9002` |
+| `apps/immersive-ocean` | Immersive Ocean — creative-studio hero with looping video background. React 19, Tailwind v4.                                   | `http://localhost:9003` |
+| `apps/viktor`          | Viktor. — portfolio hero with crossfade video switcher. React 19, Tailwind v4.                                                 | `http://localhost:9004` |
+| `apps/bali`            | Bali Adventure — cinematic luxury-travel landing page. React 19, Tailwind v4, GSAP ScrollTrigger, framer-motion.               | `http://localhost:9005` |
+| `packages/*`           | `project-registry` (typed project list), `mf-remote` (`defineRemote()` + `.env` reader), `design-tokens`, `logger`, `tsconfig` | —                       |
 
 Each app and package carries its own `AGENTS.md` with the rules for that unit;
 the root [`AGENTS.md`](AGENTS.md) covers cross-cutting concerns.
@@ -39,6 +40,10 @@ the root [`AGENTS.md`](AGENTS.md) covers cross-cutting concerns.
    where used) and exposes `mount` / `ssr` / `hydrate`. Nothing is shared across
    the host↔remote boundary, so a remote behaves identically standalone and
    mounted. `packages/mf-remote` encapsulates that Vite config.
+5. The home page eats its own dog food: its six sections are modules of the
+   `profile` remote (`profile/hero` … `profile/contact`, each `{ ssr, hydrate,
+mount }`). The host server-renders them in parallel, hydrates each into a
+   slot, and the manifest rail shows every module's real lifecycle.
 
 ## Prerequisites
 
@@ -55,7 +60,7 @@ the root [`AGENTS.md`](AGENTS.md) covers cross-cutting concerns.
 
 ```bash
 pnpm install
-pnpm dev          # host :9000 + every remote :9001–:9005 via Turbo
+pnpm dev          # host :9000 + every remote :9001–:9006 via Turbo
 ```
 
 Open http://localhost:9000 and click a project — the host loads that remote at
@@ -90,11 +95,11 @@ Non-secret defaults live in the committed **`.env`**; machine-specific overrides
 go in **`.env.local`** (gitignored). Precedence, highest first: the real
 environment, then `.env.local`, then `.env`. Never put secrets in `.env`.
 
-| Variable                                                                                                          | Purpose                                                                  |
-| ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| `PORTFOLIO_PORT`, `TOONHUB_PORT`, `MINDLOOP_PORT`, `IMMERSIVE_OCEAN_PORT`, `VIKTOR_PORT`, `BALI_PORT`             | Dev / preview ports.                                                     |
-| `TOONHUB_REMOTE_URL`, `MINDLOOP_REMOTE_URL`, `IMMERSIVE_OCEAN_REMOTE_URL`, `VIKTOR_REMOTE_URL`, `BALI_REMOTE_URL` | `remoteEntry.js` URL the host loads for each remote. **Baked at build.** |
-| `TOONHUB_BASE`, `MINDLOOP_BASE`, `IMMERSIVE_OCEAN_BASE`, `VIKTOR_BASE`, `BALI_BASE`                               | Public base path per remote (default `/`).                               |
+| Variable                                                                                                                                | Purpose                                                                  |
+| --------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| `PORTFOLIO_PORT`, `TOONHUB_PORT`, `MINDLOOP_PORT`, `IMMERSIVE_OCEAN_PORT`, `VIKTOR_PORT`, `BALI_PORT`, `PROFILE_PORT`                   | Dev / preview ports.                                                     |
+| `TOONHUB_REMOTE_URL`, `MINDLOOP_REMOTE_URL`, `IMMERSIVE_OCEAN_REMOTE_URL`, `VIKTOR_REMOTE_URL`, `BALI_REMOTE_URL`, `PROFILE_REMOTE_URL` | `remoteEntry.js` URL the host loads for each remote. **Baked at build.** |
+| `TOONHUB_BASE`, `MINDLOOP_BASE`, `IMMERSIVE_OCEAN_BASE`, `VIKTOR_BASE`, `BALI_BASE`, `PROFILE_BASE`                                     | Public base path per remote (default `/`).                               |
 
 ## Thumbnails
 
@@ -147,11 +152,12 @@ own `vercel.json`, so create one Vercel project per app with the matching
 **Root Directory**:
 
 1. **Remotes** (`apps/toonhub`, `apps/mindloop`, `apps/immersive-ocean`,
-   `apps/viktor`, `apps/bali`): `framework: vite`, `pnpm build`, output `dist`,
-   and an `Access-Control-Allow-Origin: *` header so the host can fetch
-   `remoteEntry.js` cross-origin. Note each deployed URL.
+   `apps/viktor`, `apps/bali`, `apps/profile`): `framework: vite`, `pnpm build`,
+   output `dist`, and an `Access-Control-Allow-Origin: *` header so the host can
+   fetch `remoteEntry.js` cross-origin. Note each deployed URL.
 2. **Host** (`apps/portfolio`): set `TOONHUB_REMOTE_URL`, `MINDLOOP_REMOTE_URL`,
-   `IMMERSIVE_OCEAN_REMOTE_URL`, `VIKTOR_REMOTE_URL`, `BALI_REMOTE_URL` to
+   `IMMERSIVE_OCEAN_REMOTE_URL`, `VIKTOR_REMOTE_URL`, `BALI_REMOTE_URL`,
+   `PROFILE_REMOTE_URL` to
    `https://<remote-domain>/remoteEntry.js`. Nitro detects Vercel and emits the
    Build Output; `vercel.json` just runs `pnpm build`.
 3. Own domain? Update the `SITE_URL` constants in

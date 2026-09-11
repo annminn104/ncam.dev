@@ -34,6 +34,7 @@ services:
         IMMERSIVE_OCEAN_REMOTE_URL: http://immersive-ocean.localhost:9003/remoteEntry.js
         VIKTOR_REMOTE_URL: http://viktor.localhost:9004/remoteEntry.js
         BALI_REMOTE_URL: http://bali.localhost:9005/remoteEntry.js
+        PROFILE_REMOTE_URL: http://profile.localhost:9006/remoteEntry.js
     image: ncam-monorepo:latest
     command: ['node', 'apps/portfolio/.output/server/index.mjs']
     environment:
@@ -48,6 +49,7 @@ services:
       - immersive-ocean
       - viktor
       - bali
+      - profile
 
   toonhub:
     image: ncam-monorepo:latest
@@ -110,6 +112,16 @@ services:
         aliases:
           - bali.localhost
 
+  profile:
+    image: ncam-monorepo:latest
+    command: ['pnpm', '--filter', '@ncam/profile', 'preview', '--host', '0.0.0.0', '--port', '9006']
+    ports:
+      - '9006:9006'
+    networks:
+      default:
+        aliases:
+          - profile.localhost
+
   # ── Optional reverse proxy — only runs with `--profile gateway` ──────────
   gateway:
     profiles: ['gateway']
@@ -125,6 +137,7 @@ services:
       - immersive-ocean
       - viktor
       - bali
+      - profile
     networks:
       default:
         aliases:
