@@ -73,7 +73,7 @@ apps/strapi/
   types/generated/           components.d.ts contentTypes.d.ts (committed)
 ```
 
-- `package.json` scripts: `dev` → `strapi develop`, `build` → `strapi build`,
+- `package.json` scripts: `dev` → `strapi develop --no-open`, `build` → `strapi build`,
   `start` → `strapi start`, `typecheck` → `tsc --noEmit`, `setup:env` →
   `node scripts/setup-env.mjs`, `strapi` → `strapi` (CLI passthrough, e.g.
   `pnpm --filter @ncam/strapi strapi ts:generate-types`).
@@ -186,11 +186,12 @@ POSTGRES_PASSWORD=
 
 - `scripts/setup-env.mjs`: if `.env` exists, print "exists, nothing to do" and
   exit 0. Otherwise copy `.env.example` to `.env` and fill each empty secret
-  with `crypto.randomBytes(32).toString('base64')` (`APP_KEYS` gets four
+  with `crypto.randomBytes(32).toString('base64url')` (`APP_KEYS` gets four
   comma-separated values; `DATABASE_PASSWORD` and `POSTGRES_PASSWORD` get the
-  same value, URL-safe base64). No dependencies, Node built-ins only.
-- `config/server.ts`: `host`, `port`, `url: env('PUBLIC_URL', undefined)`,
-  `app.keys: env.array('APP_KEYS')`.
+  same value). The pure `renderEnv(template, secret)` is unit-tested with an
+  injected generator. No dependencies, Node built-ins only.
+- `config/server.ts`: `host`, `port`, `url: env('PUBLIC_URL') || undefined`
+  (an empty value in `.env` must not become `url: ''`), `app.keys: env.array('APP_KEYS')`.
 - `config/database.ts`: template code — `DATABASE_CLIENT` picks `sqlite`
   (filename resolved relative to the app root) or `postgres`
   (`DATABASE_HOST/PORT/NAME/USERNAME/PASSWORD/SSL`).
@@ -236,13 +237,17 @@ export function estimateReadingTime(blocks: unknown): number;
    copy of the app with production `node_modules` only. `--legacy` is required
    because the workspace does not set `inject-workspace-packages`; the app has
    no workspace dependencies, so the legacy implementation is exactly right.
-   `apps/strapi/package.json` gets `"files": ["dist", "public", "database", "favicon.png"]`
-   so the gitignored `dist/` is still copied by `deploy`.
+   `apps/strapi/package.json` gets
+   `"files": ["dist", "public", "database", "favicon.png", "tsconfig.json"]` so the
+   gitignored `dist/` is still copied by `deploy`. `tsconfig.json` is required at
+   runtime: without it `strapi start` treats the folder as a JavaScript project and
+   ignores `dist/` (verified in the spike).
 4. `runner`: `NODE_ENV=production`; `COPY --from=build --chown=node:node /out /app`;
    `USER node`; `WORKDIR /app`; `EXPOSE 1337`;
    `HEALTHCHECK` with `node -e "fetch('http://127.0.0.1:1337/_health').then(r => process.exit(r.status === 204 ? 0 : 1)).catch(() => process.exit(1))"`
    (the slim image has no `curl`/`wget`);
-   `CMD ["node_modules/.bin/strapi", "start"]`.
+   `CMD ["node", "node_modules/@strapi/strapi/bin/strapi.js", "start"]` (PID 1 is
+   node, so SIGTERM reaches Strapi directly; no pnpm in the runtime image).
 
 `sharp` and `better-sqlite3` ship prebuilt binaries for linux-x64 glibc, so no
 `apt-get` toolchain is expected; if the build proves otherwise, the `build`
@@ -254,7 +259,9 @@ stage adds `python3 make g++` and the note lands in `AGENTS.md`.
 strapi:
   build: { context: ., dockerfile: apps/strapi/Dockerfile }
   image: ncam-strapi:latest
-  env_file: apps/strapi/.env # secrets + DB credentials + PUBLIC_URL; never committed
+  env_file:
+    - path: apps/strapi/.env # secrets + DB credentials + PUBLIC_URL; never committed
+      required: false # absent file → `docker compose up portfolio` still works
   environment: # compose-specific overrides win over env_file
     NODE_ENV: production
     HOST: 0.0.0.0
@@ -270,7 +277,9 @@ strapi:
 
 strapi-db:
   image: postgres:16-alpine
-  env_file: apps/strapi/.env # POSTGRES_DB / POSTGRES_USER / POSTGRES_PASSWORD
+  env_file:
+    - path: apps/strapi/.env # POSTGRES_DB / POSTGRES_USER / POSTGRES_PASSWORD
+      required: false
   volumes: ['strapi-db-data:/var/lib/postgresql/data']
   healthcheck:
     test: ['CMD-SHELL', 'pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB']
@@ -294,30 +303,36 @@ dependency chain, so `docker compose up portfolio` keeps working without a datab
 
 ### nginx gateway
 
-Add `upstream strapi { server strapi:1337; }` and a server block for
-`cms.localhost` proxying `/` to it with `client_max_body_size 25m;` (media
-uploads). Comment: in production swap `cms.localhost` for the real CMS
-sub-domain and set `PUBLIC_URL` / `STRAPI_PUBLIC_URL` to match.
+Add a server block for `cms.localhost` with `client_max_body_size 25m;` (media
+uploads) that proxies `/` to `http://strapi:1337` through a variable plus
+`resolver 127.0.0.11` (Docker's embedded DNS) instead of a static `upstream`,
+so the gateway still starts when the optional strapi container is down.
+Comment: in production swap `cms.localhost` for the real CMS sub-domain and set
+`PUBLIC_URL` in `apps/strapi/.env` to match.
 
 ### Root Dockerfile and `.dockerignore`
 
-- Root `Dockerfile` build stage: `pnpm build --filter=!@ncam/strapi` so the
-  monorepo image never compiles the Strapi admin (it has its own image).
+- Root `Dockerfile` build stage: `pnpm install … --filter '!@ncam/strapi'` and
+  `pnpm exec turbo run build --filter '!@ncam/strapi'` so the monorepo image
+  neither installs nor builds Strapi (it has its own image). `turbo` is invoked
+  directly because `pnpm build --filter …` would be consumed by pnpm's own
+  `--filter` option.
 - `.dockerignore`: add `**/.env`, `**/.env.*`, `**/.tmp`, `**/.strapi`,
-  `apps/strapi/public/uploads` so local secrets, the SQLite file and uploaded
-  media never enter any build context.
+  `apps/strapi/public/uploads/*` (keeping `.gitkeep`, so the image owns the
+  directory the uploads volume mounts on) so local secrets, the SQLite file and
+  uploaded media never enter any build context.
 
 ## 9. Monorepo integration
 
-| File                        | Change                                                                                                                                                                                                                                  |
-| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pnpm-workspace.yaml`       | `allowBuilds`: add `better-sqlite3: true` plus any other native package pnpm lists as "ignored build scripts" during install                                                                                                            |
-| `turbo.json`                | `build.env`: add `"STRAPI_*"`, `"PUBLIC_URL"` (admin build reads `STRAPI_ADMIN_*`). `build.outputs` already covers `dist/**`                                                                                                            |
-| `vitest.config.ts`          | `include`: add `apps/strapi/src/**/*.test.ts`                                                                                                                                                                                           |
-| `eslint.config.mjs`         | `ignores`: add `apps/strapi/types/generated/**`, `apps/strapi/.strapi/**`, `apps/strapi/.tmp/**`, `apps/strapi/database/**`                                                                                                             |
-| `.prettierignore`           | add `apps/strapi/types/generated`, `apps/strapi/.strapi`, `apps/strapi/.tmp`                                                                                                                                                            |
-| `.gitignore`                | root: no change. Template `apps/strapi/.gitignore` must cover `.env`, `.tmp`, `.strapi`, `dist`, `build`, `public/uploads/*` (add any missing line) and must **not** ignore `types/generated` (delete that line if the template has it) |
-| `apps/strapi/tsconfig.json` | template + `"exclude"` keeps `**/*.test.ts`, `src/admin/` and `scripts/` out of `dist`                                                                                                                                                  |
+| File                        | Change                                                                                                                                                                                                                                                                                              |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm-workspace.yaml`       | `allowBuilds`: add `@swc/core`, `better-sqlite3`, `core-js-pure`, `sharp` (the template's own allow-list); `overrides`: `sharp@0.35 → 0.35.4`, `nodemailer@9 → 9.1.0` (high advisories); `auditConfig.ignoreGhsas`: `GHSA-fx2h-pf6j-xcff` (vite 5 dev-server-only issue, unfixable within Strapi 5) |
+| `turbo.json`                | `build.env`: add `"STRAPI_*"`, `"PUBLIC_URL"` (admin build reads `STRAPI_ADMIN_*`). `build.outputs` already covers `dist/**`                                                                                                                                                                        |
+| `vitest.config.ts`          | `include`: add `apps/strapi/**/*.test.ts` (covers `src/lib/*.test.ts` and `scripts/*.test.ts`)                                                                                                                                                                                                      |
+| `eslint.config.mjs`         | `ignores`: add `apps/strapi/types/generated/**`, `apps/strapi/.strapi/**`, `apps/strapi/.tmp/**`                                                                                                                                                                                                    |
+| `.prettierignore`           | add `apps/strapi/types/generated`, `apps/strapi/.strapi`, `apps/strapi/.tmp`, `apps/strapi/public/uploads`                                                                                                                                                                                          |
+| `.gitignore`                | root: no change. Template `apps/strapi/.gitignore` must cover `.env`, `.tmp`, `.strapi`, `dist`, `build`, `public/uploads/*` (add any missing line) and must **not** ignore `types/generated` (delete that line if the template has it)                                                             |
+| `apps/strapi/tsconfig.json` | template + `"exclude"` keeps `**/*.test.ts`, `src/admin/` and `scripts/` out of `dist`                                                                                                                                                                                                              |
 
 `pnpm dev` (turbo) will also start `strapi develop` on `:1337` alongside the
 federation apps; `pnpm --filter @ncam/strapi dev` runs it alone.
