@@ -122,6 +122,54 @@ services:
         aliases:
           - profile.localhost
 
+  # ── CMS (Strapi): own image + Postgres. Not in the portfolio chain, so the
+  # frontend stack keeps working without it. Before the first run create the
+  # secrets file:  pnpm --filter @ncam/strapi setup:env   (apps/strapi/.env)
+  # Then:          docker compose up --build strapi        → http://localhost:1337/admin
+  strapi:
+    build:
+      context: .
+      dockerfile: apps/strapi/Dockerfile
+      args:
+        NODE_VERSION: '22'
+    image: ncam-strapi:latest
+    env_file:
+      - path: apps/strapi/.env # secrets, DB credentials, PUBLIC_URL — never committed
+        required: false
+    environment: # compose-specific values win over env_file
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: '1337'
+      DATABASE_CLIENT: postgres
+      DATABASE_HOST: strapi-db
+      DATABASE_PORT: '5432'
+    ports:
+      - '1337:1337'
+    volumes:
+      - strapi-uploads:/app/public/uploads
+    depends_on:
+      strapi-db:
+        condition: service_healthy
+    networks:
+      default:
+        aliases:
+          - cms.localhost
+    restart: unless-stopped
+
+  strapi-db:
+    image: postgres:16-alpine
+    env_file:
+      - path: apps/strapi/.env # POSTGRES_DB / POSTGRES_USER / POSTGRES_PASSWORD
+        required: false
+    volumes:
+      - strapi-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
   # ── Optional reverse proxy — only runs with `--profile gateway` ──────────
   gateway:
     profiles: ['gateway']
@@ -142,3 +190,7 @@ services:
       default:
         aliases:
           - ncam.localhost
+
+volumes:
+  strapi-uploads:
+  strapi-db-data:

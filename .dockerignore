@@ -28,3 +28,12 @@ Dockerfile
 .dockerignore
 docker-compose.yml
 README.md
+
+# Strapi (apps/strapi): local secrets, SQLite, admin build context, uploaded media.
+# Keep public/uploads/.gitkeep so the image owns the directory the volume mounts on.
+**/.env
+**/.env.*
+**/.tmp
+**/.strapi
+apps/strapi/public/uploads/*
+!apps/strapi/public/uploads/.gitkeep
