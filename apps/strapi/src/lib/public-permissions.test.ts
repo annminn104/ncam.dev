@@ -8,17 +8,29 @@ interface Fake {
   log: { info: ReturnType<typeof vi.fn>; warn: ReturnType<typeof vi.fn> };
 }
 
-/** Minimal stand-in for `strapi.db.query()` + `strapi.log`. */
-function fakeStrapi(options: { role: { id: number } | null; existing: string[] }): Fake {
+/** Minimal stand-in for `strapi.db.query()` + `strapi.log`, scoped by the `where` clause. */
+function fakeStrapi(options: {
+  role: { id: number } | null;
+  existing: Array<{ action: string; roleId: number }>;
+}): Fake {
   const created: Fake['created'] = [];
   const log = { info: vi.fn(), warn: vi.fn() };
   const strapi = {
     db: {
       query: (uid: string) => ({
-        findOne: vi.fn(async () =>
-          uid === 'plugin::users-permissions.role' ? options.role : null,
+        findOne: vi.fn(async ({ where }: { where: { type: string } }) =>
+          uid === 'plugin::users-permissions.role' && where.type === 'public' ? options.role : null,
         ),
-        findMany: vi.fn(async () => options.existing.map((action) => ({ action }))),
+        findMany: vi.fn(
+          async ({ where }: { where: { role: { id: number }; action: { $in: string[] } } }) =>
+            options.existing
+              .filter(
+                (permission) =>
+                  permission.roleId === where.role.id &&
+                  where.action.$in.includes(permission.action),
+              )
+              .map((permission) => ({ action: permission.action })),
+        ),
         create: vi.fn(async ({ data }: { data: { action: string; role: number } }) => {
           created.push(data);
           return data;
@@ -54,16 +66,30 @@ describe('ensurePublicReadPermissions', () => {
   it('adds only the missing actions', async () => {
     const { strapi, created } = fakeStrapi({
       role: { id: 2 },
-      existing: ['api::article.article.find', 'api::tag.tag.find', 'api::tag.tag.findOne'],
+      existing: [
+        { action: 'api::article.article.find', roleId: 2 },
+        { action: 'api::tag.tag.find', roleId: 2 },
+        { action: 'api::tag.tag.findOne', roleId: 2 },
+      ],
     });
     expect(await ensurePublicReadPermissions(strapi)).toEqual(['api::article.article.findOne']);
     expect(created).toHaveLength(1);
   });
 
+  it('ignores permissions that belong to a different role', async () => {
+    const { strapi, created } = fakeStrapi({
+      role: { id: 2 },
+      existing: [{ action: 'api::article.article.find', roleId: 1 }],
+    });
+    expect(await ensurePublicReadPermissions(strapi)).toEqual([...PUBLIC_READ_ACTIONS]);
+    expect(created).toHaveLength(4);
+    expect(created.every((c) => c.role === 2)).toBe(true);
+  });
+
   it('is a silent no-op when everything is already granted', async () => {
     const { strapi, created, log } = fakeStrapi({
       role: { id: 2 },
-      existing: [...PUBLIC_READ_ACTIONS],
+      existing: PUBLIC_READ_ACTIONS.map((action) => ({ action, roleId: 2 })),
     });
     expect(await ensurePublicReadPermissions(strapi)).toEqual([]);
     expect(created).toHaveLength(0);
