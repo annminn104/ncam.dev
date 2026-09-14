@@ -11,6 +11,8 @@ build/
 
 # ---- caches / task runners ----
 .turbo/
+# superpowers (agent skills) scratch: plan ledgers, briefs, review packages
+.superpowers/
 .vite/
 .cache/
 *.tsbuildinfo
