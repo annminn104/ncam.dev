@@ -4,6 +4,11 @@ packages:
 allowBuilds:
   '@parcel/watcher': true
   esbuild: true
+  # Strapi (apps/strapi): native bindings + postinstall scripts of its dependency tree.
+  '@swc/core': true
+  better-sqlite3: true
+  core-js-pure: true
+  sharp: true
 # Security overrides: pin patched transitive versions (GitHub Dependabot / pnpm audit).
 # - h3: force the SSE-injection / request-smuggling / path-traversal-patched h3 v2
 #   (rc.16 -> rc.25). Safe as a global override because removing `vinxi` eliminated the
@@ -25,3 +30,13 @@ overrides:
   'fast-uri@3': '3.1.7' # GHSA-v2hh-gcrm-f6hx … GHSA-jqff-g426-hqxp (commitlint)
   'undici@7': '7.29.1' # GHSA-4cwx-7wf7-3272 (@module-federation/dts-plugin)
   adm-zip: '0.6.0' # GHSA-xcpc-8h2w-3j85 (@module-federation/dts-plugin)
+  'sharp@0.35': '0.35.4' # GHSA-rgj7-g3m4-5g8c (@strapi/upload)
+  'nodemailer@9': '9.1.0' # GHSA-2x7j-588g-ccc2 (@strapi/provider-email-sendmail)
+
+# `pnpm audit --audit-level high` gates CI. Advisories that no override can fix:
+# - vite 5.x is what the Strapi 5 admin build uses; GHSA-fx2h-pf6j-xcff (server.fs.deny
+#   bypass on Windows) affects the vite DEV server only and is fixed only in vite >= 6.4.3.
+#   Production runs `strapi start` (prebuilt admin, no vite process) — not exposed.
+auditConfig:
+  ignoreGhsas:
+    - GHSA-fx2h-pf6j-xcff

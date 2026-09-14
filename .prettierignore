@@ -13,6 +13,12 @@ node_modules
 **/routeTree.gen.ts
 **/*.gen.ts
 
+# Strapi (apps/strapi) generated / runtime dirs
+apps/strapi/types/generated
+apps/strapi/.strapi
+apps/strapi/.tmp
+apps/strapi/public/uploads
+
 # Lockfiles & data
 pnpm-lock.yaml
 
