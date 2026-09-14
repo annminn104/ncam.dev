@@ -18,6 +18,8 @@ apps/strapi/types/generated
 apps/strapi/.strapi
 apps/strapi/.tmp
 apps/strapi/public/uploads
+apps/strapi/.strapi-updater.json
+apps/strapi/.strapi-cloud.json
 
 # Lockfiles & data
 pnpm-lock.yaml
