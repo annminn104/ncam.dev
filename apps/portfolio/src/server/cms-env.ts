@@ -17,10 +17,13 @@ function trimSlash(url: string): string {
   return url.replace(/\/+$/, '');
 }
 
+let warnedMissingUrl = false;
+
 export function getCmsEnv(env: NodeJS.ProcessEnv = process.env): CmsEnv {
   const configured = env.STRAPI_URL?.trim();
-  if (!configured && env.NODE_ENV === 'production') {
+  if (!configured && env.NODE_ENV === 'production' && !warnedMissingUrl) {
     console.warn(`[cms] STRAPI_URL is not set — falling back to ${DEFAULT_STRAPI_URL}`);
+    warnedMissingUrl = true;
   }
   const apiBase = trimSlash(configured || DEFAULT_STRAPI_URL);
   const mediaBase = trimSlash(env.STRAPI_PUBLIC_URL?.trim() || apiBase);

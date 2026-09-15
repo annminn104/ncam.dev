@@ -12,12 +12,15 @@ function jsonLdScript(value: unknown): string {
   return JSON.stringify(value).replace(/</g, '\\u003c');
 }
 
-/** True for links that leave ncam.dev. Relative URLs resolve against the site and stay internal. */
-function isExternal(url: string): boolean {
+const SAFE_PROTOCOLS = new Set(['http:', 'https:', 'mailto:', 'tel:']);
+
+/** Parse a CMS-authored link against the site; null when unparsable or not an allowed scheme. */
+function resolveLink(url: string): URL | null {
   try {
-    return new URL(url, SITE_URL).origin !== SITE_ORIGIN;
+    const parsed = new URL(url, SITE_URL);
+    return SAFE_PROTOCOLS.has(parsed.protocol) ? parsed : null;
   } catch {
-    return false;
+    return null;
   }
 }
 
@@ -64,7 +67,7 @@ export const Route = createFileRoute('/blog/$slug')({
 
 type BlocksOverrides = NonNullable<ComponentProps<typeof BlocksRenderer>['blocks']>;
 
-/** Only two overrides: images are already absolute (mapper), links open safely. */
+/** Only two overrides: images are already absolute (mapper), links pass through a scheme allow-list. */
 const blocks: BlocksOverrides = {
   image: ({ image }) => (
     <figure className="article__figure">
@@ -79,8 +82,10 @@ const blocks: BlocksOverrides = {
     </figure>
   ),
   link: ({ url, children }) => {
-    const external = isExternal(url);
-    return external ? (
+    const target = resolveLink(url);
+    if (!target) return <span>{children}</span>;
+    const offSite = target.protocol.startsWith('http') && target.origin !== SITE_ORIGIN;
+    return offSite ? (
       <a href={url} rel="noopener noreferrer" target="_blank">
         {children}
       </a>
