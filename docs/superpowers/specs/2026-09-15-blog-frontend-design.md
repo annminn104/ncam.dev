@@ -1,7 +1,7 @@
 # Blog frontend (Strapi → portfolio host) — design
 
 Date: 2026-09-15
-Status: approved design, awaiting implementation plan
+Status: implemented on feat/blog-frontend (2026-09-15); see docs/superpowers/plans/2026-09-15-blog-frontend.md
 Scope: phase 2 of the blog. Phase 1 (`apps/strapi`, the CMS and its public API) is
 merged — see `docs/superpowers/specs/2026-09-15-strapi-blog-cms-design.md`.
 
@@ -97,9 +97,9 @@ export interface StrapiArticle {
   readingTime: number | null;
   publishedAt: string;
   cover: StrapiMedia | null;
-  tags: StrapiTag[];
+  tags: StrapiTag[] | null;
   seo: StrapiSeo | null;
-  body?: unknown; // Strapi Blocks JSON, only requested on the detail query
+  body?: BlocksBody | null; // Strapi Blocks JSON (structural node types), only on the detail query
 }
 export interface StrapiList<T> {
   data: T[];
@@ -123,10 +123,17 @@ export interface BlogPost {
   readingLabel: string; // "9 min"
   tags: string[];
   cover: BlogImage | null;
-  body: unknown | null; // Blocks JSON when fetched by slug, else null
+  body: BlocksBody | null; // Blocks JSON when fetched by slug, else null
   seo: { title: string; description: string; image: BlogImage | null };
 }
 ```
+
+`BlocksBody = BlockNode[]` with structural node interfaces (`TextNode`,
+`LinkNode`, `ParagraphNode`, `HeadingNode`, `QuoteNode`, `CodeNode`,
+`ListItemNode`, `ListNode`, `ImageNode` with `BlocksImage`) instead of
+`unknown`: TanStack Start validates server-function return types for
+serializability and rejects `unknown`. `absolutizeBlockImages<T>(blocks: T,
+mediaBase): T` keeps its untyped walk behind a generic signature.
 
 ### Mapping (`map.ts`)
 
@@ -245,8 +252,13 @@ export const getBlogPost = createServerFn({ method: 'GET' })
   `<BlocksRenderer content={post.body} blocks={{ image, link }} />`. The
   `image` override renders `<img src alt width height loading="lazy">` — URLs
   are already absolute because `mapArticle` ran `absolutizeBlockImages` on the
-  server. The `link` override renders `<a rel="noopener noreferrer" target="_blank">`
-  for off-site URLs and a plain `<a>` for same-origin ones.
+  server. The `link` override compares parsed origins (`isExternal`; relative
+  URLs resolve against the site) and renders `<a rel="noopener noreferrer"
+target="_blank">` for off-site URLs, a plain `<a>` otherwise. The BlogPosting
+  JSON-LD is inlined through `jsonLdScript`, which escapes `<` as `\u003c` so
+  CMS-authored text can never close the `<script>`. Overrides are typed as
+  `NonNullable<ComponentProps<typeof BlocksRenderer>['blocks']>` (1.0.2 exports
+  no `BlocksComponents`).
 - Dependencies added to `apps/portfolio/package.json`: `@ncam/cms` (`workspace:*`)
   and `@strapi/blocks-react-renderer` (`^1.0.2`).
 - Unknown slug → `notFound()` → the existing `NotFound` component. CMS/network
@@ -267,10 +279,13 @@ navigations, which is acceptable.
 ### Home page (`src/routes/index.tsx`)
 
 - `LoaderData` gains `posts: BlogPost[]`. The loader first does
-  `const posts = await getBlogPosts().catch((error) => { log.warn('home.blog-posts-unavailable', …); return []; })`
+  `const posts = await withTimeout('getBlogPosts', getBlogPosts(), BLOG_POSTS_TIMEOUT_MS).catch((error) => { log.warn('home.blog-posts-unavailable', …); return []; })`
   — this runs in every mode (dev, CSR navigation, SSR), then the existing
   sequential SSR loop passes `{ posts }` to the blog module only:
   `mod.ssr(section.module === 'blog' ? { posts } : undefined)`.
+  `BLOG_POSTS_TIMEOUT_MS = 2_500` keeps the CMS fetch plus the 4 s SSR budget
+  well under Vercel's 10 s request cap; `withTimeout` is exported from
+  `lib/federation.ts`.
 - Client attach: `mod.hydrate(el, props)` / `mod.mount(el, props)` with the
   same `props` (from loader data → identical markup → no hydration mismatch).
 - `useProjectLinks` becomes `useInternalLinks`: intercepts clicks on
@@ -290,15 +305,19 @@ export interface SectionModule<P = undefined> {
   hydrate(target: HTMLElement, props?: P): () => void;
   mount(target: HTMLElement, props?: P): () => void;
 }
-export function renderSection<P>(
+export function renderSection<P extends object>(
   renderToString,
-  Component: ComponentType<P>,
+  Component: FunctionComponent<P>,
   props?: P,
 ): SectionSSRResult;
-export function createClientModule<P>(
-  Component: ComponentType<P>,
+export function createClientModule<P extends object>(
+  Component: FunctionComponent<P>,
 ): Pick<SectionModule<P>, 'hydrate' | 'mount'>;
 ```
+
+`FunctionComponent<P extends object>` (not `ComponentType<P>`): every section
+is a function component, and the union type matched no `createElement`
+overload.
 
 `createClientModule` builds `<StrictMode><Component {...(props ?? {})} /></StrictMode>`
 per call instead of once at module scope. The five other modules keep calling

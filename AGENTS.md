@@ -18,6 +18,7 @@ apps/
 packages/
   project-registry/  Shared, typed list of projects the shell renders.
   logger/            Shared isomorphic logger (@ncam/logger) used by both apps.
+  cms/               Typed Strapi client + BlogPost view-model (@ncam/cms), server-side use.
   tsconfig/          Shared base TypeScript config (@ncam/tsconfig).
 turbo.json, pnpm-workspace.yaml, package.json  (workspace root)
 ```

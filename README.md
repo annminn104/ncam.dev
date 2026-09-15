@@ -96,11 +96,12 @@ Non-secret defaults live in the committed **`.env`**; machine-specific overrides
 go in **`.env.local`** (gitignored). Precedence, highest first: the real
 environment, then `.env.local`, then `.env`. Never put secrets in `.env`.
 
-| Variable                                                                                                                                | Purpose                                                                  |
-| --------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| `PORTFOLIO_PORT`, `TOONHUB_PORT`, `MINDLOOP_PORT`, `IMMERSIVE_OCEAN_PORT`, `VIKTOR_PORT`, `BALI_PORT`, `PROFILE_PORT`                   | Dev / preview ports.                                                     |
-| `TOONHUB_REMOTE_URL`, `MINDLOOP_REMOTE_URL`, `IMMERSIVE_OCEAN_REMOTE_URL`, `VIKTOR_REMOTE_URL`, `BALI_REMOTE_URL`, `PROFILE_REMOTE_URL` | `remoteEntry.js` URL the host loads for each remote. **Baked at build.** |
-| `TOONHUB_BASE`, `MINDLOOP_BASE`, `IMMERSIVE_OCEAN_BASE`, `VIKTOR_BASE`, `BALI_BASE`, `PROFILE_BASE`                                     | Public base path per remote (default `/`).                               |
+| Variable                                                                                                                                | Purpose                                                                                                                                                                                  |
+| --------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PORTFOLIO_PORT`, `TOONHUB_PORT`, `MINDLOOP_PORT`, `IMMERSIVE_OCEAN_PORT`, `VIKTOR_PORT`, `BALI_PORT`, `PROFILE_PORT`                   | Dev / preview ports.                                                                                                                                                                     |
+| `TOONHUB_REMOTE_URL`, `MINDLOOP_REMOTE_URL`, `IMMERSIVE_OCEAN_REMOTE_URL`, `VIKTOR_REMOTE_URL`, `BALI_REMOTE_URL`, `PROFILE_REMOTE_URL` | `remoteEntry.js` URL the host loads for each remote. **Baked at build.**                                                                                                                 |
+| `TOONHUB_BASE`, `MINDLOOP_BASE`, `IMMERSIVE_OCEAN_BASE`, `VIKTOR_BASE`, `BALI_BASE`, `PROFILE_BASE`                                     | Public base path per remote (default `/`).                                                                                                                                               |
+| `STRAPI_URL`, `STRAPI_PUBLIC_URL`                                                                                                       | Blog CMS origin the **portfolio server** fetches from, and the origin browsers reach for media (defaults to `STRAPI_URL`). **Runtime** env — not baked; default `http://localhost:1337`. |
 
 ## Thumbnails
 
@@ -160,6 +161,13 @@ so nothing has to be clicked in Settings → Roles; writes stay admin-only. Afte
 changing a schema run `pnpm --filter @ncam/strapi strapi ts:generate-types` and
 commit `apps/strapi/types/generated/`. Details: [`apps/strapi/AGENTS.md`](apps/strapi/AGENTS.md).
 
+The portfolio renders the blog at **`/blog`** and **`/blog/<slug>`** and shows
+the latest posts in the home page's blog section. All reads happen server-side
+through TanStack Start server functions (`apps/portfolio/src/functions/blog.functions.ts`)
+using `@ncam/cms`; pages are cached for 60 s (`swr`), so a publish is live within
+a minute. With the CMS unreachable the home section shows its placeholders and
+`/blog` an empty state.
+
 ## Quality gates
 
 - **Husky**: `pre-commit` runs lint-staged (ESLint `--fix` + Prettier),
@@ -208,6 +216,9 @@ Sep 2026; `ncam.vercel.app` itself is taken):
    PROFILE_REMOTE_URL=https://ncam-profile.vercel.app/remoteEntry.js
    ```
 
+   The host project also needs `STRAPI_URL` and `STRAPI_PUBLIC_URL` (both
+   `https://cms.<domain>`).
+
    Nitro detects Vercel and emits the Build Output; SSR runs in a serverless
    function (Hobby: 10 s max). The home loader keeps a 4 s total budget for the
    six profile modules and each federated load times out individually, so a slow
@@ -250,6 +261,10 @@ docker compose --profile gateway --profile cms up --build    # + http://cms.loca
 
 Set `PUBLIC_URL` in `apps/strapi/.env` to the origin the CMS is reached at — `http://localhost:1337` when you hit the container directly, `http://cms.localhost` behind the gateway, `https://cms.<domain>` in production — so admin links and media URLs are absolute and correct. Uploads live in the
 `strapi-uploads` volume, data in `strapi-db-data`.
+
+The `portfolio` container reads the CMS through `STRAPI_URL=http://strapi:1337`
+and serves media from `STRAPI_PUBLIC_URL=http://cms.localhost:1337`; start the
+`cms` profile too (`docker compose --profile cms up`) or the blog renders empty.
 
 ## Troubleshooting
 

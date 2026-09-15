@@ -29,6 +29,17 @@ own six sections (the `profile` remote) on `/`. React 19.
     `dangerouslySetInnerHTML`), then a `useEffect` calls
     `import('<remote>/hydrate')` → `hydrate(el)`. Failures log
     `project.ssr-fallback` at warn level and fall back to a client mount.
+  - `blog/index.tsx` and `blog/$slug.tsx` — the **blog**, read from the Strapi
+    CMS (`apps/strapi`) through **server functions** in
+    `src/functions/blog.functions.ts` (`getBlogPosts`, `getBlogPost`), which call
+    `@ncam/cms` with the runtime env from `src/server/cms-env.ts`
+    (`STRAPI_URL`, `STRAPI_PUBLIC_URL`; default `http://localhost:1337`). The
+    browser never talks to Strapi. `$slug` throws `notFound()` for unknown slugs,
+    sets full SEO meta in `head()` and renders the Blocks body with
+    `@strapi/blocks-react-renderer` (overrides: `image`, `link`), escapes `<` in
+    the inlined BlogPosting JSON-LD and marks off-site links by parsed origin.
+    Styles in `src/blog.css`. Nitro `routeRules` cache `/`, `/blog`, `/blog/**`
+    with `swr: 60`, so a publish shows up within a minute.
 - `src/lib/federation.ts` — `getHostRuntime`, `forgetFailedRemote`,
   `loadRemoteModuleSSR`. In the production server bundle the plugin's import
   wrapper rejects forever after one failed attempt and never carries the remote's
@@ -46,7 +57,8 @@ own six sections (the `profile` remote) on `/`. React 19.
 Concept: the page eats its own dog food. Each section is an exposed module of the
 `profile` remote (`apps/profile`): `profile/hero`, `profile/stacks`,
 `profile/experience`, `profile/projects`, `profile/blog`, `profile/contact`, all
-shaped `{ ssr(), hydrate(el), mount(el) }`.
+shaped `{ ssr(props?), hydrate(el, props?), mount(el, props?) }` — only
+`profile/blog` takes props (`{ posts }`).
 
 - `data/sections.ts` — the contract: section `id` (the DOM id the remote's
   `<section>` renders; nav/rail/tracker key off it), `module` (exposed name),
@@ -59,6 +71,12 @@ loader)` for the six modules **sequentially** → `mod.ssr()` →
   host with a 10 s cap (Vercel Hobby) always gets a response. In `vite dev`
   everything client-mounts (federated SSR is production-only, as for the project
   route).
+- **Blog data.** The loader first calls the `getBlogPosts()` server function,
+  bounded to 2.5 s with `withTimeout` from `lib/federation.ts` (in every mode;
+  failure or timeout → `[]` + `home.blog-posts-unavailable` warn), stores the
+  posts in loader data and passes `{ posts }` to `profile/blog`'s `ssr()` on the
+  server and to `hydrate()`/`mount()` on the client — the same serialized array,
+  so hydration matches. Empty posts → the remote renders its placeholders.
 - **Federation runtime robustness** (learned the hard way, keep both):
   - `shareStrategy: 'loaded-first'` in `vite.config.ts`. `version-first` makes
     the host runtime load EVERY registered remote's entry at init to negotiate
@@ -83,8 +101,8 @@ loader)` for the six modules **sequentially** → `mod.ssr()` →
   and the hero "unmount" (as `#stacks` slides over the sticky hero its
   `.hero__inner` scales down and blurs). Re-runs once every module has settled.
   Motion **inside** a section belongs to the remote.
-- Project cards inside the remote are plain `<a href="/projects/…">`; the route
-  intercepts those clicks and navigates client-side.
+- Cards inside the remote are plain `<a href="/projects/…">` / `<a href="/blog/…">`;
+  `useInternalLinks` intercepts those clicks and navigates client-side.
 - `home.css` = shell only (`.home`, `.hnav*`, `.rail*`, `.mf-slot*`). Section
   styles live in the remote. Tokens are shared via `@ncam/design-tokens`.
 - `lib/gsap.ts` — `useGsap()` (gsap.matchMedia, reduced-motion aware,
@@ -104,7 +122,10 @@ loader)` for the six modules **sequentially** → `mod.ssr()` →
 - **Registry drives display; loaders drive loading.** Adding a project = entry in
   `@ncam/project-registry` + `remotes` in `vite.config.ts` + `loaders` entry.
   Adding a home section = component + module in `apps/profile` + `exposes` +
-  `data/sections.ts` + `loaders` in `index.tsx` + `types/remote/profile.d.ts`.
+  `data/sections.ts` + `loaders` in `index.tsx` + `src/types/remote/profile.d.ts`.
+- **CMS access is server-only.** Fetch Strapi inside `createServerFn` handlers
+  only (`src/functions/*.functions.ts`); read `STRAPI_URL`/`STRAPI_PUBLIC_URL`
+  through `getCmsEnv()` at request time — never via `import.meta.env`/`define`.
 - **SSR for SEO.** Page meta lives in route `head()`; the home page is server
   rendered (GSAP/DOM only inside effects — `lib/gsap.ts` is import-safe in Node).
   Static `public/robots.txt` + `public/sitemap.xml` (update the domain).
@@ -132,7 +153,9 @@ Don't hand-edit the images; change the remote (or the script) and re-run.
 
 SSR — deploys as a **server** (Nitro), not static. On Vercel, Nitro auto-detects
 the platform and emits the Build Output; `vercel.json` just runs `pnpm build`.
-Locally: `pnpm build` → `.output/`, run with `node .output/server/index.mjs`.
+Locally: `pnpm build` → `.output/`, run with `node .output/server/index.mjs`. Set
+`STRAPI_URL` and `STRAPI_PUBLIC_URL` on the Vercel project (both
+`https://cms.<domain>`); docker-compose sets them on the `portfolio` service.
 
 ## Verify
 

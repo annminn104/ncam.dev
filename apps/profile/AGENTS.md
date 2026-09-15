@@ -12,10 +12,16 @@ React 19 + Vite 8 + GSAP remote (`defineRemote` from `@ncam/mf-remote`, MF name
 Every module has the same shape (`src/lib/section-module.tsx`):
 
 ```ts
-ssr(): Promise<{ html, css }>   // server: renderToString + the remote's CSS (same string for all)
-hydrate(target): () => void     // client: attach React to server-rendered markup
-mount(target): () => void       // client: render from scratch (no SSR) — injects the CSS once
+ssr(props?): Promise<{ html, css }>    // server: renderToString + the remote's CSS (same string for all)
+hydrate(target, props?): () => void    // client: attach React to server-rendered markup
+mount(target, props?): () => void      // client: render from scratch (no SSR) — injects the CSS once
 ```
+
+`props` is optional and only `./blog` uses it: `{ posts?: BlogPost[] }`
+(`BlogPost` is a type-only import from `@ncam/cms`, a devDependency — the
+bundle stays self-contained). The host must pass the **same** props object to
+`ssr()` on the server and `hydrate()` on the client. No posts → the four
+placeholder drafts from `data/profile.ts` render, with the "publishing soon" copy.
 
 **Chunk-cycle rule (important).** Each `src/modules/*.tsx` entry writes its own
 `await import('react-dom/server')` and hands `renderToString` to
@@ -27,14 +33,16 @@ timing out every home section on the server. The federation plugin ignores
 Check with: no cycles when walking `dist/remoteEntry.ssr.js` → `./assets/*`.
 
 The portfolio host (`apps/portfolio/src/routes/index.tsx`) imports the six
-modules with static specifiers, server-renders them in parallel through the MF
-runtime, inlines the returned HTML + CSS, then hydrates each into its slot. The
+modules with static specifiers, server-renders them **sequentially** through
+the MF runtime (concurrent federated imports deadlock the runtime init),
+inlines the returned HTML + CSS, then hydrates each into its slot. The
 manifest rail on the host shows the real lifecycle of each module.
 
 ## Structure
 
-- `src/modules/*.tsx` — the exposed entries; each wraps one section component
-  with `createSectionModule()`.
+- `src/modules/*.tsx` — the exposed entries; each exports `ssr` (via
+  `renderSection()`, keeping its own lazy `react-dom/server` import) and
+  `{ hydrate, mount }` from `createClientModule()`.
 - `src/components/*.tsx` — the sections (hero, tech-stacks, experiences,
   projects, blogs, contact) + `section-head.tsx`. Presentational; copy comes
   from `src/data/profile.ts` (still placeholder: `profile.email`, the blog posts).
@@ -62,8 +70,9 @@ manifest rail on the host shows the real lifecycle of each module.
   the hero "unmount" while `#stacks` slides over it). Motion **inside** a section
   is this remote's job (hero intro, marquee + pinned stack strip, stacked
   experience cards, project-card tilt/spotlight, contact word reveal).
-- The projects section renders plain `<a href="/projects/<id>">`; the host
-  intercepts those clicks for client-side navigation.
+- The projects and blog sections render plain `<a href="/projects/<id>">` /
+  `<a href="/blog/<slug>">`; the host intercepts those clicks for client-side
+  navigation.
 - React and GSAP are bundled (`shared: {}`); the six modules share one React and
   one GSAP instance inside this remote, each section is its own React root.
 
