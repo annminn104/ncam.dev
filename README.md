@@ -246,9 +246,7 @@ docker compose up --build strapi             # http://localhost:1337/admin, API 
 docker compose --profile gateway up --build  # + http://cms.localhost/api/articles
 ```
 
-Set `PUBLIC_URL` in `apps/strapi/.env` to the origin the CMS is reached at
-(`http://cms.localhost:1337` locally, `https://cms.<domain>` in production) so
-admin links and media URLs are absolute and correct. Uploads live in the
+Set `PUBLIC_URL` in `apps/strapi/.env` to the origin the CMS is reached at — `http://localhost:1337` when you hit the container directly, `http://cms.localhost` behind the gateway, `https://cms.<domain>` in production — so admin links and media URLs are absolute and correct. Uploads live in the
 `strapi-uploads` volume, data in `strapi-db-data`.
 
 ## Troubleshooting

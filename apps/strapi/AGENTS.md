@@ -88,7 +88,7 @@ Pagination defaults: 25 per page, max 100 (`config/api.ts`).
 
 `apps/strapi/Dockerfile` (context = repo root) builds a prod-only runtime from
 `pnpm deploy`; `docker-compose.yml` runs it as `strapi` next to `strapi-db`
-(postgres:16) with volumes `strapi-uploads` and `strapi-db-data`; the nginx
+(postgres:16-alpine) with volumes `strapi-uploads` and `strapi-db-data`; the nginx
 gateway proxies `cms.localhost`. The monorepo image (`Dockerfile` at the root)
 deliberately excludes this app.
 
