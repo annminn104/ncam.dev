@@ -122,6 +122,59 @@ services:
         aliases:
           - profile.localhost
 
+  # ── CMS (Strapi): own image + Postgres, in the `cms` profile so the default
+  # `docker compose up` (frontend stack) never needs apps/strapi/.env.
+  # First run: `pnpm --filter @ncam/strapi setup:env` (secrets + DB password).
+  # Then: `docker compose up --build strapi` (naming the service activates the
+  # profile; strapi-db comes along) → http://localhost:1337/admin
+  # With the gateway: `docker compose --profile gateway --profile cms up --build`
+  # → http://cms.localhost
+  strapi:
+    profiles: ['cms']
+    build:
+      context: .
+      dockerfile: apps/strapi/Dockerfile
+      args:
+        NODE_VERSION: '22'
+    image: ncam-strapi:latest
+    env_file:
+      - path: apps/strapi/.env # secrets, DB credentials, PUBLIC_URL — never committed
+        required: false
+    environment: # compose-specific values win over env_file
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: '1337'
+      DATABASE_CLIENT: postgres
+      DATABASE_HOST: strapi-db
+      DATABASE_PORT: '5432'
+    ports:
+      - '1337:1337'
+    volumes:
+      - strapi-uploads:/app/public/uploads
+    depends_on:
+      strapi-db:
+        condition: service_healthy
+    networks:
+      default:
+        aliases:
+          - cms.localhost
+    restart: unless-stopped
+
+  strapi-db:
+    profiles: ['cms']
+    image: postgres:16-alpine
+    env_file:
+      - path: apps/strapi/.env # POSTGRES_DB / POSTGRES_USER / POSTGRES_PASSWORD
+        required: false
+    volumes:
+      - strapi-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
   # ── Optional reverse proxy — only runs with `--profile gateway` ──────────
   gateway:
     profiles: ['gateway']
@@ -142,3 +195,7 @@ services:
       default:
         aliases:
           - ncam.localhost
+
+volumes:
+  strapi-uploads:
+  strapi-db-data:

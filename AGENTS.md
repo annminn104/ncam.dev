@@ -13,6 +13,8 @@ apps/
              project remote at runtime. (has its own AGENTS.md)
   toonhub/   The TOONHUB collectible-figurine hero, now a federated remote
              exposing a framework-free mount() function. (has its own AGENTS.md)
+  strapi/    Strapi 5 headless CMS for the blog — a backend service, not a
+             federation remote: public read-only REST API on :1337. (has its own AGENTS.md)
 packages/
   project-registry/  Shared, typed list of projects the shell renders.
   logger/            Shared isomorphic logger (@ncam/logger) used by both apps.
@@ -28,14 +30,15 @@ that unit. This root file only covers cross-cutting monorepo concerns.
 
 - **pnpm** workspaces (`pnpm-workspace.yaml`). Use `pnpm`, not npm/yarn.
 - **Turborepo** orchestrates tasks (`turbo.json`, v2 `tasks` schema).
-- **Vite** builds every app. **Module Federation** via `@module-federation/vite`.
+- **Vite** builds every frontend app; **Module Federation** via `@module-federation/vite`.
+  `apps/strapi` is the exception: a Strapi (Node) service with its own build.
 - **TypeScript** everywhere; strict, framework-free (no React/Vue/etc runtime).
 
 Commands (from the root):
 
 ```bash
 pnpm install
-pnpm dev        # runs every app's dev server (shell :9000, toonhub :9001)
+pnpm dev        # runs every app's dev server (shell :9000, remotes :9001–:9006, strapi :1337)
 pnpm build      # builds every app
 pnpm typecheck
 pnpm assets     # downloads project image assets where apps define it

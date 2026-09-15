@@ -1,0 +1,46 @@
+{
+  "name": "@ncam/strapi",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Strapi 5 headless CMS for the ncam.dev blog: Blocks editor in, public read-only REST API out.",
+  "files": [
+    "dist",
+    "public",
+    "database",
+    "favicon.png",
+    "tsconfig.json"
+  ],
+  "scripts": {
+    "dev": "node scripts/setup-env.mjs && strapi develop",
+    "build": "strapi build",
+    "start": "strapi start",
+    "typecheck": "tsc --noEmit",
+    "setup:env": "node scripts/setup-env.mjs",
+    "strapi": "strapi",
+    "upgrade": "pnpm dlx @strapi/upgrade latest",
+    "upgrade:dry": "pnpm dlx @strapi/upgrade latest --dry"
+  },
+  "dependencies": {
+    "@strapi/database": "5.53.0",
+    "@strapi/plugin-users-permissions": "5.53.0",
+    "@strapi/strapi": "5.53.0",
+    "better-sqlite3": "12.8.0",
+    "pg": "^8.23.0",
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0",
+    "react-router-dom": "^6.30.3",
+    "styled-components": "^6.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "typescript": "^5"
+  },
+  "engines": {
+    "node": ">=20.11.0 <=26.x.x"
+  },
+  "strapi": {
+    "telemetryDisabled": true
+  }
+}

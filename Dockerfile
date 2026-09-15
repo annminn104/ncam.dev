@@ -38,8 +38,11 @@ ENV TOONHUB_REMOTE_URL=$TOONHUB_REMOTE_URL \
     BALI_REMOTE_URL=$BALI_REMOTE_URL \
     PROFILE_REMOTE_URL=$PROFILE_REMOTE_URL
 COPY . .
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile --offline
-RUN pnpm build
+# Strapi (apps/strapi) ships in its own image (apps/strapi/Dockerfile): neither its
+# dependencies nor its admin build belong in the monorepo image.
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+    pnpm install --frozen-lockfile --offline --filter '!@ncam/strapi'
+RUN pnpm exec turbo run build --filter '!@ncam/strapi'
 
 # ---- runner: production runtime ----
 FROM base AS runner
