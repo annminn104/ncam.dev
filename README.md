@@ -23,6 +23,7 @@ Turborepo + pnpm workspaces, TypeScript everywhere.
 | `apps/immersive-ocean` | Immersive Ocean — creative-studio hero with looping video background. React 19, Tailwind v4.                                   | `http://localhost:9003` |
 | `apps/viktor`          | Viktor. — portfolio hero with crossfade video switcher. React 19, Tailwind v4.                                                 | `http://localhost:9004` |
 | `apps/bali`            | Bali Adventure — cinematic luxury-travel landing page. React 19, Tailwind v4, GSAP ScrollTrigger, framer-motion.               | `http://localhost:9005` |
+| `apps/strapi`          | Strapi 5 headless CMS for the blog — Blocks editor, public read-only REST API. Backend service, not a remote.                  | `http://localhost:1337` |
 | `packages/*`           | `project-registry` (typed project list), `mf-remote` (`defineRemote()` + `.env` reader), `design-tokens`, `logger`, `tsconfig` | —                       |
 
 Each app and package carries its own `AGENTS.md` with the rules for that unit;
@@ -131,6 +132,33 @@ registry. Re-run whenever a remote's hero changes.
 
 Details and rules: root `AGENTS.md` → "Adding a new project".
 
+## Blog CMS (Strapi)
+
+`apps/strapi` is a Strapi 5 headless CMS (TypeScript, Blocks editor). Posts are
+written in its admin and served through a **public, read-only REST API**; the
+portfolio host will consume it (separate spec). It is a backend service, not a
+federated remote — Vercel cannot host it, Docker can (see Deploy → Docker).
+
+```bash
+pnpm --filter @ncam/strapi setup:env   # once: apps/strapi/.env with generated secrets (gitignored)
+pnpm --filter @ncam/strapi dev         # http://localhost:1337/admin — register the first admin user
+```
+
+`pnpm dev` at the root starts it too. Content model: `article` (title, slug,
+excerpt, cover, `body` as Blocks, `readingTime` computed on save, tags, seo) and
+`tag`. Drafts stay invisible to the API until published.
+
+```bash
+curl 'http://localhost:1337/api/articles?sort=publishedAt:desc&populate[cover]=true&populate[tags]=true'
+curl 'http://localhost:1337/api/articles?filters[slug][$eq]=my-post&populate=*'
+curl 'http://localhost:1337/api/tags'
+```
+
+Anonymous read access is granted on every boot (`apps/strapi/src/lib/public-permissions.ts`),
+so nothing has to be clicked in Settings → Roles; writes stay admin-only. After
+changing a schema run `pnpm --filter @ncam/strapi strapi ts:generate-types` and
+commit `apps/strapi/types/generated/`. Details: [`apps/strapi/AGENTS.md`](apps/strapi/AGENTS.md).
+
 ## Quality gates
 
 - **Husky**: `pre-commit` runs lint-staged (ESLint `--fix` + Prettier),
@@ -210,6 +238,19 @@ the browser (loopback) and inside the host container (compose network aliases)
 — that is what lets the host resolve remotes server-side. They are build args,
 not runtime env, because the host bakes them in at build time.
 
+The CMS has its own image and a Postgres container (SQLite is dev-only):
+
+```bash
+pnpm --filter @ncam/strapi setup:env         # secrets + DB password in apps/strapi/.env
+docker compose up --build strapi             # http://localhost:1337/admin, API under /api/*
+docker compose --profile gateway up --build  # + http://cms.localhost/api/articles
+```
+
+Set `PUBLIC_URL` in `apps/strapi/.env` to the origin the CMS is reached at
+(`http://cms.localhost:1337` locally, `https://cms.<domain>` in production) so
+admin links and media URLs are absolute and correct. Uploads live in the
+`strapi-uploads` volume, data in `strapi-db-data`.
+
 ## Troubleshooting
 
 - **`cannot find binary path`** on `pnpm dev` — Turbo can't find pnpm. Install
@@ -218,6 +259,10 @@ not runtime env, because the host bakes them in at build time.
   running, or its `*_REMOTE_URL` points elsewhere. Run `pnpm dev` at the root.
 - **`pnpm thumbnails` fails** — needs the dev servers up, Node ≥ 22.18 and a
   Playwright Chromium (`pnpm --filter @ncam/portfolio exec playwright install chromium`).
+- **Strapi: `Missing app.keys` / `ADMIN_JWT_SECRET` on start** — `apps/strapi/.env`
+  is missing. Run `pnpm --filter @ncam/strapi setup:env`.
+- **Strapi: `EADDRINUSE :1337`** — another Strapi (or the Docker container) already
+  owns 1337. `docker compose stop strapi`, or set `PORT` in `apps/strapi/.env`.
 
 ## License
 
