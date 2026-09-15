@@ -20,6 +20,8 @@ const post = await fetchArticleBySlug(apiBase, 'my-slug', mediaBase); // BlogPos
   them absolute (cover, seo image and every image block in `body`).
 - `BlogPost` is plain JSON (no `Date`): labels (`dateLabel` "Sep 15, 2026" in
   UTC, `readingLabel` "9 min") are computed here so SSR and hydration agree.
+- `body` is typed as `BlocksBody` (structural Blocks node types) so TanStack Start can
+  serialize a `BlogPost` from a server function.
 - Options: `{ fetch, signal, timeoutMs = 5000 }` — `fetch` is injectable for
   tests. Non-2xx → `CmsError(status)`; network/timeout errors propagate.
 - Query strings (`query.ts`) use only parameters Strapi's `rest.strictParams`

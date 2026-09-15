@@ -27,8 +27,8 @@ export interface StrapiArticle {
   cover: StrapiMedia | null;
   tags: StrapiTag[] | null;
   seo: StrapiSeo | null;
-  /** Strapi Blocks JSON — only requested by the by-slug query. */
-  body?: unknown;
+  /** Strapi Blocks JSON (structural node types) — only requested by the by-slug query. */
+  body?: BlocksBody | null;
 }
 
 export interface StrapiList<T> {
@@ -63,7 +63,65 @@ export interface BlogPost {
   readingLabel: string;
   tags: string[];
   cover: BlogImage | null;
-  /** Blocks JSON with absolute image URLs, or null when not fetched. */
-  body: unknown | null;
+  /** Blocks JSON (structural node types) with absolute image URLs, or null when not fetched. */
+  body: BlocksBody | null;
   seo: { title: string; description: string; image: BlogImage | null };
 }
+
+/** Strapi Blocks rich text — the node shapes the site reads (JSON-safe: TanStack can serialize them). */
+export interface TextNode {
+  type: 'text';
+  text: string;
+  bold?: boolean;
+  italic?: boolean;
+  underline?: boolean;
+  strikethrough?: boolean;
+  code?: boolean;
+}
+export interface LinkNode {
+  type: 'link';
+  url: string;
+  children: TextNode[];
+}
+export type InlineNode = TextNode | LinkNode;
+export interface ParagraphNode {
+  type: 'paragraph';
+  children: InlineNode[];
+}
+export interface HeadingNode {
+  type: 'heading';
+  level: 1 | 2 | 3 | 4 | 5 | 6;
+  children: InlineNode[];
+}
+export interface QuoteNode {
+  type: 'quote';
+  children: InlineNode[];
+}
+export interface CodeNode {
+  type: 'code';
+  language?: string;
+  children: TextNode[];
+}
+export interface ListItemNode {
+  type: 'list-item';
+  children: InlineNode[];
+}
+export interface ListNode {
+  type: 'list';
+  format: 'ordered' | 'unordered';
+  children: Array<ListItemNode | ListNode>;
+}
+export interface BlocksImage {
+  url: string;
+  alternativeText?: string | null;
+  caption?: string | null;
+  width?: number | null;
+  height?: number | null;
+}
+export interface ImageNode {
+  type: 'image';
+  image: BlocksImage;
+  children: TextNode[];
+}
+export type BlockNode = ParagraphNode | HeadingNode | QuoteNode | CodeNode | ListNode | ImageNode;
+export type BlocksBody = BlockNode[];

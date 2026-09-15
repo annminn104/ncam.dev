@@ -41,8 +41,9 @@ function mapImage(
  * Returns a copy of a Blocks tree in which every `image` node carries an absolute URL.
  * Other nodes are copied unchanged; non-object input is returned as is.
  */
-export function absolutizeBlockImages(blocks: unknown, mediaBase: string): unknown {
-  if (Array.isArray(blocks)) return blocks.map((node) => absolutizeBlockImages(node, mediaBase));
+export function absolutizeBlockImages<T>(blocks: T, mediaBase: string): T {
+  if (Array.isArray(blocks))
+    return blocks.map((node) => absolutizeBlockImages(node, mediaBase)) as T;
   if (blocks === null || typeof blocks !== 'object') return blocks;
 
   const node = blocks as Record<string, unknown>;
@@ -56,7 +57,7 @@ export function absolutizeBlockImages(blocks: unknown, mediaBase: string): unkno
   if (Array.isArray(node.children)) {
     next.children = absolutizeBlockImages(node.children, mediaBase);
   }
-  return next;
+  return next as T;
 }
 
 /** Strapi article → site view-model. Total: missing relations never throw. */
