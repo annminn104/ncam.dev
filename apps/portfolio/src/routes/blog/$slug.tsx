@@ -5,6 +5,21 @@ import type { BlogPost } from '@ncam/cms';
 import { getBlogPost } from '../../functions/blog.functions';
 
 const SITE_URL = 'https://ncam.dev';
+const SITE_ORIGIN = new URL(SITE_URL).origin;
+
+/** JSON-LD is inlined in a <script>: escape `<` so CMS-authored text can never close the tag. */
+function jsonLdScript(value: unknown): string {
+  return JSON.stringify(value).replace(/</g, '\\u003c');
+}
+
+/** True for links that leave ncam.dev. Relative URLs resolve against the site and stay internal. */
+function isExternal(url: string): boolean {
+  try {
+    return new URL(url, SITE_URL).origin !== SITE_ORIGIN;
+  } catch {
+    return false;
+  }
+}
 
 export const Route = createFileRoute('/blog/$slug')({
   loader: async ({ params }): Promise<BlogPost> => {
@@ -64,7 +79,7 @@ const blocks: BlocksOverrides = {
     </figure>
   ),
   link: ({ url, children }) => {
-    const external = /^https?:\/\//i.test(url) && !url.startsWith(SITE_URL);
+    const external = isExternal(url);
     return external ? (
       <a href={url} rel="noopener noreferrer" target="_blank">
         {children}
@@ -94,7 +109,7 @@ function BlogPostPage() {
     <div className="stage blog">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(jsonLd) }}
       />
       <Link to="/blog" className="stage__back">
         <span aria-hidden="true">←</span> Blog
