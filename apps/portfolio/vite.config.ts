@@ -66,6 +66,13 @@ export default defineConfig({
       '@module-federation/runtime-core',
       '@module-federation/sdk',
     ],
+    // Blog content changes without a deploy: serve cached HTML for 60 s and
+    // revalidate in the background (Vercel maps swr to ISR; node-server caches in memory).
+    routeRules: {
+      '/': { swr: 60 },
+      '/blog': { swr: 60 },
+      '/blog/**': { swr: 60 },
+    },
   },
   plugins: [
     federation({

@@ -1,0 +1,198 @@
+/* Blog pages (/blog, /blog/$slug): the .stage shell plus reading typography.
+   Tokens come from @ncam/design-tokens; the stage inset is the host's contract
+   with the fixed back button (see styles.css). */
+.blog {
+  padding: calc(var(--stage-top-inset) + 1.5rem) var(--gutter, 1.5rem) 6rem;
+  max-width: 72rem;
+  margin: 0 auto;
+  color: var(--text);
+}
+
+.blog__head {
+  max-width: 40rem;
+  margin-bottom: 3rem;
+}
+.blog__label,
+.blog-card__meta,
+.article__meta {
+  font: 500 0.8rem/1.4 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.blog__title,
+.article__title {
+  font: 700 clamp(2rem, 4vw, 3rem) / 1.1 var(--font-display);
+  letter-spacing: -0.02em;
+  margin: 0.5rem 0 1rem;
+}
+.blog__lead,
+.article__excerpt {
+  font-size: 1.125rem;
+  line-height: 1.6;
+  color: var(--text-muted);
+  margin: 0;
+}
+.blog__empty {
+  padding: 2rem;
+  border: 1px dashed var(--border);
+  border-radius: 1rem;
+  color: var(--text-muted);
+}
+
+.blog__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr));
+}
+.blog-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  height: 100%;
+  padding: 1.5rem;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background: var(--surface);
+  color: inherit;
+  text-decoration: none;
+  transition:
+    border-color 0.2s var(--ease-out),
+    transform 0.2s var(--ease-out);
+}
+.blog-card:hover,
+.blog-card:focus-visible {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+}
+.blog-card__meta,
+.article__meta {
+  display: flex;
+  gap: 1rem;
+  margin: 0;
+}
+.blog-card__title {
+  font: 600 1.25rem/1.3 var(--font-display);
+  margin: 0;
+}
+.blog-card__excerpt {
+  margin: 0;
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+.blog-card__tags,
+.article__tags {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: auto 0 0;
+  padding: 0;
+}
+.blog-card__tags li,
+.article__tags li {
+  font: 500 0.75rem/1 var(--font-mono);
+  padding: 0.35rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text-muted);
+}
+
+/* Article page */
+.article {
+  max-width: 44rem;
+  margin: 0 auto;
+}
+.article__head {
+  margin-bottom: 2.5rem;
+}
+.article__tags {
+  margin-top: 1rem;
+}
+.article__cover {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin-top: 2rem;
+  border-radius: 1rem;
+  border: 1px solid var(--border);
+}
+.article__body {
+  font-size: 1.0625rem;
+  line-height: 1.75;
+}
+.article__body > * + * {
+  margin-top: 1.25em;
+}
+.article__body h2,
+.article__body h3,
+.article__body h4 {
+  font-family: var(--font-display);
+  line-height: 1.25;
+  margin-top: 2.25em;
+  letter-spacing: -0.01em;
+}
+.article__body h2 {
+  font-size: 1.75rem;
+}
+.article__body h3 {
+  font-size: 1.375rem;
+}
+.article__body h4 {
+  font-size: 1.125rem;
+}
+.article__body a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+.article__body ul,
+.article__body ol {
+  padding-left: 1.5rem;
+}
+.article__body li + li {
+  margin-top: 0.4em;
+}
+.article__body blockquote {
+  margin: 1.5em 0;
+  padding: 0.25em 0 0.25em 1.25em;
+  border-left: 3px solid var(--accent);
+  color: var(--text-muted);
+  font-style: italic;
+}
+.article__body pre {
+  padding: 1.25rem;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: var(--surface-2);
+  font: 0.875rem/1.6 var(--font-mono);
+}
+.article__body code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+}
+.article__body :not(pre) > code {
+  padding: 0.15em 0.4em;
+  border-radius: 0.35em;
+  background: var(--surface-2);
+}
+.article__figure {
+  margin: 2em 0;
+}
+.article__figure img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.75rem;
+  border: 1px solid var(--border);
+}
+.article__figure figcaption {
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  text-align: center;
+}

@@ -194,9 +194,11 @@ rejection on abort.
 | `STRAPI_PUBLIC_URL` | server functions (`process.env`) | unset → defaults to `STRAPI_URL` | `http://cms.localhost:1337`            | `https://cms.<domain>`    |
 
 - Read **at request time** in the Nitro server via a tiny `src/server/cms-env.ts`
-  helper (`getCmsEnv()` → `{ apiBase, mediaBase }`; throws a clear error when
-  `STRAPI_URL` is missing). Never through `import.meta.env`/`define`, so nothing
-  is baked and the same image runs in every environment.
+  helper (`getCmsEnv()` → `{ apiBase, mediaBase }`). When `STRAPI_URL` is unset it
+  falls back to `http://localhost:1337` (the Nitro server never loads the root
+  `.env`, so this keeps `vite dev`/`preview` zero-config) and warns in production.
+  Never through `import.meta.env`/`define`, so nothing is baked and the same image
+  runs in every environment.
 - `turbo.json` `build.env` already lists `STRAPI_*` (harmless; the build does
   not read it).
 - `docker-compose.yml`: add the two variables to the `portfolio` service. The
