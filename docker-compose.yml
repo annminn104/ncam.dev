@@ -41,6 +41,10 @@ services:
       NODE_ENV: production
       HOST: 0.0.0.0
       PORT: '9000'
+      # Blog CMS (runtime; see .env). Needs the `cms` profile up — otherwise the
+      # host renders placeholders / an empty blog instead of failing.
+      STRAPI_URL: http://strapi:1337
+      STRAPI_PUBLIC_URL: http://cms.localhost:1337
     ports:
       - '9000:9000'
     depends_on:

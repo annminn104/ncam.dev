@@ -15,12 +15,14 @@
     "dev": {
       "dependsOn": ["assets"],
       "cache": false,
-      "persistent": true
+      "persistent": true,
+      "passThroughEnv": ["STRAPI_URL", "STRAPI_PUBLIC_URL"]
     },
     "preview": {
       "dependsOn": ["build"],
       "cache": false,
-      "persistent": true
+      "persistent": true,
+      "passThroughEnv": ["STRAPI_URL", "STRAPI_PUBLIC_URL"]
     },
     "typecheck": {
       "dependsOn": ["^build"]

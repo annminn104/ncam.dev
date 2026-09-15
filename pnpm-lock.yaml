@@ -267,6 +267,9 @@ importers:
       '@module-federation/runtime':
         specifier: 2.7.0
         version: 2.7.0
+      '@ncam/cms':
+        specifier: workspace:*
+        version: link:../../packages/cms
       '@ncam/design-tokens':
         specifier: workspace:*
         version: link:../../packages/design-tokens
@@ -276,6 +279,9 @@ importers:
       '@ncam/project-registry':
         specifier: workspace:*
         version: link:../../packages/project-registry
+      '@strapi/blocks-react-renderer':
+        specifier: ^1.0.2
+        version: 1.0.2(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       '@tanstack/react-router':
         specifier: 1.170.18
         version: 1.170.18(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
@@ -362,6 +368,9 @@ importers:
       '@fontsource-variable/syne':
         specifier: ^5.3.0
         version: 5.3.0
+      '@ncam/cms':
+        specifier: workspace:*
+        version: link:../../packages/cms
       '@ncam/mf-remote':
         specifier: workspace:*
         version: link:../../packages/mf-remote
@@ -509,6 +518,18 @@ importers:
       vite:
         specifier: ^8.1.4
         version: 8.1.4(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.1)(yaml@2.9.0)
+
+  packages/cms:
+    devDependencies:
+      '@ncam/tsconfig':
+        specifier: workspace:*
+        version: link:../tsconfig
+      '@types/node':
+        specifier: ^26.1.1
+        version: 26.1.1
+      typescript:
+        specifier: ^5.9.0
+        version: 5.9.3
 
   packages/design-tokens: {}
 
@@ -2769,6 +2790,12 @@ packages:
       react-dom: ^17.0.0 || ^18.0.0
       react-router-dom: ^6.30.3
       styled-components: ^6.0.0
+
+  '@strapi/blocks-react-renderer@1.0.2':
+    resolution: {integrity: sha512-pRV/WMreo5wyrLg7J0pw1DM9lg8U8m+QA7Bd8CPN3beUBTdDhYrFTTNZh3XveEdnURZNJu1X0aWXAg4SzVg7QA==}
+    peerDependencies:
+      react: ^18.0.0 || ^19.0.0
+      react-dom: ^18.0.0 || ^19.0.0
 
   '@strapi/cloud-cli@5.53.0':
     resolution: {integrity: sha512-SOdivxJcCAMGNSGxiucYYVTgSd/5FYQDoQ6CgXRpzwJ/ZlJwYgxi/gLkRS1nqtfoj1i6Oxk64tVYNySAXbO/DA==}
@@ -10589,6 +10616,11 @@ snapshots:
       - supports-color
       - tedious
       - ts-toolbelt
+
+  '@strapi/blocks-react-renderer@1.0.2(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
+    dependencies:
+      react: 19.2.7
+      react-dom: 19.2.7(react@19.2.7)
 
   '@strapi/cloud-cli@5.53.0(@types/node@20.19.43)(ts-toolbelt@9.6.0)':
     dependencies:

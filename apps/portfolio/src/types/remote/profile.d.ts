@@ -1,16 +1,17 @@
 // Type declarations for the federated `profile` remote: one module per home-page
 // section, all with the same { ssr, hydrate, mount } shape (see
-// apps/profile/src/lib/section-module.tsx).
+// apps/profile/src/lib/section-module.tsx). Modules may accept an optional props
+// object — the host passes `{ posts }` to `profile/blog`, nothing to the others.
 
 interface ProfileSectionSSRResult {
   html: string;
   css: string;
 }
 
-interface ProfileSectionModule {
-  ssr(): Promise<ProfileSectionSSRResult>;
-  hydrate(target: HTMLElement): () => void;
-  mount(target: HTMLElement): () => void;
+interface ProfileSectionModule<P = unknown> {
+  ssr(props?: P): Promise<ProfileSectionSSRResult>;
+  hydrate(target: HTMLElement, props?: P): () => void;
+  mount(target: HTMLElement, props?: P): () => void;
 }
 
 declare module 'profile/hero' {
