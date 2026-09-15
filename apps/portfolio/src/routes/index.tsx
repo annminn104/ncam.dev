@@ -146,6 +146,11 @@ export const Route = createFileRoute('/')({
     log.debug('home.ssr', { modules: Object.keys(data.html), posts: posts.length });
     return data;
   },
+  // Spec §2: pair the 60 s swr cache with a 60 s client freshness window. Without it every
+  // return to `/` (and every hover-preload of a link to it) re-runs the loader, costing a CMS
+  // round-trip and re-mounting all six sections once the new `posts` array arrives.
+  staleTime: 60_000,
+  preloadStaleTime: 60_000,
   head: () => ({
     meta: [
       { name: 'robots', content: 'index,follow' },
