@@ -24,6 +24,9 @@ const post = await fetchArticleBySlug(apiBase, 'my-slug', mediaBase); // BlogPos
   serialize a `BlogPost` from a server function.
 - Options: `{ fetch, signal, timeoutMs = 5000 }` — `fetch` is injectable for
   tests. Non-2xx → `CmsError(status)`; network/timeout errors propagate.
+- `trimTrailingSlashes(url)` is exported and used by the host's `cms-env.ts` so
+  the base URLs are normalised the same way everywhere; it is a linear scan on
+  purpose (CodeQL flags `/\/+$/` as a polynomial regex on library input).
 - Query strings (`query.ts`) use only parameters Strapi's `rest.strictParams`
   accepts; change them together with the Strapi schema.
 

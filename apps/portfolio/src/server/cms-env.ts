@@ -1,3 +1,5 @@
+import { trimTrailingSlashes } from '@ncam/cms';
+
 /**
  * Where the server finds the CMS. Read at request time from process.env so the
  * same build runs everywhere (Vercel env, docker-compose `environment`, shell).
@@ -13,10 +15,6 @@ export interface CmsEnv {
 
 export const DEFAULT_STRAPI_URL = 'http://localhost:1337';
 
-function trimSlash(url: string): string {
-  return url.replace(/\/+$/, '');
-}
-
 let warnedMissingUrl = false;
 
 export function getCmsEnv(env: NodeJS.ProcessEnv = process.env): CmsEnv {
@@ -25,7 +23,7 @@ export function getCmsEnv(env: NodeJS.ProcessEnv = process.env): CmsEnv {
     console.warn(`[cms] STRAPI_URL is not set — falling back to ${DEFAULT_STRAPI_URL}`);
     warnedMissingUrl = true;
   }
-  const apiBase = trimSlash(configured || DEFAULT_STRAPI_URL);
-  const mediaBase = trimSlash(env.STRAPI_PUBLIC_URL?.trim() || apiBase);
+  const apiBase = trimTrailingSlashes(configured || DEFAULT_STRAPI_URL);
+  const mediaBase = trimTrailingSlashes(env.STRAPI_PUBLIC_URL?.trim() || apiBase);
   return { apiBase, mediaBase };
 }

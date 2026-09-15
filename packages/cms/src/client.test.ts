@@ -1,5 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
-import { CmsError, articlesUrl, fetchArticleBySlug, fetchArticles } from './client';
+import {
+  CmsError,
+  articlesUrl,
+  fetchArticleBySlug,
+  fetchArticles,
+  trimTrailingSlashes,
+} from './client';
 import type { StrapiArticle } from './types';
 
 const BASE = 'http://cms.test:1337/';
@@ -36,6 +42,16 @@ describe('articlesUrl', () => {
   it('trims any run of trailing slashes in linear time', () => {
     expect(articlesUrl(`http://a${'/'.repeat(10_000)}`, 'x=1')).toBe('http://a/api/articles?x=1');
     expect(articlesUrl('/', 'x=1')).toBe('/api/articles?x=1');
+  });
+});
+
+describe('trimTrailingSlashes', () => {
+  it('removes only trailing slashes and leaves everything else alone', () => {
+    expect(trimTrailingSlashes('http://a///')).toBe('http://a');
+    expect(trimTrailingSlashes('http://a/b/')).toBe('http://a/b');
+    expect(trimTrailingSlashes('http://a')).toBe('http://a');
+    expect(trimTrailingSlashes('///')).toBe('');
+    expect(trimTrailingSlashes('')).toBe('');
   });
 });
 

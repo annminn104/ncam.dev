@@ -23,5 +23,11 @@ export type {
 export { absolutizeBlockImages, formatDateLabel, mapArticle, resolveMediaUrl } from './map';
 export type { MapOptions } from './map';
 export { buildBySlugQuery, buildListQuery } from './query';
-export { CmsError, articlesUrl, fetchArticleBySlug, fetchArticles } from './client';
+export {
+  CmsError,
+  articlesUrl,
+  fetchArticleBySlug,
+  fetchArticles,
+  trimTrailingSlashes,
+} from './client';
 export type { CmsOptions } from './client';

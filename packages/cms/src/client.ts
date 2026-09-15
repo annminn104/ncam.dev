@@ -28,8 +28,11 @@ function withTimeout(signal: AbortSignal | undefined, timeoutMs: number): AbortS
   return signal ? AbortSignal.any([signal, timeout]) : timeout;
 }
 
-/** Drop every trailing `/` with a linear scan (a `/\/+$/` regex backtracks on long runs). */
-function trimTrailingSlashes(url: string): string {
+/**
+ * Drop every trailing `/` with a linear scan (a `/\/+$/` regex backtracks on long
+ * runs). Shared with the host's `STRAPI_*` env parsing so both trim the same way.
+ */
+export function trimTrailingSlashes(url: string): string {
   let end = url.length;
   while (end > 0 && url.charCodeAt(end - 1) === 47 /* '/' */) end -= 1;
   return url.slice(0, end);
