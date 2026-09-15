@@ -1468,7 +1468,7 @@ grep -o '<title>[^<]*</title>' /tmp/post.html
 grep -c 'content="article"' /tmp/post.html
 grep -c '"@type":"BlogPosting"' /tmp/post.html
 curl -s -o /dev/null -w 'unknown=%{http_code}\n' http://127.0.0.1:9000/blog/does-not-exist
-kill $(lsof -ti :9000); kill $(lsof -ti :1337); lsof -ti :9000 :1337 || echo "ports free"
+kill $(lsof -ti :9000); kill $(lsof -ti :1337); lsof -ti :9000 -i :1337 || echo "ports free"
 ```
 
 Expected: `strapi=204`, `index=200`, index greps `1` each, `<title>Blog — ncam.dev</title>`; `post=200`, post greps `1` each, `<title>Hello from the blog smoke test · ncam.dev</title>`; `unknown=404`; `ports free`. Then the CMS-down path: with Strapi stopped, start only the host again and check `curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:9000/blog` → `200` and the body contains "taking a short break"; stop the host.
@@ -2171,7 +2171,7 @@ kill $(lsof -ti :9000)
 curl --retry-connrefused --retry 60 --retry-delay 1 --retry-all-errors -s -o /dev/null -w 'home-cms-down=%{http_code}\n' http://127.0.0.1:9000/
 curl -s http://127.0.0.1:9000/ | grep -c "Publishing soon"
 grep -c "home.blog-posts-unavailable" apps/portfolio/.output/host-smoke-down.log
-kill $(lsof -ti :9000); kill $(lsof -ti :9006); lsof -ti :9000 :9006 :1337 || echo "ports free"
+kill $(lsof -ti :9000); kill $(lsof -ti :9006); lsof -ti :9000 -i :9006 -i :1337 || echo "ports free"
 ```
 
 Expected: `strapi=204`, `remote=200`, `home=200`; `id="blog"` ≥ 1; smoke title ≥ 1; blog link ≥ 1; "Publishing soon" `0` (real posts replace the placeholders); with the CMS down: `home-cms-down=200`, "Publishing soon" ≥ 1, the warn line ≥ 1; `ports free`. If the blog section SSR fell back (title count 0 but the page is 200), read `.output/host-smoke.log` for `home.ssr-fallback` — the remote build must be the Task 4 build (rebuild it) and the host build must be from this task.
@@ -2323,7 +2323,7 @@ Expected: all turbo tasks successful; Vitest 10 files / 48 tests; `audit-exit=0`
 
 - [ ] **Step 2: End-to-end matrix (spec §8)**
 
-Repeat Task 5 Step 4 in full (Strapi + remote + host up; the home page shows the smoke article and the `/blog/hello-blog-smoke` link; CMS down → placeholders, 200) and the blog-page half of Task 3 Step 11 (`/blog` lists the article, `/blog/hello-blog-smoke` is 200 with body + meta, unknown slug 404). Stop every server; confirm `lsof -ti :9000 :9006 :1337` prints nothing.
+Repeat Task 5 Step 4 in full (Strapi + remote + host up; the home page shows the smoke article and the `/blog/hello-blog-smoke` link; CMS down → placeholders, 200) and the blog-page half of Task 3 Step 11 (`/blog` lists the article, `/blog/hello-blog-smoke` is 200 with body + meta, unknown slug 404). Stop every server; confirm `lsof -ti :9000 -i :9006 -i :1337` prints nothing.
 
 - [ ] **Step 3: Repository state and clean-up**
 
