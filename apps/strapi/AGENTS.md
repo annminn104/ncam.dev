@@ -56,6 +56,9 @@ pnpm --filter @ncam/strapi strapi ts:generate-types   # after ANY schema change 
   from `src/index.ts#bootstrap` on every boot and grants the Public role
   `find`/`findOne` on `article` and `tag`. **It only ever adds** — grants made
   in Settings → Roles stay. Writes remain admin-only; no API tokens exist.
+- `src/api/article/middlewares/force-published.ts` — route middleware on the
+  public `find`/`findOne` article routes that forces `status=published`;
+  Strapi would otherwise honour `?status=draft` from anonymous callers.
 - Unit tests sit next to the code (`*.test.ts`, run by the root Vitest); they
   use a fake `strapi` object, never a database.
 
@@ -67,7 +70,8 @@ GET /api/articles?filters[slug][$eq]=<slug>&populate=*
 GET /api/tags
 ```
 
-Drafts are invisible to these calls; only published entries are returned.
+Drafts are invisible to these calls (the routes force `status=published`, so
+`?status=draft` is ignored); only published entries are returned.
 Pagination defaults: 25 per page, max 100 (`config/api.ts`).
 
 ## Repo conventions that differ here

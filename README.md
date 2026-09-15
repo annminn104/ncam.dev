@@ -146,7 +146,8 @@ pnpm --filter @ncam/strapi dev         # http://localhost:1337/admin — registe
 
 `pnpm dev` at the root starts it too. Content model: `article` (title, slug,
 excerpt, cover, `body` as Blocks, `readingTime` computed on save, tags, seo) and
-`tag`. Drafts stay invisible to the API until published.
+`tag`. Drafts stay invisible to the API until published (`?status=draft` is ignored
+by the public routes).
 
 ```bash
 curl 'http://localhost:1337/api/articles?sort=publishedAt:desc&populate[cover]=true&populate[tags]=true'

@@ -141,6 +141,9 @@ Ordering for the frontend is `sort=publishedAt:desc`.
 - Uploads: default local provider → `public/uploads` (Docker volume in prod).
   Media URLs are absolute when `PUBLIC_URL` is set (§6).
 - No API tokens are created; write access is admin-only through `/admin`.
+- `find`/`findOne` on `article` run the `api::article.force-published` route
+  middleware, which forces `status=published`: Strapi otherwise accepts
+  `?status=draft` from anonymous callers and would leak drafts.
 
 Example calls the frontend will use later:
 
