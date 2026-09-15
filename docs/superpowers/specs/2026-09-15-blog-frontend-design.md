@@ -39,16 +39,16 @@ functions; the browser never talks to Strapi. A new framework-free package
 
 ## 2. Decisions
 
-| Topic           | Decision                                                                                              | Why                                                                                      |
-| --------------- | ----------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| Shared code     | New package `packages/cms` (`@ncam/cms`), framework-free                                              | One `BlogPost` type for host and remote; root Vitest already covers `packages/*`         |
-| Fetch location  | `createServerFn` handlers in the host                                                                 | Server-only, runtime env, no CORS, works on Vercel functions and the Nitro Docker server |
-| Home section    | Host fetches, passes `{ posts }` into the remote's `ssr/hydrate/mount`                                | Keeps SSR + the six-module pipeline; identical data on server and client (loader data)   |
-| Body rendering  | `@strapi/blocks-react-renderer` 1.0.x (React 19 peer ok)                                              | Official, SSR-safe; overrides for `image` and `link` only                                |
-| Freshness       | Nitro `routeRules` `swr: 60` on `/`, `/blog`, `/blog/**`; route `staleTime` 60 s                      | New posts within a minute; no webhook plumbing; Vercel preset honours swr as ISR         |
-| Env             | `STRAPI_URL` (server API base) + `STRAPI_PUBLIC_URL` (browser media origin, defaults to `STRAPI_URL`) | Docker needs an internal fetch URL and a public asset URL                                |
-| Date/label text | Computed in the mapper on the server (`en-US`, UTC → "Sep 15, 2026")                                  | Strings serialize into loader data → no hydration mismatch, no `Intl` on the client      |
-| Empty CMS       | Home keeps the existing four "Publishing soon" placeholders                                           | Site never looks broken; the copy already says posts are coming                          |
+| Topic           | Decision                                                                                                            | Why                                                                                      |
+| --------------- | ------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Shared code     | New package `packages/cms` (`@ncam/cms`), framework-free                                                            | One `BlogPost` type for host and remote; root Vitest already covers `packages/*`         |
+| Fetch location  | `createServerFn` handlers in the host                                                                               | Server-only, runtime env, no CORS, works on Vercel functions and the Nitro Docker server |
+| Home section    | Host fetches, passes `{ posts }` into the remote's `ssr/hydrate/mount`                                              | Keeps SSR + the six-module pipeline; identical data on server and client (loader data)   |
+| Body rendering  | `@strapi/blocks-react-renderer` 1.0.x (React 19 peer ok)                                                            | Official, SSR-safe; overrides for `image` and `link` only                                |
+| Freshness       | Nitro `routeRules` `swr: 60` on `/`, `/blog`, `/blog/**`; route `staleTime` 60 s (`/` also `preloadStaleTime` 60 s) | New posts within a minute; no webhook plumbing; Vercel preset honours swr as ISR         |
+| Env             | `STRAPI_URL` (server API base) + `STRAPI_PUBLIC_URL` (browser media origin, defaults to `STRAPI_URL`)               | Docker needs an internal fetch URL and a public asset URL                                |
+| Date/label text | Computed in the mapper on the server (`en-US`, UTC → "Sep 15, 2026")                                                | Strings serialize into loader data → no hydration mismatch, no `Intl` on the client      |
+| Empty CMS       | Home keeps the existing four "Publishing soon" placeholders                                                         | Site never looks broken; the copy already says posts are coming                          |
 
 ## 3. `packages/cms` — `@ncam/cms`
 
@@ -237,11 +237,10 @@ export const getBlogPost = createServerFn({ method: 'GET' })
 
 ### Routes
 
-- `src/routes/blog/index.tsx` — `loader: () => getBlogPosts().catch(() => [])`,
-  `staleTime: 60_000`, `head()` with title "Blog — <site>" and description.
-  Renders the `.stage` shell (back link to `/`), a heading, and a list of cards
-  (`<Link to="/blog/$slug">`): date label, reading label, title, excerpt, tags.
-  Empty list → an empty-state paragraph ("Nothing published yet.").
+- `src/routes/blog/index.tsx` — the loader is `try { posts = await
+getBlogPosts() } catch { unavailable = true }` → `{ posts, unavailable }`;
+  empty list → "Nothing published yet.", unavailable → "The blog is taking a
+  short break — please try again in a minute."
 - `src/routes/blog/$slug.tsx` — `loader: async ({ params }) => { const post = await getBlogPost({ data: params.slug }); if (!post) throw notFound(); return post; }`,
   `staleTime: 60_000`, `head({ loaderData })` → `<title>` = `seo.title`,
   `meta description` = `seo.description`, `og:title`, `og:description`,
@@ -252,9 +251,12 @@ export const getBlogPost = createServerFn({ method: 'GET' })
   `<BlocksRenderer content={post.body} blocks={{ image, link }} />`. The
   `image` override renders `<img src alt width height loading="lazy">` — URLs
   are already absolute because `mapArticle` ran `absolutizeBlockImages` on the
-  server. The `link` override compares parsed origins (`isExternal`; relative
-  URLs resolve against the site) and renders `<a rel="noopener noreferrer"
-target="_blank">` for off-site URLs, a plain `<a>` otherwise. The BlogPosting
+  server. The `link` override resolves the URL against the site and
+  allow-lists its scheme (`resolveLink`; only `http(s):`, `mailto:` and `tel:`
+  pass) — an off-site `http(s):` URL renders `<a rel="noopener noreferrer"
+target="_blank">`, a same-site or non-http(s) allowed URL a plain `<a>`, and
+  any other scheme (e.g. `javascript:`) a `<span>` with just the link text.
+  The BlogPosting
   JSON-LD is inlined through `jsonLdScript`, which escapes `<` as `\u003c` so
   CMS-authored text can never close the `<script>`. Overrides are typed as
   `NonNullable<ComponentProps<typeof BlocksRenderer>['blocks']>` (1.0.2 exports
@@ -273,8 +275,9 @@ target="_blank">` for off-site URLs, a plain `<a>` otherwise. The BlogPosting
 `apps/portfolio/vite.config.ts` → `nitro({ routeRules: { '/': { swr: 60 }, '/blog': { swr: 60 }, '/blog/**': { swr: 60 } } })`
 (the `nitro()` plugin already exists there; `traceDeps` unchanged). Route-level
 `staleTime: 60_000` keeps client-side navigations from refetching within a
-minute. Nothing else is cached; server functions are called fresh on client
-navigations, which is acceptable.
+minute (`/` also sets `preloadStaleTime: 60_000`, since a hover-preload runs
+the loader too). Nothing else is cached; server functions are called fresh on
+client navigations, which is acceptable.
 
 ### Home page (`src/routes/index.tsx`)
 
@@ -350,6 +353,10 @@ behaviour is unchanged. The chunk-cycle rule stays: each module keeps its own
 | No published posts                 | placeholders                    | empty state           | 404                                     |
 | Unknown slug                       | —                               | —                     | `notFound()` → 404 page                 |
 | Strapi returns relative media URLs | n/a (cards have no images)      | n/a                   | absolute via `STRAPI_PUBLIC_URL`        |
+
+Degraded 200s (placeholders / empty state) are cached by the swr layer like any
+other 200, so a recovered CMS can take up to a minute plus one revalidating
+request to show through; that is accepted.
 
 ## 8. Testing and verification
 

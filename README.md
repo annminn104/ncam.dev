@@ -94,7 +94,9 @@ pnpm --filter @ncam/portfolio dev     # host alone (projects fail to load until 
 
 Non-secret defaults live in the committed **`.env`**; machine-specific overrides
 go in **`.env.local`** (gitignored). Precedence, highest first: the real
-environment, then `.env.local`, then `.env`. Never put secrets in `.env`.
+environment, then `.env.local`, then `.env`. The runtime-only `STRAPI_*`
+variables are the exception: the built server reads them from the real
+environment only (see the table). Never put secrets in `.env`.
 
 | Variable                                                                                                                                | Purpose                                                                                                                                                                                  |
 | --------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -249,6 +251,11 @@ Remote entry URLs use `*.localhost` hostnames so the **same URL** resolves in
 the browser (loopback) and inside the host container (compose network aliases)
 — that is what lets the host resolve remotes server-side. They are build args,
 not runtime env, because the host bakes them in at build time.
+
+The host caches `/`, `/blog` and `/blog/*` for 60 s via Nitro `swr`; on the
+node-server image that cache is in process memory and keyed by path + query
+string, so before exposing the stack publicly strip query strings for those
+routes at the gateway or mount a bounded cache storage.
 
 The CMS has its own image and a Postgres container behind the `cms` compose
 profile, so the default stack never needs it (SQLite is dev-only):

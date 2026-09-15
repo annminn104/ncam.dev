@@ -39,7 +39,16 @@ own six sections (the `profile` remote) on `/`. React 19.
     `@strapi/blocks-react-renderer` (overrides: `image`, `link`), escapes `<` in
     the inlined BlogPosting JSON-LD and marks off-site links by parsed origin.
     Styles in `src/blog.css`. Nitro `routeRules` cache `/`, `/blog`, `/blog/**`
-    with `swr: 60`, so a publish shows up within a minute.
+    with `swr: 60`, so a publish shows up within a minute. The swr layer buffers
+    the SSR response (`res.text()`), so `/`, `/blog` and `/blog/**` do not
+    stream; it keys on path + query string and, on the node-server (Docker)
+    path, uses an in-memory storage with no eviction — before exposing that
+    stack publicly, strip query strings for those routes at the nginx gateway
+    or mount a bounded Nitro cache storage (Vercel's edge cache is unaffected).
+    Degraded 200s (placeholders / empty state) are cached for the same minute.
+    `/` also sets `staleTime` and `preloadStaleTime` to 60 s, and article links
+    are limited to `http(s):`/`mailto:`/`tel:` schemes (other schemes render as
+    plain text).
 - `src/lib/federation.ts` — `getHostRuntime`, `forgetFailedRemote`,
   `loadRemoteModuleSSR`. In the production server bundle the plugin's import
   wrapper rejects forever after one failed attempt and never carries the remote's
