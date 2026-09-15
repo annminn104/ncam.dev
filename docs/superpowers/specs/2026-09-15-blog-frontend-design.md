@@ -132,13 +132,13 @@ export interface BlogPost {
 
 - `resolveMediaUrl(url, mediaBase)`: absolute URLs pass through; relative
   (`/uploads/…`) are resolved against `mediaBase` with `new URL()`.
-- `mapArticle(raw, { mediaBase })`: `dateLabel` via
-  `Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' })`
-  (→ "Sep 15, 2026"); `readingTime = Math.max(1, raw.readingTime ?? 1)`;
-  `readingLabel = \`${readingTime} min\``; `tags = raw.tags.map(t => t.name)`;
-`cover`mapped with`alt = alternativeText ?? title`; `seo.title = metaTitle ?? title`,
-`seo.description = metaDescription ?? excerpt`, `seo.image = ogImage ?? cover`;
-`body = raw.body ? absolutizeBlockImages(raw.body, mediaBase) : null`.
+- `mapArticle(raw, { mediaBase })`:
+  - `dateLabel` via `Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' })` → "Sep 15, 2026"
+  - `readingTime = Math.max(1, raw.readingTime ?? 1)`; `readingLabel` = that number followed by " min" ("9 min")
+  - `tags = raw.tags.map((t) => t.name)`
+  - `cover` mapped with `alt = alternativeText ?? title`, URL made absolute
+  - `seo.title = metaTitle ?? title`, `seo.description = metaDescription ?? excerpt`, `seo.image = ogImage ?? cover`
+  - `body = raw.body ? absolutizeBlockImages(raw.body, mediaBase) : null`
 - `absolutizeBlockImages(blocks, mediaBase)`: returns a copy of the Blocks tree
   in which every `{ type: 'image', image: { url } }` node has an absolute `url`
   (via `resolveMediaUrl`); every other node is untouched. So the host never
