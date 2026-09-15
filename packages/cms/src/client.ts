@@ -28,9 +28,16 @@ function withTimeout(signal: AbortSignal | undefined, timeoutMs: number): AbortS
   return signal ? AbortSignal.any([signal, timeout]) : timeout;
 }
 
-/** `${origin}/api/articles?${query}` — tolerates a trailing slash on the base. */
+/** Drop every trailing `/` with a linear scan (a `/\/+$/` regex backtracks on long runs). */
+function trimTrailingSlashes(url: string): string {
+  let end = url.length;
+  while (end > 0 && url.charCodeAt(end - 1) === 47 /* '/' */) end -= 1;
+  return url.slice(0, end);
+}
+
+/** `${origin}/api/articles?${query}` — tolerates trailing slashes on the base. */
 export function articlesUrl(baseUrl: string, query: string): string {
-  return `${baseUrl.replace(/\/+$/, '')}/api/articles?${query}`;
+  return `${trimTrailingSlashes(baseUrl)}/api/articles?${query}`;
 }
 
 async function getJson<T>(url: string, options: CmsOptions): Promise<T> {

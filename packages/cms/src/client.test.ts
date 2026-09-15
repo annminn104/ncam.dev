@@ -32,6 +32,11 @@ describe('articlesUrl', () => {
     expect(articlesUrl('http://a/', 'x=1')).toBe('http://a/api/articles?x=1');
     expect(articlesUrl('http://a', 'x=1')).toBe('http://a/api/articles?x=1');
   });
+
+  it('trims any run of trailing slashes in linear time', () => {
+    expect(articlesUrl(`http://a${'/'.repeat(10_000)}`, 'x=1')).toBe('http://a/api/articles?x=1');
+    expect(articlesUrl('/', 'x=1')).toBe('/api/articles?x=1');
+  });
 });
 
 describe('fetchArticles', () => {
