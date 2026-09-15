@@ -1,7 +1,30 @@
 import { ArrowUpRight } from 'lucide-react';
-import { posts, type Post } from '../data/profile';
+import type { BlogPost } from '@ncam/cms';
+import { posts as placeholderPosts, type Post } from '../data/profile';
 import { useRevealChildren } from '../lib/gsap';
 import { SectionHead } from './section-head';
+
+/** Props the portfolio host passes in (server-fetched from Strapi). Empty → placeholders. */
+export interface BlogSectionProps {
+  posts?: BlogPost[];
+}
+
+const LEAD_LIVE =
+  'Long-form write-ups on micro-frontends, SSR and motion — the things this site is made of.';
+const LEAD_DRAFTS = `${LEAD_LIVE} First posts land soon; titles below are the drafts in progress.`;
+
+/** A published post → the card shape the placeholders already use. */
+function toCard(post: BlogPost): Post {
+  return {
+    id: post.slug,
+    title: post.title,
+    excerpt: post.excerpt,
+    date: post.dateLabel,
+    readingTime: post.readingLabel,
+    tags: post.tags,
+    href: `/blog/${post.slug}`,
+  };
+}
 
 function PostCard({ post, featured = false }: { post: Post; featured?: boolean }) {
   const className = `post${featured ? ' post--featured' : ''}`;
@@ -40,8 +63,10 @@ function PostCard({ post, featured = false }: { post: Post; featured?: boolean }
   );
 }
 
-export function Blogs() {
-  const [featured, ...rest] = posts;
+export function Blogs({ posts }: BlogSectionProps = {}) {
+  const live = posts !== undefined && posts.length > 0;
+  const cards = live ? posts.map(toCard) : placeholderPosts;
+  const [featured, ...rest] = cards;
   const gridRef = useRevealChildren<HTMLDivElement>({ y: 36, stagger: 0.12 });
 
   return (
@@ -54,7 +79,7 @@ export function Blogs() {
               Notes from the <em>build</em>
             </span>
           }
-          lead="Long-form write-ups on micro-frontends, SSR and motion — the things this site is made of. First posts land soon; titles below are the drafts in progress."
+          lead={live ? LEAD_LIVE : LEAD_DRAFTS}
         />
         <div ref={gridRef} className="blog__grid">
           <PostCard post={featured} featured />

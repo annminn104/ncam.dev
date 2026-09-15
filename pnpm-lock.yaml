@@ -368,6 +368,9 @@ importers:
       '@fontsource-variable/syne':
         specifier: ^5.3.0
         version: 5.3.0
+      '@ncam/cms':
+        specifier: workspace:*
+        version: link:../../packages/cms
       '@ncam/mf-remote':
         specifier: workspace:*
         version: link:../../packages/mf-remote
