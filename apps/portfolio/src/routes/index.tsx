@@ -6,7 +6,7 @@ import { HomeNav } from '../components/home/nav';
 import { ManifestRail, type LoadState } from '../components/home/manifest-rail';
 import { sections, type SectionMeta } from '../data/sections';
 import { getBlogPosts } from '../functions/blog.functions';
-import { loadRemoteModuleSSR, SSR_LOAD_TIMEOUT_MS } from '../lib/federation';
+import { loadRemoteModuleSSR, SSR_LOAD_TIMEOUT_MS, withTimeout } from '../lib/federation';
 import { ScrollTrigger } from '../lib/gsap';
 import { useSectionTracker } from '../lib/use-section-tracker';
 
@@ -19,6 +19,8 @@ const REMOTE = 'profile';
 const SSR_PAGE_BUDGET_MS = 4_000;
 /** The one section that takes data from the host. */
 const BLOG_MODULE = 'blog';
+/** Slice of the request the CMS may take on the home page (@ncam/cms itself aborts at 5 s; the SSR loop still needs its 4 s). */
+const BLOG_POSTS_TIMEOUT_MS = 2_500;
 
 // Public facts for SEO (the full content lives in the remote's data file).
 const PERSON = {
@@ -96,12 +98,15 @@ export const Route = createFileRoute('/')({
   loader: async (): Promise<LoaderData> => {
     // Blog posts come from the CMS in every mode (a server function: direct call
     // during SSR, RPC on client navigations). Unavailable → empty → placeholders.
-    const posts = await getBlogPosts().catch((error: unknown) => {
-      log.warn('home.blog-posts-unavailable', {
-        error: error instanceof Error ? error.message : String(error),
-      });
-      return [] as BlogPost[];
-    });
+    // Bounded to 2.5 s so a hanging CMS costs the blog cards, never the response.
+    const posts = await withTimeout('getBlogPosts', getBlogPosts(), BLOG_POSTS_TIMEOUT_MS).catch(
+      (error: unknown) => {
+        log.warn('home.blog-posts-unavailable', {
+          error: error instanceof Error ? error.message : String(error),
+        });
+        return [] as BlogPost[];
+      },
+    );
     const data: LoaderData = { html: {}, css: '', posts };
     if (!import.meta.env.PROD || !import.meta.env.SSR) return data;
     // One budget for the whole page: serverless hosts cap a request (Vercel Hobby:

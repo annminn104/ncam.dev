@@ -55,7 +55,8 @@ export async function forgetFailedRemote(runtime: ModuleFederation, name: string
  */
 export const SSR_LOAD_TIMEOUT_MS = 8_000;
 
-function withTimeout<T>(label: string, promise: Promise<T>, ms: number): Promise<T> {
+/** Race a promise against a deadline; rejects with "<label> timed out after <ms>ms". Used by the SSR loader and by route loaders that must never block the response. */
+export function withTimeout<T>(label: string, promise: Promise<T>, ms: number): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   const timeout = new Promise<never>((_, reject) => {
     timer = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
