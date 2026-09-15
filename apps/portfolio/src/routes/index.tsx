@@ -1,9 +1,11 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { BlogPost } from '@ncam/cms';
 import { createLogger } from '@ncam/logger';
 import { HomeNav } from '../components/home/nav';
 import { ManifestRail, type LoadState } from '../components/home/manifest-rail';
 import { sections, type SectionMeta } from '../data/sections';
+import { getBlogPosts } from '../functions/blog.functions';
 import { loadRemoteModuleSSR, SSR_LOAD_TIMEOUT_MS } from '../lib/federation';
 import { ScrollTrigger } from '../lib/gsap';
 import { useSectionTracker } from '../lib/use-section-tracker';
@@ -15,6 +17,8 @@ const SITE_URL = 'https://ncam.dev';
 const REMOTE = 'profile';
 /** Total server-side budget for rendering the home sections (see the loader). */
 const SSR_PAGE_BUDGET_MS = 4_000;
+/** The one section that takes data from the host. */
+const BLOG_MODULE = 'blog';
 
 // Public facts for SEO (the full content lives in the remote's data file).
 const PERSON = {
@@ -50,11 +54,14 @@ const jsonLd = {
   ],
 };
 
+/** Props the host hands to a section module (only the blog section takes any). */
+type SectionProps = { posts: BlogPost[] } | undefined;
+
 /** Shape of every `profile/<module>` (see apps/profile/src/lib/section-module.tsx). */
 type SectionModule = {
-  ssr(): Promise<{ html: string; css: string }>;
-  hydrate(target: HTMLElement): () => void;
-  mount(target: HTMLElement): () => void;
+  ssr(props?: SectionProps): Promise<{ html: string; css: string }>;
+  hydrate(target: HTMLElement, props?: SectionProps): () => void;
+  mount(target: HTMLElement, props?: SectionProps): () => void;
 };
 
 // Static import specifiers so the Module Federation plugin can transform them —
@@ -73,8 +80,13 @@ interface LoaderData {
   html: Record<string, string>;
   /** The remote's CSS (one copy — every module returns the same string). */
   css: string;
+  /** Published blog posts from the CMS (empty when unavailable → the remote shows placeholders). */
+  posts: BlogPost[];
 }
-const NO_SSR: LoaderData = { html: {}, css: '' };
+
+function propsFor(module: string, posts: BlogPost[]): SectionProps {
+  return module === BLOG_MODULE ? { posts } : undefined;
+}
 
 export const Route = createFileRoute('/')({
   // Server-render every section through the federation runtime so the page is
@@ -82,8 +94,16 @@ export const Route = createFileRoute('/')({
   // server build (`vite dev` cannot resolve federated SSR) — otherwise, and for
   // any module that fails, the client mounts that section instead.
   loader: async (): Promise<LoaderData> => {
-    if (!import.meta.env.PROD || !import.meta.env.SSR) return NO_SSR;
-    const data: LoaderData = { html: {}, css: '' };
+    // Blog posts come from the CMS in every mode (a server function: direct call
+    // during SSR, RPC on client navigations). Unavailable → empty → placeholders.
+    const posts = await getBlogPosts().catch((error: unknown) => {
+      log.warn('home.blog-posts-unavailable', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return [] as BlogPost[];
+    });
+    const data: LoaderData = { html: {}, css: '', posts };
+    if (!import.meta.env.PROD || !import.meta.env.SSR) return data;
     // One budget for the whole page: serverless hosts cap a request (Vercel Hobby:
     // 10 s), so a slow remote must cost sections their SSR, never the response.
     const deadline = Date.now() + SSR_PAGE_BUDGET_MS;
@@ -108,7 +128,7 @@ export const Route = createFileRoute('/')({
         if (typeof mod.ssr !== 'function') {
           throw new Error(`${REMOTE}/${section.module} does not export ssr()`);
         }
-        const { html, css } = await mod.ssr();
+        const { html, css } = await mod.ssr(propsFor(section.module, posts));
         data.html[section.module] = html;
         data.css ||= css;
       } catch (error) {
@@ -118,7 +138,7 @@ export const Route = createFileRoute('/')({
         });
       }
     }
-    log.debug('home.ssr', { modules: Object.keys(data.html) });
+    log.debug('home.ssr', { modules: Object.keys(data.html), posts: posts.length });
     return data;
   },
   head: () => ({
@@ -153,11 +173,11 @@ function useScrollTriggerRefresh() {
 }
 
 /**
- * The remote renders plain `<a href="/projects/…">` links (it has no router);
- * turn them into client-side navigations so the stage route opens without a
- * full page load.
+ * The remote renders plain `<a href="/projects/…">` and `<a href="/blog/…">`
+ * links (it has no router); turn them into client-side navigations so the stage
+ * and blog routes open without a full page load.
  */
-function useProjectLinks(rootRef: React.RefObject<HTMLElement | null>) {
+function useInternalLinks(rootRef: React.RefObject<HTMLElement | null>) {
   const navigate = useNavigate();
   useEffect(() => {
     const root = rootRef.current;
@@ -165,14 +185,13 @@ function useProjectLinks(rootRef: React.RefObject<HTMLElement | null>) {
     const onClick = (event: MouseEvent) => {
       if (event.defaultPrevented || event.button !== 0) return;
       if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-      const anchor = (event.target as Element | null)?.closest?.('a[href^="/projects/"]');
+      const anchor = (event.target as Element | null)?.closest?.(
+        'a[href^="/projects/"], a[href^="/blog/"]',
+      );
       const href = anchor?.getAttribute('href');
       if (!href) return;
       event.preventDefault();
-      void navigate({
-        to: '/projects/$projectId',
-        params: { projectId: href.slice('/projects/'.length) },
-      });
+      void navigate({ href });
     };
     root.addEventListener('click', onClick);
     return () => root.removeEventListener('click', onClick);
@@ -182,6 +201,7 @@ function useProjectLinks(rootRef: React.RefObject<HTMLElement | null>) {
 interface SectionSlotProps {
   section: SectionMeta;
   html: string | undefined;
+  props: SectionProps;
   onState: (module: string, state: LoadState) => void;
 }
 
@@ -189,8 +209,9 @@ interface SectionSlotProps {
  * One federated section. The div is `display: contents`, so the module's own
  * <section> becomes the page-level element the nav/rail/tracker key off. With
  * SSR markup present the module hydrates it; otherwise it mounts from scratch.
+ * `props` is the exact object the server rendered with (from loader data).
  */
-function SectionSlot({ section, html, onState }: SectionSlotProps) {
+function SectionSlot({ section, html, props, onState }: SectionSlotProps) {
   const ref = useRef<HTMLDivElement>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -204,7 +225,7 @@ function SectionSlot({ section, html, onState }: SectionSlotProps) {
     load()
       .then((mod) => {
         if (cancelled || !ref.current) return;
-        dispose = html ? mod.hydrate(ref.current) : mod.mount(ref.current);
+        dispose = html ? mod.hydrate(ref.current, props) : mod.mount(ref.current, props);
         log.info('home.module', {
           module: section.module,
           mode: html ? 'ssr-hydrate' : 'csr-mount',
@@ -226,7 +247,7 @@ function SectionSlot({ section, html, onState }: SectionSlotProps) {
         /* ignore disposer errors */
       }
     };
-  }, [section.module, html, onState]);
+  }, [section.module, html, props, onState]);
 
   return (
     <>
@@ -256,7 +277,7 @@ function SectionSlot({ section, html, onState }: SectionSlotProps) {
  * loaded, server-rendered and mounted exactly like the project remotes are.
  */
 function HomePage() {
-  const { html, css } = Route.useLoaderData();
+  const { html, css, posts } = Route.useLoaderData();
   const homeRef = useRef<HTMLDivElement>(null);
   const [loadState, setLoadState] = useState<Record<string, LoadState>>(() =>
     Object.fromEntries(sections.map((section) => [section.module, 'idle'])),
@@ -264,6 +285,15 @@ function HomePage() {
   const onState = useCallback((module: string, state: LoadState) => {
     setLoadState((prev) => (prev[module] === state ? prev : { ...prev, [module]: state }));
   }, []);
+  // One stable props object per module: the slot effect depends on it, and the
+  // rail's state updates re-render this component while modules are still loading.
+  const sectionProps = useMemo(
+    () =>
+      Object.fromEntries(
+        sections.map((section) => [section.module, propsFor(section.module, posts)]),
+      ) as Record<string, SectionProps>,
+    [posts],
+  );
 
   const settled = sections.every((section) => {
     const state = loadState[section.module];
@@ -271,7 +301,7 @@ function HomePage() {
   });
   const { active, visited } = useSectionTracker(homeRef, settled);
   useScrollTriggerRefresh();
-  useProjectLinks(homeRef);
+  useInternalLinks(homeRef);
 
   return (
     <div ref={homeRef} className="home">
@@ -289,6 +319,7 @@ function HomePage() {
             key={section.module}
             section={section}
             html={html[section.module]}
+            props={sectionProps[section.module]}
             onState={onState}
           />
         ))}
