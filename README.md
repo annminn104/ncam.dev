@@ -76,19 +76,19 @@ pnpm --filter @ncam/portfolio dev     # host alone (projects fail to load until 
 
 ## Scripts (repo root)
 
-| Command                   | Does                                                                               |
-| ------------------------- | ---------------------------------------------------------------------------------- |
-| `pnpm dev`                | All dev servers (Turbo, persistent).                                               |
-| `pnpm build`              | Build every workspace. Host → `.output/` (Nitro server), remotes → `dist/`.        |
-| `pnpm preview`            | Serve the production builds locally.                                               |
-| `pnpm typecheck`          | `tsc --noEmit` everywhere.                                                         |
-| `pnpm lint` / `lint:fix`  | ESLint (flat config).                                                              |
-| `pnpm format` / `:check`  | Prettier.                                                                          |
-| `pnpm test` / `:watch`    | Vitest (shared packages).                                                          |
-| `pnpm ci`                 | lint + format check + typecheck + test + build — same as GitHub Actions.           |
-| `pnpm assets`             | Download self-hosted assets where an app defines it (currently toonhub figurines). |
-| `pnpm thumbnails [id...]` | Regenerate gallery thumbnails (see below).                                         |
-| `pnpm skills:add`         | Install the agent skills listed in `scripts/add-agent-skills.sh`.                  |
+| Command                   | Does                                                                                                                  |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `pnpm dev`                | All dev servers (Turbo, persistent).                                                                                  |
+| `pnpm build`              | Build every workspace. Host → `.output/` (Nitro server), remotes → `dist/`.                                           |
+| `pnpm preview`            | Serve the production builds locally.                                                                                  |
+| `pnpm typecheck`          | `tsc --noEmit` everywhere.                                                                                            |
+| `pnpm lint` / `lint:fix`  | ESLint (flat config).                                                                                                 |
+| `pnpm format` / `:check`  | Prettier.                                                                                                             |
+| `pnpm test` / `:watch`    | Vitest (shared packages).                                                                                             |
+| `pnpm run ci`             | lint + format check + typecheck + test + build — same as GitHub Actions; `pnpm ci` alone is pnpm's own clean-install. |
+| `pnpm assets`             | Download self-hosted assets where an app defines it (currently toonhub figurines).                                    |
+| `pnpm thumbnails [id...]` | Regenerate gallery thumbnails (see below).                                                                            |
+| `pnpm skills:add`         | Install the agent skills listed in `scripts/add-agent-skills.sh`.                                                     |
 
 ## Configuration
 
@@ -141,7 +141,7 @@ federated remote — Vercel cannot host it, Docker can (see Deploy → Docker).
 
 ```bash
 pnpm --filter @ncam/strapi setup:env   # once: apps/strapi/.env with generated secrets (gitignored)
-pnpm --filter @ncam/strapi dev         # http://localhost:1337/admin — register the first admin user
+pnpm --filter @ncam/strapi dev         # creates .env on first run, then http://localhost:1337/admin — register the first admin user
 ```
 
 `pnpm dev` at the root starts it too. Content model: `article` (title, slug,
@@ -259,8 +259,9 @@ Set `PUBLIC_URL` in `apps/strapi/.env` to the origin the CMS is reached at — `
   running, or its `*_REMOTE_URL` points elsewhere. Run `pnpm dev` at the root.
 - **`pnpm thumbnails` fails** — needs the dev servers up, Node ≥ 22.18 and a
   Playwright Chromium (`pnpm --filter @ncam/portfolio exec playwright install chromium`).
-- **Strapi: `Missing app.keys` / `ADMIN_JWT_SECRET` on start** — `apps/strapi/.env`
-  is missing. Run `pnpm --filter @ncam/strapi setup:env`.
+- **Strapi: `App keys are required` / `Missing auth.secret` on start** —
+  `apps/strapi/.env` is missing. `pnpm --filter @ncam/strapi dev` creates it
+  (or run `pnpm --filter @ncam/strapi setup:env`).
 - **Strapi: `EADDRINUSE :1337`** — another Strapi (or the Docker container) already
   owns 1337. `docker compose stop strapi`, or set `PORT` in `apps/strapi/.env`.
 

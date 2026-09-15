@@ -20,7 +20,7 @@ existing `docker-compose.yml` and nginx gateway.
   work out of the box — no manual permission clicking after a fresh database.
 - Fields cover what the existing home-page blog card already renders
   (`title`, `excerpt`, `date`, `readingTime`, `tags`, link target).
-- `pnpm install && pnpm ci` stays green (lint, format, typecheck, test, build).
+- `pnpm install && pnpm run ci` stays green (lint, format, typecheck, test, build).
 - Deployable with `docker compose up strapi`.
 
 ### Non-goals (this sub-project)
@@ -73,7 +73,9 @@ apps/strapi/
   types/generated/           components.d.ts contentTypes.d.ts (committed)
 ```
 
-- `package.json` scripts: `dev` → `strapi develop --no-open`, `build` → `strapi build`,
+- `package.json` scripts: `dev` → `node scripts/setup-env.mjs && strapi develop`
+  (5.53 dropped the `--no-open` CLI flag; the first-boot browser launch is
+  disabled instead via `autoOpen: false` in `config/admin.ts`), `build` → `strapi build`,
   `start` → `strapi start`, `typecheck` → `tsc --noEmit`, `setup:env` →
   `node scripts/setup-env.mjs`, `strapi` → `strapi` (CLI passthrough, e.g.
   `pnpm --filter @ncam/strapi strapi ts:generate-types`).

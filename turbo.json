@@ -40,7 +40,7 @@
       ]
     },
     "//#test": {
-      "inputs": ["vitest.config.ts", "packages/**/*.{ts,tsx}", "apps/**/*.{ts,tsx}"]
+      "inputs": ["vitest.config.ts", "packages/**/*.{ts,tsx}", "apps/**/*.{ts,tsx,mjs}"]
     }
   }
 }

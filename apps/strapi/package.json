@@ -11,14 +11,14 @@
     "tsconfig.json"
   ],
   "scripts": {
-    "dev": "strapi develop --no-open",
+    "dev": "node scripts/setup-env.mjs && strapi develop",
     "build": "strapi build",
     "start": "strapi start",
     "typecheck": "tsc --noEmit",
     "setup:env": "node scripts/setup-env.mjs",
     "strapi": "strapi",
-    "upgrade": "npx @strapi/upgrade latest",
-    "upgrade:dry": "npx @strapi/upgrade latest --dry"
+    "upgrade": "pnpm dlx @strapi/upgrade latest",
+    "upgrade:dry": "pnpm dlx @strapi/upgrade latest --dry"
   },
   "dependencies": {
     "@strapi/database": "5.53.0",
@@ -38,7 +38,7 @@
     "typescript": "^5"
   },
   "engines": {
-    "node": ">=20.0.0 <=26.x.x"
+    "node": ">=20.11.0 <=26.x.x"
   },
   "strapi": {
     "telemetryDisabled": true

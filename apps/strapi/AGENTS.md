@@ -12,7 +12,7 @@ Design spec: `docs/superpowers/specs/2026-09-15-strapi-blog-cms-design.md`.
 
 ```bash
 pnpm --filter @ncam/strapi setup:env   # once per clone: writes .env with generated secrets
-pnpm --filter @ncam/strapi dev         # strapi develop --no-open → http://localhost:1337/admin
+pnpm --filter @ncam/strapi dev         # setup:env (idempotent) + strapi develop
 pnpm --filter @ncam/strapi build       # dist/ (server) + dist/build (admin)
 pnpm --filter @ncam/strapi start       # production server from dist/
 pnpm --filter @ncam/strapi typecheck   # tsc --noEmit
@@ -21,6 +21,11 @@ pnpm --filter @ncam/strapi strapi ts:generate-types   # after ANY schema change 
 
 `pnpm dev` at the root starts it alongside the frontend apps. First run: open
 `/admin`, register the first admin user (local SQLite, `.tmp/data.db`).
+
+`strapi develop` runs plain, without `--no-open`: Strapi 5.53's CLI only
+registers `--open` (no `--no-open` negation), so passing it is a hard CLI
+error. The first-boot browser auto-launch is disabled the supported way
+instead, via `autoOpen: false` in `config/admin.ts`.
 
 ## Environment
 
@@ -101,6 +106,6 @@ monorepo image (`Dockerfile` at the root) deliberately excludes this app.
 
 ## Verification
 
-`pnpm ci` green; `pnpm --filter @ncam/strapi build`; anonymous
+`pnpm run ci` green; `pnpm --filter @ncam/strapi build`; anonymous
 `GET /api/articles` → 200, `POST` → 403; boot twice → the
 `[public-permissions] granted` log line appears only on the first boot.
