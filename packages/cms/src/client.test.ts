@@ -18,13 +18,13 @@ const article: StrapiArticle = {
 };
 
 function fakeFetch(status: number, body: unknown) {
-  return vi.fn(
-    async (_input: RequestInfo | URL, _init?: RequestInit) =>
-      new Response(JSON.stringify(body), {
-        status,
-        headers: { 'content-type': 'application/json' },
-      }),
-  ) as unknown as typeof fetch & ReturnType<typeof vi.fn>;
+  return vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+    if (init?.signal?.aborted) throw init.signal.reason;
+    return new Response(JSON.stringify(body), {
+      status,
+      headers: { 'content-type': 'application/json' },
+    });
+  }) as unknown as typeof fetch & ReturnType<typeof vi.fn>;
 }
 
 describe('articlesUrl', () => {
@@ -54,9 +54,11 @@ describe('fetchArticles', () => {
     await expect(fetchArticles(BASE, MEDIA, { fetch })).rejects.toMatchObject({ status: 503 });
   });
 
-  it('hands an already-aborted caller signal to fetch', async () => {
+  it('rejects with the abort reason when the caller signal is already aborted', async () => {
     const fetch = fakeFetch(200, { data: [], meta: { pagination: {} } });
-    await fetchArticles(BASE, MEDIA, { fetch, signal: AbortSignal.abort() });
+    await expect(
+      fetchArticles(BASE, MEDIA, { fetch, signal: AbortSignal.abort() }),
+    ).rejects.toMatchObject({ name: 'AbortError' });
     const [, init] = fetch.mock.calls[0] as [string, RequestInit];
     expect(init.signal?.aborted).toBe(true);
   });
