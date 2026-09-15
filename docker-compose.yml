@@ -122,11 +122,15 @@ services:
         aliases:
           - profile.localhost
 
-  # ── CMS (Strapi): own image + Postgres. Not in the portfolio chain, so the
-  # frontend stack keeps working without it. Before the first run create the
-  # secrets file:  pnpm --filter @ncam/strapi setup:env   (apps/strapi/.env)
-  # Then:          docker compose up --build strapi        → http://localhost:1337/admin
+  # ── CMS (Strapi): own image + Postgres, in the `cms` profile so the default
+  # `docker compose up` (frontend stack) never needs apps/strapi/.env.
+  # First run: `pnpm --filter @ncam/strapi setup:env` (secrets + DB password).
+  # Then: `docker compose up --build strapi` (naming the service activates the
+  # profile; strapi-db comes along) → http://localhost:1337/admin
+  # With the gateway: `docker compose --profile gateway --profile cms up --build`
+  # → http://cms.localhost
   strapi:
+    profiles: ['cms']
     build:
       context: .
       dockerfile: apps/strapi/Dockerfile
@@ -157,6 +161,7 @@ services:
     restart: unless-stopped
 
   strapi-db:
+    profiles: ['cms']
     image: postgres:16-alpine
     env_file:
       - path: apps/strapi/.env # POSTGRES_DB / POSTGRES_USER / POSTGRES_PASSWORD

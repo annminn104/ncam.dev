@@ -296,8 +296,11 @@ volumes:
   strapi-db-data:
 ```
 
-No compose variable interpolation is used, so plain `docker compose up --build strapi`
-works after `pnpm --filter @ncam/strapi setup:env` (Compose only auto-loads the
+Both services carry `profiles: ['cms']`, so the default `docker compose up`
+(frontend stack) never touches them; naming `strapi` on the command line or
+passing `--profile cms` activates them. No compose variable interpolation is
+used, so plain `docker compose up --build strapi` works after
+`pnpm --filter @ncam/strapi setup:env` (Compose only auto-loads the
 root `.env`, never `.env.local`). Both containers read `apps/strapi/.env`: Strapi
 takes the secrets, `DATABASE_*` and `PUBLIC_URL` (set it to the public CMS origin,
 e.g. `http://cms.localhost:1337` or `https://cms.ncam.dev`); Postgres takes

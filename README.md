@@ -239,12 +239,13 @@ the browser (loopback) and inside the host container (compose network aliases)
 — that is what lets the host resolve remotes server-side. They are build args,
 not runtime env, because the host bakes them in at build time.
 
-The CMS has its own image and a Postgres container (SQLite is dev-only):
+The CMS has its own image and a Postgres container behind the `cms` compose
+profile, so the default stack never needs it (SQLite is dev-only):
 
 ```bash
-pnpm --filter @ncam/strapi setup:env         # secrets + DB password in apps/strapi/.env
-docker compose up --build strapi             # http://localhost:1337/admin, API under /api/*
-docker compose --profile gateway up --build  # + http://cms.localhost/api/articles
+pnpm --filter @ncam/strapi setup:env                        # secrets + DB password in apps/strapi/.env
+docker compose up --build strapi                             # http://localhost:1337/admin, API under /api/*
+docker compose --profile gateway --profile cms up --build    # + http://cms.localhost/api/articles
 ```
 
 Set `PUBLIC_URL` in `apps/strapi/.env` to the origin the CMS is reached at — `http://localhost:1337` when you hit the container directly, `http://cms.localhost` behind the gateway, `https://cms.<domain>` in production — so admin links and media URLs are absolute and correct. Uploads live in the
