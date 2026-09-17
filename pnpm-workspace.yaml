@@ -29,14 +29,24 @@ overrides:
   'browserslist@4': '4.28.9' # GHSA-c83g-rgw3-j3cx, GHSA-73wf-gq98-2v4g (babel, tanstack start)
   'fast-uri@3': '3.1.7' # GHSA-v2hh-gcrm-f6hx … GHSA-jqff-g426-hqxp (commitlint)
   'undici@7': '7.29.1' # GHSA-4cwx-7wf7-3272 (@module-federation/dts-plugin)
-  adm-zip: '0.6.0' # GHSA-xcpc-8h2w-3j85 (@module-federation/dts-plugin)
+  adm-zip: '0.6.1' # GHSA-xcpc-8h2w-3j85, GHSA-vwc7-r8mq-g2x9 (@module-federation/dts-plugin)
   'sharp@0.35': '0.35.4' # GHSA-rgj7-g3m4-5g8c (@strapi/upload)
-  'nodemailer@9': '9.1.0' # GHSA-2x7j-588g-ccc2 (@strapi/provider-email-sendmail)
+  'nodemailer@9': '9.1.1' # GHSA-2x7j-588g-ccc2, GHSA-8m3c-c648-2xjj (@strapi/provider-email-sendmail)
+  'qs@6': '6.16.0' # GHSA-4mjr-xmp4-gh2g, GHSA-x5fp-wj9c-mxmx (@strapi/* pin 6.15.3; koa via co-body / formidable)
+  # Strapi pins vite 5.4.21 for its admin build, and the 5.x line no longer receives these
+  # fixes (all land in 6.4.x). @vitejs/plugin-react-swc 3.11 accepts vite ^6, and
+  # `strapi build` + `strapi start` were smoke-tested on 6.4.3. Scoped with `parent>child`
+  # so it only rewrites @strapi/strapi's own dependency: a bare `vite@5` selector also
+  # matched the root plugins' `^5 || ^6 || …` peer ranges and detached them from vite 8.
+  # Brings esbuild ^0.25 (GHSA-67mh-4wv8-2f99) along.
+  '@strapi/strapi>vite': '6.4.3' # GHSA-4w7w-66w2-5vf9, GHSA-v6wh-96g9-6wx3, GHSA-fx2h-pf6j-xcff
 
-# `pnpm audit --audit-level high` gates CI. Advisories that no override can fix:
-# - vite 5.x is what the Strapi 5 admin build uses; GHSA-fx2h-pf6j-xcff (server.fs.deny
-#   bypass on Windows) affects the vite DEV server only and is fixed only in vite >= 6.4.3.
-#   Production runs `strapi start` (prebuilt admin, no vite process) — not exposed.
-auditConfig:
-  ignoreGhsas:
-    - GHSA-fx2h-pf6j-xcff
+
+# Moderate advisories left open on purpose (`pnpm audit --audit-level high` gates CI, so
+# they do not block). Dismiss the matching Dependabot alerts with the same reasoning:
+# - react-router 6.30.x (Strapi admin via react-router-dom 6): GHSA-wrjc-x8rr-h8h6 and
+#   GHSA-337j-9hxr-rhxg are fixed only in 7.18, which Strapi 5 does not support. The admin is
+#   a CSR app (no SSR hydration path) behind an authenticated session. Waits on Strapi.
+# - stream-json 1.9.1 (@strapi/data-transfer): GHSA-528h-pc64-c93x is in the path filters
+#   (pick / ignore / filter / replace); data-transfer only uses jsonl/Parser and
+#   jsonl/Stringer. The patched 3.x line is ESM-only (node >= 22) — not a drop-in override.
