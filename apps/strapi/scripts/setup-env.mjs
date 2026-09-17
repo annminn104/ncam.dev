@@ -3,7 +3,7 @@
 // Idempotent: does nothing when .env already exists. Node built-ins only.
 //   pnpm --filter @ncam/strapi setup:env
 import { randomBytes } from 'node:crypto';
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -48,16 +48,34 @@ export function renderEnv(template, secret) {
     .join('\n');
 }
 
+/**
+ * Writes `<appDir>/.env`, rendered from `<appDir>/.env.example`, readable by the owner only.
+ * The file is created exclusively (`wx`), so an existing .env is never touched — including
+ * one that appears between a would-be existence check and the write.
+ * @param {string} appDir directory holding .env.example
+ * @returns {'created' | 'exists'}
+ */
+export function createEnvFile(appDir) {
+  const template = readFileSync(path.join(appDir, '.env.example'), 'utf8');
+  try {
+    writeFileSync(path.join(appDir, '.env'), renderEnv(template, randomSecret), {
+      mode: 0o600,
+      flag: 'wx',
+    });
+    return 'created';
+  } catch (error) {
+    if (error?.code === 'EEXIST') return 'exists';
+    throw error;
+  }
+}
+
 export function main() {
   const appDir = path.resolve(import.meta.dirname, '..');
-  const target = path.join(appDir, '.env');
-  const shown = path.relative(process.cwd(), target) || '.env';
-  if (existsSync(target)) {
+  const shown = path.relative(process.cwd(), path.join(appDir, '.env')) || '.env';
+  if (createEnvFile(appDir) === 'exists') {
     console.log(`${shown} exists, nothing to do`);
     return;
   }
-  const template = readFileSync(path.join(appDir, '.env.example'), 'utf8');
-  writeFileSync(target, renderEnv(template, randomSecret), { mode: 0o600 });
   console.log(`wrote ${shown} with generated secrets (gitignored — never commit it)`);
 }
 

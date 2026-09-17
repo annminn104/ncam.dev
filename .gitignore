@@ -13,6 +13,8 @@ build/
 .turbo/
 # superpowers (agent skills) scratch: plan ledgers, briefs, review packages
 .superpowers/
+# Claude Code worktrees (EnterWorktree in the desktop app / CLI)
+.claude/worktrees/
 .vite/
 .cache/
 *.tsbuildinfo
