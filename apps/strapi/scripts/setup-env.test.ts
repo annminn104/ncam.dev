@@ -1,5 +1,8 @@
-import { describe, expect, it } from 'vitest';
-import { renderEnv } from './setup-env.mjs';
+import { mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import { afterEach, describe, expect, it } from 'vitest';
+import { createEnvFile, renderEnv } from './setup-env.mjs';
 
 const template = [
   '# Server',
@@ -72,5 +75,40 @@ describe('renderEnv', () => {
     expect(once.startsWith('# Server\n')).toBe(true);
     expect(once).toContain('\n\n');
     expect(renderEnv(once, counter())).toBe(once);
+  });
+});
+
+describe('createEnvFile', () => {
+  const scratchDirs: string[] = [];
+
+  /** A throwaway app dir holding only `.env.example`. */
+  function scratchApp(): string {
+    const dir = mkdtempSync(path.join(tmpdir(), 'ncam-setup-env-'));
+    writeFileSync(path.join(dir, '.env.example'), template);
+    scratchDirs.push(dir);
+    return dir;
+  }
+
+  afterEach(() => {
+    for (const dir of scratchDirs.splice(0)) rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('creates .env from .env.example with generated secrets, readable by the owner only', () => {
+    const dir = scratchApp();
+    expect(createEnvFile(dir)).toBe('created');
+    const target = path.join(dir, '.env');
+    const out = parse(readFileSync(target, 'utf8'));
+    // 32 random bytes as base64url = 43 chars
+    for (const key of SECRETS) expect(out[key]).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    expect(out.APP_KEYS.split(',')).toHaveLength(4);
+    expect(statSync(target).mode & 0o777).toBe(0o600);
+  });
+
+  it('never overwrites an existing .env', () => {
+    const dir = scratchApp();
+    const target = path.join(dir, '.env');
+    writeFileSync(target, 'KEEP=me\n');
+    expect(createEnvFile(dir)).toBe('exists');
+    expect(readFileSync(target, 'utf8')).toBe('KEEP=me\n');
   });
 });
