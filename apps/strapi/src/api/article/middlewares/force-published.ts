@@ -9,7 +9,8 @@ export function forcePublished(query: Record<string, unknown>): void {
   query.status = 'published';
 }
 
-const middleware: Core.MiddlewareFactory = () => async (ctx, next) => {
+// Strapi calls every middleware factory as `(config, { strapi })`; this one needs neither.
+const middleware: Core.MiddlewareFactory = (_config, _ctx) => async (ctx, next) => {
   forcePublished(ctx.query as Record<string, unknown>);
   await next();
 };
