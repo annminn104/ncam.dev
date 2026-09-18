@@ -275,6 +275,36 @@ The `portfolio` container reads the CMS through `STRAPI_URL=http://strapi:1337`
 and serves media from `STRAPI_PUBLIC_URL=http://cms.localhost:1337`; start the
 `cms` profile too (`docker compose --profile cms up`) or the blog renders empty.
 
+### Railway (the CMS — Vercel cannot host it)
+
+Strapi needs a long-lived process, a real database and somewhere durable for
+uploads, so it goes on Railway (or any container host) while the seven
+frontends stay on Vercel. `apps/strapi/railway.json` carries the build config.
+
+1. New Railway project → **Deploy from GitHub repo**, pick this repo. In the
+   service settings set **Config File Path** to `apps/strapi/railway.json` and
+   leave the root directory alone — the Dockerfile copies `pnpm-workspace.yaml`
+   and `pnpm-lock.yaml` from the repo root, so a narrower build context cannot
+   install.
+2. Add the **Postgres** plugin. Set `DATABASE_CLIENT=postgres`; its `DATABASE_URL`
+   is picked up as-is. Use the private URL where possible, otherwise also set
+   `DATABASE_SSL=true`.
+3. Add a **Volume** mounted at `/app/public/uploads`. Without it every image
+   uploaded through the admin is lost on the next deploy.
+4. Set the secrets — `APP_KEYS`, `API_TOKEN_SALT`, `ADMIN_JWT_SECRET`,
+   `TRANSFER_TOKEN_SALT`, `JWT_SECRET`, `ENCRYPTION_KEY` — once, as Railway
+   variables. Generate them locally with
+   `pnpm --filter @ncam/strapi setup:env` and copy the values out of
+   `apps/strapi/.env`. Do not rotate them casually: it invalidates every admin
+   session and API token.
+5. Set `NODE_ENV=production` and `PUBLIC_URL` to the service's public domain.
+   Railway injects `PORT` itself; `config/server.ts` already binds it.
+6. On the Vercel host project set `STRAPI_URL` and `STRAPI_PUBLIC_URL` to that
+   same domain. Both are read at runtime, so no rebuild is needed to change them.
+
+Until step 6, `/blog` renders its empty state and the home page's blog section
+shows placeholders — by design, the site degrades rather than failing.
+
 ## Troubleshooting
 
 - **`cannot find binary path`** on `pnpm dev` — Turbo can't find pnpm. Install
