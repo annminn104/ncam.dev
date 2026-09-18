@@ -79,9 +79,13 @@ manifest rail on the host shows the real lifecycle of each module.
 ## GSAP rules
 
 Same as `apps/bali`: everything through `useGsap()`, `fromTo` with the markup as
-the end state, stagger `wrapper.children` (never ref arrays), pinned strip pins
-its own wrapper (`.stacks__pin`) and toggles `.is-pinned` to switch the track
-from native scroll-snap to a transform.
+the end state, stagger `wrapper.children` (never ref arrays).
+
+Card grids (stacks, projects) share one idiom: `useRevealChildren()` staggers
+them in, and on a fine pointer each card tilts with `gsap.quickTo` on
+`rotationX/Y` while a `--mx/--my` spotlight follows the cursor. GSAP owns
+`transform` on those cards, so their CSS animates only `border-color`,
+`background` and `box-shadow` — never `transform`, or the two fight.
 
 ## Verify
 
