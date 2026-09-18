@@ -104,6 +104,39 @@ they sit out of the default `docker compose up`; naming the service —
 comes along as its dependency), or pass `--profile cms` explicitly. The
 monorepo image (`Dockerfile` at the root) deliberately excludes this app.
 
+The image's `HEALTHCHECK` probes `$PORT`, not a literal 1337, because hosts that
+assign the port themselves (Railway, Fly) rarely pick 1337 and a hardcoded probe
+reports a healthy container as failing. `config/server.ts` already binds `$PORT`.
+
+## Railway
+
+`railway.json` is the service's config-as-code: Dockerfile builder,
+`dockerfilePath: apps/strapi/Dockerfile`, healthcheck on `/_health`. Point the
+Railway service's **Config File Path** at `apps/strapi/railway.json` and leave
+its Root Directory at the repo root — the Dockerfile copies `pnpm-workspace.yaml`
+and `pnpm-lock.yaml` from there, so a narrower context cannot install.
+
+- **Postgres.** Add Railway's Postgres and set `DATABASE_CLIENT=postgres`; the
+  plugin's `DATABASE_URL` is enough. `config/database.ts` passes it as
+  `connectionString` alongside the discrete `DATABASE_*` defaults, and `pg`
+  resolves the connection string over them (verified against pg 8.23), so the
+  `localhost` defaults never win. Prefer the private URL; the public one needs
+  `DATABASE_SSL=true` as well.
+- **Uploads.** The local upload provider writes to `public/uploads`, and a
+  container filesystem does not survive a redeploy. Mount a Railway Volume at
+  `/app/public/uploads` or every image uploaded in the admin disappears on the
+  next deploy. `.dockerignore` keeps `public/uploads/.gitkeep` precisely so the
+  image owns that directory for the volume to mount over.
+- **Secrets.** `APP_KEYS`, `API_TOKEN_SALT`, `ADMIN_JWT_SECRET`,
+  `TRANSFER_TOKEN_SALT`, `JWT_SECRET` and `ENCRYPTION_KEY` are set in Railway,
+  not generated per deploy — regenerating them invalidates every admin session
+  and every API token.
+- **`PUBLIC_URL`** must be the service's public domain, or admin links and media
+  URLs come out relative to whatever host the request arrived on.
+- The host side then points `STRAPI_URL` and `STRAPI_PUBLIC_URL` at that domain.
+  Both are runtime env on the portfolio deployment, so changing them needs no
+  rebuild.
+
 ## Verification
 
 `pnpm run ci` green; `pnpm --filter @ncam/strapi build`; anonymous
