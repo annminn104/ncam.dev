@@ -20,6 +20,16 @@ body {
   color: var(--text);
   font-family: var(--font-body, 'Inter', system-ui, sans-serif);
   -webkit-font-smoothing: antialiased;
+  /* Syne (--font-display) ships OLDSTYLE figures by default: at 40px its `5`
+     rises 20px against a 25.9px cap and drops 6.5px below the baseline, like a
+     `p`. Next to capitals — "5.4. UI — …" — the digits read as misaligned.
+     `lnum` gives cap-aligned lining figures (26px ascent, 0.5px descent).
+     Set here because the property inherits: it reaches every display-font
+     element on the host AND every remote mounted into this document. Inter and
+     JetBrains Mono are lining already, so they are unaffected. Anything that
+     later needs `tabular-nums` must ask for `lining-nums tabular-nums`, since
+     naming one numeric group resets the others. */
+  font-variant-numeric: lining-nums;
 }
 
 /* Base + project stage. Linked via src/app.css (see routes/__root.tsx); the home
