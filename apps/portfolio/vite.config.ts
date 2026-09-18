@@ -27,9 +27,19 @@ const PORTFOLIO_PORT = Number(env('PORTFOLIO_PORT', '9000'));
 // build on slow machines (an emulated Docker VM shipped an image with an empty
 // .output/server). Nitro writes its manifest last, so exit only once a manifest
 // newer than this build exists alongside the server entry.
-const OUTPUT_DIR = fileURLToPath(new URL('./.output/', import.meta.url));
-const NITRO_MANIFEST = `${OUTPUT_DIR}nitro.json`;
-const SERVER_ENTRY = `${OUTPUT_DIR}server/index.mjs`;
+// Nitro picks its preset from the environment, and each preset writes somewhere
+// different: `node-server` locally produces .output/server/index.mjs, while on
+// Vercel the `vercel` preset produces .vercel/output/functions/__server.func/
+// index.mjs instead. Watch every layout a build here can produce — a guard that
+// only knows one of them waits the full BUILD_EXIT_MAX_MS for a file that is
+// never written, then fails the build (30 idle minutes on every deploy).
+const OUTPUTS = [
+  { dir: './.output/', entry: 'server/index.mjs' },
+  { dir: './.vercel/output/', entry: 'functions/__server.func/index.mjs' },
+].map(({ dir, entry }) => {
+  const base = fileURLToPath(new URL(dir, import.meta.url));
+  return { manifest: `${base}nitro.json`, entry: `${base}${entry}` };
+});
 const BUILD_EXIT_POLL_MS = 500;
 const BUILD_EXIT_MAX_MS = 30 * 60_000;
 const buildStartedAt = Date.now();
@@ -38,17 +48,21 @@ let buildExitTimer: ReturnType<typeof setTimeout> | undefined;
 function exitWhenNitroHasWritten() {
   if (buildExitTimer) clearTimeout(buildExitTimer);
   buildExitTimer = setTimeout(() => {
-    const done =
-      existsSync(SERVER_ENTRY) &&
-      existsSync(NITRO_MANIFEST) &&
-      statSync(NITRO_MANIFEST).mtimeMs > buildStartedAt;
+    // Nitro writes its manifest last, so a manifest newer than this build,
+    // sitting beside a server entry, means the output is complete.
+    const done = OUTPUTS.some(
+      ({ manifest, entry }) =>
+        existsSync(entry) && existsSync(manifest) && statSync(manifest).mtimeMs > buildStartedAt,
+    );
     if (done) {
       // Let the last file handles flush, then leave.
       setTimeout(() => process.exit(0), 1000);
       return;
     }
     if (Date.now() - buildStartedAt > BUILD_EXIT_MAX_MS) {
-      console.error(`[tanstack-build-exit] ${SERVER_ENTRY} never appeared; giving up.`);
+      console.error(
+        `[tanstack-build-exit] no Nitro output appeared at ${OUTPUTS.map((o) => o.entry).join(' or ')}; giving up.`,
+      );
       process.exit(1);
     }
     exitWhenNitroHasWritten();
