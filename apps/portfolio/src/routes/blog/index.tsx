@@ -46,23 +46,23 @@ export const Route = createFileRoute('/blog/')({
 function BlogIndexPage() {
   const { posts, unavailable } = Route.useLoaderData();
   return (
-    <div className="stage blog">
+    <div className="stage blogpage">
       <Link to="/" className="stage__back">
         <span aria-hidden="true">←</span> Home
       </Link>
-      <header className="blog__head">
-        <p className="blog__label">Blog</p>
-        <h1 className="blog__title">Notes from the build</h1>
-        <p className="blog__lead">{DESCRIPTION}</p>
+      <header className="blogpage__head">
+        <p className="blogpage__label">Blog</p>
+        <h1 className="blogpage__title">Notes from the build</h1>
+        <p className="blogpage__lead">{DESCRIPTION}</p>
       </header>
       {posts.length === 0 ? (
-        <p className="blog__empty" role="status">
+        <p className="blogpage__empty" role="status">
           {unavailable
             ? 'The blog is taking a short break — please try again in a minute.'
             : 'Nothing published yet.'}
         </p>
       ) : (
-        <ul className="blog__list">
+        <ul className="blogpage__list">
           {posts.map((post) => (
             <li key={post.id}>
               <Link to="/blog/$slug" params={{ slug: post.slug }} className="blog-card">

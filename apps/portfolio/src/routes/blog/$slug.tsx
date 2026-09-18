@@ -3,6 +3,7 @@ import { BlocksRenderer, type BlocksContent } from '@strapi/blocks-react-rendere
 import type { ComponentProps } from 'react';
 import type { BlogPost } from '@ncam/cms';
 import { getBlogPost } from '../../functions/blog.functions';
+import { highlightCode } from '../../lib/highlight';
 
 const SITE_URL = 'https://ncam.dev';
 const SITE_ORIGIN = new URL(SITE_URL).origin;
@@ -67,8 +68,27 @@ export const Route = createFileRoute('/blog/$slug')({
 
 type BlocksOverrides = NonNullable<ComponentProps<typeof BlocksRenderer>['blocks']>;
 
-/** Only two overrides: images are already absolute (mapper), links pass through a scheme allow-list. */
+/** Images are already absolute (mapper), links pass a scheme allow-list, code is highlighted. */
 const blocks: BlocksOverrides = {
+  code: (props) => {
+    // The renderer spreads every node property onto the override, so `language`
+    // arrives even though its published `CodeBlockNode` type omits the field.
+    // `plainText` is optional in the renderer's prop type (an empty code block).
+    const text = props.plainText ?? '';
+    const { language } = props as { language?: string | null };
+    const { html, language: label } = highlightCode(text, language);
+    return (
+      <pre data-language={label ?? undefined}>
+        {html ? (
+          // `hljs` HTML-escapes the source it is given, so the only markup in
+          // `html` is the <span class="hljs-*"> wrappers it emits itself.
+          <code className="hljs" dangerouslySetInnerHTML={{ __html: html }} />
+        ) : (
+          <code>{text}</code>
+        )}
+      </pre>
+    );
+  },
   image: ({ image }) => (
     <figure className="article__figure">
       <img
@@ -111,7 +131,7 @@ function BlogPostPage() {
   };
 
   return (
-    <div className="stage blog">
+    <div className="stage blogpage blogpage--article">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLdScript(jsonLd) }}

@@ -16,6 +16,10 @@
   font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
   overflow-x: clip;
+  /* Syne defaults to oldstyle figures, which sit low next to capitals. Mounted
+     in the host these sections inherit `lining-nums` from its <body>; this line
+     is what gives the standalone dev page the same figures. */
+  font-variant-numeric: lining-nums;
 }
 .mf-slot {
   display: contents;
@@ -427,79 +431,66 @@
   background: var(--amber);
 }
 
-/* Horizontal strip. Base = native horizontal scroll with snap (mobile, reduced
-   motion, no JS). `.is-pinned` is added by GSAP on desktop: the strip is pinned
-   and translated sideways instead, so overflow must stay visible there. */
-.stacks__pin {
-  position: relative;
-  /* Clip on the left only: cards leaving the strip vanish at the content edge
-     (never under the manifest rail) while still running off to the right. */
-  clip-path: inset(0 -100vw 0 0);
-}
-.stacks__bar {
-  display: flex;
-  align-items: center;
-  gap: 1.25rem;
-  margin-bottom: 1.25rem;
-  font-family: var(--font-mono);
-  font-size: 0.66rem;
-  font-weight: 500;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-}
-.stacks__counter {
-  color: var(--text);
-  white-space: nowrap;
-}
-.stacks__progress {
-  flex: 1;
-  height: 1px;
-  background: var(--line);
-}
-.stacks__progress i {
-  display: block;
-  height: 100%;
-  transform: scaleX(0);
-  transform-origin: left;
-  background: linear-gradient(90deg, var(--accent), var(--amber));
-}
-.stacks__hint {
-  white-space: nowrap;
-}
-.stacks__track {
-  display: flex;
+/* The categories were a pinned strip that scrolled sideways under a progress
+   bar; they are a plain responsive grid now, so nothing pins the page and every
+   area is readable at a glance. Hover motion belongs to GSAP (it writes
+   `rotationX/Y`), so no rule here touches `transform` — the same division of
+   labour as `.pcard`. */
+.stacks__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr));
   gap: 1rem;
-  padding-bottom: 0.5rem;
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
-  scrollbar-width: none;
-  will-change: transform;
-}
-.stacks__track::-webkit-scrollbar {
-  display: none;
-}
-.stacks__pin.is-pinned .stacks__track {
-  overflow: visible;
-  scroll-snap-type: none;
+  /* Room for the 3D tilt to breathe. */
+  perspective: 1200px;
 }
 .stack-card {
-  flex: 0 0 auto;
-  width: clamp(260px, 27vw, 360px);
+  --mx: 50%;
+  --my: 50%;
+  position: relative;
   display: flex;
   flex-direction: column;
   padding: 1.6rem;
   border: 1px solid var(--line);
   border-radius: 22px;
   background: color-mix(in srgb, var(--page-bg, var(--bg)) 70%, #fff 4%);
-  scroll-snap-align: start;
+  overflow: hidden;
+  /* Keeps the spotlight's negative z-index inside this card. */
+  isolation: isolate;
+  transform-style: preserve-3d;
+  will-change: transform;
   transition:
-    border-color 0.4s var(--ease-out),
-    transform 0.4s var(--ease-out);
+    border-color 0.45s var(--ease-out),
+    box-shadow 0.6s var(--ease-out),
+    background 0.45s var(--ease-out);
 }
-.stack-card:hover {
-  border-color: var(--accent);
-  transform: translateY(-4px);
+.stack-card:hover,
+.stack-card:focus-within {
+  border-color: color-mix(in srgb, var(--accent) 65%, transparent);
+  background: color-mix(
+    in srgb,
+    var(--accent) 7%,
+    color-mix(in srgb, var(--page-bg, var(--bg)) 70%, #fff 4%)
+  );
+  box-shadow:
+    0 40px 80px -40px color-mix(in srgb, var(--accent) 70%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--accent) 25%, transparent) inset;
+}
+/* Pointer-following spotlight; `--mx/--my` are written by the tilt handler. */
+.stack-card__spot {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(
+    300px circle at var(--mx) var(--my),
+    color-mix(in srgb, var(--accent) 20%, transparent),
+    transparent 60%
+  );
+  transition: opacity 0.5s var(--ease-out);
+}
+.stack-card:hover .stack-card__spot {
+  opacity: 1;
 }
 .stack-card__title {
   margin: 0 0 1.25rem;

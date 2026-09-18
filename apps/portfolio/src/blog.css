@@ -1,18 +1,31 @@
 /* Blog pages (/blog, /blog/$slug): the .stage shell plus reading typography.
    Tokens come from @ncam/design-tokens; the stage inset is the host's contract
-   with the fixed back button (see styles.css). */
-.blog {
+   with the fixed back button (see styles.css).
+
+   The block is `blogpage`, not `blog`, on purpose. This stylesheet is global and
+   also cascades into every mounted remote, and `apps/profile` renders the home
+   page's own blog section as `<section class="sec blog">` with a `.blogpage__list`
+   inside it. While this block was called `blog`, the host's `max-width: 72rem`
+   narrowed that federated section, and the sticky hero's orbs showed through the
+   strips either side of it. Keep host page styles namespaced away from the
+   generic names a remote might reasonably use. */
+.blogpage {
   padding: calc(var(--stage-top-inset) + 1.5rem) var(--gutter, 1.5rem) 6rem;
   max-width: 72rem;
   margin: 0 auto;
   color: var(--text);
 }
+/* The article page needs a wider shell than the index grid: its code blocks run
+   to ~125 columns and CMS tables arrive as code (Blocks has no table node). */
+.blogpage--article {
+  max-width: 78rem;
+}
 
-.blog__head {
+.blogpage__head {
   max-width: 40rem;
   margin-bottom: 3rem;
 }
-.blog__label,
+.blogpage__label,
 .blog-card__meta,
 .article__meta {
   font: 500 0.8rem/1.4 var(--font-mono);
@@ -20,27 +33,27 @@
   text-transform: uppercase;
   color: var(--text-muted);
 }
-.blog__title,
+.blogpage__title,
 .article__title {
   font: 700 clamp(2rem, 4vw, 3rem) / 1.1 var(--font-display);
   letter-spacing: -0.02em;
   margin: 0.5rem 0 1rem;
 }
-.blog__lead,
+.blogpage__lead,
 .article__excerpt {
   font-size: 1.125rem;
   line-height: 1.6;
   color: var(--text-muted);
   margin: 0;
 }
-.blog__empty {
+.blogpage__empty {
   padding: 2rem;
   border: 1px dashed var(--border);
   border-radius: 1rem;
   color: var(--text-muted);
 }
 
-.blog__list {
+.blogpage__list {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -101,9 +114,14 @@
   color: var(--text-muted);
 }
 
-/* Article page */
+/* Article page. One track for everything: prose, code and figures share the
+   full width, which is sized for the long code lines and for the CMS tables
+   that arrive as code (Blocks has no table node). */
 .article {
-  max-width: 44rem;
+  /* ~128 monospace columns at the <pre> font size. Genuine outliers still
+     scroll inside their own <pre>; that is what its overflow-x is for. */
+  --article-wide: 70rem;
+  max-width: var(--article-wide);
   margin: 0 auto;
 }
 .article__head {
@@ -174,6 +192,81 @@
 .article__body code {
   font-family: var(--font-mono);
   font-size: 0.9em;
+}
+
+/* Syntax highlighting (highlight.js token classes, see src/lib/highlight.ts).
+   Hues come from the site palette so code reads as part of the page rather than
+   a pasted editor theme; every colour clears 4.5:1 on --surface-2. */
+.article__body pre {
+  --code-comment: #8b8ba8;
+  --code-keyword: #a78bfa;
+  --code-string: #5be49b;
+  --code-number: #ffb457;
+  --code-function: #6cb6ff;
+  --code-type: #ffd479;
+  --code-attr: #7ee0c8;
+  --code-tag: #ff8fa3;
+  --code-punct: #a2a2b8;
+  color: #e8e8f2;
+}
+.article__body .hljs-comment,
+.article__body .hljs-quote {
+  color: var(--code-comment);
+  font-style: italic;
+}
+.article__body .hljs-keyword,
+.article__body .hljs-selector-tag,
+.article__body .hljs-literal,
+.article__body .hljs-section,
+.article__body .hljs-doctag {
+  color: var(--code-keyword);
+}
+.article__body .hljs-string,
+.article__body .hljs-regexp,
+.article__body .hljs-addition,
+.article__body .hljs-meta-string {
+  color: var(--code-string);
+}
+.article__body .hljs-number,
+.article__body .hljs-symbol,
+.article__body .hljs-bullet,
+.article__body .hljs-link {
+  color: var(--code-number);
+}
+.article__body .hljs-title,
+.article__body .hljs-title.function_,
+.article__body .hljs-name {
+  color: var(--code-function);
+}
+.article__body .hljs-type,
+.article__body .hljs-built_in,
+.article__body .hljs-class .hljs-title,
+.article__body .hljs-title.class_ {
+  color: var(--code-type);
+}
+.article__body .hljs-attr,
+.article__body .hljs-attribute,
+.article__body .hljs-property,
+.article__body .hljs-variable,
+.article__body .hljs-template-variable {
+  color: var(--code-attr);
+}
+.article__body .hljs-tag,
+.article__body .hljs-selector-id,
+.article__body .hljs-selector-class,
+.article__body .hljs-deletion {
+  color: var(--code-tag);
+}
+.article__body .hljs-meta,
+.article__body .hljs-punctuation,
+.article__body .hljs-operator {
+  color: var(--code-punct);
+}
+.article__body .hljs-emphasis {
+  font-style: italic;
+}
+.article__body .hljs-strong {
+  font-weight: 600;
 }
 .article__body :not(pre) > code {
   padding: 0.15em 0.4em;

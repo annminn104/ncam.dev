@@ -1,26 +1,27 @@
 import { useRef } from 'react';
 import { marqueeRows, stackCategories } from '../data/profile';
-import { gsap, ScrollTrigger, useGsap } from '../lib/gsap';
+import { gsap, ScrollTrigger, useGsap, useRevealChildren } from '../lib/gsap';
 import { SectionHead } from './section-head';
-
-const pad = (n: number) => String(n).padStart(2, '0');
 
 /**
  * Three infinite marquee rows (alternating direction) whose speed reacts to
- * scroll velocity, then the stack categories as a horizontal strip. On desktop
- * the strip pins and slides sideways as you scroll (scrub), with a progress bar
- * and counter; below 960px and under reduced motion it is a native horizontal
- * scroll-snap row instead.
+ * scroll velocity, then the stack categories as a responsive card grid.
+ *
+ * The categories used to be a pinned strip that scrolled sideways under a
+ * progress bar. They are a grid now: every area is readable at a glance, the
+ * section no longer pins the page, and there is no horizontal scrolling to
+ * discover. Cards stagger in on scroll and, on a fine pointer, tilt toward the
+ * cursor with a spotlight following it — the same idiom as the projects grid,
+ * so the two sections feel like one system.
  */
 export function TechStacks() {
   const marqueeRef = useRef<HTMLDivElement>(null);
-  const pinRef = useRef<HTMLDivElement>(null);
-  const trackRef = useRef<HTMLDivElement>(null);
-  const progressRef = useRef<HTMLElement>(null);
-  const counterRef = useRef<HTMLSpanElement>(null);
+  const gridRef = useRevealChildren<HTMLDivElement>({ y: 44, stagger: 0.06 });
   const total = stackCategories.length;
 
-  useGsap(({ isDesktop }) => {
+  useGsap(({ finePointer }) => {
+    const cleanups: Array<() => void> = [];
+
     const group = marqueeRef.current;
     if (group) {
       const tracks = Array.from(group.querySelectorAll<HTMLElement>('.marquee__track'));
@@ -50,37 +51,39 @@ export function TechStacks() {
       });
     }
 
-    const pin = pinRef.current;
-    const track = trackRef.current;
-    const counter = counterRef.current;
-    if (!isDesktop || !pin || !track) return;
+    // Tilt + spotlight. Pointer-driven, so it is skipped on touch: `--mx/--my`
+    // stay at their CSS defaults and the card keeps its plain hover treatment.
+    const grid = gridRef.current;
+    if (grid && finePointer) {
+      for (const card of Array.from(grid.querySelectorAll<HTMLElement>('.stack-card'))) {
+        gsap.set(card, { transformPerspective: 900 });
+        const tiltX = gsap.quickTo(card, 'rotationX', { duration: 0.6, ease: 'power3.out' });
+        const tiltY = gsap.quickTo(card, 'rotationY', { duration: 0.6, ease: 'power3.out' });
 
-    // GSAP drives the strip: switch the track from native scrolling to a transform.
-    pin.classList.add('is-pinned');
-    const distance = () => Math.max(0, track.scrollWidth - pin.clientWidth);
+        const onMove = (event: PointerEvent) => {
+          const rect = card.getBoundingClientRect();
+          const px = (event.clientX - rect.left) / rect.width;
+          const py = (event.clientY - rect.top) / rect.height;
+          card.style.setProperty('--mx', `${(px * 100).toFixed(1)}%`);
+          card.style.setProperty('--my', `${(py * 100).toFixed(1)}%`);
+          // Gentler than the project cards: these sit in a denser grid.
+          tiltX((0.5 - py) * 7);
+          tiltY((px - 0.5) * 9);
+        };
+        const onLeave = () => {
+          tiltX(0);
+          tiltY(0);
+        };
+        card.addEventListener('pointermove', onMove);
+        card.addEventListener('pointerleave', onLeave);
+        cleanups.push(() => {
+          card.removeEventListener('pointermove', onMove);
+          card.removeEventListener('pointerleave', onLeave);
+        });
+      }
+    }
 
-    const tl = gsap.timeline({
-      defaults: { ease: 'none' },
-      scrollTrigger: {
-        trigger: pin,
-        start: 'center center',
-        end: () => `+=${distance()}`,
-        pin: true,
-        scrub: 1,
-        anticipatePin: 1,
-        invalidateOnRefresh: true,
-        onUpdate: (self) => {
-          if (counter) counter.textContent = pad(Math.round(self.progress * (total - 1)) + 1);
-        },
-      },
-    });
-    tl.to(track, { x: () => -distance() }, 0);
-    if (progressRef.current) tl.to(progressRef.current, { scaleX: 1 }, 0);
-
-    return () => {
-      pin.classList.remove('is-pinned');
-      track.scrollLeft = 0;
-    };
+    return () => cleanups.forEach((fn) => fn());
   });
 
   return (
@@ -93,7 +96,7 @@ export function TechStacks() {
               Tools I reach for, <em>and why</em>
             </span>
           }
-          lead="Five years across React, Next.js, Remix and Angular codebases — enterprise platforms, real-time operations, creative micro-sites. The strip below is the toolbox that came out of it: scroll to move through it."
+          lead="Five years across React, Next.js, Remix and Angular codebases — enterprise platforms, real-time operations, creative micro-sites. This is the toolbox that came out of it."
         />
       </div>
 
@@ -112,31 +115,20 @@ export function TechStacks() {
       </div>
 
       <div className="sec__inner">
-        <div ref={pinRef} className="stacks__pin">
-          <div className="stacks__bar" aria-hidden="true">
-            <span className="stacks__counter">
-              <span ref={counterRef}>01</span> / {pad(total)}
-            </span>
-            <span className="stacks__progress">
-              <i ref={progressRef} />
-            </span>
-            <span className="stacks__hint">scroll →</span>
-          </div>
-
-          <div ref={trackRef} className="stacks__track" role="list" aria-label="Tech stack areas">
-            {stackCategories.map((category) => (
-              <article key={category.title} className="stack-card" role="listitem">
-                <h3 className="stack-card__title">{category.title}</h3>
-                <ul className="stack-card__chips" aria-label={category.title}>
-                  {category.keys.map((key) => (
-                    <li key={key} className="chip">
-                      {key}
-                    </li>
-                  ))}
-                </ul>
-              </article>
-            ))}
-          </div>
+        <div ref={gridRef} className="stacks__grid" role="list" aria-label="Tech stack areas">
+          {stackCategories.map((category) => (
+            <article key={category.title} className="stack-card" role="listitem">
+              <span className="stack-card__spot" aria-hidden="true" />
+              <h3 className="stack-card__title">{category.title}</h3>
+              <ul className="stack-card__chips" aria-label={category.title}>
+                {category.keys.map((key) => (
+                  <li key={key} className="chip">
+                    {key}
+                  </li>
+                ))}
+              </ul>
+            </article>
+          ))}
         </div>
       </div>
     </section>
