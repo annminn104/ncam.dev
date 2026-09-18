@@ -6,7 +6,7 @@ import { loadRemoteModuleSSR } from '../../lib/federation';
 
 const log = createLogger({ scope: 'portfolio' });
 
-const SITE_URL = 'https://ncam.dev';
+import { SITE_URL } from '../../lib/site';
 
 // Static import specifiers so the Module Federation plugin can transform them.
 // `./ssr` is server-safe (loader); `./hydrate` / `./mount` are client-only.

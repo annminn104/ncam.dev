@@ -10,7 +10,16 @@
     "build": {
       "dependsOn": ["^build", "assets"],
       "outputs": ["dist/**", ".output/**", ".vinxi/**", ".nitro/**"],
-      "env": ["*_REMOTE_URL", "*_PORT", "*_BASE", "PORTFOLIO_PORT", "STRAPI_*", "PUBLIC_URL"]
+      "env": [
+        "*_REMOTE_URL",
+        "*_PORT",
+        "*_BASE",
+        "PORTFOLIO_PORT",
+        "STRAPI_*",
+        "PUBLIC_URL",
+        "SITE_URL",
+        "VERCEL_PROJECT_PRODUCTION_URL"
+      ]
     },
     "dev": {
       "dependsOn": ["assets"],
