@@ -137,7 +137,12 @@ loader)` for the six modules **sequentially** → `mod.ssr()` →
   through `getCmsEnv()` at request time — never via `import.meta.env`/`define`.
 - **SSR for SEO.** Page meta lives in route `head()`; the home page is server
   rendered (GSAP/DOM only inside effects — `lib/gsap.ts` is import-safe in Node).
-  Static `public/robots.txt` + `public/sitemap.xml` (update the domain).
+  The public origin is `src/lib/site.ts` (`SITE_URL` / `SITE_ORIGIN`), baked
+  from the `SITE_URL` env var — never hardcode the domain in a route. The
+  `site-files` plugin in `vite.config.ts` generates `robots.txt` and
+  `sitemap.xml` from that same value plus `@ncam/project-registry`, and serves
+  both from memory in `vite dev`; blog posts are not in the sitemap because they
+  change in the CMS without a deploy.
 - Keep `react`/`react-dom` as MF singletons and Nitro `traceDeps` externals, or
   hooks/context break across the host↔remote boundary.
 - Pinned TanStack/nitro/vinxi versions matter (MF + TanStack Router had version

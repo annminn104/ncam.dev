@@ -8,11 +8,11 @@ import { sections, type SectionMeta } from '../data/sections';
 import { getBlogPosts } from '../functions/blog.functions';
 import { loadRemoteModuleSSR, SSR_LOAD_TIMEOUT_MS, withTimeout } from '../lib/federation';
 import { ScrollTrigger } from '../lib/gsap';
+import { SITE_URL } from '../lib/site';
 import { useSectionTracker } from '../lib/use-section-tracker';
 
 const log = createLogger({ scope: 'portfolio' });
 
-const SITE_URL = 'https://ncam.dev';
 /** The remote that exposes the home-page sections (see apps/profile). */
 const REMOTE = 'profile';
 /** Total server-side budget for rendering the home sections (see the loader). */

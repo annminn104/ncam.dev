@@ -5,8 +5,7 @@ import type { BlogPost } from '@ncam/cms';
 import { getBlogPost } from '../../functions/blog.functions';
 import { highlightCode } from '../../lib/highlight';
 
-const SITE_URL = 'https://ncam.dev';
-const SITE_ORIGIN = new URL(SITE_URL).origin;
+import { SITE_ORIGIN, SITE_URL } from '../../lib/site';
 
 /** JSON-LD is inlined in a <script>: escape `<` so CMS-authored text can never close the tag. */
 function jsonLdScript(value: unknown): string {
