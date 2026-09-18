@@ -98,12 +98,13 @@ environment, then `.env.local`, then `.env`. The runtime-only `STRAPI_*`
 variables are the exception: the built server reads them from the real
 environment only (see the table). Never put secrets in `.env`.
 
-| Variable                                                                                                                                | Purpose                                                                                                                                                                                  |
-| --------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `PORTFOLIO_PORT`, `TOONHUB_PORT`, `MINDLOOP_PORT`, `IMMERSIVE_OCEAN_PORT`, `VIKTOR_PORT`, `BALI_PORT`, `PROFILE_PORT`                   | Dev / preview ports.                                                                                                                                                                     |
-| `TOONHUB_REMOTE_URL`, `MINDLOOP_REMOTE_URL`, `IMMERSIVE_OCEAN_REMOTE_URL`, `VIKTOR_REMOTE_URL`, `BALI_REMOTE_URL`, `PROFILE_REMOTE_URL` | `remoteEntry.js` URL the host loads for each remote. **Baked at build.**                                                                                                                 |
-| `TOONHUB_BASE`, `MINDLOOP_BASE`, `IMMERSIVE_OCEAN_BASE`, `VIKTOR_BASE`, `BALI_BASE`, `PROFILE_BASE`                                     | Public base path per remote (default `/`).                                                                                                                                               |
-| `STRAPI_URL`, `STRAPI_PUBLIC_URL`                                                                                                       | Blog CMS origin the **portfolio server** fetches from, and the origin browsers reach for media (defaults to `STRAPI_URL`). **Runtime** env — not baked; default `http://localhost:1337`. |
+| Variable                                                                                                                                | Purpose                                                                                                                                                                                      |
+| --------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PORTFOLIO_PORT`, `TOONHUB_PORT`, `MINDLOOP_PORT`, `IMMERSIVE_OCEAN_PORT`, `VIKTOR_PORT`, `BALI_PORT`, `PROFILE_PORT`                   | Dev / preview ports.                                                                                                                                                                         |
+| `TOONHUB_REMOTE_URL`, `MINDLOOP_REMOTE_URL`, `IMMERSIVE_OCEAN_REMOTE_URL`, `VIKTOR_REMOTE_URL`, `BALI_REMOTE_URL`, `PROFILE_REMOTE_URL` | `remoteEntry.js` URL the host loads for each remote. **Baked at build.**                                                                                                                     |
+| `TOONHUB_BASE`, `MINDLOOP_BASE`, `IMMERSIVE_OCEAN_BASE`, `VIKTOR_BASE`, `BALI_BASE`, `PROFILE_BASE`                                     | Public base path per remote (default `/`).                                                                                                                                                   |
+| `SITE_URL`                                                                                                                              | The site's public origin: canonical / OG / JSON-LD plus the generated `robots.txt` and `sitemap.xml`. **Baked at build.** Falls back to Vercel's production domain, then `https://ncam.dev`. |
+| `STRAPI_URL`, `STRAPI_PUBLIC_URL`                                                                                                       | Blog CMS origin the **portfolio server** fetches from, and the origin browsers reach for media (defaults to `STRAPI_URL`). **Runtime** env — not baked; default `http://localhost:1337`.     |
 
 ## Thumbnails
 
@@ -226,11 +227,12 @@ Sep 2026; `ncam.vercel.app` itself is taken):
    six profile modules and each federated load times out individually, so a slow
    or missing remote costs its section SSR, never the response.
 
-3. Own domain? Point `ncam.dev` at the host project and update the `SITE_URL`
-   constants in `apps/portfolio/src/routes/index.tsx` and
-   `routes/projects/$projectId.tsx` (canonical / OG / JSON-LD) plus
-   `public/robots.txt` and `public/sitemap.xml`. Remotes can stay on
-   `*.vercel.app`.
+3. Own domain? Point it at the host project and set `SITE_URL` on that project
+   (e.g. `https://ncam.dev`), then redeploy — it is baked at build time and
+   drives canonical / OG / JSON-LD as well as the generated `robots.txt` and
+   `sitemap.xml`. Without it the build falls back to Vercel's production domain
+   for that project, so a fresh `*.vercel.app` deploy is already self-consistent.
+   Remotes can stay on `*.vercel.app`.
 
 Hobby notes: one concurrent build (a push touching everything builds the seven
 projects one after another, ~10 min; `turbo-ignore` skips the untouched ones),

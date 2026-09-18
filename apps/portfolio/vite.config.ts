@@ -1,11 +1,12 @@
 import { federation } from '@module-federation/vite';
 import { env } from '@ncam/mf-remote';
+import { projects } from '@ncam/project-registry';
 import { tanstackStart } from '@tanstack/react-start/plugin/vite';
 import react from '@vitejs/plugin-react';
 import { existsSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { nitro } from 'nitro/vite';
-import { defineConfig } from 'vite';
+import { defineConfig, type PluginOption } from 'vite';
 
 // Config resolved from the root .env / .env.local (overridable by real env).
 const TOONHUB_REMOTE = env('TOONHUB_REMOTE_URL', 'http://localhost:9001/remoteEntry.js');
@@ -21,6 +22,83 @@ const BALI_REMOTE = env('BALI_REMOTE_URL', 'http://localhost:9005/remoteEntry.js
 // The home page's own sections live in the `profile` remote (one module each).
 const PROFILE_REMOTE = env('PROFILE_REMOTE_URL', 'http://localhost:9006/remoteEntry.js');
 const PORTFOLIO_PORT = Number(env('PORTFOLIO_PORT', '9000'));
+
+/**
+ * The site's public origin, for canonical URLs, Open Graph, JSON-LD, robots and
+ * the sitemap. `SITE_URL` wins; otherwise Vercel's production domain, which it
+ * exposes to preview builds too — a preview's canonical should point at
+ * production, not at itself. Falls back to the live domain for local builds.
+ */
+function resolveSiteUrl(): string {
+  const configured = env('SITE_URL').trim();
+  const vercel = process.env.VERCEL_PROJECT_PRODUCTION_URL?.trim();
+  const raw = configured || (vercel ? `https://${vercel}` : 'https://ncam.dev');
+  // Callers append their own path, so the origin must not end in a slash.
+  return raw.replace(/\/+$/, '');
+}
+
+const SITE_URL = resolveSiteUrl();
+
+/**
+ * Emit `robots.txt` and `sitemap.xml` from the resolved origin instead of
+ * shipping them as `public/` files with the domain typed into them — those went
+ * stale the moment the site moved, and listed one of the five live projects.
+ *
+ * Blog posts are deliberately absent: they live in the CMS and change without a
+ * deploy, so a build-time sitemap cannot know them. Article pages are still
+ * crawlable through `/blog`, which is listed here and server-rendered.
+ */
+function siteFiles(): PluginOption {
+  const robots = () => `User-agent: *\nAllow: /\n\nSitemap: ${SITE_URL}/sitemap.xml\n`;
+
+  const sitemap = () => {
+    const entries = [
+      { loc: `${SITE_URL}/`, changefreq: 'weekly', priority: '1.0' },
+      { loc: `${SITE_URL}/blog`, changefreq: 'weekly', priority: '0.8' },
+      ...projects
+        .filter((project) => project.status === 'live')
+        .map((project) => ({
+          loc: `${SITE_URL}/projects/${project.id}`,
+          changefreq: 'monthly',
+          priority: '0.8',
+        })),
+    ];
+    const urls = entries
+      .map(
+        ({ loc, changefreq, priority }) =>
+          `  <url><loc>${loc}</loc><changefreq>${changefreq}</changefreq><priority>${priority}</priority></url>`,
+      )
+      .join('\n');
+    return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`;
+  };
+
+  return {
+    name: 'site-files',
+    // `vite dev` produces no bundle, so serve the same strings from memory.
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        const path = req.url?.split('?')[0];
+        if (path === '/robots.txt') {
+          res.setHeader('content-type', 'text/plain; charset=utf-8');
+          res.end(robots());
+          return;
+        }
+        if (path === '/sitemap.xml') {
+          res.setHeader('content-type', 'application/xml; charset=utf-8');
+          res.end(sitemap());
+          return;
+        }
+        next();
+      });
+    },
+    generateBundle() {
+      // Client bundle only: these are static files, not server assets.
+      if (this.environment?.name && this.environment.name !== 'client') return;
+      this.emitFile({ type: 'asset', fileName: 'robots.txt', source: robots() });
+      this.emitFile({ type: 'asset', fileName: 'sitemap.xml', source: sitemap() });
+    },
+  };
+}
 
 // Nitro leaves a handle open after its build, so `vite build` never exits on its
 // own. Exiting on a fixed delay after `writeBundle` raced the SSR + Nitro server
@@ -140,6 +218,7 @@ export default defineConfig({
     tanstackStart(),
     react(),
     nitro(),
+    siteFiles(),
     {
       // See exitWhenNitroHasWritten(): exit once Nitro's server bundle is on disk.
       name: 'tanstack-build-exit',
@@ -156,6 +235,8 @@ export default defineConfig({
   },
   define: {
     'import.meta.env.VITE_TOONHUB_ORIGIN': JSON.stringify(TOONHUB_ORIGIN),
+    // Read through src/lib/site.ts — never import.meta.env directly in a route.
+    'import.meta.env.VITE_SITE_URL': JSON.stringify(SITE_URL),
   },
   build: {
     target: 'chrome89',

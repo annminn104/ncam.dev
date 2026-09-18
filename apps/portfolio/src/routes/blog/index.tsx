@@ -4,7 +4,7 @@ import { createLogger } from '@ncam/logger';
 import { getBlogPosts } from '../../functions/blog.functions';
 
 const log = createLogger({ scope: 'portfolio' });
-const SITE_URL = 'https://ncam.dev';
+import { SITE_URL } from '../../lib/site';
 const TITLE = 'Blog — ncam.dev';
 const DESCRIPTION =
   'Long-form write-ups on micro-frontends, SSR and motion — the things this site is made of.';
