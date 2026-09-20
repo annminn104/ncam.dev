@@ -6,7 +6,7 @@
   "description": "The ncam.dev home-page sections (hero, tech stacks, experience, projects, blog, contact), each exposed as its own Module Federation module and mounted by the portfolio host at runtime.",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build --app",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit"
   },

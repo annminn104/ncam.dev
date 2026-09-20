@@ -9,7 +9,7 @@
     "predev": "node scripts/download-assets.mjs",
     "prebuild": "node scripts/download-assets.mjs",
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build --app",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit"
   },
