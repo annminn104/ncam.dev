@@ -6,7 +6,7 @@
   "description": "Mindloop — a dark monochrome newsletter/content landing page, packaged as a React Module Federation remote.",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build --app",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit"
   },

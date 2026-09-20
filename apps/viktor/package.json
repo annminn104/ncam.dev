@@ -6,7 +6,7 @@
   "description": "Viktor — a full-screen hero with video crossfade switcher, animated name reveal and CTA, packaged as a self-contained React Module Federation remote.",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build --app",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit"
   },

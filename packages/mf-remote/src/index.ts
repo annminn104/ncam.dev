@@ -39,6 +39,34 @@ export function env(key: string, fallback = ''): string {
   return process.env[key] ?? loadRootEnv()[key] ?? fallback;
 }
 
+/** The plugin's own remote-entry filename; the SSR sibling is derived from it. */
+const REMOTE_ENTRY_FILENAME = 'remoteEntry.js';
+
+/**
+ * Rollup input for the remote's **SSR** entry.
+ *
+ * `@module-federation/vite` emits `remoteEntry.ssr.js` only when a build runs an
+ * `ssr` environment — its `isSsrRemoteEntryBuild()` gate is closed for a
+ * client-only build, silently and without a warning, which is why a remote built
+ * as a plain SPA can never be server-rendered by the host. The `ssr` environment
+ * in turn needs an explicit input: left to inherit `index.html` the build dies
+ * with "rolldownOptions.input should not be an html file when building for SSR".
+ *
+ * The right input is the plugin's own virtual module, but neither
+ * `getRemoteEntrySSRId()` nor its `REMOTE_ENTRY_SSR_ID` constant is exported, so
+ * the id is reconstructed here exactly as `lib/index.js` builds it:
+ * `virtual:mf-REMOTE_ENTRY_SSR_ID:` + `${internalName}__${filename}`, sanitised,
+ * where `internalName` is the remote name behind the `__mfe_internal__` prefix.
+ *
+ * Verified against 1.21.5. If a future release renames any of those, the ssr
+ * build fails loudly with an unresolved input rather than silently regressing to
+ * client-only — which is the failure mode worth having.
+ */
+function ssrRemoteEntryInput(name: string, filename = REMOTE_ENTRY_FILENAME): string {
+  const scopeKey = `__mfe_internal__${name}__${filename}`.replace(/[^a-zA-Z0-9_-]/g, '_');
+  return `virtual:mf-REMOTE_ENTRY_SSR_ID:${scopeKey}`;
+}
+
 export interface RemoteOptions {
   /** Module Federation remote name, e.g. 'mindloop'. Must be a valid identifier. */
   name: string;
@@ -95,11 +123,29 @@ export function defineRemote({
       target: 'esnext',
       modulePreload: false,
     },
+    // Second build environment whose only job is to emit `remoteEntry.ssr.js`
+    // and the Node-targeted copy of every exposed module. `vite build` alone
+    // builds the client environment only, so the remote's build script must run
+    // `vite build --app`; the plugin's `publishSsrOutputFiles()` then copies the
+    // whole SSR graph into the client `outDir`, which is what makes it servable
+    // from static hosting (Vercel) next to the browser entry. The host's
+    // ssrEntryLoader finds it by convention: remoteEntry.js → remoteEntry.ssr.js.
+    environments: {
+      ssr: {
+        build: {
+          ssr: true,
+          target: 'esnext',
+          outDir: 'dist-ssr',
+          emptyOutDir: true,
+          rollupOptions: { input: { remoteEntrySsr: ssrRemoteEntryInput(name) } },
+        },
+      },
+    },
     plugins: [
       ...plugins,
       federation({
         name,
-        filename: 'remoteEntry.js',
+        filename: REMOTE_ENTRY_FILENAME,
         exposes,
         // Self-contained: no shared singletons across the boundary.
         shared: {},

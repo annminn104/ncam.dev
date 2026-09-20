@@ -6,7 +6,7 @@
   "description": "Bali Adventure — a cinematic luxury-travel landing page (GSAP pinned parallax hero, horizontal-scroll itinerary, framer-motion modals), packaged as a self-contained React Module Federation remote.",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build --app",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit"
   },
