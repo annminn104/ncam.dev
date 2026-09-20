@@ -3,8 +3,8 @@
  * edit content here only. (Section ids / order / colours live in the HOST:
  * apps/portfolio/src/data/sections.ts — the shell owns navigation.)
  *
- * Still placeholder: `profile.email` (no personal address supplied yet) and the
- * blog posts (drafts, rendered as "publishing soon"). Everything else is real.
+ * Still placeholder: the blog posts (drafts, rendered as "publishing soon").
+ * Everything else is real.
  */
 
 export type SocialKind = 'linkedin' | 'github' | 'facebook';
@@ -46,8 +46,7 @@ export const profile = {
     'GSAP',
     'Micro Frontends',
   ],
-  /** PLACEHOLDER — replace with the real contact address. */
-  email: 'hello@ncam.dev',
+  email: 'annminn100@gmail.com',
   phone: '(+84) 374 742 756',
   phoneHref: 'tel:+84374742756',
   socials: [
