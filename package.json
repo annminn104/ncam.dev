@@ -3,7 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "description": "Turborepo monorepo: a shell host that renders project mini-apps as micro-frontends via Module Federation.",
-  "packageManager": "pnpm@11.13.0",
+  "packageManager": "pnpm@11.27.0",
   "scripts": {
     "dev": "turbo run dev",
     "build": "turbo run build",
