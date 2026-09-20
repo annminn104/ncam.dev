@@ -208,6 +208,24 @@ export default defineConfig({
         react: { singleton: true, requiredVersion: '^19.0.0' },
         'react-dom': { singleton: true, requiredVersion: '^19.0.0' },
       },
+      // Declaring the SSR entry loader here suppresses the plugin's automatic
+      // injection, which is what we want: its default `temp-file` strategy
+      // writes the remote's fetched SSR graph to
+      // `<process.cwd()>/node_modules/.ssr-cache/<pid>`. That is fine on a
+      // normal Node server and fatal on a serverless function, where the
+      // filesystem is read-only outside /tmp — the mkdir throws EACCES, the
+      // hook returns nothing, and every remote silently renders its client-only
+      // fallback. Reproduced exactly by calling `loadEntry()` from a chmod 555
+      // working directory.
+      //
+      // `vm` evaluates the graph with `vm.SourceTextModule` and links bare
+      // imports through the host's share scope instead of touching the disk, so
+      // it needs no writable directory and no build-time absolute paths. It
+      // requires `--experimental-vm-modules`, so the host's deployment must set
+      // NODE_OPTIONS=--experimental-vm-modules; without the flag the loader
+      // falls back to `temp-file` on its own, which is the right behaviour
+      // locally, where the working directory is writable.
+      runtimePlugins: [['@module-federation/vite/ssrEntryLoader', { strategy: 'vm' }]],
       // `loaded-first`: resolve shared packages from what is already loaded (the
       // host's React) instead of `version-first`, which eagerly loads EVERY
       // registered remote's entry at host init to negotiate versions. On the

@@ -132,6 +132,21 @@ export function defineRemote({
     // ssrEntryLoader finds it by convention: remoteEntry.js → remoteEntry.ssr.js.
     environments: {
       ssr: {
+        // Bundle the remote's dependencies into the SSR graph instead of
+        // leaving them as bare imports. The host evaluates this graph with the
+        // `vm` strategy, which links bare specifiers through ITS share scope —
+        // so anything the host does not share (lucide-react, gsap, framer-motion
+        // …) fails with ERR_MODULE_NOT_FOUND and that section falls back to
+        // client-only.
+        //
+        // React stays external on purpose. The host has it, so the vm links it
+        // fine, and bundling it instead drags in react-dom/server's Node build,
+        // whose `createRequire(import.meta.url)` throws under vm — there
+        // `import.meta.url` is the remote's http:// URL, not a file path.
+        resolve: {
+          noExternal: true,
+          external: ['react', 'react-dom', 'react-dom/server', 'react/jsx-runtime'],
+        },
         build: {
           ssr: true,
           target: 'esnext',
