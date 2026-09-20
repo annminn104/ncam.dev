@@ -69,7 +69,7 @@ export const profile = {
       href: 'https://www.facebook.com/Minhmin0507',
     },
   ] satisfies Social[],
-  siteUrl: 'https://ncam.dev',
+  siteUrl: 'https://ncam-profile.vercel.app',
   repoUrl: 'https://github.com/annminn104/ncam.dev',
 };
 
