@@ -1,0 +1,81 @@
+# Keeps the Render-hosted Strapi CMS from spinning down.
+#
+# A free Render web service sleeps after 15 minutes without inbound traffic and
+# needs ~60 s to wake. The portfolio host allows the CMS 2.5 s on the home page
+# and 5 s in @ncam/cms, so the first request after a sleep always loses: /blog
+# falls back to its empty state and the home section shows placeholders.
+#
+# QUOTA. Render grants 750 Free instance hours per WORKSPACE per calendar month,
+# and a service consumes them only while awake. Keeping one service up around
+# the clock costs ~744 h in a 31-day month, which leaves ~6 h of headroom for
+# everything else. Adding a second always-on free web service would blow the
+# quota and Render suspends *every* free service until the next month. If more
+# free services appear, narrow the schedule below to waking hours instead.
+#
+# RELIABILITY. GitHub's scheduled workflows are best-effort and can be delayed
+# well past their cron interval on busy runners. A delay beyond 15 minutes lets
+# the service sleep anyway, so this job pings several times across its run
+# rather than once. A dedicated uptime service (UptimeRobot and friends) keeps
+# stricter intervals if the occasional cold start turns out to matter.
+#
+# GitHub also disables scheduled workflows after 60 days without repository
+# activity; re-enable it in the Actions tab if the repo goes quiet.
+
+name: Keep CMS awake
+
+on:
+  schedule:
+    # Every 10 minutes — inside Render's 15-minute idle window with room for drift.
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+# Least privilege: this job only makes an outbound request.
+permissions:
+  contents: read
+
+# A delayed run must not stack on top of the next one.
+concurrency:
+  group: keep-cms-awake
+  cancel-in-progress: false
+
+jobs:
+  ping:
+    name: Ping the CMS health endpoint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      # No actions are used on purpose: nothing needs checking out, and a plain
+      # `run` step keeps this free of third-party SHAs to pin and review.
+      - name: Ping /_health
+        env:
+          # Override with a repository variable if the CMS moves.
+          CMS_URL: ${{ vars.CMS_URL || 'https://ncam-cms.onrender.com' }}
+        run: |
+          set -uo pipefail
+          # Three pings ~4 minutes apart. One run therefore covers ~8 minutes,
+          # so two consecutive runs keep the service inside its idle window even
+          # when GitHub delivers the schedule late.
+          ok=0
+          for attempt in 1 2 3; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' \
+                     --max-time 90 --retry 2 --retry-delay 5 --retry-all-errors \
+                     "${CMS_URL}/_health" || echo "000")
+            echo "ping ${attempt}: HTTP ${code}"
+            # Strapi answers 204 when ready; anything 2xx/3xx means it is awake.
+            case "$code" in
+              2*|3*) ok=$((ok + 1)) ;;
+            esac
+            [ "$attempt" -lt 3 ] && sleep 240
+          done
+
+          echo "successful pings: ${ok}/3"
+          if [ "$ok" -eq 0 ]; then
+            echo "::error::CMS did not respond to any ping — it may be suspended, redeploying, or out of Render free instance hours."
+            exit 1
+          fi
+          # A partial failure is normal while the service is waking, so it is a
+          # warning rather than a failed run: a red cron every ten minutes is
+          # noise nobody reads.
+          if [ "$ok" -lt 3 ]; then
+            echo "::warning::Only ${ok}/3 pings succeeded; the service was probably still spinning up."
+          fi
