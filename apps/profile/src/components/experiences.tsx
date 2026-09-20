@@ -18,14 +18,65 @@ export function Experiences() {
     if (!stack) return;
     const cards = Array.from(stack.children) as HTMLElement[];
 
-    cards.forEach((card, i) => {
-      ScrollTrigger.create({
-        trigger: card,
-        start: 'top 60%',
-        onEnter: () => setActiveIndex(i),
-        onLeaveBack: () => setActiveIndex(Math.max(0, i - 1)),
+    // Derive the rail's active year from where the cards actually are, not from
+    // crossing callbacks. `onEnter`/`onLeaveBack` fire once per crossing and are
+    // never replayed when ScrollTrigger re-measures — and this component mounts
+    // inside a client-only federated remote, so the five other remotes on the
+    // home page keep mounting *after* these triggers exist and push the section
+    // down by thousands of pixels. When the stack happens to sit near the top of
+    // a still-short page at setup time, all four `onEnter`s fire at once and the
+    // rail sticks on the last role until the reader scrolls through the section.
+    // Reading the rects on every update (and every refresh) cannot desync.
+    let current = -1;
+    const syncActive = () => {
+      const line = window.innerHeight * 0.6;
+      let index = 0;
+      cards.forEach((card, i) => {
+        if (card.getBoundingClientRect().top <= line) index = i;
       });
+      if (index === current) return;
+      current = index;
+      setActiveIndex(index);
+    };
+
+    ScrollTrigger.create({
+      trigger: stack,
+      start: 'top bottom',
+      end: 'bottom top',
+      onUpdate: syncActive,
+      onRefresh: syncActive,
     });
+    syncActive();
+
+    // ScrollTrigger caches every start/end as an absolute scroll offset and only
+    // re-measures on window resize and `load` — a document that simply grows
+    // taller never triggers that. On the home page it always does: this section
+    // lives in a client-only federated remote and the five others mount around
+    // it whenever their chunks land, moving the stack by thousands of pixels
+    // after these triggers were measured. Stale offsets leave cards blurred out
+    // of turn and the year rail pinned to whichever role was "entered" against
+    // the old layout.
+    // The 4px threshold and the re-baseline after refreshing matter: a refresh
+    // itself nudges the document height, and reacting to that would loop.
+    let lastHeight = document.documentElement.scrollHeight;
+    let pending = 0;
+    let refreshing = false;
+    const observer = new ResizeObserver(() => {
+      const height = document.documentElement.scrollHeight;
+      if (refreshing || Math.abs(height - lastHeight) < 4) return;
+      window.clearTimeout(pending);
+      pending = window.setTimeout(() => {
+        refreshing = true;
+        ScrollTrigger.refresh();
+        lastHeight = document.documentElement.scrollHeight;
+        refreshing = false;
+      }, 200);
+    });
+    observer.observe(document.documentElement);
+    const stopWatchingHeight = () => {
+      window.clearTimeout(pending);
+      observer.disconnect();
+    };
 
     if (!isDesktop) {
       gsap.fromTo(
@@ -40,21 +91,38 @@ export function Experiences() {
           scrollTrigger: { trigger: stack, start: 'top 80%', once: true },
         },
       );
-      return;
+      return stopWatchingHeight;
     }
 
-    // Card i recedes while card i+1 arrives.
+    // Card i recedes while card i+1 arrives. `fromTo` + `immediateRender: false`
+    // pins the clean state as the explicit start instead of letting GSAP record
+    // whatever the card looks like on its first render, and `invalidateOnRefresh`
+    // re-reads it whenever the page grows underneath us — without both, a card
+    // that first rendered mid-scrub keeps a blurred baseline it never returns from.
     cards.forEach((card, i) => {
       const next = cards[i + 1];
       if (!next) return;
-      gsap.to(card, {
-        scale: 0.94,
-        opacity: 0.35,
-        filter: 'blur(2px)',
-        ease: 'none',
-        scrollTrigger: { trigger: next, start: 'top 90%', end: 'top 35%', scrub: true },
-      });
+      gsap.fromTo(
+        card,
+        { scale: 1, opacity: 1, filter: 'blur(0px)' },
+        {
+          scale: 0.94,
+          opacity: 0.35,
+          filter: 'blur(2px)',
+          ease: 'none',
+          immediateRender: false,
+          scrollTrigger: {
+            trigger: next,
+            start: 'top 90%',
+            end: 'top 35%',
+            scrub: true,
+            invalidateOnRefresh: true,
+          },
+        },
+      );
     });
+
+    return stopWatchingHeight;
   });
 
   return (
