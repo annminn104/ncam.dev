@@ -275,35 +275,44 @@ The `portfolio` container reads the CMS through `STRAPI_URL=http://strapi:1337`
 and serves media from `STRAPI_PUBLIC_URL=http://cms.localhost:1337`; start the
 `cms` profile too (`docker compose --profile cms up`) or the blog renders empty.
 
-### Railway (the CMS — Vercel cannot host it)
+### Render (the CMS — Vercel cannot host it)
 
 Strapi needs a long-lived process, a real database and somewhere durable for
-uploads, so it goes on Railway (or any container host) while the seven
-frontends stay on Vercel. `apps/strapi/railway.json` carries the build config.
+uploads, so it goes on Render while the seven frontends stay on Vercel.
+[`render.yaml`](render.yaml) at the repo root is the Blueprint: the `ncam-cms`
+Docker web service plus its `ncam-cms-db` Postgres.
 
-1. New Railway project → **Deploy from GitHub repo**, pick this repo. In the
-   service settings set **Config File Path** to `apps/strapi/railway.json` and
-   leave the root directory alone — the Dockerfile copies `pnpm-workspace.yaml`
-   and `pnpm-lock.yaml` from the repo root, so a narrower build context cannot
-   install.
-2. Add the **Postgres** plugin. Set `DATABASE_CLIENT=postgres`; its `DATABASE_URL`
-   is picked up as-is. Use the private URL where possible, otherwise also set
-   `DATABASE_SSL=true`.
-3. Add a **Volume** mounted at `/app/public/uploads`. Without it every image
-   uploaded through the admin is lost on the next deploy.
-4. Set the secrets — `APP_KEYS`, `API_TOKEN_SALT`, `ADMIN_JWT_SECRET`,
-   `TRANSFER_TOKEN_SALT`, `JWT_SECRET`, `ENCRYPTION_KEY` — once, as Railway
-   variables. Generate them locally with
-   `pnpm --filter @ncam/strapi setup:env` and copy the values out of
-   `apps/strapi/.env`. Do not rotate them casually: it invalidates every admin
-   session and API token.
-5. Set `NODE_ENV=production` and `PUBLIC_URL` to the service's public domain.
-   Railway injects `PORT` itself; `config/server.ts` already binds it.
-6. On the Vercel host project set `STRAPI_URL` and `STRAPI_PUBLIC_URL` to that
-   same domain. Both are read at runtime, so no rebuild is needed to change them.
+1. Render Dashboard → **New → Blueprint**, pick this repo. Render reads
+   `render.yaml` and creates both resources. Leave the Docker context at the
+   repo root — the Dockerfile copies `pnpm-workspace.yaml` and `pnpm-lock.yaml`
+   from there, so a narrower context cannot install.
+2. Apply. The six Strapi secrets are generated once by the Blueprint and kept
+   across syncs; `DATABASE_URL` is wired from the database over the private
+   network. Nothing to paste.
+3. Open `<service-url>/admin` and register the first admin user. This database
+   starts empty — posts written against the local SQLite do not come along.
+4. On the Vercel host project set `STRAPI_URL` and `STRAPI_PUBLIC_URL` to the
+   service URL. Both are read at runtime, so no rebuild is needed.
 
-Until step 6, `/blog` renders its empty state and the home page's blog section
+`PUBLIC_URL` is deliberately unset: `config/server.ts` falls back to
+`RENDER_EXTERNAL_URL`, which Render injects. Set it explicitly only for a custom
+domain. Render injects `PORT` too, and the server already binds it.
+
+Until step 4, `/blog` renders its empty state and the home page's blog section
 shows placeholders — by design, the site degrades rather than failing.
+
+**Three free-plan limits hit a CMS specifically**, so read these before treating
+it as production:
+
+- A free web service **sleeps after 15 minutes idle** and takes about a minute
+  to wake. The host allows the CMS 2.5 s on the home page and 5 s in
+  `@ncam/cms`, so the first request after a sleep always shows placeholders.
+- Free web services **cannot attach a persistent disk**, so uploaded media is
+  lost on every deploy, restart and spin-down. The `disk` block in `render.yaml`
+  is commented out for that reason — uncomment it on a paid plan. The fix that
+  keeps the free plan is an external upload provider (S3, Cloudinary).
+- A **free Postgres expires 30 days after creation**, with a 14-day grace period
+  before deletion.
 
 ## Troubleshooting
 

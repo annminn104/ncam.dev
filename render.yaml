@@ -1,0 +1,72 @@
+# Render Blueprint — the blog CMS only.
+#
+# Vercel hosts the seven frontends; it cannot host Strapi, which needs a
+# long-lived process, a real database and somewhere durable for uploads. This
+# file lives at the repo root because that is where Render looks for a Blueprint.
+#
+# Free-plan caveats, all three of which bite a CMS (see apps/strapi/AGENTS.md):
+#   - a free web service spins down after 15 minutes idle and takes ~1 minute to
+#     come back, which is far past the host's 2.5 s / 5 s CMS timeouts;
+#   - free web services cannot attach a persistent disk, so uploaded media is
+#     lost on every deploy, restart and spin-down;
+#   - a free Postgres expires 30 days after creation.
+# Moving `plan` to `starter` and adding the `disk` block below fixes the first
+# two; upgrading the database fixes the third.
+
+services:
+  - type: web
+    name: ncam-cms
+    runtime: docker
+    plan: free
+    region: singapore
+    # Paths are relative to the repo root. The Dockerfile copies
+    # pnpm-workspace.yaml and pnpm-lock.yaml from there, so the build context
+    # must be the whole repo, not apps/strapi.
+    dockerfilePath: ./apps/strapi/Dockerfile
+    dockerContext: .
+    healthCheckPath: /_health
+    autoDeployTrigger: commit
+
+    # Uncomment on a paid plan — free web services cannot attach a disk, and
+    # without one every image uploaded through the admin disappears on the next
+    # deploy. `.dockerignore` keeps public/uploads/.gitkeep so the image owns
+    # the directory for a disk to mount over.
+    # disk:
+    #   name: uploads
+    #   mountPath: /app/public/uploads
+    #   sizeGB: 1
+
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_CLIENT
+        value: postgres
+      # Private-network connection string. Free web services cannot *receive*
+      # private traffic but can still *send* it to a datastore in the region.
+      - key: DATABASE_URL
+        fromDatabase:
+          name: ncam-cms-db
+          property: connectionString
+      # Generated once on the first sync and kept afterwards. Do not rotate
+      # casually: it invalidates every admin session and API token.
+      - key: APP_KEYS
+        generateValue: true
+      - key: API_TOKEN_SALT
+        generateValue: true
+      - key: ADMIN_JWT_SECRET
+        generateValue: true
+      - key: TRANSFER_TOKEN_SALT
+        generateValue: true
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ENCRYPTION_KEY
+        generateValue: true
+      # PUBLIC_URL is intentionally absent: config/server.ts falls back to
+      # RENDER_EXTERNAL_URL, which Render injects with the service's public URL.
+
+databases:
+  - name: ncam-cms-db
+    plan: free
+    region: singapore
+    databaseName: strapi
+    user: strapi
