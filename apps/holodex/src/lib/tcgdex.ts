@@ -226,3 +226,73 @@ export async function getCard(cardId: string, opts: RequestOpts = {}): Promise<C
   if (!card || typeof card.id !== 'string') throw new TcgdexError('Expected a card object', url);
   return card;
 }
+
+/** Rows per request when resolving a filtered set. */
+export const SET_QUERY_PAGE_SIZE = 600;
+/** Hard stop, so a pathological prefix can never fan out unbounded. */
+export const SET_QUERY_MAX_PAGES = 4;
+
+/**
+ * Global card search. There is no total-count header, so ask for one row more
+ * than the page needs: if it arrives, there is a next page. The caller gets a
+ * `hasNext` boolean and never a total.
+ */
+export async function searchCards(q: CardQuery, opts: RequestOpts = {}): Promise<Page<CardBrief>> {
+  const page = positive(q.page, 1);
+  const perPage = positive(q.perPage, DEFAULT_PER_PAGE);
+  const url = buildCardUrl({ ...q, page, perPage: perPage + 1 }, opts.base);
+  const rows = await fetchArray<CardBrief>(url, opts);
+  return { items: rows.slice(0, perPage), page, hasNext: rows.length > perPage };
+}
+
+/**
+ * Cards of one set, paginated exactly.
+ *
+ * Unfiltered, `/sets/{setId}` already returns the set's complete card list
+ * (216 for swsh1, 331 for the largest set), so it is paginated in memory.
+ *
+ * Filtered, the filters shrink the result hard, so `?set.id=` is affordable —
+ * but it is a substring match, so the rows are intersected with the exact ids
+ * from `/sets/{setId}`. A response at exactly `SET_QUERY_PAGE_SIZE` means the
+ * cap was hit and another page is fetched, up to `SET_QUERY_MAX_PAGES`.
+ */
+export async function getSetCards(
+  setId: string,
+  filters: { name?: string; types?: string; rarity?: string },
+  page: number,
+  perPage: number,
+  opts: RequestOpts = {},
+): Promise<Page<CardBrief>> {
+  const safePage = positive(page, 1);
+  const safePerPage = positive(perPage, DEFAULT_PER_PAGE);
+  const set = await getSet(setId, opts);
+  const filtered = Boolean(filters.name?.trim() || filters.types?.trim() || filters.rarity?.trim());
+
+  let list = set.cards;
+  let truncated = false;
+
+  if (filtered) {
+    const order = new Map(set.cards.map((card, index) => [card.id, index]));
+    const matched = new Map<string, CardBrief>();
+    for (let apiPage = 1; apiPage <= SET_QUERY_MAX_PAGES; apiPage += 1) {
+      const url = buildCardUrl(
+        { ...filters, setId, page: apiPage, perPage: SET_QUERY_PAGE_SIZE },
+        opts.base,
+      );
+      const rows = await fetchArray<CardBrief>(url, opts);
+      for (const row of rows) if (order.has(row.id)) matched.set(row.id, row);
+      if (rows.length < SET_QUERY_PAGE_SIZE) break;
+      if (apiPage === SET_QUERY_MAX_PAGES) truncated = true;
+    }
+    list = [...matched.values()].sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0));
+  }
+
+  const start = (safePage - 1) * safePerPage;
+  return {
+    items: list.slice(start, start + safePerPage),
+    page: safePage,
+    hasNext: start + safePerPage < list.length,
+    total: list.length,
+    truncated,
+  };
+}

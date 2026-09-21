@@ -1,5 +1,15 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { API_BASE, buildCardUrl, getCard, getSet, getSets, TcgdexError } from './tcgdex';
+import {
+  API_BASE,
+  buildCardUrl,
+  getCard,
+  getSet,
+  getSetCards,
+  getSets,
+  searchCards,
+  SET_QUERY_PAGE_SIZE,
+  TcgdexError,
+} from './tcgdex';
 
 function mockFetch(handler: (url: string) => unknown, status = 200) {
   const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
@@ -117,5 +127,109 @@ describe('endpoints', () => {
       }),
     );
     await expect(getSets()).rejects.toBeInstanceOf(TcgdexError);
+  });
+});
+
+const brief = (id: string) => ({ id, localId: id.split('-')[1] ?? '1', name: id });
+
+describe('searchCards (global, probe pagination)', () => {
+  it('asks for one extra row and reports hasNext when it arrives', async () => {
+    const fetchMock = mockFetch(() => Array.from({ length: 25 }, (_, i) => brief(`sv1-${i}`)));
+    const page = await searchCards({ name: 'char', page: 1, perPage: 24 });
+    expect(
+      new URL(String(fetchMock.mock.calls[0][0])).searchParams.get('pagination:itemsPerPage'),
+    ).toBe('25');
+    expect(page.items).toHaveLength(24);
+    expect(page.hasNext).toBe(true);
+    expect(page.total).toBeUndefined();
+  });
+
+  it('reports no next page when the probe row does not arrive', async () => {
+    mockFetch(() => Array.from({ length: 24 }, (_, i) => brief(`sv1-${i}`)));
+    const page = await searchCards({ name: 'char', page: 1, perPage: 24 });
+    expect(page.items).toHaveLength(24);
+    expect(page.hasNext).toBe(false);
+  });
+
+  it('handles the empty last page the API returns for an overflowing page number', async () => {
+    mockFetch(() => []);
+    const page = await searchCards({ name: 'char', page: 99999, perPage: 24 });
+    expect(page).toMatchObject({ items: [], hasNext: false, page: 99999 });
+  });
+});
+
+describe('getSetCards (exact membership)', () => {
+  const setBody = (ids: string[]) => ({
+    id: 'swsh1',
+    name: 'Sword & Shield',
+    cardCount: { total: ids.length, official: ids.length },
+    serie: { id: 'swsh', name: 'Sword & Shield' },
+    cards: ids.map(brief),
+  });
+
+  it('pages the set endpoint in memory when there is no filter, and never calls /cards', async () => {
+    const ids = Array.from({ length: 50 }, (_, i) => `swsh1-${i + 1}`);
+    const fetchMock = mockFetch(() => setBody(ids));
+    const page = await getSetCards('swsh1', {}, 2, 20);
+    expect(fetchMock.mock.calls.every(([url]) => !String(url).includes('/cards'))).toBe(true);
+    expect(page.items.map((c) => c.id)).toEqual(ids.slice(20, 40));
+    expect(page).toMatchObject({ page: 2, total: 50, hasNext: true, truncated: false });
+  });
+
+  it('reports the last page correctly', async () => {
+    const ids = Array.from({ length: 50 }, (_, i) => `swsh1-${i + 1}`);
+    mockFetch(() => setBody(ids));
+    const page = await getSetCards('swsh1', {}, 3, 20);
+    expect(page.items).toHaveLength(10);
+    expect(page.hasNext).toBe(false);
+  });
+
+  it('drops the prefix bleed when a filter is active', async () => {
+    const ids = ['swsh1-1', 'swsh1-2', 'swsh1-3'];
+    mockFetch((url) =>
+      url.includes('/cards')
+        ? [brief('swsh1-1'), brief('swsh10-4'), brief('swsh12-9'), brief('swsh1-3')]
+        : setBody(ids),
+    );
+    const page = await getSetCards('swsh1', { types: 'Fire' }, 1, 20);
+    expect(page.items.map((c) => c.id)).toEqual(['swsh1-1', 'swsh1-3']);
+    expect(page.total).toBe(2);
+  });
+
+  it('follows a capped response onto the next page', async () => {
+    const ids = Array.from({ length: 4 }, (_, i) => `swsh1-${i + 1}`);
+    const pages = [
+      [
+        ...Array.from({ length: SET_QUERY_PAGE_SIZE - 2 }, (_, i) => brief(`swsh10-${i}`)),
+        brief('swsh1-1'),
+        brief('swsh1-2'),
+      ],
+      [brief('swsh1-3')],
+    ];
+    let call = 0;
+    mockFetch((url) => (url.includes('/cards') ? pages[call++] : setBody(ids)));
+    const page = await getSetCards('swsh1', { types: 'Fire' }, 1, 20);
+    expect(page.items.map((c) => c.id)).toEqual(['swsh1-1', 'swsh1-2', 'swsh1-3']);
+    expect(page.truncated).toBe(false);
+  });
+
+  it('stops at the request cap and says so instead of lying', async () => {
+    const ids = ['swsh1-1'];
+    mockFetch((url) =>
+      url.includes('/cards')
+        ? Array.from({ length: SET_QUERY_PAGE_SIZE }, (_, i) => brief(`swsh10-${i}`))
+        : setBody(ids),
+    );
+    const page = await getSetCards('swsh1', { types: 'Fire' }, 1, 20);
+    expect(page.truncated).toBe(true);
+  });
+
+  it('keeps the set ordering rather than the API ordering', async () => {
+    const ids = ['swsh1-1', 'swsh1-2', 'swsh1-3'];
+    mockFetch((url) =>
+      url.includes('/cards') ? [brief('swsh1-3'), brief('swsh1-1')] : setBody(ids),
+    );
+    const page = await getSetCards('swsh1', { name: 'x' }, 1, 20);
+    expect(page.items.map((c) => c.id)).toEqual(['swsh1-1', 'swsh1-3']);
   });
 });
