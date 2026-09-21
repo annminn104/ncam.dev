@@ -104,20 +104,28 @@ describe('EFFECT_BY_RARITY', () => {
     expect(stray).toEqual([]);
   });
 
-  it('leaves exactly the override-only effects out of the table', () => {
+  it('declares exactly the effects no rarity maps to', () => {
+    // Asserted against a literal list, not against OVERRIDE_ONLY_EFFECTS
+    // itself — comparing the constant to a filter of itself would pass even
+    // if it were empty.
+    expect([...OVERRIDE_ONLY_EFFECTS].sort()).toEqual([
+      'reverse-holo',
+      'trainer-gallery-secret-rare',
+      'trainer-gallery-v-max',
+      'trainer-gallery-v-regular',
+    ]);
+  });
+
+  it('keeps every override-only effect out of the rarity table', () => {
     const used = new Set(Object.values(EFFECT_BY_RARITY));
-    const absent = OVERRIDE_ONLY_EFFECTS.filter((e) => !used.has(e));
-    expect(absent.sort()).toEqual(
-      [
-        'reverse-holo',
-        'trainer-gallery-holo',
-        'trainer-gallery-secret-rare',
-        'trainer-gallery-v-max',
-        'trainer-gallery-v-regular',
-      ]
-        .filter((e) => OVERRIDE_ONLY_EFFECTS.includes(e as EffectId))
-        .sort(),
-    );
+    const leaked = OVERRIDE_ONLY_EFFECTS.filter((e) => used.has(e));
+    expect(leaked).toEqual([]);
+  });
+
+  it('accounts for every effect: each is either mapped or override-only', () => {
+    const used = new Set<EffectId>(Object.values(EFFECT_BY_RARITY));
+    const declared = new Set<EffectId>([...used, ...OVERRIDE_ONLY_EFFECTS]);
+    expect(declared.size).toBe(22);
   });
 });
 
@@ -282,13 +290,15 @@ export interface HoloSelection {
 }
 
 /**
- * Effects with no rarity of their own. `reverse-holo` comes from a printing
- * variant; the gallery effects come from the card number. A test asserts this
- * list is exactly the set of effects missing from EFFECT_BY_RARITY.
+ * Effects no rarity maps to. `reverse-holo` comes from a printing variant; the
+ * three gallery variants come from the card number.
+ *
+ * `trainer-gallery-holo` is deliberately NOT here — `Illustration rare` maps to
+ * it in the table below, and it is also the fallback the gallery override uses
+ * for any other rarity. It is reachable both ways.
  */
 export const OVERRIDE_ONLY_EFFECTS: EffectId[] = [
   'reverse-holo',
-  'trainer-gallery-holo',
   'trainer-gallery-v-regular',
   'trainer-gallery-v-max',
   'trainer-gallery-secret-rare',
