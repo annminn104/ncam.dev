@@ -86,6 +86,7 @@ export interface Variants {
   wPromo?: boolean;
 }
 
+/** Cardmarket's shape: flat, with a three-point trend history. */
 export interface PriceBlock {
   unit?: string;
   updated?: string;
@@ -97,11 +98,36 @@ export interface PriceBlock {
   avg30?: number;
 }
 
+/**
+ * One TCGplayer product entry, e.g. the value at `holofoil` or
+ * `reverse-holofoil`. Snapshot only — TCGplayer carries no history.
+ */
+export interface TcgplayerProductPrice {
+  productId?: number;
+  lowPrice?: number | null;
+  midPrice?: number | null;
+  highPrice?: number | null;
+  marketPrice?: number | null;
+  directLowPrice?: number | null;
+}
+
+/**
+ * TCGplayer's block is keyed by product type, not flat like cardmarket's:
+ * `unit` and `updated` sit alongside a dynamic set of product-type keys
+ * (`holofoil`, `reverse-holofoil`, `1st-edition-holofoil`, `normal`, ...),
+ * each holding a `TcgplayerProductPrice`. Which keys exist varies per card.
+ */
+export interface TcgplayerPricing {
+  unit?: string;
+  updated?: string;
+  [productType: string]: TcgplayerProductPrice | string | undefined;
+}
+
 export interface VariantDetail {
   type: string;
   size?: string;
   variantId?: string;
-  pricing?: { cardmarket?: PriceBlock; tcgplayer?: PriceBlock };
+  pricing?: { cardmarket?: PriceBlock | null; tcgplayer?: TcgplayerPricing | null };
 }
 
 export interface Card extends CardBrief {
