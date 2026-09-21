@@ -203,11 +203,29 @@ export function buildCardUrl(q: CardQuery, base: string = API_BASE): string {
   return url.toString();
 }
 
+/** How long one request may hang before it is aborted. */
+export const REQUEST_TIMEOUT_MS = 10_000;
+
+/**
+ * The signal a request actually runs under: the caller's, the timeout, or
+ * both — whichever aborts first wins.
+ *
+ * Every factory in lib/queries.ts passes react-query's own `signal`, so the
+ * previous `opts.signal ?? AbortSignal.timeout(...)` installed the timeout
+ * only when nobody was watching. In production it was therefore dead: a
+ * stalled TCGdex connection never settled, `retry: 2` never fired, and the
+ * visitor sat on a skeleton with no error panel and no retry button.
+ */
+export function requestSignal(signal?: AbortSignal, timeoutMs = REQUEST_TIMEOUT_MS): AbortSignal {
+  const timeout = AbortSignal.timeout(timeoutMs);
+  return signal ? AbortSignal.any([signal, timeout]) : timeout;
+}
+
 async function fetchJson<T>(url: string, opts: RequestOpts = {}): Promise<T> {
   let response: Response;
   try {
     response = await fetch(url, {
-      signal: opts.signal ?? AbortSignal.timeout(10_000),
+      signal: requestSignal(opts.signal),
       headers: { accept: 'application/json' },
     });
   } catch (cause) {
@@ -229,10 +247,6 @@ async function fetchArray<T>(url: string, opts: RequestOpts): Promise<T[]> {
   const body = await fetchJson<unknown>(url, opts);
   if (!Array.isArray(body)) throw new TcgdexError('Expected a JSON array', url);
   return body as T[];
-}
-
-export function getSeries(opts: RequestOpts = {}): Promise<SeriesBrief[]> {
-  return fetchArray<SeriesBrief>(`${opts.base ?? API_BASE}/series`, opts);
 }
 
 export function getSets(opts: RequestOpts = {}): Promise<SetBrief[]> {
@@ -274,16 +288,21 @@ export async function searchCards(q: CardQuery, opts: RequestOpts = {}): Promise
 /**
  * Cards of one set, paginated exactly.
  *
- * Unfiltered, `/sets/{setId}` already returns the set's complete card list
- * (216 for swsh1, 331 for the largest set), so it is paginated in memory.
+ * Takes the already-fetched set document rather than an id: `/sets/{setId}` is
+ * a 216–331 card payload, and the caller (SetView, and the SSR prefetch) is
+ * already holding it under `setQuery`. Fetching it here bypassed that cache
+ * and re-downloaded the whole set on every page click.
+ *
+ * Unfiltered, the set document already carries the complete card list, so it
+ * is paginated in memory and nothing is fetched at all.
  *
  * Filtered, the filters shrink the result hard, so `?set.id=` is affordable —
  * but it is a substring match, so the rows are intersected with the exact ids
- * from `/sets/{setId}`. A response at exactly `SET_QUERY_PAGE_SIZE` means the
+ * from the set document. A response at exactly `SET_QUERY_PAGE_SIZE` means the
  * cap was hit and another page is fetched, up to `SET_QUERY_MAX_PAGES`.
  */
-export async function getSetCards(
-  setId: string,
+export async function selectSetCards(
+  set: SetDetail,
   filters: { name?: string; types?: string; rarity?: string },
   page: number,
   perPage: number,
@@ -291,7 +310,6 @@ export async function getSetCards(
 ): Promise<Page<CardBrief>> {
   const safePage = positive(page, 1);
   const safePerPage = positive(perPage, DEFAULT_PER_PAGE);
-  const set = await getSet(setId, opts);
   const filtered = Boolean(filters.name?.trim() || filters.types?.trim() || filters.rarity?.trim());
 
   let list = set.cards;
@@ -302,7 +320,7 @@ export async function getSetCards(
     const matched = new Map<string, CardBrief>();
     for (let apiPage = 1; apiPage <= SET_QUERY_MAX_PAGES; apiPage += 1) {
       const url = buildCardUrl(
-        { ...filters, setId, page: apiPage, perPage: SET_QUERY_PAGE_SIZE },
+        { ...filters, setId: set.id, page: apiPage, perPage: SET_QUERY_PAGE_SIZE },
         opts.base,
       );
       const rows = await fetchArray<CardBrief>(url, opts);

@@ -4,9 +4,9 @@ import {
   DEFAULT_PER_PAGE,
   getCard,
   getSet,
-  getSetCards,
   getSets,
   searchCards,
+  selectSetCards,
   type Card,
   type CardBrief,
   type Page,
@@ -40,7 +40,6 @@ function filterKey(filters: Filters) {
 }
 
 export const queryKeys = {
-  series: ['series'] as const,
   sets: ['sets'] as const,
   set: (setId: string) => ['set', setId] as const,
   setCards: (setId: string, filters: Filters, perPage: number) =>
@@ -72,14 +71,20 @@ export function setCardsQuery(
 ): UseQueryOptions<Page<CardBrief>> {
   return {
     queryKey: queryKeys.setCards(setId, filters, perPage),
-    queryFn: ({ signal }) =>
-      getSetCards(
-        setId,
+    queryFn: async ({ signal, client }) => {
+      // The set document comes through the cache, under the very key SetView
+      // and the SSR prefetch already hold (`setQuery`), so it is downloaded
+      // once and every page click paginates the cached copy. Reaching for
+      // getSet() here instead re-fetched a 216–331 card payload per page.
+      const set = await client.ensureQueryData(setQuery(setId));
+      return selectSetCards(
+        set,
         { name: filters.q, types: filters.type, rarity: filters.rarity },
         filters.page,
         perPage,
         { signal },
-      ),
+      );
+    },
     staleTime: MINUTE,
   };
 }

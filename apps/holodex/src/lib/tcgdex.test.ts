@@ -4,11 +4,13 @@ import {
   buildCardUrl,
   getCard,
   getSet,
-  getSetCards,
   getSets,
+  requestSignal,
   searchCards,
+  selectSetCards,
   SET_QUERY_PAGE_SIZE,
   TcgdexError,
+  type SetDetail,
 } from './tcgdex';
 
 function mockFetch(handler: (url: string) => unknown, status = 200) {
@@ -183,8 +185,10 @@ describe('searchCards (global, probe pagination)', () => {
   });
 });
 
-describe('getSetCards (exact membership)', () => {
-  const setBody = (ids: string[]) => ({
+describe('selectSetCards (exact membership)', () => {
+  // The set document now arrives from the caller's cache, never from a fetch
+  // inside this function: that is the whole point of the restructure.
+  const setBody = (ids: string[]): SetDetail => ({
     id: 'swsh1',
     name: 'Sword & Shield',
     cardCount: { total: ids.length, official: ids.length },
@@ -192,31 +196,27 @@ describe('getSetCards (exact membership)', () => {
     cards: ids.map(brief),
   });
 
-  it('pages the set endpoint in memory when there is no filter, and never calls /cards', async () => {
+  it('pages the cached set in memory when there is no filter, fetching nothing', async () => {
     const ids = Array.from({ length: 50 }, (_, i) => `swsh1-${i + 1}`);
-    const fetchMock = mockFetch(() => setBody(ids));
-    const page = await getSetCards('swsh1', {}, 2, 20);
-    expect(fetchMock.mock.calls.every(([url]) => !String(url).includes('/cards'))).toBe(true);
+    const fetchMock = mockFetch(() => []);
+    const page = await selectSetCards(setBody(ids), {}, 2, 20);
+    expect(fetchMock).not.toHaveBeenCalled();
     expect(page.items.map((c) => c.id)).toEqual(ids.slice(20, 40));
     expect(page).toMatchObject({ page: 2, total: 50, hasNext: true, truncated: false });
   });
 
   it('reports the last page correctly', async () => {
     const ids = Array.from({ length: 50 }, (_, i) => `swsh1-${i + 1}`);
-    mockFetch(() => setBody(ids));
-    const page = await getSetCards('swsh1', {}, 3, 20);
+    mockFetch(() => []);
+    const page = await selectSetCards(setBody(ids), {}, 3, 20);
     expect(page.items).toHaveLength(10);
     expect(page.hasNext).toBe(false);
   });
 
   it('drops the prefix bleed when a filter is active', async () => {
     const ids = ['swsh1-1', 'swsh1-2', 'swsh1-3'];
-    mockFetch((url) =>
-      url.includes('/cards')
-        ? [brief('swsh1-1'), brief('swsh10-4'), brief('swsh12-9'), brief('swsh1-3')]
-        : setBody(ids),
-    );
-    const page = await getSetCards('swsh1', { types: 'Fire' }, 1, 20);
+    mockFetch(() => [brief('swsh1-1'), brief('swsh10-4'), brief('swsh12-9'), brief('swsh1-3')]);
+    const page = await selectSetCards(setBody(ids), { types: 'Fire' }, 1, 20);
     expect(page.items.map((c) => c.id)).toEqual(['swsh1-1', 'swsh1-3']);
     expect(page.total).toBe(2);
   });
@@ -232,29 +232,71 @@ describe('getSetCards (exact membership)', () => {
       [brief('swsh1-3')],
     ];
     let call = 0;
-    mockFetch((url) => (url.includes('/cards') ? pages[call++] : setBody(ids)));
-    const page = await getSetCards('swsh1', { types: 'Fire' }, 1, 20);
+    mockFetch(() => pages[call++]);
+    const page = await selectSetCards(setBody(ids), { types: 'Fire' }, 1, 20);
     expect(page.items.map((c) => c.id)).toEqual(['swsh1-1', 'swsh1-2', 'swsh1-3']);
     expect(page.truncated).toBe(false);
   });
 
   it('stops at the request cap and says so instead of lying', async () => {
     const ids = ['swsh1-1'];
-    mockFetch((url) =>
-      url.includes('/cards')
-        ? Array.from({ length: SET_QUERY_PAGE_SIZE }, (_, i) => brief(`swsh10-${i}`))
-        : setBody(ids),
-    );
-    const page = await getSetCards('swsh1', { types: 'Fire' }, 1, 20);
+    mockFetch(() => Array.from({ length: SET_QUERY_PAGE_SIZE }, (_, i) => brief(`swsh10-${i}`)));
+    const page = await selectSetCards(setBody(ids), { types: 'Fire' }, 1, 20);
     expect(page.truncated).toBe(true);
   });
 
   it('keeps the set ordering rather than the API ordering', async () => {
     const ids = ['swsh1-1', 'swsh1-2', 'swsh1-3'];
-    mockFetch((url) =>
-      url.includes('/cards') ? [brief('swsh1-3'), brief('swsh1-1')] : setBody(ids),
-    );
-    const page = await getSetCards('swsh1', { name: 'x' }, 1, 20);
+    mockFetch(() => [brief('swsh1-3'), brief('swsh1-1')]);
+    const page = await selectSetCards(setBody(ids), { name: 'x' }, 1, 20);
     expect(page.items.map((c) => c.id)).toEqual(['swsh1-1', 'swsh1-3']);
+  });
+});
+
+describe('requestSignal', () => {
+  const settle = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  it('installs the timeout when no caller signal is passed', async () => {
+    const signal = requestSignal(undefined, 5);
+    expect(signal.aborted).toBe(false);
+    await settle(30);
+    expect(signal.aborted).toBe(true);
+  });
+
+  it('still installs the timeout when a caller signal is passed', async () => {
+    // The regression: every query factory passes react-query's signal, so
+    // `opts.signal ?? timeout` meant no request ever had a deadline.
+    const controller = new AbortController();
+    const signal = requestSignal(controller.signal, 5);
+    expect(signal.aborted).toBe(false);
+    await settle(30);
+    expect(signal.aborted).toBe(true);
+    expect(controller.signal.aborted).toBe(false);
+  });
+
+  it('aborts as soon as the caller aborts, without waiting for the timeout', () => {
+    const controller = new AbortController();
+    const signal = requestSignal(controller.signal, 60_000);
+    controller.abort();
+    expect(signal.aborted).toBe(true);
+  });
+
+  it('is what the endpoints hand to fetch, even when the caller passes one', async () => {
+    let installed: AbortSignal | undefined;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (_url: RequestInfo | URL, init?: RequestInit) => {
+        installed = init?.signal ?? undefined;
+        return { ok: true, status: 200, json: async () => [] } as Response;
+      }),
+    );
+    const controller = new AbortController();
+    await getSets({ signal: controller.signal });
+    // Not the caller's signal verbatim — that is precisely how the deadline
+    // went missing — but still driven by it.
+    expect(installed).toBeDefined();
+    expect(installed).not.toBe(controller.signal);
+    controller.abort();
+    expect(installed?.aborted).toBe(true);
   });
 });

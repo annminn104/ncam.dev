@@ -32,6 +32,12 @@ export function createHoloScene(canvas: HTMLCanvasElement): HoloScene {
   const camera = new OrthographicCamera(-0.5, 0.5, 0.5, -0.5, 0, 10);
   camera.position.z = 2;
 
+  const target = { x: 0, y: 0 };
+  // Also the uPointer uniform's value object. three compares a vec2 uniform
+  // component-wise against its cache, so mutating this in place is picked up
+  // exactly like a fresh object would be — without allocating one per frame.
+  const current = { x: 0, y: 0 };
+
   const material = new ShaderMaterial({
     vertexShader: VERTEX_SHADER,
     fragmentShader: FRAGMENT_SHADER,
@@ -39,7 +45,7 @@ export function createHoloScene(canvas: HTMLCanvasElement): HoloScene {
     uniforms: {
       uCard: { value: null },
       uFoil: { value: null },
-      uPointer: { value: { x: 0, y: 0 } },
+      uPointer: { value: current },
       uTime: { value: 0 },
       uIntensity: { value: 0 },
     },
@@ -51,15 +57,13 @@ export function createHoloScene(canvas: HTMLCanvasElement): HoloScene {
 
   let raf = 0;
   let running = false;
+  let disposed = false;
   const start0 = performance.now();
-  const target = { x: 0, y: 0 };
-  const current = { x: 0, y: 0 };
 
   const frame = () => {
     // Spring toward the pointer so the card leans rather than snapping.
     current.x += (target.x - current.x) * 0.12;
     current.y += (target.y - current.y) * 0.12;
-    material.uniforms.uPointer.value = { x: current.x, y: current.y };
     material.uniforms.uTime.value = (performance.now() - start0) / 1000;
     mesh.rotation.y = current.x * 0.18;
     mesh.rotation.x = -current.y * 0.18;
@@ -70,6 +74,13 @@ export function createHoloScene(canvas: HTMLCanvasElement): HoloScene {
   return {
     async setCard(url) {
       const texture = await new TextureLoader().loadAsync(url);
+      if (disposed) {
+        // The scene was torn down while this load was in flight. Assigning it
+        // now would attach a texture to a dead material, and nothing would
+        // ever free it.
+        texture.dispose();
+        return;
+      }
       material.uniforms.uCard.value?.dispose?.();
       material.uniforms.uCard.value = texture;
       material.needsUpdate = true;
@@ -103,12 +114,18 @@ export function createHoloScene(canvas: HTMLCanvasElement): HoloScene {
     },
     dispose() {
       running = false;
+      disposed = true;
       cancelAnimationFrame(raf);
       // Both textures: the foil canvas texture and whatever card art was loaded.
       (material.uniforms.uFoil.value as CanvasTexture | null)?.dispose?.();
       (material.uniforms.uCard.value as CanvasTexture | null)?.dispose?.();
       geometry.dispose();
       material.dispose();
+      // dispose() alone leaves the WebGL context alive until the canvas is
+      // collected. Every card navigation builds a new canvas and renderer, and
+      // Chrome caps live contexts near 16 — past that it kills the oldest and
+      // the app's holo.context-lost path fires. Drop this one explicitly.
+      renderer.forceContextLoss();
       renderer.dispose();
     },
   };
