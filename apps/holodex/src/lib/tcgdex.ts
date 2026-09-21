@@ -135,6 +135,8 @@ export interface Card extends CardBrief {
   set: SetBrief;
   illustrator?: string;
   rarity?: string;
+  suffix?: string;
+  trainerType?: string;
   variants?: Variants;
   variants_detailed?: VariantDetail[];
   dexId?: number[];
