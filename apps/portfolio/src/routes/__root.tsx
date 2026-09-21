@@ -5,6 +5,7 @@ import type { ReactNode } from 'react';
 // would only attach the CSS once the client bundle runs (flash of unstyled page).
 // app.css @imports the self-hosted fonts, styles.css (base + stage) and home.css.
 import appCss from '../app.css?url';
+import { THEME_SCRIPT } from '../lib/theme';
 
 const TITLE = 'Matthew (Minh Nguyen) — Frontend Developer · ncam.dev';
 const DESCRIPTION =
@@ -17,7 +18,8 @@ export const Route = createRootRoute({
       { name: 'viewport', content: 'width=device-width, initial-scale=1, viewport-fit=cover' },
       { title: TITLE },
       { name: 'description', content: DESCRIPTION },
-      { name: 'theme-color', content: '#0b0b12' },
+      // `theme-color` is NOT here: it is written before first paint by the theme
+      // script in RootDocument, because it has to track the resolved theme.
       { property: 'og:type', content: 'website' },
       { property: 'og:site_name', content: 'ncam.dev' },
       { property: 'og:title', content: TITLE },
@@ -37,9 +39,17 @@ export const Route = createRootRoute({
 
 function RootDocument({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <HeadContent />
+        {/* Sets <html data-theme> for a returning visitor and writes the
+            `theme-color` meta. A synchronous script in <head> runs while the
+            document is still being parsed, so both land before anything paints —
+            no flash of the other theme. It touches only that one attribute of
+            <html>, which is why the element carries suppressHydrationWarning;
+            the meta it creates is outside React's tree on purpose (see
+            THEME_SCRIPT). */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
       </head>
       <body>
         {children}

@@ -42,9 +42,9 @@ html {
 }
 .mf-slot__error-card {
   padding: 1.5rem 1.75rem;
-  border: 1px dashed color-mix(in srgb, #ff6b6b 50%, transparent);
+  border: 1px dashed color-mix(in srgb, var(--danger) 50%, transparent);
   border-radius: 20px;
-  background: color-mix(in srgb, #ff6b6b 6%, transparent);
+  background: color-mix(in srgb, var(--danger) 6%, transparent);
   font-family: var(--font-mono);
   font-size: 0.8rem;
   line-height: 1.7;
@@ -55,7 +55,7 @@ html {
   font-weight: 600;
 }
 .mf-slot__error-card code {
-  color: #ff9b9b;
+  color: var(--danger-text);
 }
 
 /* ---------------- Nav ---------------- */
@@ -106,7 +106,7 @@ html {
   height: 8px;
   border-radius: 50%;
   background: var(--mint);
-  box-shadow: 0 0 0 4px rgba(91, 228, 155, 0.18);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--mint) 18%, transparent);
 }
 .hnav__links {
   display: flex;
@@ -121,9 +121,18 @@ html {
 .hnav__links::-webkit-scrollbar {
   display: none;
 }
+/* Trailing group: the section links plus the theme toggle. They share a wrapper
+   so `.hnav__inner`'s space-between stays a two-part split (brand ↔ the rest)
+   rather than stranding the links in the middle of the bar. */
+.hnav__end {
+  display: flex;
+  align-items: center;
+  gap: clamp(0.75rem, 2vw, 1.25rem);
+  min-width: 0;
+}
 /* The <nav> is a flex item: without min-width: 0 it refuses to shrink below its
    content, so the list never overflows and never scrolls — it just gets cut. */
-.hnav__inner > nav {
+.hnav__end > nav {
   min-width: 0;
   display: flex;
   justify-content: flex-end;
@@ -281,10 +290,10 @@ html {
   box-shadow: 0 0 10px var(--mint);
 }
 .rail__item[data-state='error'] a {
-  color: #ff9b9b;
+  color: var(--danger-text);
 }
 .rail__item[data-state='error'] .rail__dot {
-  background: #ff6b6b;
+  background: var(--danger);
   opacity: 1;
 }
 @keyframes railPulse {

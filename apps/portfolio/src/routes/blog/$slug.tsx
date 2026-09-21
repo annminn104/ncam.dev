@@ -4,6 +4,7 @@ import type { ComponentProps } from 'react';
 import type { BlogPost } from '@ncam/cms';
 import { getBlogPost } from '../../functions/blog.functions';
 import { highlightCode } from '../../lib/highlight';
+import { ThemeToggle } from '../../components/theme-toggle';
 
 import { SITE_ORIGIN, SITE_URL } from '../../lib/site';
 
@@ -138,6 +139,7 @@ function BlogPostPage() {
       <Link to="/blog" className="stage__back">
         <span aria-hidden="true">←</span> Blog
       </Link>
+      <ThemeToggle className="theme-toggle--floating" />
       <article className="article">
         <header className="article__head">
           <p className="article__meta">

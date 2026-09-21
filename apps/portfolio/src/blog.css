@@ -21,6 +21,23 @@
   max-width: 78rem;
 }
 
+/* `.stage__back` (styles.css) is hard-coded dark because on a project page it
+   floats over a remote's own artwork, which the theme does not reach. The blog
+   pages reuse `.stage` but ARE host chrome, so here the pill follows the theme —
+   otherwise it sits as a dark blob on a light page, next to a light toggle. */
+.blogpage .stage__back {
+  border-color: var(--line-strong);
+  background: color-mix(in srgb, var(--bg) 60%, transparent);
+  color: var(--text);
+}
+.blogpage .stage__back:hover {
+  background: color-mix(in srgb, var(--bg) 85%, transparent);
+  border-color: var(--accent);
+}
+.blogpage .stage__back:focus-visible {
+  outline-color: var(--accent);
+}
+
 .blogpage__head {
   max-width: 40rem;
   margin-bottom: 3rem;
@@ -196,18 +213,84 @@
 
 /* Syntax highlighting (highlight.js token classes, see src/lib/highlight.ts).
    Hues come from the site palette so code reads as part of the page rather than
-   a pasted editor theme; every colour clears 4.5:1 on --surface-2. */
+   a pasted editor theme; every colour clears 4.5:1 on --surface-2 — the dark set
+   on the dark surface, the light set on the light one.
+
+   Same shape as @ncam/design-tokens/tokens.css: the pairs below are declared
+   once and the theme rules only re-point the live `--code-*` tokens, which is
+   what the .hljs-* rules further down consume. These live here rather than in
+   the tokens package because only the host renders articles. */
 .article__body pre {
-  --code-comment: #8b8ba8;
-  --code-keyword: #a78bfa;
-  --code-string: #5be49b;
-  --code-number: #ffb457;
-  --code-function: #6cb6ff;
-  --code-type: #ffd479;
-  --code-attr: #7ee0c8;
-  --code-tag: #ff8fa3;
-  --code-punct: #a2a2b8;
-  color: #e8e8f2;
+  --dark-code-comment: #8b8ba8;
+  --dark-code-keyword: #a78bfa;
+  --dark-code-string: #5be49b;
+  --dark-code-number: #ffb457;
+  --dark-code-function: #6cb6ff;
+  --dark-code-type: #ffd479;
+  --dark-code-attr: #7ee0c8;
+  --dark-code-tag: #ff8fa3;
+  --dark-code-punct: #a2a2b8;
+  --dark-code-text: #e8e8f2;
+
+  --light-code-comment: #6b6a80;
+  --light-code-keyword: #6d28d9;
+  --light-code-string: #0f7a4a;
+  --light-code-number: #9a5b00;
+  --light-code-function: #1d5fbf;
+  --light-code-type: #8a5a00;
+  --light-code-attr: #0e7490;
+  --light-code-tag: #b4265a;
+  --light-code-punct: #5c5a70;
+  --light-code-text: #1f1e2b;
+
+  --code-comment: var(--dark-code-comment);
+  --code-keyword: var(--dark-code-keyword);
+  --code-string: var(--dark-code-string);
+  --code-number: var(--dark-code-number);
+  --code-function: var(--dark-code-function);
+  --code-type: var(--dark-code-type);
+  --code-attr: var(--dark-code-attr);
+  --code-tag: var(--dark-code-tag);
+  --code-punct: var(--dark-code-punct);
+  color: var(--dark-code-text);
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme='dark']) .article__body pre {
+    --code-comment: var(--light-code-comment);
+    --code-keyword: var(--light-code-keyword);
+    --code-string: var(--light-code-string);
+    --code-number: var(--light-code-number);
+    --code-function: var(--light-code-function);
+    --code-type: var(--light-code-type);
+    --code-attr: var(--light-code-attr);
+    --code-tag: var(--light-code-tag);
+    --code-punct: var(--light-code-punct);
+    color: var(--light-code-text);
+  }
+}
+:root[data-theme='light'] .article__body pre {
+  --code-comment: var(--light-code-comment);
+  --code-keyword: var(--light-code-keyword);
+  --code-string: var(--light-code-string);
+  --code-number: var(--light-code-number);
+  --code-function: var(--light-code-function);
+  --code-type: var(--light-code-type);
+  --code-attr: var(--light-code-attr);
+  --code-tag: var(--light-code-tag);
+  --code-punct: var(--light-code-punct);
+  color: var(--light-code-text);
+}
+:root[data-theme='dark'] .article__body pre {
+  --code-comment: var(--dark-code-comment);
+  --code-keyword: var(--dark-code-keyword);
+  --code-string: var(--dark-code-string);
+  --code-number: var(--dark-code-number);
+  --code-function: var(--dark-code-function);
+  --code-type: var(--dark-code-type);
+  --code-attr: var(--dark-code-attr);
+  --code-tag: var(--dark-code-tag);
+  --code-punct: var(--dark-code-punct);
+  color: var(--dark-code-text);
 }
 .article__body .hljs-comment,
 .article__body .hljs-quote {

@@ -1,12 +1,7 @@
-:root {
-  --bg: #0b0b12;
-  --surface: #14141f;
-  --surface-2: #1c1c2b;
-  --text: #f4f4f8;
-  --text-muted: #a2a2b8;
-  --border: rgba(255, 255, 255, 0.09);
-  color-scheme: dark;
-}
+/* Colour tokens and `color-scheme` live in @ncam/design-tokens/tokens.css, which
+   app.css imports just before this file. They used to be re-declared here too —
+   and since this file wins on import order, that copy silently pinned the site
+   to dark. Do not reintroduce it: theme it in the tokens package. */
 
 * {
   box-sizing: border-box;
@@ -124,8 +119,84 @@ body {
   font-size: 0.85em;
 }
 
+/* ---------------- Theme toggle ---------------- */
+/* Used in the home nav (`.hnav__end`) and, as `--floating`, on the blog pages,
+   which have no nav of their own. Lives here rather than in home.css because
+   both of those stylesheets' pages need it. */
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--tint) 6%, transparent);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition:
+    color 0.3s var(--ease-out),
+    border-color 0.3s var(--ease-out),
+    background-color 0.3s var(--ease-out);
+}
+.theme-toggle:hover {
+  color: var(--text);
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.theme-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.theme-toggle__icon {
+  display: block;
+}
+
+/* The blog pages render inside `.stage`, which has no nav bar — mirror the
+   fixed "← Projects" button's placement on the opposite corner. */
+.theme-toggle--floating {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 9999;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  background: color-mix(in srgb, var(--bg) 60%, transparent);
+}
+
+/* Which icon shows is pure CSS — same cascade as the tokens in
+   @ncam/design-tokens — so the button is already correct on the server-rendered
+   first paint, before any JS runs. The icon shows the theme you would switch TO,
+   matching the button's accessible name. */
+.theme-toggle__icon--moon {
+  display: none;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme='dark']) .theme-toggle__icon--sun {
+    display: none;
+  }
+  :root:not([data-theme='dark']) .theme-toggle__icon--moon {
+    display: block;
+  }
+}
+:root[data-theme='light'] .theme-toggle__icon--sun {
+  display: none;
+}
+:root[data-theme='light'] .theme-toggle__icon--moon {
+  display: block;
+}
+:root[data-theme='dark'] .theme-toggle__icon--sun {
+  display: block;
+}
+:root[data-theme='dark'] .theme-toggle__icon--moon {
+  display: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .stage__back {
+  .stage__back,
+  .theme-toggle {
     transition: none;
   }
 }

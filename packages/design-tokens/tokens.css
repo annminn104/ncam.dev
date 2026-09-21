@@ -1,28 +1,153 @@
 /* ncam.dev design tokens — imported by the host (apps/portfolio/src/app.css) and
    by the profile remote (apps/profile/src/styles/profile.css) so both sides of
-   the federation boundary agree on colour, type, layout and easing. */
+   the federation boundary agree on colour, type, layout and easing.
+
+   THEMING. Every palette value lives exactly once, as a `--dark-*` / `--light-*`
+   pair. The three rules below only ever re-point the *live* token (`--bg`,
+   `--text`, …) at one of the two, so a palette tweak is a one-line change and the
+   two themes can never drift apart.
+
+     :root                                 → dark, the fallback with no JS and no
+                                             OS preference.
+     @media (prefers-color-scheme: light)  → light, unless the visitor pinned dark.
+     :root[data-theme='light' | 'dark']    → the visitor's explicit choice, which
+                                             beats the OS.
+
+   `data-theme` is written on <html> before first paint by the host's blocking
+   inline script (apps/portfolio/src/lib/theme.ts). Remotes mount INTO the host
+   document, so they inherit the attribute — and therefore the theme — for free;
+   no host↔remote interface is involved. */
 :root {
-  --bg: #0b0b12;
-  --surface: #14141f;
-  --surface-2: #1c1c2b;
-  --text: #f4f4f8;
-  --text-muted: #a2a2b8;
-  --border: rgba(255, 255, 255, 0.09);
+  /* ---- Palette source of truth (never consumed directly by a component) ---- */
+  --dark-bg: #0b0b12;
+  --dark-surface: #14141f;
+  --dark-surface-2: #1c1c2b;
+  --dark-text: #f4f4f8;
+  --dark-text-muted: #a2a2b8;
+  --dark-border: rgba(255, 255, 255, 0.09);
+  --dark-accent: #8b7cff;
+  --dark-accent-soft: rgba(139, 124, 255, 0.16);
+  --dark-amber: #ffb457;
+  --dark-mint: #5be49b;
+  --dark-danger: #ff6b6b;
+  --dark-danger-text: #ff9b9b;
+  --dark-line: rgba(255, 255, 255, 0.08);
+  --dark-line-strong: rgba(255, 255, 255, 0.16);
+  /* The colour a surface is mixed WITH to lift it off the page background.
+     White lifts a dark page; black shades a light one. */
+  --dark-tint: #fff;
+  /* Drop shadows: near-opaque on a dark page, a light touch on a pale one. */
+  --dark-shadow: rgba(0, 0, 0, 0.9);
+
+  --light-bg: #fbfaff;
+  --light-surface: #ffffff;
+  --light-surface-2: #f1f0f7;
+  --light-text: #17161f;
+  --light-text-muted: #5c5a70;
+  --light-border: rgba(17, 16, 31, 0.12);
+  /* Accent/amber/mint are darkened for light mode: the dark-mode values sit at
+     2–3:1 against white, which fails WCAG AA for text. These clear 4.5:1. */
+  --light-accent: #6247e8;
+  --light-accent-soft: rgba(98, 71, 232, 0.12);
+  --light-amber: #b06f10;
+  --light-mint: #0f8a55;
+  --light-danger: #d63a37;
+  --light-danger-text: #b3261e;
+  --light-line: rgba(17, 16, 31, 0.09);
+  --light-line-strong: rgba(17, 16, 31, 0.18);
+  --light-tint: #000;
+  --light-shadow: rgba(17, 16, 31, 0.16);
+
+  /* ---- Live tokens: dark by default ---- */
+  --bg: var(--dark-bg);
+  --surface: var(--dark-surface);
+  --surface-2: var(--dark-surface-2);
+  --text: var(--dark-text);
+  --text-muted: var(--dark-text-muted);
+  --border: var(--dark-border);
+  --accent: var(--dark-accent);
+  --accent-soft: var(--dark-accent-soft);
+  --amber: var(--dark-amber);
+  --mint: var(--dark-mint);
+  --danger: var(--dark-danger);
+  --danger-text: var(--dark-danger-text);
+  --line: var(--dark-line);
+  --line-strong: var(--dark-line-strong);
+  --tint: var(--dark-tint);
+  --shadow: var(--dark-shadow);
+  color-scheme: dark;
 
   --font-display: 'Syne Variable', 'Syne', ui-sans-serif, system-ui, sans-serif;
   --font-body: 'Inter Variable', 'Inter', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono Variable', ui-monospace, SFMono-Regular, Menlo, monospace;
-
-  --accent: #8b7cff;
-  --accent-soft: rgba(139, 124, 255, 0.16);
-  --amber: #ffb457;
-  --mint: #5be49b;
-  --line: rgba(255, 255, 255, 0.08);
-  --line-strong: rgba(255, 255, 255, 0.16);
 
   /* Host shell geometry the remote's section layout aligns to. */
   --nav-h: 64px;
   --rail-w: 232px;
   --gutter: clamp(1.25rem, 4vw, 3rem);
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* OS preference — skipped once the visitor has pinned dark. */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme='dark']) {
+    --bg: var(--light-bg);
+    --surface: var(--light-surface);
+    --surface-2: var(--light-surface-2);
+    --text: var(--light-text);
+    --text-muted: var(--light-text-muted);
+    --border: var(--light-border);
+    --accent: var(--light-accent);
+    --accent-soft: var(--light-accent-soft);
+    --amber: var(--light-amber);
+    --mint: var(--light-mint);
+    --danger: var(--light-danger);
+    --danger-text: var(--light-danger-text);
+    --line: var(--light-line);
+    --line-strong: var(--light-line-strong);
+    --tint: var(--light-tint);
+    --shadow: var(--light-shadow);
+    color-scheme: light;
+  }
+}
+
+/* Explicit choice — beats the OS in both directions. */
+:root[data-theme='light'] {
+  --bg: var(--light-bg);
+  --surface: var(--light-surface);
+  --surface-2: var(--light-surface-2);
+  --text: var(--light-text);
+  --text-muted: var(--light-text-muted);
+  --border: var(--light-border);
+  --accent: var(--light-accent);
+  --accent-soft: var(--light-accent-soft);
+  --amber: var(--light-amber);
+  --mint: var(--light-mint);
+  --danger: var(--light-danger);
+  --danger-text: var(--light-danger-text);
+  --line: var(--light-line);
+  --line-strong: var(--light-line-strong);
+  --tint: var(--light-tint);
+  --shadow: var(--light-shadow);
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  --bg: var(--dark-bg);
+  --surface: var(--dark-surface);
+  --surface-2: var(--dark-surface-2);
+  --text: var(--dark-text);
+  --text-muted: var(--dark-text-muted);
+  --border: var(--dark-border);
+  --accent: var(--dark-accent);
+  --accent-soft: var(--dark-accent-soft);
+  --amber: var(--dark-amber);
+  --mint: var(--dark-mint);
+  --danger: var(--dark-danger);
+  --danger-text: var(--dark-danger-text);
+  --line: var(--dark-line);
+  --line-strong: var(--dark-line-strong);
+  --tint: var(--dark-tint);
+  --shadow: var(--dark-shadow);
+  color-scheme: dark;
 }
