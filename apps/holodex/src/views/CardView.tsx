@@ -4,6 +4,7 @@ import { cardQuery } from '../lib/queries';
 import { EMPTY_FILTERS } from '../routes';
 import { CardImage } from '../components/CardImage';
 import { ErrorPanel } from '../components/ErrorPanel';
+import { PricePanel } from '../components/PricePanel';
 import { StatPanel } from '../components/StatPanel';
 
 export function CardView({ cardId }: { cardId: string }) {
@@ -59,6 +60,7 @@ export function CardView({ cardId }: { cardId: string }) {
             />
           ) : null}
         </div>
+        {card ? <PricePanel card={card} /> : null}
       </div>
     </section>
   );
