@@ -33,6 +33,16 @@ describe('project-registry', () => {
     }
   });
 
+  it('marks only route-aware remotes, defaulting the rest to not-route-aware', () => {
+    // The host's splat route answers 200 at any depth, so this flag is what
+    // keeps /projects/<id>/anything out of the index for the remotes that
+    // render a single page. Absent must mean no.
+    expect(getProject('holodex')?.routeAware).toBe(true);
+    for (const p of projects.filter((p) => p.id !== 'holodex')) {
+      expect(p.routeAware).toBeUndefined();
+    }
+  });
+
   it('ids are unique', () => {
     const ids = projects.map((p) => p.id);
     expect(new Set(ids).size).toBe(ids.length);

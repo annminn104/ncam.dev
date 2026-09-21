@@ -23,6 +23,18 @@ export interface ProjectEntry {
   /** Exposed module on that remote, e.g. './mount'. */
   module: string;
   status: 'live' | 'coming-soon';
+  /**
+   * Whether the remote owns URLs below its project path — i.e. it implements
+   * the route-aware half of the mount contract (`MountConfig.route` +
+   * `MountHandle.update`, see packages/mf-remote).
+   *
+   * Absent means no, which is right for every remote that renders a single
+   * page. The host's splat route answers 200 for any depth, so without this
+   * flag `/projects/<id>/anything/at/all` is an indexable duplicate of the
+   * project page for those remotes; `projectHead` reads it to send `noindex`
+   * and a canonical back to the project root instead.
+   */
+  routeAware?: boolean;
 }
 
 export const projects: ProjectEntry[] = [
@@ -100,6 +112,8 @@ export const projects: ProjectEntry[] = [
     remote: 'holodex',
     module: './mount',
     status: 'live',
+    // Sets, cards, search and the collection are all real Holodex URLs.
+    routeAware: true,
   },
 ];
 
