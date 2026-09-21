@@ -1,7 +1,7 @@
-import { createFileRoute, useRouterState } from '@tanstack/react-router';
+import { createFileRoute } from '@tanstack/react-router';
 import { getProject } from '@ncam/project-registry';
 import { createLogger } from '@ncam/logger';
-import { ProjectStage, loadSsrExports, ssrLoaders } from '../../components/ProjectStage';
+import { ProjectStagePage, loadSsrExports, ssrLoaders } from '../../components/ProjectStage';
 import { toRemoteRoute } from '../../lib/remote-route';
 import { projectHead } from '../../lib/project-head';
 
@@ -46,19 +46,8 @@ export const Route = createFileRoute('/projects/$projectId_/$')({
     }
   },
   head: ({ params }) => projectHead(params.projectId, params._splat),
-  component: ProjectSplatPage,
+  // Same component function as the bare project route, so crossing between the
+  // two reconciles the stage in place rather than tearing the remote down.
+  // See ProjectStagePage.
+  component: ProjectStagePage,
 });
-
-function ProjectSplatPage() {
-  const { projectId, _splat } = Route.useParams();
-  const { html, css } = Route.useLoaderData();
-  const searchStr = useRouterState({ select: (s) => s.location.searchStr });
-  return (
-    <ProjectStage
-      projectId={projectId}
-      html={html}
-      css={css}
-      route={toRemoteRoute(_splat, searchStr)}
-    />
-  );
-}

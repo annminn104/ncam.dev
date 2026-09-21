@@ -1,10 +1,10 @@
-import { Link, useRouter } from '@tanstack/react-router';
+import { Link, useLoaderData, useParams, useRouter, useRouterState } from '@tanstack/react-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { getProject, type ProjectEntry } from '@ncam/project-registry';
 import { createLogger } from '@ncam/logger';
 import type { MountConfig, MountHandle } from '@ncam/mf-remote';
 import { loadRemoteModuleSSR } from '../lib/federation';
-import { fromRemoteRoute } from '../lib/remote-route';
+import { fromRemoteRoute, toRemoteRoute } from '../lib/remote-route';
 import { SITE_URL } from '../lib/site';
 
 const log = createLogger({ scope: 'portfolio' });
@@ -68,6 +68,17 @@ export async function loadSsrExports(
   return { renderHeroSSR };
 }
 
+/**
+ * JSON destined for a `<script>` block. Same treatment the remotes give their
+ * SSR payload (see holodex's `serialiseState`): `<` becomes its unicode escape,
+ * so no value can open or close a tag, and `JSON.parse` reads the original
+ * character back. Registry-controlled today — escaped anyway, because this is
+ * the same sink and the registry will not always be the only source.
+ */
+function serialiseJsonLd(value: unknown): string {
+  return JSON.stringify(value).replace(/</g, '\\u003c');
+}
+
 export interface ProjectStageProps {
   projectId: string;
   html: string | null;
@@ -82,6 +93,20 @@ export function ProjectStage({ projectId, html, css, route }: ProjectStageProps)
   const mountRef = useRef<HTMLDivElement>(null);
   const handleRef = useRef<MountHandle | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // How this stage was entered, captured once.
+  //
+  // The loader returns markup only on the server (`NO_SSR` whenever
+  // `!import.meta.env.SSR`), so after an SSR entry the very first client
+  // navigation re-runs it and flips `html` to null. Everything that depends on
+  // the entry mode — hydrate vs mount, the inlined critical CSS, and the
+  // server markup handed to React — therefore reads this snapshot and never
+  // the live prop. Reacting to that later null would dispose the hydrated root
+  // and rebuild the remote: the dehydrated query cache the SSR path exists to
+  // deliver would be thrown away, the WebGL context rebuilt, and the injected
+  // styles removed mid-flight.
+  const entryRef = useRef<{ html: string | null; css: string }>({ html, css });
+  const entry = entryRef.current;
 
   // `onNavigate` must not change identity between renders, or the mount effect
   // below would tear the remote down on every navigation — the exact thing the
@@ -106,7 +131,8 @@ export function ProjectStage({ projectId, html, css, route }: ProjectStageProps)
   useEffect(() => {
     if (!project || project.status !== 'live') return;
     let cancelled = false;
-    const attach = html
+    const ssr = entryRef.current.html !== null;
+    const attach = ssr
       ? hydrateLoaders[project.remote]?.().then((m) => m.hydrate)
       : mountLoaders[project.remote]?.().then((m) => m.mount);
     attach
@@ -116,7 +142,7 @@ export function ProjectStage({ projectId, html, css, route }: ProjectStageProps)
           route: routeRef.current,
           onNavigate,
         });
-        log.info('project.open', { id: project.id, mode: html ? 'ssr-hydrate' : 'csr-mount' });
+        log.info('project.open', { id: project.id, mode: ssr ? 'ssr-hydrate' : 'csr-mount' });
       })
       .catch((err) => {
         const message = err instanceof Error ? err.message : String(err);
@@ -132,7 +158,7 @@ export function ProjectStage({ projectId, html, css, route }: ProjectStageProps)
       }
       handleRef.current = null;
     };
-  }, [project, html, onNavigate]);
+  }, [project, onNavigate]);
 
   // Route changed without the project changing → hand the new route to a
   // route-aware remote. A remote without `update` has no internal routes, so
@@ -181,7 +207,7 @@ export function ProjectStage({ projectId, html, css, route }: ProjectStageProps)
     <div className="stage">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: serialiseJsonLd(jsonLd) }}
       />
       <Link to="/" className="stage__back">
         <span aria-hidden="true">←</span> Projects
@@ -196,8 +222,11 @@ export function ProjectStage({ projectId, html, css, route }: ProjectStageProps)
           </p>
         </div>
       ) : null}
-      {/* SSR path fills this via dangerouslySetInnerHTML; CSR path via mount(). */}
-      {html && <style dangerouslySetInnerHTML={{ __html: css }} />}
+      {/* SSR path fills this via dangerouslySetInnerHTML; CSR path via mount().
+          Both read the captured entry, never the live loader data, so a later
+          client navigation cannot pull the markup or the styles out from under
+          the remote's own React root. */}
+      {entry.html && <style dangerouslySetInnerHTML={{ __html: entry.css }} />}
       <div
         // Fresh container per project so React never reuses one mount node
         // across different remotes (avoids cross-framework teardown races).
@@ -205,8 +234,46 @@ export function ProjectStage({ projectId, html, css, route }: ProjectStageProps)
         className="stage__mount"
         ref={mountRef}
         aria-label={project.name}
-        {...(html ? { dangerouslySetInnerHTML: { __html: html } } : {})}
+        {...(entry.html ? { dangerouslySetInnerHTML: { __html: entry.html } } : {})}
       />
     </div>
+  );
+}
+
+interface ProjectLoaderData {
+  html: string | null;
+  css: string;
+}
+
+/**
+ * The route component for BOTH `/projects/$projectId` and its splat route
+ * `/projects/$projectId/$` — deliberately one function, shared.
+ *
+ * TanStack renders a match as `jsx(route.options.component, {})` with no React
+ * key (see Match.tsx: a key is only set when the route declares
+ * `remountDeps`), so two routes that share one component *function reference*
+ * reconcile in place when the match changes. Two separate functions — even
+ * with identical bodies — are two element types, and React would unmount the
+ * stage and remount it, disposing the live remote.
+ *
+ * That boundary is crossed constantly: a route-aware remote's own "home" link
+ * navigates to the splat route with an empty splat, which resolves back to the
+ * bare project path. Keeping one instance keeps the remote's query cache,
+ * WebGL context and scroll position across it.
+ *
+ * Reads params/loader data in loose mode because the same function serves both
+ * routes; `_splat` is simply absent on the bare one.
+ */
+export function ProjectStagePage() {
+  const params = useParams({ strict: false }) as { projectId?: string; _splat?: string };
+  const data = useLoaderData({ strict: false }) as ProjectLoaderData | undefined;
+  const searchStr = useRouterState({ select: (state) => state.location.searchStr });
+  return (
+    <ProjectStage
+      projectId={params.projectId ?? ''}
+      html={data?.html ?? null}
+      css={data?.css ?? ''}
+      route={toRemoteRoute(params._splat, searchStr)}
+    />
   );
 }
