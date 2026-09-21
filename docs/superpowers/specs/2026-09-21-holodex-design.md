@@ -91,7 +91,7 @@ apps/holodex/
       CardTile.tsx      grid tile: image + CSS-only tilt, no WebGL
       CardImage.tsx     quality-aware <img> + missing-image placeholder
       FilterBar.tsx     name / type / rarity controls
-      Pager.tsx         prev / next (no total count)
+      Pager.tsx         prev / next; shows a total only when one is known
       StatPanel.tsx     HP, attacks, weakness, retreat, legality
       PricePanel.tsx    cardmarket + tcgplayer + sparkline
       CollectionToggle.tsx
@@ -284,8 +284,14 @@ Gotchas that shape the code:
    exposed headers. There is no `X-Total-Count`, so page counts are unknowable.
 2. **Unknown query params match nothing.** `?nonsense=zzz` returns `[]`, not the
    unfiltered list. Only whitelisted params may ever be sent.
-3. **`set` / `set.id` are substring matches.** `?set.id=swsh3` also returns
-   `swsh3.5` cards. Exact set membership must be enforced another way.
+3. **`set` / `set.id` are substring matches, and the bleed can swamp a page.**
+   `?set.id=swsh3` also returns `swsh3.5` cards (201 exact / 80 bleed at
+   `itemsPerPage=600`). Worse, `swsh1` is a prefix of `swsh10`, `swsh11`,
+   `swsh12`, `swsh12.5`… — `?set.id=swsh1&itemsPerPage=600` returns 600 rows of
+   which only **103** are really `swsh1-`, so the response is truncated by the
+   page cap and a client-side filter silently loses cards. Exact set membership
+   must come from `/sets/{setId}`, never from `?set.id=`.
+   Measured 2026-09-21: 31 of 220 set ids are a prefix of another set id.
 4. **~20% of card briefs have no `image`.** 10 of 50 in a sampled query. Every
    image site needs a placeholder.
 5. Page overflow is not an error: `?pagination:page=99999` → `200 []`.
@@ -322,13 +328,22 @@ export interface Page<T> {
 - **Pagination (gotcha 1):** request `perPage + 1` items. If `perPage + 1` come
   back, `hasNext = true` and the extra item is sliced off. The pager therefore
   shows "‹ prev · page N · next ›" and never a total.
-- **Exact set (gotcha 3):** `getSet(setId)` uses `/sets/{setId}` and paginates
-  its `cards` array in memory. When a type or rarity filter is active inside a
-  set, the request goes to `/cards?set.id=…&…` and results are then filtered with
-  `card.id.startsWith(`${setId}-`)`, because card ids are `<setId>-<localId>`.
-  That client-side filter runs **before** the `hasNext` slice, so a page can come
-  back short; the pager treats "fewer than perPage after filtering, but the API
-  returned a full page" as `hasNext = true`.
+- **Exact set (gotcha 3)** — two paths, because `?set.id=` cannot be trusted:
+  - **Unfiltered set view:** `getSet(setId)` calls `/sets/{setId}`, which returns
+    the set's complete `cards` array in one response (216 for `swsh1`, 331 for
+    the largest set, `B1`). Paginate that array **in memory**. Exact membership,
+    exact page count, one cached request.
+  - **Filtered set view:** the filters (`name` / `types` / `rarity`) shrink the
+    result set hard — `set.id=swsh1&types=Fire` returns 84 rows, `&name=pika`
+    returns 11 — so the query goes to `/cards?set.id=…&<filters>` at
+    `itemsPerPage=600`, and the result is **intersected** with the exact id set
+    from `/sets/{setId}` (card ids are `<setId>-<localId>`). If a response comes
+    back at exactly 600 rows the cap was hit: fetch the next page, up to 4 pages,
+    then stop and surface "showing the first N matches" rather than lying.
+    Either way the pager gets an exact `total`, because both paths end with a
+    complete in-memory list.
+- **Global search** (`/search`, no `setId`) has no bleed, so it keeps the
+  `perPage + 1` probe and a `hasNext` boolean with no total.
 - Every response is validated shallowly (`Array.isArray`, required keys) and a
   malformed body throws a typed `TcgdexError` carrying status and URL.
 - A 10 s `AbortSignal.timeout` on every request.
@@ -469,10 +484,12 @@ Lifecycle and safety:
   `visibilitychange` stops it when the tab is hidden.
 - `webglcontextlost` → cancel RAF, swap to the CSS fallback, log a warning;
   `webglcontextrestored` → rebuild.
-- `capability.ts` returns `false` when there is no WebGL2 context, when
-  `prefers-reduced-motion: reduce` is set, or when the device reports
-  `navigator.hardwareConcurrency <= 2`. In that case `HoloCard` renders the plain
-  image plus a static CSS sheen and never loads the chunk.
+- `capability.ts` exports `supportsHolo(probe)` where `probe` supplies
+  `matchMedia`, `hardwareConcurrency` and `createContext()`. It returns `false`
+  when there is no WebGL2 context, when `prefers-reduced-motion: reduce` is set,
+  or when the device reports `hardwareConcurrency <= 2`. In that case `HoloCard`
+  renders the plain image plus a static CSS sheen and never loads the chunk. The
+  injected probe keeps it unit-testable under `node` (§11).
 - `dispose()` frees geometry, material, textures and the renderer on unmount.
 
 ### 6.5 SSR interaction
@@ -484,7 +501,10 @@ hydration mismatch and no flash.
 ## 7. Collection
 
 `lib/collection.ts` — `localStorage` key `holodex:collection:v1`, value
-`{ version: 1, owned: string[], wishlist: string[] }`.
+`{ version: 1, owned: string[], wishlist: string[] }`. The module exports
+`createCollectionStore(storage: Storage | null)` and a default instance bound to
+`globalThis.localStorage`; tests pass a fake `Storage`, which keeps them in the
+repo's `node` test environment (§11).
 
 - Every read and write is wrapped in `try/catch` (Safari private mode throws on
   write; storage may be blocked entirely). On failure the store degrades to an
@@ -537,14 +557,26 @@ the `updated` date, and a note that prices are indicative.
 
 ## 11. Testing and verification
 
-Vitest (the root config already globs `apps/**/*.{ts,tsx}`). `fetch` is mocked —
-no test touches the network.
+Vitest. Two constraints the root config imposes, both verified 2026-09-21:
+
+- `vitest.config.ts` includes only `packages/*/src/**/*.test.ts`,
+  `apps/strapi/**/*.test.ts` and `apps/*/scripts/**/*.test.ts`. Holodex's tests
+  live in `apps/holodex/src/**`, so the config must gain that glob or **no
+  holodex test ever runs**.
+- `environment: 'node'`, and jsdom is not a dependency anywhere in the repo.
+  Rather than add it, every tested module takes its browser dependency as an
+  injected parameter — `collection.ts` takes a `Storage`, `capability.ts` takes
+  a probe object — so the tests are plain Node logic, matching the rest of the
+  repo.
+
+`fetch` is mocked with `vi.stubGlobal` — no test touches the network.
 
 - `lib/tcgdex.ts`: URL building for each filter combination; rejection of
   non-whitelisted params; `pagination:*` encoding; the `perPage + 1` probe
-  setting `hasNext` true/false; the short-page-after-client-filter case; the
-  `set.id` substring workaround keeping only `<setId>-` ids; `TcgdexError` on a
-  non-200 and on a malformed body.
+  setting `hasNext` true/false in global search; in-memory pagination of a
+  `/sets/{id}` card list; the filtered-set intersection keeping only
+  `<setId>-` ids; the 600-row cap triggering a follow-up page and the 4-page
+  stop; `TcgdexError` on a non-200 and on a malformed body.
 - `lib/images.ts`: quality suffixes; `null` for a missing base.
 - `holo/tiers.ts`: every rarity in the checked-in snapshot maps to a tier;
   unknown → `sparkle`; the `variants.reverse` and `variants.holo` upgrades.
