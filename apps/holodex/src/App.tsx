@@ -9,6 +9,7 @@ import { NotFoundView } from './views/NotFoundView';
 import { SetsView } from './views/SetsView';
 import { SetView } from './views/SetView';
 import { SearchView } from './views/SearchView';
+import { CardView } from './views/CardView';
 
 export interface AppProps {
   controller: RouteController;
@@ -28,9 +29,10 @@ function renderView(route: Route): ReactNode {
       return <SetView setId={route.setId} filters={route.filters} />;
     case 'search':
       return <SearchView filters={route.filters} />;
-    case 'collection':
     case 'card':
-      return <p className="text-holo-muted">View “{route.view}” lands in a later task.</p>;
+      return <CardView cardId={route.cardId} />;
+    case 'collection':
+      return <p className="text-holo-muted">View "collection" lands in a later task.</p>;
     case 'not-found':
       return <NotFoundView path={route.path} />;
   }
