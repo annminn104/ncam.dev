@@ -10,15 +10,32 @@ export function serialiseState(state: unknown): string {
   return JSON.stringify(state).replace(/</g, '\\u003c');
 }
 
-export function readState(doc: {
+interface StateDocument {
   getElementById: (id: string) => { textContent: string | null } | null;
-}): unknown {
-  const raw = doc.getElementById(SSR_STATE_ID)?.textContent;
+}
+
+/**
+ * The payload's raw JSON text, exactly as the server wrote it.
+ *
+ * `hydrate` reads this before `hydrateRoot` (react-query needs the state to
+ * build its client) and then renders the very same text back into the React
+ * tree, so the script element the server emitted has an identical counterpart
+ * on the client and hydration has nothing to reconcile.
+ */
+export function readStateJson(doc: StateDocument): string | null {
+  return doc.getElementById(SSR_STATE_ID)?.textContent || null;
+}
+
+/** Degraded, not broken: on anything unparseable react-query refetches. */
+export function parseState(raw: string | null): unknown {
   if (!raw) return undefined;
   try {
     return JSON.parse(raw);
   } catch {
-    // Degraded, not broken: react-query refetches on the client.
     return undefined;
   }
+}
+
+export function readState(doc: StateDocument): unknown {
+  return parseState(readStateJson(doc));
 }

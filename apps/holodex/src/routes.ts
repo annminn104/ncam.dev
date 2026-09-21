@@ -50,6 +50,32 @@ export function parseRoute(input: string): Route {
   return { view: 'not-found', path: `/${segments.join('/')}` };
 }
 
+/**
+ * Identity of the *view*, not of the whole route.
+ *
+ * `App` keys its error boundary on this. Keying on the full route string
+ * instead remounted the whole subtree on every debounced commit: the search
+ * box became a new DOM node and focus dropped to `<body>` mid-word, and
+ * `useMounted()` reset, blanking the owned counter and CollectionToggle for a
+ * frame. Filters, pages and query strings therefore do not appear here — only
+ * what makes one view genuinely a different view, so a broken one still gets a
+ * fresh boundary instead of stranding the whole app on an error panel.
+ */
+export function viewKey(route: Route): string {
+  switch (route.view) {
+    case 'home':
+    case 'search':
+    case 'collection':
+      return route.view;
+    case 'set':
+      return `set:${route.setId}`;
+    case 'card':
+      return `card:${route.cardId}`;
+    case 'not-found':
+      return `not-found:${route.path}`;
+  }
+}
+
 function formatFilters(filters: Filters): string {
   const params = new URLSearchParams();
   if (filters.q) params.set('q', filters.q);

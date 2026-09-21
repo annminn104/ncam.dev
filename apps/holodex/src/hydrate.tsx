@@ -5,7 +5,7 @@ import type { MountConfig, MountHandle } from '@ncam/mf-remote';
 import App from './App';
 import { createRouteController, type RouteController } from './route-controller';
 import { createQueryClient } from './lib/queries';
-import { readState } from './lib/ssr-state';
+import { parseState, readStateJson, SSR_STATE_ID } from './lib/ssr-state';
 
 const roots = new WeakMap<HTMLElement, { root: Root; controller: RouteController }>();
 
@@ -19,11 +19,14 @@ export function hydrate(target: HTMLElement, config: MountConfig = {}): MountHan
   const controller = createRouteController(config);
   const queryClient = createQueryClient();
   // Written by ./ssr into the markup the host injected — a <script
-  // type="application/json"> inside target itself, so it hydrates along with
-  // everything else. Missing or corrupt is fine: readState degrades to
-  // undefined and react-query just fetches on the client, same as a route
-  // SSR never prefetched.
-  const state = readState(target.ownerDocument ?? document);
+  // type="application/json"> inside target itself. It has to be read before
+  // hydrateRoot, because react-query needs the state to build its client, and
+  // it is then rendered straight back below so the element has a counterpart
+  // in the tree instead of being a stray child of the hydration root. Missing
+  // or corrupt is fine: parseState degrades to undefined and react-query just
+  // fetches on the client, same as a route SSR never prefetched.
+  const stateJson = readStateJson(target.ownerDocument ?? document);
+  const state = parseState(stateJson);
   const root = hydrateRoot(
     target,
     <StrictMode>
@@ -32,6 +35,13 @@ export function hydrate(target: HTMLElement, config: MountConfig = {}): MountHan
           context — pass the same instance explicitly, as ./ssr does. */}
       <HydrationBoundary state={state as never} queryClient={queryClient}>
         <App controller={controller} queryClient={queryClient} />
+        {/* Same element ./ssr rendered, with the same text, so hydration has
+            nothing to reconcile here. */}
+        <script
+          type="application/json"
+          id={SSR_STATE_ID}
+          dangerouslySetInnerHTML={{ __html: stateJson ?? '' }}
+        />
       </HydrationBoundary>
     </StrictMode>,
   );

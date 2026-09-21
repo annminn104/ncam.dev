@@ -97,6 +97,17 @@ export async function renderHeroSSR(
     // context here — pass the same instance explicitly instead.
     <HydrationBoundary state={state} queryClient={queryClient}>
       <App controller={controller} queryClient={queryClient} />
+      {/* Part of the React tree on purpose. The host injects this markup into
+          the same div `hydrate` passes to hydrateRoot, so appending the script
+          to the HTML string afterwards made it a child of the hydration root
+          with no counterpart in the tree: React warns and strips it, and a
+          root-level mismatch would client-render the whole remote. `hydrate`
+          renders this element back with byte-identical text. */}
+      <script
+        type="application/json"
+        id={SSR_STATE_ID}
+        dangerouslySetInnerHTML={{ __html: serialiseState(state) }}
+      />
     </HydrationBoundary>,
   );
   // Two concurrent SSR requests must never share a cache: this client was
@@ -104,8 +115,7 @@ export async function renderHeroSSR(
   // and the rendered markup have both been captured.
   queryClient.clear();
 
-  const html = `${body}<script type="application/json" id="${SSR_STATE_ID}">${serialiseState(state)}</script>`;
-  return { html, css };
+  return { html: body, css };
 }
 
 export default renderHeroSSR;

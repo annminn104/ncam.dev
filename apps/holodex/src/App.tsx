@@ -2,7 +2,7 @@ import { useSyncExternalStore, type ReactNode } from 'react';
 import { QueryClientProvider, type QueryClient } from '@tanstack/react-query';
 import { RouteControllerContext } from './app-context';
 import type { RouteController } from './route-controller';
-import { parseRoute, type Route } from './routes';
+import { parseRoute, viewKey, type Route } from './routes';
 import { Shell } from './components/Shell';
 import { HolodexErrorBoundary } from './components/ErrorBoundary';
 import { NotFoundView } from './views/NotFoundView';
@@ -53,7 +53,11 @@ export default function App({ controller, queryClient }: AppProps) {
     <QueryClientProvider client={queryClient}>
       <RouteControllerContext.Provider value={controller}>
         <Shell>
-          <HolodexErrorBoundary key={routeString}>{renderView(route)}</HolodexErrorBoundary>
+          {/* Keyed on view identity, not the whole route: a filter, page or
+              query change must stay inside one component instance (or the
+              debounced search box loses focus mid-word), while a genuinely
+              different view still gets a fresh boundary. */}
+          <HolodexErrorBoundary key={viewKey(route)}>{renderView(route)}</HolodexErrorBoundary>
         </Shell>
       </RouteControllerContext.Provider>
     </QueryClientProvider>

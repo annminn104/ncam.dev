@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { readState, serialiseState, SSR_STATE_ID } from './ssr-state';
+import { parseState, readState, readStateJson, serialiseState, SSR_STATE_ID } from './ssr-state';
 
 const docWith = (textContent: string | null) => ({
   getElementById: (id: string) => (id === SSR_STATE_ID ? { textContent } : null),
@@ -33,5 +33,31 @@ describe('readState', () => {
 
   it('returns undefined for an empty element', () => {
     expect(readState(docWith(''))).toBeUndefined();
+  });
+});
+
+describe('readStateJson', () => {
+  it('returns the raw text, so hydrate can render it back byte-identically', () => {
+    // The client re-renders this exact string into the React tree; anything
+    // re-serialised could differ from what the server wrote.
+    const raw = '{"queries":[{"queryKey":["sets"],"state":{"data":[1,2]}}]}';
+    expect(readStateJson(docWith(raw))).toBe(raw);
+  });
+
+  it('returns null when the element is missing or empty', () => {
+    expect(readStateJson({ getElementById: () => null })).toBeNull();
+    expect(readStateJson(docWith(''))).toBeNull();
+    expect(readStateJson(docWith(null))).toBeNull();
+  });
+});
+
+describe('parseState', () => {
+  it('parses what readStateJson returned', () => {
+    expect(parseState('{"queries":[]}')).toEqual({ queries: [] });
+  });
+
+  it('degrades to undefined on null or corrupt input', () => {
+    expect(parseState(null)).toBeUndefined();
+    expect(parseState('{not json')).toBeUndefined();
   });
 });

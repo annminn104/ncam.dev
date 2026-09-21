@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { EMPTY_FILTERS, formatRoute, parseRoute } from './routes';
+import { EMPTY_FILTERS, formatRoute, parseRoute, viewKey } from './routes';
 
 describe('parseRoute', () => {
   it('maps the root onto home', () => {
@@ -77,5 +77,34 @@ describe('formatRoute', () => {
   it('round-trips a fully-loaded set route', () => {
     const input = '/sets/swsh3?q=char&type=Fire&rarity=Holo+Rare&page=3';
     expect(formatRoute(parseRoute(input))).toBe(input);
+  });
+});
+
+describe('viewKey', () => {
+  it('is stable while only the filters or the page change', () => {
+    // The error boundary is keyed on this. If it changed here, the debounced
+    // search box would be remounted on every commit and lose focus mid-word.
+    const base = parseRoute('/sets/swsh3');
+    expect(viewKey(parseRoute('/sets/swsh3?q=c'))).toBe(viewKey(base));
+    expect(viewKey(parseRoute('/sets/swsh3?q=char&type=Fire&page=4'))).toBe(viewKey(base));
+    expect(viewKey(parseRoute('/search?q=a'))).toBe(viewKey(parseRoute('/search?q=ab&page=2')));
+  });
+
+  it('changes when the view genuinely changes', () => {
+    const keys = [
+      viewKey(parseRoute('/')),
+      viewKey(parseRoute('/search')),
+      viewKey(parseRoute('/collection')),
+      viewKey(parseRoute('/sets/swsh3')),
+      viewKey(parseRoute('/sets/swsh1')),
+      viewKey(parseRoute('/card/swsh3-136')),
+      viewKey(parseRoute('/card/swsh3-1')),
+      viewKey(parseRoute('/nope')),
+    ];
+    expect(new Set(keys).size).toBe(keys.length);
+  });
+
+  it('separates two not-found paths so a fresh boundary is built for each', () => {
+    expect(viewKey(parseRoute('/a/b'))).not.toBe(viewKey(parseRoute('/c/d')));
   });
 });
