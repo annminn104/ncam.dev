@@ -28,20 +28,28 @@ describe('EFFECT_BY_RARITY', () => {
     expect(stray).toEqual([]);
   });
 
-  it('leaves exactly the override-only effects out of the table', () => {
+  it('declares exactly the effects no rarity maps to', () => {
+    // Asserted against a literal list, not against OVERRIDE_ONLY_EFFECTS
+    // itself — comparing the constant to a filter of itself would pass even
+    // if it were empty.
+    expect([...OVERRIDE_ONLY_EFFECTS].sort()).toEqual([
+      'reverse-holo',
+      'trainer-gallery-secret-rare',
+      'trainer-gallery-v-max',
+      'trainer-gallery-v-regular',
+    ]);
+  });
+
+  it('keeps every override-only effect out of the rarity table', () => {
     const used = new Set(Object.values(EFFECT_BY_RARITY));
-    const absent = OVERRIDE_ONLY_EFFECTS.filter((e) => !used.has(e));
-    expect(absent.sort()).toEqual(
-      [
-        'reverse-holo',
-        'trainer-gallery-holo',
-        'trainer-gallery-secret-rare',
-        'trainer-gallery-v-max',
-        'trainer-gallery-v-regular',
-      ]
-        .filter((e) => OVERRIDE_ONLY_EFFECTS.includes(e as EffectId))
-        .sort(),
-    );
+    const leaked = OVERRIDE_ONLY_EFFECTS.filter((e) => used.has(e));
+    expect(leaked).toEqual([]);
+  });
+
+  it('accounts for every effect: each is either mapped or override-only', () => {
+    const used = new Set<EffectId>(Object.values(EFFECT_BY_RARITY));
+    const declared = new Set<EffectId>([...used, ...OVERRIDE_ONLY_EFFECTS]);
+    expect(declared.size).toBe(22);
   });
 });
 
@@ -114,6 +122,12 @@ describe('selectHolo — reverse holo override', () => {
 
   it('leaves invert false for everything else', () => {
     expect(selectHolo(card({ rarity: 'Holo Rare' })).invert).toBe(false);
+  });
+
+  it('gives gallery override precedence over reverse holo', () => {
+    const c = card({ localId: 'TG10', rarity: 'Holo Rare', variants: { reverse: true } });
+    expect(selectHolo(c).effect).toBe('trainer-gallery-holo');
+    expect(selectHolo(c).invert).toBe(false);
   });
 });
 
