@@ -6,6 +6,7 @@ import { parseRoute, type Route } from './routes';
 import { Shell } from './components/Shell';
 import { HolodexErrorBoundary } from './components/ErrorBoundary';
 import { NotFoundView } from './views/NotFoundView';
+import { SetsView } from './views/SetsView';
 
 export interface AppProps {
   controller: RouteController;
@@ -20,6 +21,7 @@ export interface AppProps {
 function renderView(route: Route): ReactNode {
   switch (route.view) {
     case 'home':
+      return <SetsView />;
     case 'set':
     case 'search':
     case 'collection':
