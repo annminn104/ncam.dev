@@ -1515,6 +1515,22 @@ describe('compileEffect', () => {
     expect(compileEffect(rich)).toBe(compileEffect(rich));
   });
 
+  it('emits no #version directive — three.js prepends its own', () => {
+    // three.js builds '#version ' + glslVersion in WebGLProgram when the
+    // material sets glslVersion, and GLSL3 === '300 es'. A second directive
+    // here is a GLSL compile error that only shows on a real GPU, so this
+    // assertion is the only thing standing between us and a black card.
+    expect(compileEffect(rich)).not.toContain('#version');
+    expect(compileEffect(minimal)).not.toContain('#version');
+  });
+
+  it('declares its own fragment output, which GLSL3 does not provide', () => {
+    // For GLSL3 three.js deliberately omits its pc_fragColor shim, so the
+    // shader must declare `out vec4 fragColor` itself — baseGLSL does.
+    expect(compileEffect(minimal)).toContain('out vec4 fragColor');
+    expect(compileEffect(minimal)).toContain('fragColor =');
+  });
+
   it('names the effect in a comment so a shader log can be traced back', () => {
     expect(compileEffect(rich)).toContain('test-rich');
   });
@@ -1754,8 +1770,13 @@ export function compileEffect(effect: Effect): string {
   const shine = effect.shine.map((e, i) => elementCode(e, `shine${i}`)).join('\n\n');
   const glare = effect.glare.map((e, i) => elementCode(e, `glare${i}`)).join('\n\n');
 
-  return `#version 300 es
-precision highp float;
+  // NO `#version` directive here. three.js prepends `#version 300 es` itself
+  // whenever `glslVersion` is set on the material (WebGLProgram.js builds
+  // `'#version ' + parameters.glslVersion`, and GLSL3 === '300 es'). Emitting
+  // one here too produces a duplicate directive, which is a compile error —
+  // and one no test in this plan can catch, because ShaderMaterial is an inert
+  // object until a GPU compiles it. The test below pins this.
+  return `precision highp float;
 
 // effect: ${effect.id}
 
