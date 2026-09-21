@@ -24,7 +24,7 @@
     "@strapi/database": "5.53.0",
     "@strapi/plugin-users-permissions": "5.53.0",
     "@strapi/strapi": "5.53.0",
-    "better-sqlite3": "12.8.0",
+    "better-sqlite3": "13.0.3",
     "pg": "^8.23.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
