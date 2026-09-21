@@ -3,6 +3,7 @@ import { useNavigate } from '../app-context';
 import { cardQuery } from '../lib/queries';
 import { EMPTY_FILTERS } from '../routes';
 import { CardImage } from '../components/CardImage';
+import { CollectionToggle } from '../components/CollectionToggle';
 import { ErrorPanel } from '../components/ErrorPanel';
 import { PricePanel } from '../components/PricePanel';
 import { StatPanel } from '../components/StatPanel';
@@ -51,6 +52,9 @@ export function CardView({ cardId }: { cardId: string }) {
             {card.set.name}
           </button>
         ) : null}
+        <div className="mt-3">
+          <CollectionToggle cardId={cardId} />
+        </div>
         <div className="mt-4">
           {isPending ? (
             <div className="h-72 animate-pulse rounded-xl bg-holo-panel" />

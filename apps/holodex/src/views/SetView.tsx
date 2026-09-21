@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from '../app-context';
+import { useCollectionState } from '../lib/collection';
 import { setCardsQuery, setQuery } from '../lib/queries';
 import { DEFAULT_PER_PAGE } from '../lib/tcgdex';
+import { useMounted } from '../lib/use-mounted';
 import type { Filters } from '../routes';
 import { CardGrid } from '../components/CardGrid';
 import { ErrorPanel } from '../components/ErrorPanel';
@@ -21,6 +23,11 @@ export function SetView({ setId, filters }: { setId: string; filters: Filters })
     const id = setTimeout(() => go({ ...filters, q: draft.q, page: 1 }), 300);
     return () => clearTimeout(id);
   }, [draft.q]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const mounted = useMounted();
+  const collection = useCollectionState();
+  // Prefix must include the dash: "swsh1-" must not match a swsh10- card.
+  const owned = collection.owned.filter((id) => id.startsWith(`${setId}-`)).length;
 
   const set = useQuery(setQuery(setId));
   const cards = useQuery(setCardsQuery(setId, filters, DEFAULT_PER_PAGE));
@@ -49,6 +56,7 @@ export function SetView({ setId, filters }: { setId: string; filters: Filters })
         {set.data
           ? `${set.data.cardCount.official} cards · released ${set.data.releaseDate ?? 'unknown'}`
           : 'Loading…'}
+        {mounted && set.data ? ` · ${owned}/${set.data.cardCount.official} owned` : ''}
       </p>
 
       <FilterBar
