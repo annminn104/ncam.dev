@@ -92,24 +92,32 @@ describe('blendRGB — separable modes against known values', () => {
 });
 
 describe('blendRGB — non-separable modes', () => {
+  const luma = (c: readonly number[]) => 0.3 * c[0] + 0.59 * c[1] + 0.11 * c[2];
+  const sat = (c: readonly number[]) => Math.max(c[0], c[1], c[2]) - Math.min(c[0], c[1], c[2]);
+
   it('luminosity takes the source luma and the backdrop colour', () => {
     const out = blendRGB('luminosity', [0.8, 0.2, 0.2], [0.5, 0.5, 0.5]);
-    const luma = (c: readonly number[]) => 0.3 * c[0] + 0.59 * c[1] + 0.11 * c[2];
     expect(close(luma(out), 0.5)).toBe(true);
   });
 
-  it('hue keeps the backdrop luma', () => {
-    const backdrop = [0.8, 0.2, 0.2] as const;
-    const out = blendRGB('hue', backdrop, [0.2, 0.2, 0.8]);
-    const luma = (c: readonly number[]) => 0.3 * c[0] + 0.59 * c[1] + 0.11 * c[2];
+  it('hue takes source hue but keeps backdrop saturation', () => {
+    const backdrop = [0.5, 0.45, 0.4] as const;
+    const source = [0.9, 0.1, 0.1] as const;
+    const out = blendRGB('hue', backdrop, source);
+    // Hue keeps the backdrop's saturation (not the source's)
+    expect(close(sat(out), sat(backdrop))).toBe(true);
+    // Hue also keeps the backdrop's luma
     expect(close(luma(out), luma(backdrop))).toBe(true);
   });
 
-  it('saturation keeps the backdrop luma too', () => {
-    const backdrop = [0.6, 0.4, 0.2] as const;
-    const out = blendRGB('saturation', backdrop, [0.9, 0.1, 0.1]);
-    const luma = (c: readonly number[]) => 0.3 * c[0] + 0.59 * c[1] + 0.11 * c[2];
+  it('saturation takes source saturation but keeps backdrop hue', () => {
+    const backdrop = [0.5, 0.45, 0.4] as const;
+    const source = [0.9, 0.1, 0.1] as const;
+    const out = blendRGB('saturation', backdrop, source);
+    // Saturation keeps the backdrop's luma
     expect(close(luma(out), luma(backdrop))).toBe(true);
+    // Saturation takes the source's saturation (much higher than backdrop's, ~0.77 after clipping)
+    expect(Math.abs(sat(out) - 0.77) < 0.01).toBe(true);
   });
 
   it('never produces a channel outside 0..1', () => {
