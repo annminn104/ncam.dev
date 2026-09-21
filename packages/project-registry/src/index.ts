@@ -89,6 +89,18 @@ export const projects: ProjectEntry[] = [
     module: './mount',
     status: 'live',
   },
+  {
+    id: 'holodex',
+    name: 'Holodex',
+    tagline: 'Pokémon TCG explorer',
+    description:
+      'A Pokémon TCG database explorer built on the TCGdex API — browse every series, set and card, filter by type and rarity, track a collection, and inspect a card rendered with a WebGL holo foil keyed to its rarity.',
+    accent: '#7C5CFF',
+    thumbnail: '/thumbnails/holodex.jpg',
+    remote: 'holodex',
+    module: './mount',
+    status: 'live',
+  },
 ];
 
 export function getProject(id: string): ProjectEntry | undefined {

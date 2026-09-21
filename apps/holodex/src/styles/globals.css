@@ -1,0 +1,16 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-holo-bg: #0b0714;
+  --color-holo-panel: #150e24;
+  --color-holo-line: #2a1f45;
+  --color-holo-text: #ede9fb;
+  --color-holo-muted: #a99fc9;
+  --color-holo-accent: #7c5cff;
+}
+
+.holodex {
+  background: var(--color-holo-bg);
+  color: var(--color-holo-text);
+  min-height: 100%;
+}

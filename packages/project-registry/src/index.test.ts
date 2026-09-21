@@ -9,6 +9,7 @@ describe('project-registry', () => {
       'immersive-ocean',
       'viktor',
       'bali',
+      'holodex',
     ]);
   });
 

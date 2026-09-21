@@ -33,6 +33,7 @@ export const ssrLoaders: Record<string, () => Promise<unknown>> = {
   immersive_ocean: () => import('immersive_ocean/ssr'),
   viktor: () => import('viktor/ssr'),
   bali: () => import('bali/ssr'),
+  holodex: () => import('holodex/ssr'),
 };
 const hydrateLoaders: Record<string, () => Promise<HydrateModule>> = {
   toonhub: () => import('toonhub/hydrate'),
@@ -40,6 +41,7 @@ const hydrateLoaders: Record<string, () => Promise<HydrateModule>> = {
   immersive_ocean: () => import('immersive_ocean/hydrate'),
   viktor: () => import('viktor/hydrate'),
   bali: () => import('bali/hydrate'),
+  holodex: () => import('holodex/hydrate'),
 };
 const mountLoaders: Record<string, () => Promise<MountModule>> = {
   toonhub: () => import('toonhub/mount'),
@@ -47,6 +49,7 @@ const mountLoaders: Record<string, () => Promise<MountModule>> = {
   immersive_ocean: () => import('immersive_ocean/mount'),
   viktor: () => import('viktor/mount'),
   bali: () => import('bali/mount'),
+  holodex: () => import('holodex/mount'),
 };
 
 /**
