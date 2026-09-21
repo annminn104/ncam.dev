@@ -7,6 +7,7 @@ import { Shell } from './components/Shell';
 import { HolodexErrorBoundary } from './components/ErrorBoundary';
 import { NotFoundView } from './views/NotFoundView';
 import { SetsView } from './views/SetsView';
+import { SetView } from './views/SetView';
 
 export interface AppProps {
   controller: RouteController;
@@ -23,6 +24,7 @@ function renderView(route: Route): ReactNode {
     case 'home':
       return <SetsView />;
     case 'set':
+      return <SetView setId={route.setId} filters={route.filters} />;
     case 'search':
     case 'collection':
     case 'card':
