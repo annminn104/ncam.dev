@@ -5,7 +5,7 @@
  *  - an unknown query param makes the API return `[]` rather than ignoring it,
  *    so params come from a whitelist and never from caller-supplied keys;
  *  - there is no total-count header, so page counts have to be derived
- *    (see `searchCards` and `getSetCards`).
+ *    (see `searchCards` and `selectSetCards`).
  */
 
 export const API_BASE = 'https://api.tcgdex.net/v2/en';
