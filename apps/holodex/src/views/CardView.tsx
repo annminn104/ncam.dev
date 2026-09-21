@@ -6,6 +6,7 @@ import { CardImage } from '../components/CardImage';
 import { ErrorPanel } from '../components/ErrorPanel';
 import { PricePanel } from '../components/PricePanel';
 import { StatPanel } from '../components/StatPanel';
+import { HoloCard } from '../holo/HoloCard';
 
 export function CardView({ cardId }: { cardId: string }) {
   const navigate = useNavigate();
@@ -32,8 +33,10 @@ export function CardView({ cardId }: { cardId: string }) {
             className="animate-pulse rounded-xl bg-holo-panel"
             style={{ aspectRatio: '63 / 88' }}
           />
+        ) : card ? (
+          <HoloCard card={card} />
         ) : (
-          <CardImage base={card?.image} name={card?.name ?? cardId} quality="high" priority />
+          <CardImage name={cardId} quality="high" priority />
         )}
       </div>
 
