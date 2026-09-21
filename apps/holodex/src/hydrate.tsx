@@ -1,9 +1,11 @@
 import { StrictMode } from 'react';
 import { hydrateRoot, type Root } from 'react-dom/client';
+import { HydrationBoundary } from '@tanstack/react-query';
 import type { MountConfig, MountHandle } from '@ncam/mf-remote';
 import App from './App';
 import { createRouteController, type RouteController } from './route-controller';
 import { createQueryClient } from './lib/queries';
+import { readState } from './lib/ssr-state';
 
 const roots = new WeakMap<HTMLElement, { root: Root; controller: RouteController }>();
 
@@ -16,10 +18,21 @@ export function hydrate(target: HTMLElement, config: MountConfig = {}): MountHan
   }
   const controller = createRouteController(config);
   const queryClient = createQueryClient();
+  // Written by ./ssr into the markup the host injected — a <script
+  // type="application/json"> inside target itself, so it hydrates along with
+  // everything else. Missing or corrupt is fine: readState degrades to
+  // undefined and react-query just fetches on the client, same as a route
+  // SSR never prefetched.
+  const state = readState(target.ownerDocument ?? document);
   const root = hydrateRoot(
     target,
     <StrictMode>
-      <App controller={controller} queryClient={queryClient} />
+      {/* App renders its own QueryClientProvider internally, below this
+          element, so this boundary cannot read the client back out of
+          context — pass the same instance explicitly, as ./ssr does. */}
+      <HydrationBoundary state={state as never} queryClient={queryClient}>
+        <App controller={controller} queryClient={queryClient} />
+      </HydrationBoundary>
     </StrictMode>,
   );
   roots.set(target, { root, controller });

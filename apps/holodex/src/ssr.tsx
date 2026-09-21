@@ -1,7 +1,22 @@
+import { dehydrate, HydrationBoundary } from '@tanstack/react-query';
+import { createLogger } from '@ncam/logger';
 import css from './styles/globals.css?inline';
 import App from './App';
+import {
+  cardQuery,
+  createQueryClient,
+  searchQuery,
+  setCardsQuery,
+  setQuery,
+  setsQuery,
+} from './lib/queries';
 import { createRouteController } from './route-controller';
-import { createQueryClient } from './lib/queries';
+import { parseRoute } from './routes';
+import { serialiseState, SSR_STATE_ID } from './lib/ssr-state';
+import { DEFAULT_PER_PAGE } from './lib/tcgdex';
+import type { QueryClient } from '@tanstack/react-query';
+
+const log = createLogger({ scope: 'holodex' });
 
 export interface RenderHeroSSRResult {
   html: string;
@@ -15,22 +30,81 @@ export interface RenderHeroSSROptions {
 }
 
 /**
+ * Warm the cache for the route being rendered.
+ *
+ * Every prefetch goes through the same factory the matching view calls
+ * (`setsQuery`, `setQuery`, `setCardsQuery`, `searchQuery`, `cardQuery`) with
+ * the same arguments, so the resulting query key is byte-identical to the
+ * client's. A hand-rolled or inline key would not error — it would just miss
+ * on hydration and refetch silently, throwing away this whole task.
+ */
+async function prefetch(client: QueryClient, route: ReturnType<typeof parseRoute>): Promise<void> {
+  const jobs: Promise<void>[] = [];
+  if (route.view === 'home') jobs.push(client.prefetchQuery(setsQuery()));
+  if (route.view === 'set') {
+    jobs.push(client.prefetchQuery(setQuery(route.setId)));
+    jobs.push(client.prefetchQuery(setCardsQuery(route.setId, route.filters, DEFAULT_PER_PAGE)));
+  }
+  if (route.view === 'search' && (route.filters.q || route.filters.type || route.filters.rarity)) {
+    // client.prefetchQuery takes FetchQueryOptions, which has no `enabled`
+    // field, so searchQuery's `enabled` guard (stopping an unfiltered
+    // /search from paging the whole ~20,000-card catalogue) is silently
+    // dropped here. This `if` repeats that same condition explicitly for the
+    // server. It is NOT redundant with `enabled` — remove it and every
+    // server render of /search pages the entire catalogue.
+    jobs.push(client.prefetchQuery(searchQuery(route.filters, DEFAULT_PER_PAGE)));
+  }
+  if (route.view === 'card') jobs.push(client.prefetchQuery(cardQuery(route.cardId)));
+  // One slow or failing endpoint must not fail the whole render: an
+  // un-prefetched query just renders its skeleton and the client fetches it.
+  await Promise.allSettled(jobs);
+}
+
+/**
  * SSR entry. `react-dom/server` is imported dynamically so it never enters the
  * client bundle's federation graph.
  *
  * One `RouteController` and one `QueryClient` per request — never a
- * module-level singleton, or concurrent requests would share state. Data
- * prefetching and cache dehydration land in Task 17; for now this renders the
- * correct view shell for the requested route with an empty cache, which the
- * client fills in after hydration.
+ * module-level singleton, or two concurrent requests would share a cache.
  */
 export async function renderHeroSSR(
   options: RenderHeroSSROptions = {},
 ): Promise<RenderHeroSSRResult> {
   const { renderToString } = await import('react-dom/server');
-  const controller = createRouteController({ route: options.config?.route });
+  const routeString = options.config?.route ?? '/';
   const queryClient = createQueryClient();
-  const html = renderToString(<App controller={controller} queryClient={queryClient} />);
+  const controller = createRouteController({ route: routeString });
+
+  try {
+    await prefetch(queryClient, parseRoute(routeString));
+  } catch (error) {
+    // A prefetch failure must not fail the render. prefetch() already
+    // isolates one bad query from the rest via Promise.allSettled; this
+    // catch is the backstop for anything else (parseRoute, or prefetch
+    // itself, throwing). Log and fall through to render with whatever did
+    // make it into the cache — an un-prefetched query renders its skeleton
+    // and the client fetches it, same as if SSR had not run at all.
+    log.warn('holodex.ssr-prefetch-failed', {
+      route: routeString,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+
+  const state = dehydrate(queryClient);
+  const body = renderToString(
+    // App renders its own QueryClientProvider internally, below this
+    // element, so HydrationBoundary cannot read the client back out of
+    // context here — pass the same instance explicitly instead.
+    <HydrationBoundary state={state} queryClient={queryClient}>
+      <App controller={controller} queryClient={queryClient} />
+    </HydrationBoundary>,
+  );
+  // Two concurrent SSR requests must never share a cache: this client was
+  // built for this request alone, so drop it once the dehydrated snapshot
+  // and the rendered markup have both been captured.
+  queryClient.clear();
+
+  const html = `${body}<script type="application/json" id="${SSR_STATE_ID}">${serialiseState(state)}</script>`;
   return { html, css };
 }
 
