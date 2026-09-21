@@ -24,11 +24,16 @@ export const Route = createFileRoute('/projects/$projectId_/$')({
     if (!load || !import.meta.env.PROD || !import.meta.env.SSR) return NO_SSR;
     const route = toRemoteRoute(
       params._splat,
-      new URLSearchParams(deps as Record<string, string>).toString(),
+      new URLSearchParams(
+        Object.entries(deps).map(([key, value]) => [key, String(value)]),
+      ).toString(),
     );
     try {
       const { renderHeroSSR } = await loadSsrExports(project, load);
-      const { html, css } = await renderHeroSSR({ config: { route } });
+      const { html, css } = await renderHeroSSR({
+        config: { route },
+        assetBase: import.meta.env.VITE_TOONHUB_ORIGIN,
+      });
       log.debug('project.ssr', { id: project.id, route });
       return { html, css };
     } catch (error) {
