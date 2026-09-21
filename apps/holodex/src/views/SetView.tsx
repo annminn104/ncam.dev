@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from '../app-context';
-import { useCollectionState } from '../lib/collection';
+import { collectionStore, useCollectionState } from '../lib/collection';
 import { setCardsQuery, setQuery } from '../lib/queries';
 import { DEFAULT_PER_PAGE } from '../lib/tcgdex';
 import { useMounted } from '../lib/use-mounted';
@@ -25,9 +25,11 @@ export function SetView({ setId, filters }: { setId: string; filters: Filters })
   }, [draft.q]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const mounted = useMounted();
-  const collection = useCollectionState();
-  // Prefix must include the dash: "swsh1-" must not match a swsh10- card.
-  const owned = collection.owned.filter((id) => id.startsWith(`${setId}-`)).length;
+  // Subscribe so the counter re-renders after a write; the count itself comes
+  // from the store's own tested countWithPrefix, which already knows the
+  // prefix must include the dash ("swsh1-" must not match a swsh10- card).
+  useCollectionState();
+  const owned = collectionStore.countWithPrefix('owned', `${setId}-`);
 
   const set = useQuery(setQuery(setId));
   const cards = useQuery(setCardsQuery(setId, filters, DEFAULT_PER_PAGE));

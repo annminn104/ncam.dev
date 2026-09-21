@@ -54,16 +54,20 @@ function hasTcgplayerData(pricing: TcgplayerPricing | null | undefined): boolean
 
 /** avg30 → avg7 → avg1, the only history the API gives us. Cardmarket only. */
 function Sparkline({ block }: { block: PriceBlock }) {
-  const points = [block.avg30, block.avg7, block.avg1].filter(
-    (value): value is number => typeof value === 'number',
-  );
+  const points = [
+    { value: block.avg30, label: '30-day average' },
+    { value: block.avg7, label: '7-day average' },
+    { value: block.avg1, label: '24-hour average' },
+  ].filter((point): point is { value: number; label: string } => typeof point.value === 'number');
   if (points.length < 2) return null;
-  const min = Math.min(...points);
-  const max = Math.max(...points);
+  const values = points.map((point) => point.value);
+  const min = Math.min(...values);
+  const max = Math.max(...values);
   const span = max - min || 1;
   const path = points
     .map(
-      (value, index) => `${(index / (points.length - 1)) * 60},${16 - ((value - min) / span) * 14}`,
+      (point, index) =>
+        `${(index / (points.length - 1)) * 60},${16 - ((point.value - min) / span) * 14}`,
     )
     .join(' ');
   return (
@@ -72,7 +76,9 @@ function Sparkline({ block }: { block: PriceBlock }) {
       width="60"
       height="18"
       role="img"
-      aria-label="30-day, 7-day and 24-hour average"
+      // The API often omits one of the three, in which case only two points
+      // are drawn — name the ones actually on screen, not all three.
+      aria-label={`Price trend: ${points.map((point) => point.label).join(', ')}`}
     >
       <polyline points={path} fill="none" stroke="currentColor" strokeWidth="1.5" />
     </svg>
