@@ -8,6 +8,7 @@ import { HolodexErrorBoundary } from './components/ErrorBoundary';
 import { NotFoundView } from './views/NotFoundView';
 import { SetsView } from './views/SetsView';
 import { SetView } from './views/SetView';
+import { SearchView } from './views/SearchView';
 
 export interface AppProps {
   controller: RouteController;
@@ -26,6 +27,7 @@ function renderView(route: Route): ReactNode {
     case 'set':
       return <SetView setId={route.setId} filters={route.filters} />;
     case 'search':
+      return <SearchView filters={route.filters} />;
     case 'collection':
     case 'card':
       return <p className="text-holo-muted">View “{route.view}” lands in a later task.</p>;
