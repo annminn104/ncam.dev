@@ -119,6 +119,31 @@ describe('endpoints', () => {
     await expect(getSets()).rejects.toBeInstanceOf(TcgdexError);
   });
 
+  it('throws TcgdexError when getSet receives a body without a string id', async () => {
+    mockFetch(() => ({ not: 'a set' }));
+    await expect(getSet('swsh3')).rejects.toBeInstanceOf(TcgdexError);
+    await expect(getSet('swsh3')).rejects.toMatchObject({ url: `${API_BASE}/sets/swsh3` });
+  });
+
+  it('throws TcgdexError when getCard receives a body without a string id', async () => {
+    mockFetch(() => ({ not: 'a card' }));
+    await expect(getCard('swsh3-1')).rejects.toBeInstanceOf(TcgdexError);
+  });
+
+  it('throws TcgdexError when the response body cannot be parsed as JSON', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: true,
+        status: 200,
+        json: async () => {
+          throw new SyntaxError('Unexpected token < in JSON at position 0');
+        },
+      })),
+    );
+    await expect(getSets()).rejects.toBeInstanceOf(TcgdexError);
+  });
+
   it('throws TcgdexError when the network rejects', async () => {
     vi.stubGlobal(
       'fetch',
