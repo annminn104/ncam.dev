@@ -2,6 +2,7 @@ import { createFileRoute, Link } from '@tanstack/react-router';
 import type { BlogPost } from '@ncam/cms';
 import { createLogger } from '@ncam/logger';
 import { getBlogPosts } from '../../functions/blog.functions';
+import { ThemeToggle } from '../../components/theme-toggle';
 
 const log = createLogger({ scope: 'portfolio' });
 import { SITE_URL } from '../../lib/site';
@@ -50,6 +51,7 @@ function BlogIndexPage() {
       <Link to="/" className="stage__back">
         <span aria-hidden="true">←</span> Home
       </Link>
+      <ThemeToggle className="theme-toggle--floating" />
       <header className="blogpage__head">
         <p className="blogpage__label">Blog</p>
         <h1 className="blogpage__title">Notes from the build</h1>

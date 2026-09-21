@@ -1,6 +1,7 @@
 import { useRef } from 'react';
 import { sections } from '../../data/sections';
 import { gsap, useGsap } from '../../lib/gsap';
+import { ThemeToggle } from '../theme-toggle';
 
 const BRAND = 'ncam';
 
@@ -25,24 +26,27 @@ export function HomeNav({ active }: { active: string }) {
           <span className="hnav__dot" aria-hidden="true" />
           {BRAND}.dev
         </a>
-        <nav aria-label="Sections">
-          <ul className="hnav__links">
-            {sections
-              .filter((section) => section.id !== 'top')
-              .map((section) => (
-                <li key={section.id}>
-                  <a
-                    href={`#${section.id}`}
-                    className="hnav__link"
-                    data-active={active === section.id ? '' : undefined}
-                    aria-current={active === section.id ? 'location' : undefined}
-                  >
-                    {section.label}
-                  </a>
-                </li>
-              ))}
-          </ul>
-        </nav>
+        <div className="hnav__end">
+          <nav aria-label="Sections">
+            <ul className="hnav__links">
+              {sections
+                .filter((section) => section.id !== 'top')
+                .map((section) => (
+                  <li key={section.id}>
+                    <a
+                      href={`#${section.id}`}
+                      className="hnav__link"
+                      data-active={active === section.id ? '' : undefined}
+                      aria-current={active === section.id ? 'location' : undefined}
+                    >
+                      {section.label}
+                    </a>
+                  </li>
+                ))}
+            </ul>
+          </nav>
+          <ThemeToggle />
+        </div>
       </div>
     </header>
   );
