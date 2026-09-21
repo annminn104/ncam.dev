@@ -13,6 +13,10 @@ apps/
              project remote at runtime. (has its own AGENTS.md)
   toonhub/   The TOONHUB collectible-figurine hero, now a federated remote
              exposing a framework-free mount() function. (has its own AGENTS.md)
+  holodex/   Pokémon TCG explorer remote (port 9007) with a route-aware
+             MountConfig/MountHandle contract (host-owned nested URLs, no
+             remount on in-app navigation) and a lazily-chunked three.js holo
+             card renderer. (has its own AGENTS.md)
   strapi/    Strapi 5 headless CMS for the blog — a backend service, not a
              federation remote: public read-only REST API on :1337. (has its own AGENTS.md)
 packages/
@@ -39,7 +43,7 @@ Commands (from the root):
 
 ```bash
 pnpm install
-pnpm dev        # runs every app's dev server (shell :9000, remotes :9001–:9006, strapi :1337)
+pnpm dev        # runs every app's dev server (shell :9000, remotes :9001–:9007, strapi :1337)
 pnpm build      # builds every app
 pnpm typecheck
 pnpm assets     # downloads project image assets where apps define it

@@ -1,7 +1,7 @@
 # Holodex (Pokémon TCG explorer + WebGL holo cards) — design
 
 Date: 2026-09-21
-Status: designed, not implemented
+Status: implemented on feat/holodex (2026-09-21)
 Scope: a new federated remote `apps/holodex` (port 9007) plus the host changes
 needed to give a remote its own nested URLs. Data comes from the public
 [TCGdex](https://tcgdex.dev) REST API (`https://api.tcgdex.net/v2/en`).
