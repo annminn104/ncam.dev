@@ -3,7 +3,14 @@ import { SHAPE_ID } from '../regions';
 export const VERTEX_SHADER = /* glsl */ `
 out vec2 vUv;
 void main() {
-  vUv = uv;
+  // three.js's PlaneGeometry emits uv.y = 1 at the top (uv.y points up —
+  // PlaneGeometry.js pushes 1 - (iy / gridY)), but everything downstream of
+  // vUv is authored in y-down card space: the clip insets and stage cut-out
+  // in regions.ts, every effect's fromTop offset, and the CSS-derived
+  // gradients they all come from. Flip once here so vUv matches that
+  // convention everywhere else it's consumed, instead of leaving every
+  // consumer to re-derive (or silently disagree about) the flip.
+  vUv = vec2(uv.x, 1.0 - uv.y);
   gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
 }
 `;
@@ -25,7 +32,11 @@ uniform float uCardOpacity;
 const float STAGE_STEP_X = 0.57;
 const float STAGE_STEP_Y = 0.16;
 
-/** Whether the foil reaches this fragment. uv.y runs down the card. */
+/**
+ * Whether the foil reaches this fragment. uv.y runs down the card — true
+ * because the vertex shader above flips three.js's y-up uv before vUv ever
+ * reaches here.
+ */
 float coverage(vec2 uv) {
   float inside = step(uClipRect.w, uv.x)
                * step(uv.x, 1.0 - uClipRect.y)

@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { disposeMaterials, getMaterial } from './program-cache';
 
+/** Every `uniform <type> <name>;` declaration in a compiled fragment shader. */
+function declaredUniforms(source: string): string[] {
+  return Array.from(source.matchAll(/uniform\s+\w+\s+(\w+)\s*;/g), (match) => match[1]);
+}
+
 describe('getMaterial', () => {
   it('returns a material for a known effect', () => {
     const m = getMaterial('basic');
@@ -25,21 +30,21 @@ describe('getMaterial', () => {
 
   it('declares every uniform the generated shaders reference', () => {
     disposeMaterials();
-    const m = getMaterial('cosmos-holo');
-    for (const name of [
-      'uCard',
-      'uGlitter',
-      'uGrain',
-      'uPointer',
-      'uPointerUV',
-      'uPointerFromCenter',
-      'uTime',
-      'uClipRect',
-      'uClipShape',
-      'uInvert',
-      'uCardOpacity',
-    ]) {
-      expect(m?.uniforms, name).toHaveProperty(name);
+    // Derived from each effect's own compiled source rather than restated as
+    // a fixed list — a fixed list still passes if a new uniform is added to
+    // the GLSL and forgotten in program-cache.ts's `build()`, which is
+    // exactly the failure this test is named for. Checked against more than
+    // one effect since different effects generate different source.
+    for (const id of ['basic', 'cosmos-holo'] as const) {
+      const m = getMaterial(id);
+      const declared = declaredUniforms(m?.fragmentShader ?? '');
+      // A regex that matched nothing would make the loop below vacuously
+      // pass even if program-cache.ts provided zero uniforms, so assert it
+      // actually found declarations before trusting it found them all.
+      expect(declared.length, `${id}: found uniform declarations`).toBeGreaterThan(0);
+      for (const name of declared) {
+        expect(m?.uniforms, `${id}: ${name}`).toHaveProperty(name);
+      }
     }
   });
 

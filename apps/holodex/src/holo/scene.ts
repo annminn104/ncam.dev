@@ -41,8 +41,25 @@ function sharedTexture(name: TextureName): CanvasTexture {
   const texture = new CanvasTexture(makeTexture(name));
   texture.wrapS = RepeatWrapping;
   texture.wrapT = RepeatWrapping;
+  // Tiling noise, so the flip is visually meaningless either way — but every
+  // texture in this pipeline agreeing on orientation (see the card texture
+  // in setCard below) is one fewer thing for the next person to re-derive.
+  texture.flipY = false;
   shared.set(name, texture);
   return texture;
+}
+
+/**
+ * Maps the -1..1 pointer space that `setPointer` receives — y-up, +1 at the
+ * top of the card, per HoloCard's `onPointerMove` negating `clientY` — to
+ * the 0..1 y-down space `uPointerUV` is sampled in, matching the vertex
+ * shader's flipped `vUv` (shader/base.ts) and `coverage()`'s "uv.y runs down
+ * the card". Pulled out as its own pure function because `createHoloScene`
+ * needs a live WebGL renderer to run at all, so this mapping is the one
+ * piece of the frame loop a unit test can reach without one.
+ */
+export function pointerToUV(x: number, y: number): [number, number] {
+  return [(x + 1) / 2, (1 - y) / 2];
 }
 
 export function createHoloScene(canvas: HTMLCanvasElement): HoloScene {
@@ -103,8 +120,10 @@ export function createHoloScene(canvas: HTMLCanvasElement): HoloScene {
 
     const material = mesh.material;
     material.uniforms.uPointer.value.set(current.x, current.y);
-    // 0..1 card space, y down the card — matches vUv and coverage().
-    material.uniforms.uPointerUV.value.set((current.x + 1) / 2, (current.y + 1) / 2);
+    // 0..1 card space, y down the card — matches vUv and coverage(). See
+    // pointerToUV above for the derivation and why the y term flips.
+    const [pointerU, pointerV] = pointerToUV(current.x, current.y);
+    material.uniforms.uPointerUV.value.set(pointerU, pointerV);
     material.uniforms.uPointerFromCenter.value = Math.min(
       1,
       Math.hypot(current.x, current.y) / Math.SQRT2,
@@ -126,6 +145,11 @@ export function createHoloScene(canvas: HTMLCanvasElement): HoloScene {
         texture.dispose();
         return;
       }
+      // three.js defaults flipY to true, which would undo the vertex
+      // shader's own flip (shader/base.ts) and render the card upside down.
+      // The generator samples this texture with vUv directly — compile.ts's
+      // main() opens with `vec3 art = srcCard(vUv);` — so this has to be off.
+      texture.flipY = false;
       cardTexture?.dispose();
       cardTexture = texture;
       // The card can load after the selection is set, or before it, so

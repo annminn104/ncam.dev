@@ -60,12 +60,23 @@ const rich: Effect = {
 };
 
 describe('VERTEX_SHADER', () => {
-  it('passes uv through and is balanced', () => {
+  it('derives vUv from uv and is balanced', () => {
     expect(VERTEX_SHADER).toContain('vUv');
     expect(VERTEX_SHADER).toContain('gl_Position');
     expect((VERTEX_SHADER.match(/\{/g) ?? []).length).toBe(
       (VERTEX_SHADER.match(/\}/g) ?? []).length,
     );
+  });
+
+  it('flips uv.y instead of passing three.js uv straight through', () => {
+    // three.js's PlaneGeometry puts uv.y = 1 at the top; everything vUv
+    // feeds downstream — regions.ts's clip insets, every effect's fromTop
+    // offset, the CSS-derived gradients — is authored y-down. A silent
+    // revert to `vUv = uv;` would invert the foil vertically across all 22
+    // effects with a fully green suite, since ShaderMaterial is inert until
+    // a GPU links it. This is the one place under `node` that can catch it.
+    expect(VERTEX_SHADER).not.toContain('vUv = uv;');
+    expect(VERTEX_SHADER).toMatch(/vUv\s*=\s*vec2\(\s*uv\.x\s*,\s*1\.0\s*-\s*uv\.y\s*\)/);
   });
 });
 
