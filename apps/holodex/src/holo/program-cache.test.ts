@@ -3,7 +3,10 @@ import { disposeMaterials, getMaterial } from './program-cache';
 
 /** Every `uniform <type> <name>;` declaration in a compiled fragment shader. */
 function declaredUniforms(source: string): string[] {
-  return Array.from(source.matchAll(/uniform\s+\w+\s+(\w+)\s*;/g), (match) => match[1]);
+  return Array.from(
+    source.matchAll(/uniform\s+\w+\s+(\w+)\s*(?:\[[^\]]*\])?\s*;/g),
+    (match) => match[1],
+  );
 }
 
 describe('getMaterial', () => {
@@ -33,8 +36,12 @@ describe('getMaterial', () => {
     // Derived from each effect's own compiled source rather than restated as
     // a fixed list — a fixed list still passes if a new uniform is added to
     // the GLSL and forgotten in program-cache.ts's `build()`, which is
-    // exactly the failure this test is named for. Checked against more than
-    // one effect since different effects generate different source.
+    // exactly the failure this test is named for. Looped over more than one
+    // effect to guard against a future uniform that only some effect emits —
+    // today every effect's declared uniforms come from the same shared
+    // baseGLSL + sourcesGLSL that compile.ts splices into all of them
+    // unconditionally, so basic and cosmos-holo currently declare an
+    // identical set.
     for (const id of ['basic', 'cosmos-holo'] as const) {
       const m = getMaterial(id);
       const declared = declaredUniforms(m?.fragmentShader ?? '');

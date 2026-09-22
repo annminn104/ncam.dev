@@ -35,6 +35,19 @@ export interface HoloScene {
  */
 const shared = new Map<TextureName, CanvasTexture>();
 
+/**
+ * The vertex shader flips vUv to y-down (shader/base.ts), so every texture
+ * the generated shaders sample must not flip too, or the two flips cancel
+ * out and the art renders upside down. Pulled out so both call sites below
+ * (the shared glitter/grain textures and the per-card texture in setCard)
+ * share one implementation — and so a bare `new Texture()` can pin it in a
+ * test without a live WebGL renderer.
+ */
+export function orientTexture<T extends Texture>(texture: T): T {
+  texture.flipY = false;
+  return texture;
+}
+
 function sharedTexture(name: TextureName): CanvasTexture {
   const hit = shared.get(name);
   if (hit) return hit;
@@ -44,7 +57,7 @@ function sharedTexture(name: TextureName): CanvasTexture {
   // Tiling noise, so the flip is visually meaningless either way — but every
   // texture in this pipeline agreeing on orientation (see the card texture
   // in setCard below) is one fewer thing for the next person to re-derive.
-  texture.flipY = false;
+  orientTexture(texture);
   shared.set(name, texture);
   return texture;
 }
@@ -149,14 +162,13 @@ export function createHoloScene(canvas: HTMLCanvasElement): HoloScene {
       // shader's own flip (shader/base.ts) and render the card upside down.
       // The generator samples this texture with vUv directly — compile.ts's
       // main() opens with `vec3 art = srcCard(vUv);` — so this has to be off.
-      texture.flipY = false;
+      orientTexture(texture);
       cardTexture?.dispose();
       cardTexture = texture;
       // The card can load after the selection is set, or before it, so
       // re-assign onto whichever material is current right now.
       const material = mesh.material;
       material.uniforms.uCard.value = texture;
-      material.needsUpdate = true;
     },
     setSelection(selection) {
       const material = getMaterial(selection.effect);
