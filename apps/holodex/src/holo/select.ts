@@ -97,7 +97,13 @@ export const EFFECT_BY_RARITY: Record<string, EffectId> = {
 
   'Holo Rare V': 'v-regular',
   'Ultra Rare': 'v-full-art',
-  'Double rare': 'v-full-art',
+  // Double rare is the ordinary SV-era ex card: standard layout, normal art
+  // window. It is NOT a full art — that's Ultra Rare (full-art ex) and
+  // Special illustration rare (secret-rare tier). v-regular gets the
+  // standard-layout holo treatment and, unlike v-full-art, is not in
+  // FULL_ART, so clipShape() falls through to regular/stage/trainer by
+  // category instead of covering the whole card.
+  'Double rare': 'v-regular',
   'Two Star': 'v-full-art',
   'Holo Rare VMAX': 'v-max',
   'Holo Rare VSTAR': 'v-star',
@@ -158,7 +164,25 @@ function clipShape(effect: EffectId, card: Card): ClipShape {
 
 /** Which foil a card gets, where it is confined, and whether that is inverted. */
 export function selectHolo(card: Card): HoloSelection {
-  const base: EffectId = (card.rarity && EFFECT_BY_RARITY[card.rarity]) || 'basic';
+  let base: EffectId = (card.rarity && EFFECT_BY_RARITY[card.rarity]) || 'basic';
+
+  // TCGdex files every promo — plain reprints and holo V/ex/GX chase cards
+  // alike — under the single rarity 'Promo', which EFFECT_BY_RARITY maps to
+  // 'basic'. The reference (CardProxy.svelte) recovers the real foil by
+  // rewriting the rarity from the card's subtypes before selecting one; we
+  // don't have subtypes, but `suffix` (V, ex, GX, EX, TAG TEAM-GX, ...) is
+  // the same signal when TCGdex populates it, so a promo carrying one gets
+  // the standard V/ex holo treatment instead of rendering flat. A promo with
+  // no suffix really is unfoiled and stays on 'basic'.
+  //
+  // This deliberately does not special-case VMAX/VSTAR promos: TCGdex's
+  // `suffix` is inconsistent for them (swsh3-2 Butterfree VMAX has no
+  // suffix, while swsh12-008 Serperior VSTAR has suffix "V"). Parsing the
+  // card name instead would be fragile and language-dependent, so we leave
+  // that gap rather than guess.
+  if (base === 'basic' && card.rarity === 'Promo' && card.suffix) {
+    base = 'v-regular';
+  }
 
   let effect = base;
   let invert = false;

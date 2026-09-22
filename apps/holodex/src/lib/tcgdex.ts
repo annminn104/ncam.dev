@@ -136,6 +136,9 @@ export interface Card extends CardBrief {
   illustrator?: string;
   rarity?: string;
   trainerType?: string;
+  /** Subtype suffix, e.g. 'V' | 'ex' | 'GX' | 'EX' | 'TAG TEAM-GX'. Used to
+   * recover the real foil for Promo-rarity cards — see selectHolo. */
+  suffix?: string;
   variants?: Variants;
   variants_detailed?: VariantDetail[];
   dexId?: number[];

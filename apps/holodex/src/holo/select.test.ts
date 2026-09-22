@@ -163,3 +163,39 @@ describe('selectHolo — clip shape', () => {
     expect(selectHolo(card({ rarity: 'Holo Rare', stage: 'Basic' })).shape).toBe('regular');
   });
 });
+
+describe('selectHolo — Double rare is the standard-layout ex, not a full art', () => {
+  it('selects v-regular for a Double rare Pokemon card, clipped to the art window', () => {
+    const selection = selectHolo(card({ rarity: 'Double rare', stage: 'Basic' }));
+    expect(selection.effect).toBe('v-regular');
+    // The whole point of the fix: this must NOT be 'full' (that's what made
+    // the foil cover the entire card, indistinguishable from a real full art).
+    expect(selection.shape).toBe('regular');
+  });
+
+  it('gives a Double rare Stage1/Stage2 card the stepped stage region', () => {
+    expect(selectHolo(card({ rarity: 'Double rare', stage: 'Stage1' })).shape).toBe('stage');
+    expect(selectHolo(card({ rarity: 'Double rare', stage: 'Stage2' })).shape).toBe('stage');
+  });
+
+  it('still gives Ultra Rare the full-art treatment — the other ex tier', () => {
+    // Regression guard: Double rare and Ultra Rare are both "ex" cards but
+    // must stay on opposite sides of FULL_ART. If a future edit collapses
+    // them back together, this goes red.
+    const selection = selectHolo(card({ rarity: 'Ultra Rare' }));
+    expect(selection.effect).toBe('v-full-art');
+    expect(selection.shape).toBe('full');
+  });
+});
+
+describe('selectHolo — promo subtype foils', () => {
+  it('gives a Promo card with a subtype suffix the v-regular holo treatment', () => {
+    expect(selectHolo(card({ rarity: 'Promo', suffix: 'V' })).effect).toBe('v-regular');
+    expect(selectHolo(card({ rarity: 'Promo', suffix: 'ex' })).effect).toBe('v-regular');
+  });
+
+  it('leaves a plain Promo card with no suffix unfoiled', () => {
+    expect(selectHolo(card({ rarity: 'Promo' })).effect).toBe('basic');
+    expect(selectHolo(card({ rarity: 'Promo', suffix: '' })).effect).toBe('basic');
+  });
+});
