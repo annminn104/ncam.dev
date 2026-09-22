@@ -1,7 +1,11 @@
 # Holodex holo effects v2 — rarity-keyed, derived from pokemon-cards-css
 
 Date: 2026-09-21
-Status: designed, not implemented
+Status: implemented on branch `feat/holodex-holo-v2` (not merged, not pushed,
+not reviewed). One deviation from §5.1's sketch: effects are declarative
+descriptions (`holo/shader/types.ts#Effect`) compiled to GLSL by
+`holo/shader/compile.ts#compileEffect`, rather than hand-written GLSL chunks
+per effect.
 Scope: replaces the four-tier foil model in `apps/holodex/src/holo/` with 22
 rarity-specific effects derived from
 [simeydotme/pokemon-cards-css](https://github.com/simeydotme/pokemon-cards-css),
