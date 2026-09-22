@@ -40,6 +40,19 @@ describe('EFFECTS registry', () => {
     }
   });
 
+  it('never lets a first layer carry a blend the generator drops', () => {
+    // layerCode() seeds stack_<prefix> straight from layers[0]'s source and
+    // never calls blendWith for it — a first layer has nothing beneath it to
+    // blend against, exactly like CSS ignoring background-blend-mode on a
+    // first background. A non-'normal' blend at layers[0] is silently
+    // dropped by the generator, so it is always a mistake in the data.
+    for (const [key, effect] of Object.entries(EFFECTS)) {
+      for (const el of [...effect.shine, ...effect.glare]) {
+        expect(el.layers[0].blend, key).toBe('normal');
+      }
+    }
+  });
+
   it('keeps every gradient within the shader stop limit', () => {
     for (const [key, effect] of Object.entries(EFFECTS)) {
       for (const el of [...effect.shine, ...effect.glare]) {
@@ -61,7 +74,22 @@ describe('EFFECTS registry', () => {
     for (const [key, effect] of Object.entries(EFFECTS)) {
       const src = compileEffect(effect);
       expect((src.match(/\{/g) ?? []).length, key).toBe((src.match(/\}/g) ?? []).length);
-      expect(src, key).toContain('void main()');
+
+      // Every generated shader contains 'void main()' unconditionally, so
+      // asserting that only proves compileEffect() ran — it can never fail,
+      // so it can never catch a dropped element or layer. Count what
+      // layerCode()/elementCode() actually emit instead: one `vec3 src_`
+      // declaration per layer, and one `acc = mix(acc, blendWith(` per
+      // element (that exact pattern excludes the unconditional clip-region
+      // line `acc = mix(art, acc, cov);`, which would otherwise be an
+      // off-by-one for every effect).
+      const layerCount = [...effect.shine, ...effect.glare].reduce(
+        (n, el) => n + el.layers.length,
+        0,
+      );
+      const elementCount = effect.shine.length + effect.glare.length;
+      expect((src.match(/vec3 src_/g) ?? []).length, key).toBe(layerCount);
+      expect((src.match(/acc = mix\(acc, blendWith\(/g) ?? []).length, key).toBe(elementCount);
     }
   });
 });

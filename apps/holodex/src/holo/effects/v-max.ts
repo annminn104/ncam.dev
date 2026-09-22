@@ -36,7 +36,8 @@ export const vMax: Effect = {
       layers: [
         {
           source: { kind: 'repeating-linear', angleDeg: 0, space: 0.05, stops: SUNPILLAR },
-          blend: 'hue',
+          // The first layer of an element has nothing beneath it, so its blend is ignored — the same reason CSS ignores it.
+          blend: 'normal',
           size: [2, 7],
           offset: { x: { base: 0 }, y: { base: 0, fromTop: 1 } },
         },

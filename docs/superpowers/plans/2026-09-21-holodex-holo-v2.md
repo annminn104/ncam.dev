@@ -2832,7 +2832,7 @@ export const vMax: Effect = {
       layers: [
         {
           source: { kind: 'repeating-linear', angleDeg: 0, space: 0.05, stops: SUNPILLAR },
-          blend: 'hue',
+          blend: 'normal',
           size: [2, 7],
           offset: { x: { base: 0 }, y: { base: 0, fromTop: 1 } },
         },
