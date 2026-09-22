@@ -7,21 +7,42 @@ import {
   Scene,
   ShaderMaterial,
   TextureLoader,
+  Vector2,
   WebGLRenderer,
+  type Texture,
 } from 'three';
-import { FRAGMENT_SHADER, VERTEX_SHADER } from './shaders';
-import { makeFoilTexture } from './textures';
-import { TIER_INTENSITY, type FoilTier } from './tiers';
+import { getMaterial } from './program-cache';
+import { regionFor, SHAPE_ID } from './regions';
+import type { HoloSelection } from './select';
+import { makeTexture, type TextureName } from './textures';
 
 export interface HoloScene {
   setCard: (url: string) => Promise<void>;
-  setTier: (tier: FoilTier) => void;
+  setSelection: (selection: HoloSelection) => void;
   /** Pointer in -1..1 card space; also drives the mesh tilt. */
   setPointer: (x: number, y: number) => void;
   resize: (width: number, height: number) => void;
   start: () => void;
   stop: () => void;
   dispose: () => void;
+}
+
+/**
+ * The glitter and grain CanvasTextures. Materials are cached per effect
+ * (program-cache.ts) and shared across every scene that uses that effect, so
+ * the textures they sample have to be shared too — built once per name here,
+ * module-level, and never disposed by any one scene's dispose().
+ */
+const shared = new Map<TextureName, CanvasTexture>();
+
+function sharedTexture(name: TextureName): CanvasTexture {
+  const hit = shared.get(name);
+  if (hit) return hit;
+  const texture = new CanvasTexture(makeTexture(name));
+  texture.wrapS = RepeatWrapping;
+  texture.wrapT = RepeatWrapping;
+  shared.set(name, texture);
+  return texture;
 }
 
 export function createHoloScene(canvas: HTMLCanvasElement): HoloScene {
@@ -33,37 +54,61 @@ export function createHoloScene(canvas: HTMLCanvasElement): HoloScene {
   camera.position.z = 2;
 
   const target = { x: 0, y: 0 };
-  // Also the uPointer uniform's value object. three compares a vec2 uniform
-  // component-wise against its cache, so mutating this in place is picked up
-  // exactly like a fresh object would be — without allocating one per frame.
+  // Spring-smoothed toward `target` each frame so the card leans rather than
+  // snapping, then written into the *current* material's own uPointer
+  // uniforms in frame() below. Never held as a uniform's value object itself
+  // — that object belongs to a cached material this scene may not be the
+  // only user of.
   const current = { x: 0, y: 0 };
 
-  const material = new ShaderMaterial({
-    vertexShader: VERTEX_SHADER,
-    fragmentShader: FRAGMENT_SHADER,
+  // Stands in for `mesh.material` until the first successful setSelection().
+  // Unlike a material from getMaterial(), this one is never registered with
+  // the effect cache, so it is this scene's alone to dispose.
+  const placeholder = new ShaderMaterial({
     transparent: true,
+    vertexShader: /* glsl */ `
+      void main() {
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: /* glsl */ `
+      void main() {
+        gl_FragColor = vec4(0.0);
+      }
+    `,
     uniforms: {
       uCard: { value: null },
-      uFoil: { value: null },
-      uPointer: { value: current },
+      uPointer: { value: new Vector2(0, 0) },
+      uPointerUV: { value: new Vector2(0.5, 0.5) },
+      uPointerFromCenter: { value: 0 },
       uTime: { value: 0 },
-      uIntensity: { value: 0 },
     },
   });
 
   const geometry = new PlaneGeometry(1, 1);
-  const mesh = new Mesh(geometry, material);
+  const mesh = new Mesh(geometry, placeholder);
   scene.add(mesh);
 
   let raf = 0;
   let running = false;
   let disposed = false;
   const start0 = performance.now();
+  // Owned here, not read back off a uniform, because the uniform lives on a
+  // material this scene may be sharing with another live scene.
+  let cardTexture: Texture | null = null;
 
   const frame = () => {
-    // Spring toward the pointer so the card leans rather than snapping.
     current.x += (target.x - current.x) * 0.12;
     current.y += (target.y - current.y) * 0.12;
+
+    const material = mesh.material;
+    material.uniforms.uPointer.value.set(current.x, current.y);
+    // 0..1 card space, y down the card — matches vUv and coverage().
+    material.uniforms.uPointerUV.value.set((current.x + 1) / 2, (current.y + 1) / 2);
+    material.uniforms.uPointerFromCenter.value = Math.min(
+      1,
+      Math.hypot(current.x, current.y) / Math.SQRT2,
+    );
     material.uniforms.uTime.value = (performance.now() - start0) / 1000;
     mesh.rotation.y = current.x * 0.18;
     mesh.rotation.x = -current.y * 0.18;
@@ -81,17 +126,32 @@ export function createHoloScene(canvas: HTMLCanvasElement): HoloScene {
         texture.dispose();
         return;
       }
-      material.uniforms.uCard.value?.dispose?.();
+      cardTexture?.dispose();
+      cardTexture = texture;
+      // The card can load after the selection is set, or before it, so
+      // re-assign onto whichever material is current right now.
+      const material = mesh.material;
       material.uniforms.uCard.value = texture;
       material.needsUpdate = true;
     },
-    setTier(tier) {
-      const foil = new CanvasTexture(makeFoilTexture(tier));
-      foil.wrapS = RepeatWrapping;
-      foil.wrapT = RepeatWrapping;
-      (material.uniforms.uFoil.value as CanvasTexture | null)?.dispose?.();
-      material.uniforms.uFoil.value = foil;
-      material.uniforms.uIntensity.value = TIER_INTENSITY[tier];
+    setSelection(selection) {
+      const material = getMaterial(selection.effect);
+      // basic itself failed to compile; leave the current mesh material
+      // alone and let the React layer fall back to the plain image.
+      if (!material) return;
+
+      material.uniforms.uCard.value = cardTexture;
+      material.uniforms.uGlitter.value = sharedTexture('glitter');
+      material.uniforms.uGrain.value = sharedTexture('grain');
+
+      // vec4(top, right, bottom, left), matching the order coverage() in
+      // shader/base.ts reads uClipRect in.
+      const region = regionFor(selection.shape);
+      material.uniforms.uClipRect.value.set(region.top, region.right, region.bottom, region.left);
+      material.uniforms.uClipShape.value = SHAPE_ID[selection.shape];
+      material.uniforms.uInvert.value = selection.invert ? 1 : 0;
+
+      mesh.material = material;
     },
     setPointer(x, y) {
       target.x = x;
@@ -116,11 +176,19 @@ export function createHoloScene(canvas: HTMLCanvasElement): HoloScene {
       running = false;
       disposed = true;
       cancelAnimationFrame(raf);
-      // Both textures: the foil canvas texture and whatever card art was loaded.
-      (material.uniforms.uFoil.value as CanvasTexture | null)?.dispose?.();
-      (material.uniforms.uCard.value as CanvasTexture | null)?.dispose?.();
+      // Only clear the shared material's uCard if it's still pointing at the
+      // texture we're about to free — a second live scene may already have
+      // pointed the same shared material at a texture of its own.
+      if (mesh.material.uniforms.uCard.value === cardTexture) {
+        mesh.material.uniforms.uCard.value = null;
+      }
+      cardTexture?.dispose();
+      // The placeholder is this scene's own, never shared — safe to dispose
+      // whether or not it's still current. uGlitter/uGrain are module-level
+      // shared textures and a getMaterial() material outlives the scene, so
+      // neither is touched here; disposeMaterials() is HoloCard's job.
+      placeholder.dispose();
       geometry.dispose();
-      material.dispose();
       // dispose() alone leaves the WebGL context alive until the canvas is
       // collected. Every card navigation builds a new canvas and renderer, and
       // Chrome caps live contexts near 16 — past that it kills the oldest and

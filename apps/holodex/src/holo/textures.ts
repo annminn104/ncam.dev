@@ -1,6 +1,6 @@
-import type { FoilTier } from './tiers';
+export type TextureName = 'glitter' | 'grain';
 
-const cache = new Map<FoilTier, HTMLCanvasElement>();
+const cache = new Map<TextureName, HTMLCanvasElement>();
 
 function canvasOf(
   width: number,
@@ -10,7 +10,7 @@ function canvasOf(
   canvas.width = width;
   canvas.height = height;
   const ctx = canvas.getContext('2d');
-  if (!ctx) throw new Error('2D canvas unavailable for the foil texture');
+  if (!ctx) throw new Error('2D canvas unavailable for the holo texture');
   return { canvas, ctx };
 }
 
@@ -26,23 +26,7 @@ function sparkle(): HTMLCanvasElement {
   return canvas;
 }
 
-function rainbow(): HTMLCanvasElement {
-  const { canvas, ctx } = canvasOf(512, 64);
-  const gradient = ctx.createLinearGradient(0, 0, 512, 0);
-  const stops = ['#ff2d55', '#ff9500', '#ffe83d', '#3ddc84', '#32ade6', '#7c5cff', '#ff2d55'];
-  stops.forEach((color, index) => gradient.addColorStop(index / (stops.length - 1), color));
-  ctx.fillStyle = gradient;
-  ctx.fillRect(0, 0, 512, 64);
-  // Banding, so the sheen reads as foil rather than as a smooth gradient.
-  ctx.globalCompositeOperation = 'multiply';
-  for (let x = 0; x < 512; x += 6) {
-    ctx.fillStyle = `rgba(0,0,0,${x % 12 === 0 ? 0.18 : 0})`;
-    ctx.fillRect(x, 0, 3, 64);
-  }
-  return canvas;
-}
-
-function cosmos(): HTMLCanvasElement {
+function grain(): HTMLCanvasElement {
   const { canvas, ctx } = canvasOf(1024, 1024);
   const base = ctx.createLinearGradient(0, 0, 1024, 1024);
   base.addColorStop(0, '#120a2e');
@@ -68,11 +52,11 @@ function cosmos(): HTMLCanvasElement {
   return canvas;
 }
 
-/** Cached per tier for the page's lifetime — every card shares one texture. */
-export function makeFoilTexture(tier: FoilTier): HTMLCanvasElement {
-  const hit = cache.get(tier);
+/** Generated once at runtime, shared by every effect that names them. */
+export function makeTexture(name: TextureName): HTMLCanvasElement {
+  const hit = cache.get(name);
   if (hit) return hit;
-  const made = tier === 'cosmos' ? cosmos() : tier === 'rainbow' ? rainbow() : sparkle();
-  cache.set(tier, made);
+  const made = name === 'grain' ? grain() : sparkle();
+  cache.set(name, made);
   return made;
 }
