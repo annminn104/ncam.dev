@@ -32,9 +32,29 @@ function build(id: EffectId): ShaderMaterial {
 }
 
 /**
- * One material per effect, compiled on first use and kept for the page's
- * lifetime. A failure falls back to `basic`; if `basic` itself fails the
- * caller drops to the plain image.
+ * One `ShaderMaterial` per effect id, built on first use and kept for the
+ * page's lifetime.
+ *
+ * What this actually saves is CPU work, not GPU work: `compileEffect()`'s
+ * string codegen and a single `ShaderMaterial` construction per effect. It
+ * does NOT save the GPU compile-and-link. three.js keeps its program cache on
+ * the `WebGLRenderer`, and `scene.ts` calls `forceContextLoss()` when a card
+ * tears down, so each new card's renderer re-links every program from scratch
+ * however warm this map is. The name is older than that teardown; don't read
+ * "cache" as "the shader is compiled once".
+ *
+ * Hazard: a material is shared by every card using that effect, and so are its
+ * uniforms. Two cards on screen with the same effect mutate the very same
+ * `uPointer`, `uClipRect` and `uCard` objects, and the last writer wins. It is
+ * invisible today only because `scene.ts` gives each card its own renderer and
+ * rewrites the pointer and time uniforms immediately before each draw, with
+ * the clip and texture uniforms rewritten on every `setSelection`. Anything
+ * that batches cards into one renderer, or lets a uniform write outlive the
+ * draw it was meant for, needs per-instance materials (`material.clone()`).
+ * Restructuring that is an open decision for the repo owner, not a to-do here.
+ *
+ * A build failure falls back to `basic`; if `basic` itself fails the caller
+ * drops to the plain image.
  */
 export function getMaterial(id: EffectId): ShaderMaterial | null {
   const hit = cache.get(id);

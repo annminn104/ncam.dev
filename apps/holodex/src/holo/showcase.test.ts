@@ -28,6 +28,17 @@ describe('createShowcase', () => {
     expect(s.isActive()).toBe(false);
   });
 
+  it('finishes exactly at its duration, not one frame past it', () => {
+    // The guard is `elapsed >= durationMs`. Relaxing it to `>` leaves the
+    // sweep live for one more sample at exactly t = duration, where the
+    // envelope is sin(PI) — a denormal rather than a clean zero — so the
+    // handover to the pointer spring starts from a nonzero offset.
+    const s = createShowcase({ durationMs: 1000 });
+    s.start(0);
+    expect(s.valueAt(1000)).toEqual({ x: 0, y: 0 });
+    expect(s.isActive()).toBe(false);
+  });
+
   it('cancels on real pointer input and never replays', () => {
     const s = createShowcase({ durationMs: 1000 });
     s.start(0);

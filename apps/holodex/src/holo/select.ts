@@ -148,6 +148,13 @@ function galleryEffect(base: EffectId): EffectId {
   if (base === 'v-regular') return 'trainer-gallery-v-regular';
   if (base === 'v-max') return 'trainer-gallery-v-max';
   if (base === 'secret-rare') return 'trainer-gallery-secret-rare';
+  // Every 'Full Art Trainer' card TCGdex has is TG-numbered, so without this
+  // arm the gallery override swallowed all six of them into
+  // 'trainer-gallery-holo' and 'trainer-full-art' was unreachable — as was
+  // the `rarity === 'Full Art Trainer'` branch in clipShape() below. A full
+  // art trainer is a full art first and a gallery card second: it keeps its
+  // own effect and the `full` clip rather than the gallery `borders` clip.
+  if (base === 'trainer-full-art') return 'trainer-full-art';
   return 'trainer-gallery-holo';
 }
 

@@ -7,7 +7,11 @@
 export interface HoloProbe {
   matchMedia?: (query: string) => { matches: boolean };
   hardwareConcurrency?: number;
-  /** Returns a WebGL2 context, or null/throws when unavailable. */
+  /**
+   * Anything truthy when a WebGL2 context could be created; falsy or throws
+   * when not. Deliberately `unknown` rather than a context type: the real
+   * probe releases the context it opens and reports only the verdict.
+   */
   createContext?: () => unknown;
 }
 
@@ -31,6 +35,17 @@ export function browserProbe(): HoloProbe {
   return {
     matchMedia: (query) => window.matchMedia(query),
     hardwareConcurrency: navigator.hardwareConcurrency,
-    createContext: () => document.createElement('canvas').getContext('webgl2'),
+    // Probing costs a real WebGL2 context, and `HoloCard` probes once per
+    // mount. Left to the garbage collector those accumulate: browsers cap
+    // live contexts near 16 and drop the oldest, which is precisely the
+    // `holo.context-lost` path — a grid of cards could knock out its own
+    // earlier canvases just by asking whether WebGL works. See the same
+    // reasoning in scene.ts's teardown. So free it the instant the answer is
+    // known, and hand `supportsHolo` the boolean rather than the context.
+    createContext: () => {
+      const gl = document.createElement('canvas').getContext('webgl2');
+      gl?.getExtension('WEBGL_lose_context')?.loseContext();
+      return gl !== null;
+    },
   };
 }

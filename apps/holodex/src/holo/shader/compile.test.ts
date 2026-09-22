@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { compileEffect, VERTEX_SHADER } from './compile';
+import { baseGLSL } from './base';
+import { coversPoint, regionFor, SHAPE_ID, STAGE_STEP, type RegionRect } from '../regions';
+import type { ClipShape } from '../select';
 import type { Effect } from './types';
 
 const minimal: Effect = {
@@ -261,10 +264,80 @@ describe('compileEffect', () => {
     expect(src).not.toContain('// --- glare');
   });
 
-  it('applies the clip coverage before writing the fragment', () => {
+  // Region clipping is the spec's headline feature, and it used to be pinned
+  // by `toContain('coverage')` / `toContain('uInvert')` — two strings baseGLSL
+  // emits unconditionally, spliced into every effect whether or not
+  // compileEffect ever applies the clip. Deleting both generated lines left
+  // the whole suite green. These assert on the generated statements instead,
+  // which exist only because compileEffect writes them.
+  it('applies the clip coverage exactly once', () => {
+    const src = compileEffect(rich);
+    expect(src.split('float cov = coverage(vUv);').length - 1).toBe(1);
+    expect(src.split('acc = mix(art, acc, cov);').length - 1).toBe(1);
+  });
+
+  it('clips the shine but leaves the glare covering the whole card', () => {
+    // Ordering is the behaviour: shine accumulates into `acc`, the clip mix
+    // confines it to the region, and only then does glare go on top. That
+    // matches the reference, where .card__shine carries the clip-path and
+    // .card__glare does not. Moving the mix below the glare block would clip
+    // the glare too — a change no string-presence assertion can see.
+    const src = compileEffect(rich);
+    const clip = src.indexOf('acc = mix(art, acc, cov);');
+    const glareBlock = src.indexOf('// --- glare0');
+    expect(clip).toBeGreaterThan(-1);
+    expect(glareBlock).toBeGreaterThan(-1);
+    const firstGlareMix = src.indexOf('acc = mix(acc, blendWith(', glareBlock);
+    expect(firstGlareMix).toBeGreaterThan(-1);
+    expect(clip).toBeLessThan(firstGlareMix);
+  });
+
+  it('takes the stage cut-out constants from regions.ts, not its own literals', () => {
+    // base.ts used to hardcode 0.57/0.16 while regions.ts owned the same pair
+    // for coversPoint. Editing either alone left the suite green with the CPU
+    // and GPU clips silently disagreeing.
     const src = compileEffect(minimal);
-    expect(src).toContain('coverage');
-    expect(src).toContain('uInvert');
+    const x = /const float STAGE_STEP_X = ([0-9.]+);/.exec(src);
+    const y = /const float STAGE_STEP_Y = ([0-9.]+);/.exec(src);
+    expect(x).not.toBeNull();
+    expect(y).not.toBeNull();
+    expect(Number(x?.[1])).toBe(STAGE_STEP.x);
+    expect(Number(y?.[1])).toBe(STAGE_STEP.y);
+  });
+
+  it('emits the element filter rather than dropping it on the floor', () => {
+    // `rich`'s shine element sets brightness (pointer-driven) and contrast but
+    // not saturate, so the third argument falls back to the 1.0 default.
+    const src = compileEffect(rich);
+    expect(src).toContain(
+      'stack_shine0 = applyFilter(stack_shine0, (0.400000 + 0.400000 * uPointerFromCenter), (2.000000), 1.000000);',
+    );
+    const unfiltered: Effect = { ...rich, shine: [{ ...rich.shine[0], filter: undefined }] };
+    const bare = compileEffect(unfiltered);
+    expect(bare).not.toBe(src);
+    expect(bare).toContain(
+      'stack_shine0 = applyFilter(stack_shine0, 1.000000, 1.000000, 1.000000);',
+    );
+  });
+
+  it("emits a layer's size into its uvTransform rather than ignoring it", () => {
+    const sized: Effect = {
+      ...minimal,
+      shine: [{ ...minimal.shine[0], layers: [{ ...minimal.shine[0].layers[0], size: [6, 6] }] }],
+    };
+    const a = compileEffect(sized);
+    const b = compileEffect(minimal);
+    expect(a).not.toBe(b);
+    expect(a).toContain('uvTransform(vUv, vec2(6.000000, 6.000000)');
+    expect(b).toContain('uvTransform(vUv, vec2(1.000000, 1.000000)');
+  });
+
+  it('scales every element mix by uCardOpacity', () => {
+    const src = compileEffect(rich);
+    const mixes = src.match(/acc = mix\(acc, blendWith\([^;]*\);/g) ?? [];
+    // one shine element, one glare element
+    expect(mixes).toHaveLength(2);
+    for (const line of mixes) expect(line).toContain('uCardOpacity');
   });
 
   it('handles every source kind without throwing', () => {
@@ -329,5 +402,89 @@ describe('compileEffect', () => {
     expect(() => compileEffect(all)).not.toThrow();
     const src = compileEffect(all);
     expect((src.match(/\{/g) ?? []).length).toBe((src.match(/\}/g) ?? []).length);
+  });
+});
+
+/**
+ * `coverage()` is GLSL, so nothing under `node` can call it, and base.ts calls
+ * `coversPoint` its "tested twin" without anything checking the claim —
+ * swapping uClipRect's top/bottom components, or dropping the uInvert term
+ * that reverse holo depends on entirely, both left the suite green.
+ *
+ * Hand-copying the arithmetic into JS would not fix that: the copy would agree
+ * with `coversPoint` forever regardless of what base.ts said. So this
+ * translates the *emitted GLSL itself* into JS and executes that. Mutating the
+ * shader mutates what runs here.
+ */
+function transpileCoverage(glsl: string) {
+  const consts = glsl.match(/const float STAGE_STEP_[XY] = [^;]+;/g) ?? [];
+  const body = /float coverage\(vec2 uv\) \{\n([\s\S]*?)\n\}/.exec(glsl)?.[1];
+  if (consts.length !== 2 || !body) {
+    throw new Error('coverage() no longer has the shape this translation assumes');
+  }
+
+  const js = [...consts, body]
+    .join('\n')
+    .replace(/^\s*\/\/.*$/gm, '')
+    .replace(/const float /g, 'const ')
+    .replace(/\bfloat /g, 'let ')
+    .replace(/uClipRect\.x/g, 'rect.top')
+    .replace(/uClipRect\.y/g, 'rect.right')
+    .replace(/uClipRect\.z/g, 'rect.bottom')
+    .replace(/uClipRect\.w/g, 'rect.left')
+    .replace(/uClipShape/g, 'shapeId')
+    .replace(/uInvert/g, 'invert')
+    .replace(/ == /g, ' === ');
+
+  // A translation that quietly left GLSL behind would be a twin all over
+  // again, so fail loudly rather than evaluate something half-converted.
+  expect(js).not.toMatch(/\bu[A-Z]\w*/);
+  expect(js).not.toMatch(/\b(?:float|vec[234]|uniform)\b/);
+
+  const step = (edge: number, v: number) => (v >= edge ? 1 : 0);
+  const mix = (a: number, b: number, t: number) => a * (1 - t) + b * t;
+  const compiled = new Function('uv', 'rect', 'shapeId', 'invert', 'step', 'mix', js) as (
+    uv: { x: number; y: number },
+    rect: RegionRect,
+    shapeId: number,
+    invert: number,
+    step: (edge: number, v: number) => number,
+    mix: (a: number, b: number, t: number) => number,
+  ) => number;
+
+  return (shape: ClipShape, x: number, y: number, invert: boolean) =>
+    compiled({ x, y }, regionFor(shape), SHAPE_ID[shape], invert ? 1 : 0, step, mix);
+}
+
+describe('coverage() in GLSL agrees with coversPoint() in JS', () => {
+  const coverage = transpileCoverage(baseGLSL);
+  const shapes: ClipShape[] = ['full', 'regular', 'stage', 'trainer', 'borders'];
+  // Deliberately offset off the round numbers so no sample lands exactly on an
+  // inset edge: float equality on the boundary is not what this pins.
+  const axis = Array.from({ length: 21 }, (_, i) => (i / 20) * 0.98 + 0.011);
+
+  for (const shape of shapes) {
+    for (const invert of [false, true]) {
+      it(`agrees across the card for ${shape}${invert ? ', inverted' : ''}`, () => {
+        const disagreements: string[] = [];
+        for (const x of axis) {
+          for (const y of axis) {
+            const gpu = coverage(shape, x, y, invert) > 0.5;
+            const cpu = coversPoint(shape, x, y, invert);
+            if (gpu !== cpu) {
+              disagreements.push(`(${x.toFixed(3)}, ${y.toFixed(3)}) gpu=${gpu} cpu=${cpu}`);
+            }
+          }
+        }
+        expect(disagreements).toEqual([]);
+      });
+    }
+  }
+
+  it('actually exercises both verdicts, so agreement is not vacuous', () => {
+    // A coverage() stuck at a constant would "agree" with nothing to compare.
+    expect(coverage('regular', 0.5, 0.3, false)).toBe(1);
+    expect(coverage('regular', 0.5, 0.8, false)).toBe(0);
+    expect(coverage('regular', 0.5, 0.8, true)).toBe(1);
   });
 });

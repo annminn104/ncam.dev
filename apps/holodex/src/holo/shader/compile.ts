@@ -124,6 +124,11 @@ ${shine}
   // the foil only exists inside the clip region
   acc = mix(art, acc, cov);
 
+  // Glare is applied AFTER the clip mix, so it is deliberately unclipped: it
+  // sweeps the whole card while the shine stays inside the art window. That
+  // mirrors the reference, where .card__shine carries the clip-path but
+  // .card__glare covers the full card face. Moving this block above the mix
+  // would confine the glare to the region and flatten the card's edges.
 ${glare}
 
   fragColor = vec4(acc, 1.0);

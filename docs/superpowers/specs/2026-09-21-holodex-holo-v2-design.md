@@ -153,8 +153,8 @@ them, and gets the same two-directional coverage test.
 | `shiny-rare`           | Shiny rare, One Shiny, Two Shiny                                                                     |
 | `shiny-v`              | Shiny rare V, Shiny Ultra Rare                                                                       |
 | `shiny-vmax`           | Shiny rare VMAX                                                                                      |
-| `v-regular`            | Holo Rare V                                                                                          |
-| `v-full-art`           | Ultra Rare, Double rare, Two Star                                                                    |
+| `v-regular`            | Holo Rare V, Double rare                                                                             |
+| `v-full-art`           | Ultra Rare, Two Star                                                                                 |
 | `v-max`                | Holo Rare VMAX                                                                                       |
 | `v-star`               | Holo Rare VSTAR                                                                                      |
 | `trainer-full-art`     | Full Art Trainer                                                                                     |
@@ -175,12 +175,36 @@ rarity. Classic Collection (the Celebrations reprints) genuinely uses cosmos
 foil, so it takes that effect; everything else that would have been cosmos
 falls to `regular-holo`.
 
+`Double rare` deserves one too. It is the ordinary SV-era **ex** card: standard
+layout, normal art window. It is _not_ a full art — that is `Ultra Rare`
+(full-art ex) and `Special illustration rare` (secret-rare tier). So it maps to
+`v-regular`, which is absent from the full-art set in §4.4 and therefore falls
+through to `regular`/`stage`/`trainer` by category rather than covering the
+whole card. An earlier revision of this table filed it under `v-full-art`,
+which made every ex card's foil run edge to edge and left it indistinguishable
+from a real full art.
+
 ### 4.3 Overrides, applied in order
 
+0. **Promo subtype.** TCGdex files every promo under the single rarity `Promo`,
+   which the table maps to `basic` — plain reprints and holo V/ex/GX chase
+   cards alike. The reference (`CardProxy.svelte`) recovers the real foil by
+   rewriting the rarity from the card's subtypes; we have no subtypes, but
+   `suffix` (`V`, `ex`, `GX`, …) carries the same signal, so a `Promo` card
+   with a non-empty `suffix` is promoted to `v-regular` before the overrides
+   below run. A `Promo` with no suffix genuinely is unfoiled and stays on
+   `basic`. The guard is deliberately narrow — it tests the rarity as well as
+   the suffix, so a suffix on any other rarity changes nothing. VMAX/VSTAR
+   promos are knowingly not special-cased: TCGdex's `suffix` is inconsistent
+   for them and parsing card names would be language-dependent.
 1. **Trainer gallery.** `localId` matching `/^[tg]g/i` overrides the table:
    `Holo Rare V` → `trainer-gallery-v-regular`, `Holo Rare VMAX` →
    `trainer-gallery-v-max`, `Secret Rare` → `trainer-gallery-secret-rare`,
-   anything else → `trainer-gallery-holo`.
+   `trainer-full-art` → `trainer-full-art` (unchanged), anything else →
+   `trainer-gallery-holo`. That last carve-out is load-bearing: every
+   `Full Art Trainer` card in TCGdex is TG-numbered, so without it the effect
+   is unreachable and a full art trainer renders with the gallery's `borders`
+   clip instead of the whole-card `full` clip it should get.
 2. **Reverse holo.** `variants.reverse === true` on a card whose table effect is
    `basic` or `regular-holo` yields `reverse-holo` with `invert: true`.
 3. **Unknown rarity** → `basic`. Not silently: the coverage test fails if a
@@ -258,24 +282,54 @@ its source.
 `regions.ts` maps a `ClipShape` to an inset `vec4` in UV space plus a shape id.
 The fragment shader computes coverage from that, and `invert` flips it. The
 `stage` shape's stepped outline is computed arithmetically from two insets
-rather than carried as polygon data. `borders` uses a rounded inset.
+rather than carried as polygon data, from a `STAGE_STEP` constant that
+`regions.ts` owns and `shader/base.ts` interpolates into the GLSL — one
+definition, so the CPU-side `coversPoint` and the GPU-side `coverage()` cannot
+drift apart.
+
+`borders` is a **plain** inset, not a rounded one. The reference's
+`--clip-borders` carries a `round 2.55% / 1.5%` term, but `regions.ts` keeps
+only the `2.8% 4%` inset and the GLSL does no corner rounding, so the foil's
+corners are square where the reference's are radiused. It is invisible in
+practice because the card image itself is rounded over the top, and adding
+rounding would mean a per-corner distance test in `coverage()` for every
+fragment of every card. Noted rather than fixed.
+
+`coverage()` and `coversPoint` are checked against each other directly: a test
+translates the emitted GLSL into JS and drives both over a grid of points for
+every shape with `invert` both ways, so the "tested twin" claim in `base.ts` is
+something the suite actually enforces.
 
 ### 5.5 Program cache
 
-`program-cache.ts` assembles `base + blend + noise + effect.chunk`, compiles a
+`program-cache.ts` assembles `base + blend + noise + effect.chunk`, builds a
 `ShaderMaterial` per effect id, and caches it at module scope for the page's
 lifetime. `scene.ts` swaps materials on `setEffect`, keeping one renderer, one
-geometry and one mesh. A compile failure logs and falls back to `basic`; if
+geometry and one mesh. A build failure logs and falls back to `basic`; if
 `basic` itself fails, `HoloCard` drops to the plain image.
+
+What the cache saves is CPU work — `compileEffect()`'s string codegen and one
+`ShaderMaterial` construction per effect — and **not** the GPU compile-and-link.
+three.js keeps its program cache on the `WebGLRenderer`, and `scene.ts` calls
+`forceContextLoss()` on every card teardown, so each new card's renderer
+re-links every program from scratch however warm the map is. A shared material
+also means shared uniforms; see the hazard note in `program-cache.ts`.
+Restructuring that is an open decision, not part of this spec.
 
 ## 6. Interaction
 
 `HoloCard` gains, all on the wrapper's transform rather than in the shader, so
 the host's stage layout and z-index are untouched:
 
-- **Pop.** `pointerenter` scales the card forward and lifts it; `pointerleave`
-  springs it back. The existing spring already damps the tilt — the same spring
-  drives the scale.
+- **Pop.** `pointerenter` scales the card forward; `pointerleave` returns it.
+  This is a plain CSS transition on the wrapper's `transform`
+  (`220ms cubic-bezier(0.2, 0.8, 0.2, 1)`) driven by a `popped` state flag —
+  **not** the pointer spring. The spring lives in `scene.ts` and damps the
+  tilt inside the WebGL layer; the pop has to work on cards that never mount
+  that layer at all (`basic` effects, and any visitor `supportsHolo()` turns
+  down), so it cannot depend on it. That also means the pop needs its own
+  reduced-motion gate, which `HoloCard` gets from `useReducedMotion()` rather
+  than from `supportsHolo()`.
 - **Showcase.** On first mount the card plays one slow rotation, cancelled
   immediately by the first real pointer or orientation input, and never
   replayed.

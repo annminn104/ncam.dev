@@ -33,8 +33,16 @@ const REGIONS: Record<ClipShape, RegionRect> = {
   borders: { top: 0.028, right: 0.04, bottom: 0.028, left: 0.04 },
 };
 
-/** The stage cut-out: everything left of `x` and above `y` is excluded. */
-const STAGE_STEP = { x: 0.57, y: 0.16 };
+/**
+ * The stage cut-out: everything left of `x` and above `y` is excluded.
+ *
+ * Exported because `shader/base.ts` interpolates these same two numbers into
+ * the GLSL `coverage()` function. They used to be written out twice — once
+ * here, once as a pair of literals in the shader — and changing either alone
+ * left the suite green while the CPU-side `coversPoint` and the GPU-side
+ * `coverage` silently disagreed. One owner now, read by both.
+ */
+export const STAGE_STEP = { x: 0.57, y: 0.16 };
 
 export function regionFor(shape: ClipShape): RegionRect {
   return REGIONS[shape];

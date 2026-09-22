@@ -1,4 +1,7 @@
-import { SHAPE_ID } from '../regions';
+import { SHAPE_ID, STAGE_STEP } from '../regions';
+
+/** GLSL has no implicit int→float, so every constant needs a decimal point. */
+const f = (n: number): string => n.toFixed(6);
 
 export const VERTEX_SHADER = /* glsl */ `
 out vec2 vUv;
@@ -29,8 +32,8 @@ uniform int uClipShape;
 uniform float uInvert;    // 1.0 for reverse holo
 uniform float uCardOpacity;
 
-const float STAGE_STEP_X = 0.57;
-const float STAGE_STEP_Y = 0.16;
+const float STAGE_STEP_X = ${f(STAGE_STEP.x)};
+const float STAGE_STEP_Y = ${f(STAGE_STEP.y)};
 
 /**
  * Whether the foil reaches this fragment. uv.y runs down the card — true
@@ -44,7 +47,11 @@ float coverage(vec2 uv) {
                * step(uv.y, 1.0 - uClipRect.z);
 
   if (uClipShape == ${SHAPE_ID.stage}) {
-    float inStep = step(uv.x, STAGE_STEP_X) * step(uv.y, STAGE_STEP_Y);
+    // Strictly less-than, matching coversPoint's x < STAGE_STEP.x:
+    // step(edge, v) is v >= edge, so 1.0 - step(edge, v) is v < edge. The
+    // earlier step(uv.x, STAGE_STEP_X) spelling was <=, which disagreed with
+    // the twin on the boundary itself.
+    float inStep = (1.0 - step(STAGE_STEP_X, uv.x)) * (1.0 - step(STAGE_STEP_Y, uv.y));
     inside *= 1.0 - inStep;
   }
 

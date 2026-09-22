@@ -105,13 +105,44 @@ describe('selectHolo — trainer gallery override', () => {
   it('does not treat an ordinary numeric localId as a gallery card', () => {
     expect(selectHolo(card({ localId: '136', rarity: 'Holo Rare' })).effect).toBe('regular-holo');
   });
+
+  it('only treats a localId that STARTS with tg/gg as a gallery card', () => {
+    // isTrainerGallery is /^[tg]g/i. Without the anchor the pattern also
+    // matches 'tg' anywhere in the string, and an ordinary set-prefixed
+    // number like stg1 would silently become a gallery card.
+    expect(selectHolo(card({ localId: 'stg1', rarity: 'Holo Rare' })).effect).toBe('regular-holo');
+  });
+
+  it('routes a TG-numbered Full Art Trainer to trainer-full-art, not the gallery holo', () => {
+    // Every 'Full Art Trainer' in TCGdex is TG-numbered, so before
+    // galleryEffect() grew this arm the effect was unreachable in practice
+    // and the spec's "22 effects" was one short. A full art trainer is a full
+    // art first: it keeps its own foil and the whole-card clip rather than
+    // dropping to the gallery's borders clip.
+    const selection = selectHolo(
+      card({
+        localId: 'TG23',
+        rarity: 'Full Art Trainer',
+        category: 'Trainer',
+        trainerType: 'Supporter',
+      }),
+    );
+    expect(selection.effect).toBe('trainer-full-art');
+    expect(selection.shape).toBe('full');
+  });
 });
 
 describe('selectHolo — reverse holo override', () => {
   it('turns a basic or regular-holo card with a reverse printing into reverse-holo', () => {
-    const c = card({ rarity: 'Common', variants: { reverse: true } });
-    expect(selectHolo(c).effect).toBe('reverse-holo');
-    expect(selectHolo(c).invert).toBe(true);
+    const basic = card({ rarity: 'Common', variants: { reverse: true } });
+    expect(selectHolo(basic).effect).toBe('reverse-holo');
+    expect(selectHolo(basic).invert).toBe(true);
+    // The other half of REVERSIBLE, which the name always claimed but only
+    // the 'basic' half ever exercised: removing 'regular-holo' from that set
+    // left this test green.
+    const holo = card({ rarity: 'Holo Rare', variants: { reverse: true } });
+    expect(selectHolo(holo).effect).toBe('reverse-holo');
+    expect(selectHolo(holo).invert).toBe(true);
   });
 
   it('never downgrades a chase rarity that also has a reverse printing', () => {
@@ -152,6 +183,19 @@ describe('selectHolo — clip shape', () => {
 
   it('gives an ordinary trainer the trainer region', () => {
     expect(selectHolo(card({ category: 'Trainer', rarity: 'Uncommon' })).shape).toBe('trainer');
+  });
+
+  it('keeps a gallery trainer on the borders clip — the BORDERS check comes first', () => {
+    // clipShape()'s comment and the spec both say the check order is
+    // load-bearing, and this card is the case that proves it: it satisfies
+    // both the BORDERS rule and the `category === 'Trainer'` rule. Move the
+    // BORDERS check below the trainer rule and it silently drops to
+    // 'trainer', shrinking the foil to the art window.
+    const selection = selectHolo(
+      card({ localId: 'TG23', category: 'Trainer', rarity: 'Uncommon' }),
+    );
+    expect(selection.effect).toBe('trainer-gallery-holo');
+    expect(selection.shape).toBe('borders');
   });
 
   it('gives an evolution pokemon the stepped stage region', () => {
@@ -197,5 +241,14 @@ describe('selectHolo — promo subtype foils', () => {
   it('leaves a plain Promo card with no suffix unfoiled', () => {
     expect(selectHolo(card({ rarity: 'Promo' })).effect).toBe('basic');
     expect(selectHolo(card({ rarity: 'Promo', suffix: '' })).effect).toBe('basic');
+  });
+
+  it('upgrades only Promo cards — a suffix on any other rarity changes nothing', () => {
+    // The guard is `rarity === 'Promo' && suffix`. No test gave a non-Promo
+    // card a suffix, so deleting the rarity half left the suite green while
+    // every Common/Uncommon reprint carrying a subtype started rendering as
+    // a V holo.
+    expect(selectHolo(card({ rarity: 'Common', suffix: 'V' })).effect).toBe('basic');
+    expect(selectHolo(card({ rarity: 'Uncommon', suffix: 'ex' })).effect).toBe('basic');
   });
 });
