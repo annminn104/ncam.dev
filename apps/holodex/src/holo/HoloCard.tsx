@@ -12,6 +12,7 @@ import type { Card } from '../lib/tcgdex';
 import { browserProbe, supportsHolo } from './capability';
 import { selectHolo } from './select';
 import { createShowcase, type Showcase } from './showcase';
+import { useReducedMotion } from './use-reduced-motion';
 import type { HoloScene } from './scene';
 
 const log = createLogger({ scope: 'holodex' });
@@ -27,6 +28,10 @@ export function HoloCard({ card }: { card: Card }) {
   /** Drives the wrapper's CSS scale on pointer-enter/leave. A ref would not
    *  re-render, so the transform would never actually apply. */
   const [popped, setPopped] = useState(false);
+  // The pop is plain CSS, set below regardless of whether the WebGL layer
+  // ever mounts, so it needs its own reduced-motion gate rather than relying
+  // on supportsHolo()'s (which only guards the three.js scene).
+  const reducedMotion = useReducedMotion();
 
   const src = imageUrl(card.image, 'high');
   const freshSelection = selectHolo(card);
@@ -198,6 +203,9 @@ export function HoloCard({ card }: { card: Card }) {
   const onPointerEnter = () => setPopped(true);
 
   const onPointerLeave = () => {
+    // Consistent with onPointerMove: leaving with no move in between should
+    // still be authoritative over the intro sweep, not leave it driving.
+    showcaseRef.current?.cancel();
     sceneRef.current?.setPointer(0, 0);
     setPopped(false);
   };
@@ -211,8 +219,11 @@ export function HoloCard({ card }: { card: Card }) {
       className="relative"
       style={{
         aspectRatio: '63 / 88',
-        transform: popped ? 'scale(1.04)' : 'scale(1)',
-        transition: 'transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1)',
+        // Reduced motion means no animation at all, not just a faster one —
+        // pin the wrapper at rest and drop the transition entirely rather
+        // than let popped still swing the scale.
+        transform: reducedMotion ? 'scale(1)' : popped ? 'scale(1.04)' : 'scale(1)',
+        transition: reducedMotion ? undefined : 'transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1)',
         // A permanent will-change keeps a compositor layer alive on every
         // card in a grid — only hint it while actually popped.
         willChange: popped ? 'transform' : undefined,

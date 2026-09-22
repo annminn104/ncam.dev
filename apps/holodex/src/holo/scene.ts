@@ -222,7 +222,8 @@ export function createHoloScene(canvas: HTMLCanvasElement): HoloScene {
       // The placeholder is this scene's own, never shared — safe to dispose
       // whether or not it's still current. uGlitter/uGrain are module-level
       // shared textures and a getMaterial() material outlives the scene, so
-      // neither is touched here; disposeMaterials() is HoloCard's job.
+      // neither is touched here; disposeMaterials() is the remote's
+      // teardown's job (mount.tsx / hydrate.tsx), not this scene's.
       placeholder.dispose();
       geometry.dispose();
       // dispose() alone leaves the WebGL context alive until the canvas is

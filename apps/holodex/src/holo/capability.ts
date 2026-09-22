@@ -11,9 +11,12 @@ export interface HoloProbe {
   createContext?: () => unknown;
 }
 
+/** The media query the app's reduced-motion policy is keyed to. */
+export const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)';
+
 export function supportsHolo(probe: HoloProbe): boolean {
   if (!probe.createContext) return false;
-  if (probe.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return false;
+  if (probe.matchMedia?.(REDUCED_MOTION_QUERY).matches) return false;
   if (typeof probe.hardwareConcurrency === 'number' && probe.hardwareConcurrency <= 2) return false;
   try {
     return Boolean(probe.createContext());

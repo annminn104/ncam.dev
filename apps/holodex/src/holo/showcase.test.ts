@@ -14,7 +14,7 @@ describe('createShowcase', () => {
     expect(s.isActive()).toBe(true);
     const mid = s.valueAt(250);
     expect(Math.abs(mid.x)).toBeGreaterThan(0.1);
-    const end = s.valueAt(1000);
+    const end = s.valueAt(999);
     expect(Math.abs(end.x)).toBeLessThan(0.01);
     expect(Math.abs(end.y)).toBeLessThan(0.01);
   });
@@ -23,6 +23,8 @@ describe('createShowcase', () => {
     const s = createShowcase({ durationMs: 1000 });
     s.start(0);
     s.valueAt(1001);
+    expect(s.isActive()).toBe(false);
+    s.start(2000);
     expect(s.isActive()).toBe(false);
   });
 

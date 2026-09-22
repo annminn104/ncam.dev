@@ -3,6 +3,7 @@ import { createLogger } from '@ncam/logger';
 import { compileEffect, VERTEX_SHADER } from './shader/compile';
 import { EFFECTS } from './effects';
 import type { EffectId } from './select';
+import { registerCacheDispose } from './teardown';
 
 const log = createLogger({ scope: 'holodex' });
 
@@ -57,3 +58,9 @@ export function disposeMaterials(): void {
   for (const material of cache.values()) material.dispose();
   cache.clear();
 }
+
+// Registered at module scope, the moment this module is first loaded, so
+// mount.tsx / hydrate.tsx can free this cache through teardown.ts's
+// three-free indirection without ever importing this file — or three.js —
+// themselves. See teardown.ts for why that indirection exists.
+registerCacheDispose(disposeMaterials);

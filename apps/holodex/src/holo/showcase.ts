@@ -45,7 +45,6 @@ export function createShowcase({ durationMs, enabled = true }: ShowcaseOptions):
       if (!isActive()) return { x: 0, y: 0 };
       const elapsed = nowMs - (startedAt as number);
       if (elapsed >= durationMs) {
-        startedAt = null;
         cancelled = true;
         return { x: 0, y: 0 };
       }
