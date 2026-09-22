@@ -47,6 +47,18 @@ export function unmount(target: HTMLElement): void {
   queueMicrotask(() => {
     root.unmount();
     doc.getElementById(STYLE_ID)?.remove();
+    // Frees every cached holo shader program. Dynamically imported: a static
+    // top-level import here would pull program-cache.ts — and the three.js
+    // symbols it imports — into this module's own eager graph, which is
+    // evaluated on every remote mount whether or not a card ever renders a
+    // holo foil. HoloCard's own dynamic import('./scene') is the only other
+    // path to program-cache.ts, so this keeps both paths equally lazy.
+    //
+    // Correct as written because the remote is mounted once today — roots is
+    // keyed by target in a WeakMap, so if a page ever hosted two Holodex
+    // mounts, the first one to unmount would free materials the second mount
+    // is still using. Worth knowing if that ever changes.
+    void import('./holo/program-cache').then(({ disposeMaterials }) => disposeMaterials());
   });
 }
 
