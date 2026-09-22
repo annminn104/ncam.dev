@@ -15,27 +15,39 @@ import { vFullArt } from './v-full-art';
 import { vMax } from './v-max';
 import { vStar } from './v-star';
 import { trainerFullArt } from './trainer-full-art';
+import { shinyRare } from './shiny-rare';
+import { shinyV } from './shiny-v';
+import { shinyVmax } from './shiny-vmax';
+import { trainerGalleryHolo } from './trainer-gallery-holo';
+import { trainerGalleryVRegular } from './trainer-gallery-v-regular';
+import { trainerGalleryVMax } from './trainer-gallery-v-max';
+import { trainerGallerySecretRare } from './trainer-gallery-secret-rare';
 
 /**
  * Every effect `selectHolo` can return. The registry test asserts this covers
  * exactly that set — a missing entry is a failing test, not a blank card.
  */
-export const EFFECTS = {
+export const EFFECTS: Record<EffectId, Effect> = {
   basic,
   'reverse-holo': reverseHolo,
   'regular-holo': regularHolo,
   'cosmos-holo': cosmosHolo,
+  'amazing-rare': amazingRare,
+  'radiant-holo': radiantHolo,
   'rainbow-holo': rainbowHolo,
   'rainbow-alt': rainbowAlt,
   'secret-rare': secretRare,
-  'swsh-pikachu': swshPikachu,
-  'amazing-rare': amazingRare,
-  'radiant-holo': radiantHolo,
+  'shiny-rare': shinyRare,
+  'shiny-v': shinyV,
+  'shiny-vmax': shinyVmax,
   'v-regular': vRegular,
   'v-full-art': vFullArt,
   'v-max': vMax,
   'v-star': vStar,
   'trainer-full-art': trainerFullArt,
-  // TODO(task-9): once the remaining 18 effects land and this object honestly
-  // satisfies Record<EffectId, Effect> on its own, delete the cast below.
-} as unknown as Record<EffectId, Effect>;
+  'trainer-gallery-holo': trainerGalleryHolo,
+  'trainer-gallery-v-regular': trainerGalleryVRegular,
+  'trainer-gallery-v-max': trainerGalleryVMax,
+  'trainer-gallery-secret-rare': trainerGallerySecretRare,
+  'swsh-pikachu': swshPikachu,
+};
