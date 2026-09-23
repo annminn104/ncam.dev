@@ -31,7 +31,7 @@ function renderView(route: Route): ReactNode {
     case 'search':
       return <SearchView filters={route.filters} />;
     case 'card':
-      return <CardView cardId={route.cardId} />;
+      return <CardView cardId={route.cardId} variant={route.variant} />;
     case 'collection':
       return <CollectionView />;
     case 'not-found':

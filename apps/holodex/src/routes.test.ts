@@ -40,6 +40,24 @@ describe('parseRoute', () => {
     expect(parseRoute('/collection')).toEqual({ view: 'collection' });
   });
 
+  it('parses ?variant=reverse on a card route', () => {
+    expect(parseRoute('/card/swsh3-136?variant=reverse')).toEqual({
+      view: 'card',
+      cardId: 'swsh3-136',
+      variant: 'reverse',
+    });
+  });
+
+  it('treats anything other than the literal variant=reverse as the normal printing', () => {
+    // No `variant` key at all — not `variant: undefined` — so a plain
+    // `toEqual` on the plain route also proves the key is genuinely absent.
+    expect(parseRoute('/card/swsh3-136?variant=bogus')).toEqual({
+      view: 'card',
+      cardId: 'swsh3-136',
+    });
+    expect(parseRoute('/card/swsh3-136')).toEqual({ view: 'card', cardId: 'swsh3-136' });
+  });
+
   it('decodes an escaped id segment', () => {
     expect(parseRoute('/card/exu-%21')).toEqual({ view: 'card', cardId: 'exu-!' });
   });
@@ -78,6 +96,11 @@ describe('formatRoute', () => {
     const input = '/sets/swsh3?q=char&type=Fire&rarity=Holo+Rare&page=3';
     expect(formatRoute(parseRoute(input))).toBe(input);
   });
+
+  it('round-trips a card route with the reverse variant', () => {
+    const input = '/card/swsh3-136?variant=reverse';
+    expect(formatRoute(parseRoute(input))).toBe(input);
+  });
 });
 
 describe('viewKey', () => {
@@ -88,6 +111,15 @@ describe('viewKey', () => {
     expect(viewKey(parseRoute('/sets/swsh3?q=c'))).toBe(viewKey(base));
     expect(viewKey(parseRoute('/sets/swsh3?q=char&type=Fire&page=4'))).toBe(viewKey(base));
     expect(viewKey(parseRoute('/search?q=a'))).toBe(viewKey(parseRoute('/search?q=ab&page=2')));
+  });
+
+  it('is stable across the reverse-holo variant — toggling it must not remount the view', () => {
+    // Keying more finely than `card:${cardId}` here is exactly the
+    // remount/focus-loss bug the comment above documents; the variant must
+    // stay as invisible to this key as filters and page are.
+    expect(viewKey(parseRoute('/card/swsh3-136?variant=reverse'))).toBe(
+      viewKey(parseRoute('/card/swsh3-136')),
+    );
   });
 
   it('changes when the view genuinely changes', () => {

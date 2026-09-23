@@ -1,4 +1,4 @@
-import type { Card, Variants } from '../lib/tcgdex';
+import type { Card } from '../lib/tcgdex';
 
 /**
  * One effect per look in simeydotme/pokemon-cards-css. Four of these are
@@ -139,6 +139,19 @@ const BORDERS: ReadonlySet<EffectId> = new Set<EffectId>([
 /** Effects a reverse printing is allowed to replace. */
 const REVERSIBLE: ReadonlySet<EffectId> = new Set<EffectId>(['basic', 'regular-holo']);
 
+export interface SelectOptions {
+  /**
+   * True only when the app is showing the reverse printing. This is an
+   * explicit display choice (the card page's normal/reverse toggle), never
+   * derived from the card itself — `card.variants?.reverse` means "a reverse
+   * printing of this card exists," not "this card is currently reversed."
+   * Conflating the two rendered roughly half of TCGdex with inverted or
+   * unwarranted foil; `card.variants?.reverse` still decides whether the
+   * toggle is offered at all (see `views/CardView.tsx`), just not this.
+   */
+  reverse?: boolean;
+}
+
 /** The reference detects gallery cards from the card number, not a rarity. */
 function isTrainerGallery(localId: string | undefined): boolean {
   return /^[tg]g/i.test(localId ?? '');
@@ -169,8 +182,14 @@ function clipShape(effect: EffectId, card: Card): ClipShape {
   return 'regular';
 }
 
-/** Which foil a card gets, where it is confined, and whether that is inverted. */
-export function selectHolo(card: Card): HoloSelection {
+/**
+ * Which foil a card gets, where it is confined, and whether that is inverted.
+ *
+ * `options.reverse` is the only thing that selects the reverse-holo
+ * treatment — see `SelectOptions`. It is never read off `card.variants`
+ * directly here.
+ */
+export function selectHolo(card: Card, options: SelectOptions = {}): HoloSelection {
   let base: EffectId = (card.rarity && EFFECT_BY_RARITY[card.rarity]) || 'basic';
 
   // TCGdex files every promo — plain reprints and holo V/ex/GX chase cards
@@ -196,7 +215,7 @@ export function selectHolo(card: Card): HoloSelection {
 
   if (isTrainerGallery(card.localId)) {
     effect = galleryEffect(base);
-  } else if (REVERSIBLE.has(base) && (card.variants as Variants | undefined)?.reverse) {
+  } else if (REVERSIBLE.has(base) && options.reverse) {
     effect = 'reverse-holo';
     invert = true;
   }

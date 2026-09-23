@@ -80,6 +80,15 @@ export interface WeaknessEntry {
 
 export interface Variants {
   normal?: boolean;
+  /**
+   * True when a reverse-foil PRINTING OF THIS CARD ALSO EXISTS in TCGdex's
+   * data — it does NOT mean "this card is a reverse holo." Reading it that
+   * way mis-rendered roughly half of TCGdex with inverted or unwarranted
+   * foil. Whether the *current view* shows the reverse printing is a
+   * separate, explicit choice — see `SelectOptions.reverse` in
+   * `holo/select.ts` and the toggle in `views/CardView.tsx`. This field only
+   * decides whether that toggle is offered at all.
+   */
   reverse?: boolean;
   holo?: boolean;
   firstEdition?: boolean;

@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from '../app-context';
 import { cardQuery } from '../lib/queries';
 import { EMPTY_FILTERS } from '../routes';
+import { cn } from '../lib/utils';
 import { CardImage } from '../components/CardImage';
 import { CollectionToggle } from '../components/CollectionToggle';
 import { ErrorPanel } from '../components/ErrorPanel';
@@ -9,7 +10,45 @@ import { PricePanel } from '../components/PricePanel';
 import { StatPanel } from '../components/StatPanel';
 import { HoloCard } from '../holo/HoloCard';
 
-export function CardView({ cardId }: { cardId: string }) {
+/**
+ * Normal vs. reverse holo is an explicit display choice (see
+ * `holo/select.ts`'s `SelectOptions`), never derived from the card — this is
+ * the control that supplies it, deep-linked through `?variant=reverse` (see
+ * `routes.ts`). TCGdex serves exactly one image per card either way: a
+ * reverse printing swaps the *foil*, not the artwork, so toggling only ever
+ * changes what `<HoloCard>` renders on top of the same image, never `src`.
+ */
+function PrintingToggle({ cardId, variant }: { cardId: string; variant?: 'reverse' }) {
+  const navigate = useNavigate();
+  const isReverse = variant === 'reverse';
+  const base =
+    'rounded-lg border px-3 py-1.5 text-sm outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-holo-accent';
+  const on = 'border-holo-accent text-holo-accent';
+  const off = 'border-holo-line';
+
+  return (
+    <div className="mt-3 flex gap-2" role="group" aria-label="Printing">
+      <button
+        type="button"
+        aria-pressed={!isReverse}
+        onClick={() => navigate({ view: 'card', cardId })}
+        className={cn(base, !isReverse ? on : off)}
+      >
+        Normal
+      </button>
+      <button
+        type="button"
+        aria-pressed={isReverse}
+        onClick={() => navigate({ view: 'card', cardId, variant: 'reverse' })}
+        className={cn(base, isReverse ? on : off)}
+      >
+        Reverse holo
+      </button>
+    </div>
+  );
+}
+
+export function CardView({ cardId, variant }: { cardId: string; variant?: 'reverse' }) {
   const navigate = useNavigate();
   const { data: card, error, isPending, refetch } = useQuery(cardQuery(cardId));
 
@@ -35,10 +74,15 @@ export function CardView({ cardId }: { cardId: string }) {
             style={{ aspectRatio: '63 / 88' }}
           />
         ) : card ? (
-          <HoloCard card={card} />
+          <HoloCard card={card} reverse={variant === 'reverse'} />
         ) : (
           <CardImage name={cardId} quality="high" priority />
         )}
+        {/* Most cards have no reverse printing at all, so the control only
+            appears for the ones that do — everyone else sees nothing here. */}
+        {card?.variants?.reverse === true ? (
+          <PrintingToggle cardId={cardId} variant={variant} />
+        ) : null}
       </div>
 
       <div>

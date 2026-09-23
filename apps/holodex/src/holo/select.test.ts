@@ -133,32 +133,52 @@ describe('selectHolo — trainer gallery override', () => {
 });
 
 describe('selectHolo — reverse holo override', () => {
-  it('turns a basic or regular-holo card with a reverse printing into reverse-holo', () => {
-    const basic = card({ rarity: 'Common', variants: { reverse: true } });
-    expect(selectHolo(basic).effect).toBe('reverse-holo');
-    expect(selectHolo(basic).invert).toBe(true);
-    // The other half of REVERSIBLE, which the name always claimed but only
-    // the 'basic' half ever exercised: removing 'regular-holo' from that set
-    // left this test green.
-    const holo = card({ rarity: 'Holo Rare', variants: { reverse: true } });
-    expect(selectHolo(holo).effect).toBe('reverse-holo');
-    expect(selectHolo(holo).invert).toBe(true);
+  it('does NOT select reverse-holo just because a reverse printing exists — the regression guard', () => {
+    // The defect this suite exists to catch: `variants.reverse` means "a
+    // reverse printing of this card also exists in TCGdex," not "this card
+    // is the reverse printing." With no `reverse` option (the caller not
+    // asking to show the reverse side), a Common card carrying
+    // variants.reverse: true must still render as a plain basic card — this
+    // is the single most important assertion in this file.
+    const c = card({ rarity: 'Common', variants: { reverse: true } });
+    const selection = selectHolo(c);
+    expect(selection.effect).toBe('basic');
+    expect(selection.invert).toBe(false);
   });
 
-  it('never downgrades a chase rarity that also has a reverse printing', () => {
+  it('selects reverse-holo, inverted, only once the caller explicitly asks for the reverse printing', () => {
+    const c = card({ rarity: 'Common', variants: { reverse: true } });
+    const selection = selectHolo(c, { reverse: true });
+    expect(selection.effect).toBe('reverse-holo');
+    expect(selection.invert).toBe(true);
+  });
+
+  it('reverses a regular-holo card too — the other half of REVERSIBLE', () => {
+    // A previous test claimed regular-holo was reachable through REVERSIBLE
+    // but only ever exercised the 'basic' half; removing 'regular-holo' from
+    // that set left the old test green.
+    const c = card({ rarity: 'Holo Rare', variants: { reverse: true } });
+    const selection = selectHolo(c, { reverse: true });
+    expect(selection.effect).toBe('reverse-holo');
+    expect(selection.invert).toBe(true);
+  });
+
+  it('never downgrades a chase rarity, even when explicitly asked to reverse it', () => {
     const c = card({ rarity: 'Secret Rare', variants: { reverse: true } });
-    expect(selectHolo(c).effect).toBe('secret-rare');
-    expect(selectHolo(c).invert).toBe(false);
+    const selection = selectHolo(c, { reverse: true });
+    expect(selection.effect).toBe('secret-rare');
+    expect(selection.invert).toBe(false);
   });
 
   it('leaves invert false for everything else', () => {
     expect(selectHolo(card({ rarity: 'Holo Rare' })).invert).toBe(false);
   });
 
-  it('gives gallery override precedence over reverse holo', () => {
+  it('gives gallery override precedence over reverse holo, even when explicitly asked to reverse', () => {
     const c = card({ localId: 'TG10', rarity: 'Holo Rare', variants: { reverse: true } });
-    expect(selectHolo(c).effect).toBe('trainer-gallery-holo');
-    expect(selectHolo(c).invert).toBe(false);
+    const selection = selectHolo(c, { reverse: true });
+    expect(selection.effect).toBe('trainer-gallery-holo');
+    expect(selection.invert).toBe(false);
   });
 });
 

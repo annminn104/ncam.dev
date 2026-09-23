@@ -19,7 +19,7 @@ export type Route =
   | { view: 'home' }
   | { view: 'set'; setId: string; filters: Filters }
   | { view: 'search'; filters: Filters }
-  | { view: 'card'; cardId: string }
+  | { view: 'card'; cardId: string; variant?: 'reverse' }
   | { view: 'collection' }
   | { view: 'not-found'; path: string };
 
@@ -34,6 +34,11 @@ function parseFilters(query: string): Filters {
   };
 }
 
+/** Anything other than the literal value `reverse` means the normal printing. */
+function parseVariant(query: string): 'reverse' | undefined {
+  return new URLSearchParams(query).get('variant') === 'reverse' ? 'reverse' : undefined;
+}
+
 export function parseRoute(input: string): Route {
   const [rawPath = '', query = ''] = String(input ?? '').split('?');
   const segments = rawPath.split('/').filter(Boolean).map(decodeURIComponent);
@@ -46,7 +51,10 @@ export function parseRoute(input: string): Route {
   if (segments.length === 2 && head === 'sets' && second) {
     return { view: 'set', setId: second, filters };
   }
-  if (segments.length === 2 && head === 'card' && second) return { view: 'card', cardId: second };
+  if (segments.length === 2 && head === 'card' && second) {
+    const variant = parseVariant(query);
+    return variant ? { view: 'card', cardId: second, variant } : { view: 'card', cardId: second };
+  }
   return { view: 'not-found', path: `/${segments.join('/')}` };
 }
 
@@ -93,7 +101,7 @@ export function formatRoute(route: Route): string {
     case 'collection':
       return '/collection';
     case 'card':
-      return `/card/${encodeURIComponent(route.cardId)}`;
+      return `/card/${encodeURIComponent(route.cardId)}${route.variant === 'reverse' ? '?variant=reverse' : ''}`;
     case 'search':
       return `/search${formatFilters(route.filters)}`;
     case 'set':

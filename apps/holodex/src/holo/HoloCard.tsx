@@ -17,7 +17,7 @@ import type { HoloScene } from './scene';
 
 const log = createLogger({ scope: 'holodex' });
 
-export function HoloCard({ card }: { card: Card }) {
+export function HoloCard({ card, reverse = false }: { card: Card; reverse?: boolean }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const sceneRef = useRef<HoloScene | null>(null);
@@ -34,20 +34,29 @@ export function HoloCard({ card }: { card: Card }) {
   const reducedMotion = useReducedMotion();
 
   const src = imageUrl(card.image, 'high');
-  const freshSelection = selectHolo(card);
+  const freshSelection = selectHolo(card, { reverse });
   // selectHolo returns a fresh object every render. Rebuilt here from its own
   // primitive fields so the result is referentially stable unless the
   // effective selection actually changes — the mount effect below depends on
   // this object, and an unmemoised fresh object in its dependency array would
   // remount the scene (recompiling the shader and refetching the card) on
   // every render.
+  //
+  // `reverse` is one of selectHolo's own inputs now, so it belongs in this
+  // list too, alongside the fields it's fed into — not because today's
+  // REVERSIBLE/clipShape rules happen to always change effect/invert in
+  // lockstep with it (they do, so eslint sees it as redundant), but because
+  // this memo shouldn't depend on that staying true. Miss it and a future
+  // tweak to selectHolo could leave toggling silently stuck on the
+  // pre-toggle foil.
   const selection = useMemo(
     () => ({
       effect: freshSelection.effect,
       shape: freshSelection.shape,
       invert: freshSelection.invert,
     }),
-    [freshSelection.effect, freshSelection.shape, freshSelection.invert],
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reverse is deliberately explicit, see comment above
+    [freshSelection.effect, freshSelection.shape, freshSelection.invert, reverse],
   );
 
   useEffect(() => {
