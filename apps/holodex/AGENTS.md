@@ -125,17 +125,26 @@ card, and only when `holo/capability.ts#supportsHolo` says the visitor's
 device qualifies (WebGL2 available, no `prefers-reduced-motion: reduce`,
 `hardwareConcurrency > 2`) — otherwise `HoloCard` stays on the plain `<img>`.
 
-**22 rarity-keyed effects, not four tiers.** `holo/select.ts#selectHolo(card)`
-maps all 42 TCGdex rarities onto 22 `EffectId`s (`EFFECT_BY_RARITY`), derived
-from — not ported from — [simeydotme/pokemon-cards-css](https://github.com/simeydotme/pokemon-cards-css).
+**22 rarity-keyed effects, not four tiers.** `holo/select.ts#selectHolo(card,
+options)` maps all 42 TCGdex rarities onto 22 `EffectId`s (`EFFECT_BY_RARITY`),
+derived from — not ported from — [simeydotme/pokemon-cards-css](https://github.com/simeydotme/pokemon-cards-css).
 Two overrides apply on top of the rarity table, in order: (1) a card number
 matching `/^[tg]g/i` is a trainer-gallery printing and remaps its base effect
-to one of four gallery variants (`galleryEffect`); (2) `variants.reverse` on a
-card whose table effect is `basic` or `regular-holo` becomes `reverse-holo`
-with `invert: true` instead. An unmapped rarity falls back to `basic`, but
-never silently: a coverage test asserts every one of the 42 rarities has a
-table entry and that the four override-only effects (`reverse-holo` and the
-three gallery variants) never appear as a table value. `selectHolo` also
+to one of four gallery variants (`galleryEffect`); (2) `options.reverse` — an
+explicit flag, never read off the card — on a card whose table effect is
+`basic` or `regular-holo` becomes `reverse-holo` with `invert: true` instead.
+`options.reverse` is true only when the card page's normal/reverse toggle
+(`views/CardView.tsx`) is set to reverse; `card.variants?.reverse` means "a
+reverse printing of this card exists in TCGdex's data," not "show it," and
+only decides whether that toggle is offered at all. An earlier version of
+`selectHolo` read `card.variants?.reverse` directly instead of taking
+`options.reverse` — conflating "exists" with "show it" — and mis-rendered
+roughly half of TCGdex (~12,500 cards, every one whose reverse printing
+exists but isn't what a visitor is looking at) with inverted or unwarranted
+foil. An unmapped rarity falls back to `basic`,
+but never silently: a coverage test asserts every one of the 42 rarities has
+a table entry and that the four override-only effects (`reverse-holo` and
+the three gallery variants) never appear as a table value. `selectHolo` also
 picks the card's `ClipShape` (`clipShape()` in the same file) from the
 resolved effect, the card's `category`/`stage`, and whether its rarity is
 literally `Full Art Trainer` — order matters, since `radiant-holo` and the
