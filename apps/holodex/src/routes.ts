@@ -5,6 +5,9 @@
  * of what a Holodex URL means.
  */
 
+import { isGalleryEffect } from './holo/effect-gallery';
+import type { EffectId } from './holo/select';
+
 export interface Filters {
   q: string;
   type: string;
@@ -21,6 +24,7 @@ export type Route =
   | { view: 'search'; filters: Filters }
   | { view: 'card'; cardId: string; variant?: 'reverse' }
   | { view: 'collection' }
+  | { view: 'effects'; effect?: EffectId }
   | { view: 'not-found'; path: string };
 
 function parseFilters(query: string): Filters {
@@ -48,6 +52,12 @@ export function parseRoute(input: string): Route {
   if (segments.length === 0) return { view: 'home' };
   if (segments.length === 1 && head === 'search') return { view: 'search', filters };
   if (segments.length === 1 && head === 'collection') return { view: 'collection' };
+  if (segments.length === 1 && head === 'effects') return { view: 'effects' };
+  if (segments.length === 2 && head === 'effects' && second) {
+    // An id that names no tile is not a 404: the page exists, it just opens
+    // on its default tile.
+    return isGalleryEffect(second) ? { view: 'effects', effect: second } : { view: 'effects' };
+  }
   if (segments.length === 2 && head === 'sets' && second) {
     return { view: 'set', setId: second, filters };
   }
@@ -74,6 +84,10 @@ export function viewKey(route: Route): string {
     case 'home':
     case 'search':
     case 'collection':
+    case 'effects':
+      // For effects, the selected tile is state inside one view, like a
+      // filter: keying on it would remount the whole grid on every pick and
+      // drop focus off the tile just clicked.
       return route.view;
     case 'set':
       return `set:${route.setId}`;
@@ -100,6 +114,8 @@ export function formatRoute(route: Route): string {
       return '/';
     case 'collection':
       return '/collection';
+    case 'effects':
+      return route.effect ? `/effects/${encodeURIComponent(route.effect)}` : '/effects';
     case 'card':
       return `/card/${encodeURIComponent(route.cardId)}${route.variant === 'reverse' ? '?variant=reverse' : ''}`;
     case 'search':

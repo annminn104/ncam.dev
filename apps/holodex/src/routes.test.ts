@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { EFFECT_GALLERY } from './holo/effect-gallery';
 import { EMPTY_FILTERS, formatRoute, parseRoute, viewKey } from './routes';
 
 describe('parseRoute', () => {
@@ -58,6 +59,20 @@ describe('parseRoute', () => {
     expect(parseRoute('/card/swsh3-136')).toEqual({ view: 'card', cardId: 'swsh3-136' });
   });
 
+  it('parses the effects page, with and without a selected effect', () => {
+    // No `effect` key at all on the bare page, as with `variant` above.
+    expect(parseRoute('/effects')).toEqual({ view: 'effects' });
+    expect(parseRoute('/effects/v-max')).toEqual({ view: 'effects', effect: 'v-max' });
+  });
+
+  it('opens the effects page on its default tile for an unknown effect, not a 404', () => {
+    expect(parseRoute('/effects/not-an-effect')).toEqual({ view: 'effects' });
+    expect(parseRoute('/effects/v-max/extra')).toEqual({
+      view: 'not-found',
+      path: '/effects/v-max/extra',
+    });
+  });
+
   it('decodes an escaped id segment', () => {
     expect(parseRoute('/card/exu-%21')).toEqual({ view: 'card', cardId: 'exu-!' });
   });
@@ -101,6 +116,14 @@ describe('formatRoute', () => {
     const input = '/card/swsh3-136?variant=reverse';
     expect(formatRoute(parseRoute(input))).toBe(input);
   });
+
+  it('round-trips the effects page and every tile on it', () => {
+    expect(formatRoute(parseRoute('/effects'))).toBe('/effects');
+    for (const { effect } of EFFECT_GALLERY) {
+      expect(parseRoute(`/effects/${effect}`)).toEqual({ view: 'effects', effect });
+      expect(formatRoute(parseRoute(`/effects/${effect}`))).toBe(`/effects/${effect}`);
+    }
+  });
 });
 
 describe('viewKey', () => {
@@ -122,11 +145,21 @@ describe('viewKey', () => {
     );
   });
 
+  it('is constant across the selected effect — picking a tile must not remount the view', () => {
+    // Same bug as above if this keyed on the effect: the grid would be
+    // rebuilt on every pick and focus would drop off the tile just clicked.
+    const bare = viewKey(parseRoute('/effects'));
+    for (const { effect } of EFFECT_GALLERY) {
+      expect(viewKey(parseRoute(`/effects/${effect}`)), effect).toBe(bare);
+    }
+  });
+
   it('changes when the view genuinely changes', () => {
     const keys = [
       viewKey(parseRoute('/')),
       viewKey(parseRoute('/search')),
       viewKey(parseRoute('/collection')),
+      viewKey(parseRoute('/effects')),
       viewKey(parseRoute('/sets/swsh3')),
       viewKey(parseRoute('/sets/swsh1')),
       viewKey(parseRoute('/card/swsh3-136')),

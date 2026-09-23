@@ -11,6 +11,7 @@ import { SetView } from './views/SetView';
 import { SearchView } from './views/SearchView';
 import { CardView } from './views/CardView';
 import { CollectionView } from './views/CollectionView';
+import { EffectsView } from './views/EffectsView';
 
 export interface AppProps {
   controller: RouteController;
@@ -34,6 +35,8 @@ function renderView(route: Route): ReactNode {
       return <CardView cardId={route.cardId} variant={route.variant} />;
     case 'collection':
       return <CollectionView />;
+    case 'effects':
+      return <EffectsView effect={route.effect} />;
     case 'not-found':
       return <NotFoundView path={route.path} />;
   }

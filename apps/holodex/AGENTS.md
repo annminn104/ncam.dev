@@ -54,8 +54,8 @@ return a `MountHandle`: a disposer that also carries an optional
 ## Structure
 
 - `src/routes.ts` — the remote's whole URL space: `parseRoute` / `formatRoute`
-  for `home | set | search | card | collection | not-found`, plus filter
-  (`q`, `type`, `rarity`, `page`) parsing.
+  for `home | set | search | card | collection | effects | not-found`, plus
+  filter (`q`, `type`, `rarity`, `page`) parsing.
 - `src/route-controller.ts` — route store outside React (see above).
 - `src/App.tsx` — one `switch` over `Route` into a view; wraps everything in
   `QueryClientProvider` + an error boundary keyed by route so a bad view can't
@@ -69,14 +69,20 @@ return a `MountHandle`: a disposer that also carries an optional
   `CardImage`, `StatPanel`, `PricePanel`, `CollectionToggle`, `ErrorBoundary` /
   `ErrorPanel`, `Skeleton`.
 - `src/views/` — `SetsView`, `SetView`, `SearchView`, `CardView`,
-  `CollectionView`, `NotFoundView` — one per `Route` case.
+  `CollectionView`, `EffectsView`, `NotFoundView` — one per `Route` case.
+  `EffectsView` (`/effects`, `/effects/<effectId>`) shows every `EffectId` on a
+  real card with the rarities that select it; exactly one tile renders a live
+  `HoloCard` at a time, the rest are plain art.
 - `src/holo/` — eager (statically imported by `HoloCard.tsx`, so part of the
   main chunk): `select.ts` (rarity/layout/printing → `HoloSelection`),
   `regions.ts` (`ClipShape` → inset rect + `coversPoint`), `capability.ts`
   (`supportsHolo`), `showcase.ts` (the one-shot intro sweep, a pure state
   machine over an injected clock), `use-reduced-motion.ts`, `teardown.ts`
   (three-free indirection onto the shader cache's disposer — see "The holo
-  chunk is lazy" below), `HoloCard.tsx` itself (mount, pop/showcase,
+  chunk is lazy" below), `effect-gallery.ts` (the effects page's matrix: one
+  example card per `EffectId`, rarities read off `EFFECT_BY_RARITY`, each card
+  checked against the real `selectHolo` on a captured TCGdex copy in
+  `effect-gallery.fixture.ts`), `HoloCard.tsx` itself (mount, pop/showcase,
   context-loss and off-screen handling). Lazy (only reachable through
   `HoloCard.tsx`'s dynamic `import('./scene')` — see below): `scene.ts`,
   `textures.ts`, `program-cache.ts`, `shader/` (`base.ts`, `blend.ts`,
@@ -360,7 +366,10 @@ instead of reaching for a global:
 jsdom has no WebGL2 and this repo has no jsdom regardless. They sit behind
 `capability.ts` (which is tested) so a visitor who can't run them never loads
 them, and they're checked by hand (`pnpm --filter @ncam/holodex dev`, open a
-card, confirm the holo reacts to the pointer).
+card, confirm the holo reacts to the pointer). `/effects` puts every effect's
+example card on one page for that: click through the tiles. A selected tile
+whose card TCGdex serves without an image says so, since there is no art for
+the foil to render on.
 
 ## Run standalone
 

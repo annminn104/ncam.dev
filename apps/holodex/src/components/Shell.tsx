@@ -1,4 +1,4 @@
-import { Layers, Search, Star } from 'lucide-react';
+import { Layers, Search, Sparkles, Star } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useNavigate, useRoute } from '../app-context';
 import { EMPTY_FILTERS, type Route } from '../routes';
@@ -13,6 +13,7 @@ const NAV: Array<{ label: string; icon: typeof Layers; route: Route; match: Rout
     match: ['search'],
   },
   { label: 'Collection', icon: Star, route: { view: 'collection' }, match: ['collection'] },
+  { label: 'Effects', icon: Sparkles, route: { view: 'effects' }, match: ['effects'] },
 ];
 
 export function Shell({ children }: { children: ReactNode }) {
