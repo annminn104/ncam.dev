@@ -500,7 +500,7 @@ describe('selectHolo — 151 reverse holos', () => {
     });
   });
 
-  it('reverses a 151 Rare too, since a Scarlet & Violet Rare is regular-holo first', () => {
+  it('reverses a 151 Rare too, since a Scarlet & Violet Rare is sv-rare-holo first', () => {
     expect(selectHolo(CAPTURED_CARDS['sv03.5-026'], { reverse: true }).effect).toBe(
       'poke-ball-holo',
     );

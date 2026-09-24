@@ -14,12 +14,12 @@ import type { Card } from '../lib/tcgdex';
  * it kept from the 66-card page (captured 2026-09-23 and 2026-09-24) matched
  * that fetch in every field. The last three, dp7-96, hgss3-83 and me01-034,
  * came on 2026-09-25 with the page's 30th section, sv-rare-holo, whose two
- * other cards moved over from regular-holo. The subset-set cards (`swsh4.5sv-…` and the
- * `swsh9tg`–`swsh12tg` Trainer Gallery ones) have no `image` because the API
- * links none: `lib/images.ts#cardImageBase` finds their art. Every value is
- * copied verbatim: never edit one by hand to make a test pass — re-fetch the
- * card instead. Re-capture them all if `selectHolo`, or the page, ever starts
- * reading a field that is not here.
+ * other cards moved over from regular-holo. The subset-set cards
+ * (`swsh4.5sv-…` and the `swsh9tg`–`swsh12tg` Trainer Gallery ones) have no
+ * `image` because the API links none: `lib/images.ts#cardImageBase` finds
+ * their art. Every value is copied verbatim: never edit one by hand to make a
+ * test pass — re-fetch the card instead. Re-capture them all if `selectHolo`,
+ * or the page, ever starts reading a field that is not here.
  */
 export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
   'sm1-1': {

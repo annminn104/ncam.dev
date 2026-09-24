@@ -9,6 +9,9 @@ textures — **without** per-card masks. See "The ceiling" below.
 
 Branch `feat/holodex-holo-v2`. Local commits only; **never push**.
 
+**Status (2026-09-25): landed**, `7c28553` … `618d32c`, local only. What changed on the way is
+under "What landed" at the end; where the plan below turned out wrong, it says so in place.
+
 ## Why
 
 `simeydotme/pokemon-cards-css`, which v2's 22 effects were derived from, only defines Sword & Shield
@@ -48,14 +51,15 @@ Read the file for each effect you port. Map it the same way v2's 22 effects were
 | CSS                                                                | DSL                                                                                                               |
 | ------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------- |
 | `.card__shine`, `::before`, `::after`                              | `shine[]` elements (≤ 3 — the registry test enforces it)                                                          |
-| `.card__glare`, `.card__glare2`                                    | `glare[]` elements (≤ 2)                                                                                          |
+| `.card__glare`, `.card__glare2`                                    | `glare[]` elements (≤ 2) — or `beneath[]` when the glare has no z-index (see "What landed")                       |
 | each entry in `background-image`                                   | a `Layer`, bottom-most first                                                                                      |
 | `background-blend-mode` list                                       | each layer's `blend` — **layer 0's is always `'normal'`** (the generator drops it; a registry test enforces this) |
 | `mix-blend-mode`                                                   | the element's `mixBlend`                                                                                          |
 | `filter: brightness() contrast() saturate()`                       | the element's `filter`                                                                                            |
 | `opacity: calc(... var(--pointer-from-center))`                    | a `PointerDriven` opacity                                                                                         |
 | `background-size` / `background-position` with `--background-x/y`  | a layer's `size` / `PointerDriven` `offset`                                                                       |
-| `clip-path`                                                        | the card's `ClipShape`, chosen in `select.ts` — not part of the `Effect`                                          |
+| `clip-path`                                                        | the card's `ClipShape`, chosen in `select.ts` — or an element's own `clip`, where one layer is clipped otherwise  |
+| `radial-gradient(… at var(--pointer-x) var(--pointer-y), …)`       | `radial()` from `effects/css.ts`: CSS's `farthest-corner` radius, which grows as the pointer leaves the centre    |
 | `var(--grain)`, `var(--noise)`, `var(--noise-over)`                | `grain`                                                                                                           |
 | `var(--glitter)`                                                   | `glitter`                                                                                                         |
 | `var(--iri1..9)`                                                   | the new `iri` source (Task 1)                                                                                     |
@@ -120,7 +124,9 @@ Card-set era, derived from the set id (strip `-${localId}` from `card.id`, exact
 `lib/images.ts#cardImageBase` does — set ids contain hyphens):
 
 - **SV**: `/^sv(\d|p$)/i` — `sv01`…`sv10.5w` and `svp` (SV promos). Must **not** match `swsh4.5sv`
-  or McDonald's `2023sv`; anchoring at the start guarantees that.
+  or McDonald's `2023sv`; anchoring at the start guarantees that. (_Corrected:_ so does the
+  `(\d|p$)` on its own, since nothing follows their `sv`. The `^` guards only ids with `sv` or `me`
+  then a digit further in, and none of the 220 real ones has that.)
 - **Mega**: `/^me(\d|p$)/i` — `me01`… and `mep`.
 - "Modern" = SV or Mega. They share one rarity system.
 
@@ -134,7 +140,7 @@ Mapping changes (everything not listed keeps its current effect):
 | `Illustration rare`                 | —                | `illustration-rare`                                                                                                   |
 | `Special illustration rare`         | —                | `ex-special-illustration-rare`                                                                                        |
 | `Hyper rare`, `Mega Hyper Rare`     | —                | `hyper-rare`                                                                                                          |
-| `Rare`                              | modern           | `regular-holo` (the reference promotes SV `Rare` to `Rare Holo`)                                                      |
+| `Rare`                              | modern           | `regular-holo` (the reference promotes SV `Rare` to `Rare Holo`) — **landed as `sv-rare-holo`**, see "What landed"    |
 | `Rare`                              | older            | `basic` (unchanged — non-holo rare)                                                                                   |
 | `ACE SPEC Rare`                     | —                | `rainbow-holo` — SV prism foil, not gold; and it keeps `rainbow-holo` reachable once the three gold rarities leave it |
 | `Promo` + `suffix`                  | modern           | `ex-regular`                                                                                                          |
@@ -143,7 +149,7 @@ Mapping changes (everything not listed keeps its current effect):
 | **Pocket** `One Star`               | —                | `illustration-rare`                                                                                                   |
 | **Pocket** `Two Star` (full-art ex) | —                | `ex-full-art`                                                                                                         |
 | **Pocket** `Crown` (gold)           | —                | `hyper-rare`                                                                                                          |
-| **Pocket** `Three Diamond`          | —                | `regular-holo`                                                                                                        |
+| **Pocket** `Three Diamond`          | —                | `regular-holo` — **landed as `sv-rare-holo`**                                                                         |
 | **Pocket** `Two Shiny` (shiny ex)   | —                | `shiny-v`                                                                                                             |
 
 **Clip regions for the new effects — read this before touching `clipShape()`.** Where the reference
@@ -173,13 +179,15 @@ Reverse, when `options.reverse` is set on a reversible base:
 - every other set → `reverse-holo` (unchanged). Real SV sets outside 151 have plain reverse holos.
 
 `REVERSIBLE` gains `regular-holo`'s new modern members automatically, since it keys on the effect.
+(_As landed:_ the modern members went to `sv-rare-holo`, which `REVERSIBLE` lists beside `basic`
+and `regular-holo`.)
 
 **Pocket `Three Star` deliberately stays on `rainbow-alt`.** It is Pocket's top art tier and would fit
 `ex-special-illustration-rare`, but moving it would leave `rainbow-alt` with only `Futuristic Rare` —
 which has **2 cards in all of TCGdex** (controller-verified), too few even to fill a showcase section.
 `ex-special-illustration-rare` is well served by SV and Mega SIRs (~120 cards) without it.
 
-**Reachability — every one of the 29 effects must stay selectable**, and the registry test enforces
+**Reachability — every one of the 29 effects (30 with `sv-rare-holo`) must stay selectable**, and the registry test enforces
 it. After this table: `rainbow-holo` survives only through `ACE SPEC Rare` (33 cards);
 `secret-rare` through older `Secret Rare`; `v-full-art` through older `Ultra Rare`; `v-regular`
 through `Holo Rare V` and older promos; `trainer-gallery-holo` through the TG override;
@@ -192,13 +200,20 @@ a rarity that exists in the table but has no real card is dead.
 `mee`, the SV and Mega **basic energy** sets — harmless, because energies carry `Common` / `None`
 rarities that never reach an era-split row. Say so in a comment rather than widening the patterns.
 
+_Missed here, caught in Task 3:_ this check matched set ids, never series. TCGdex's Mega series also
+holds `30th` (30th Celebration) and `30th-c` (30th Classic Collection), which the pattern cannot
+reach, and 30th's 18 `Rare` cards would have gone unfoiled. They are Mega by exact id
+(`UNPREFIXED_MEGA_SETS`, `2e1ba25`). A new set with an odd id needs the same check against its
+series.
+
 Tests: every row above, both sides of each era split, the SV regex's controls (`swsh4.5sv`,
 `2023sv`), the masterball numbers and a non-masterball 151 card, and a non-151 SV reverse staying
-`reverse-holo`. Mutation-test the era regexes' anchors.
+`reverse-holo`. Mutation-test the era regexes' anchors. (_As landed:_ no real id kills a dropped
+`^`, per the correction above, so that test uses made-up ids, `tk-sv1-1` and `tk-me1-1`.)
 
 ### Task 4 — The showcase
 
-29 sections × 3 cards = 87. **The controller builds and verifies the matrix** — through the real
+29 sections × 3 cards = 87 (`2e1ba25`; `sv-rare-holo` later made it 30 and 90). **The controller builds and verifies the matrix** — through the real
 selection logic, on each card's _real_ rarity from a detail fetch (TCGdex's `?rarity=` is a substring
 match), with art confirmed to load — and hands it over, exactly as for the 66. Seven new sections;
 several existing sections change membership because their rarities moved. The fixture gains the new
@@ -209,9 +224,46 @@ page, equal tile heights, constant `viewKey`.
 
 - `pnpm vitest run && pnpm lint && pnpm --filter @ncam/holodex typecheck && pnpm --filter @ncam/holodex build`
 - The lazy three.js chunk will grow by seven compiled shader strings. Report the new size against
-  the 170 KB gz budget.
+  the 170 KB gz budget. (_Measured at `618d32c`:_ 545.22 kB, 139.60 KB gz — 30.4 KB under.)
 - **The real check is visual**, and none of it is testable under node: a GPU smoke pass through
-  `/effects`, comparing each new effect side by side with the same card in the 151 demo.
+  `/effects`, comparing each new effect side by side with the same card in the 151 demo. (_As
+  landed:_ done headless and by the numbers, with the demo's art swapped for TCGdex's — the method
+  is in `apps/holodex/AGENTS.md`, "Comparing an effect with the reference".)
+
+## What landed
+
+`7c28553` (the blends and textures), `7e40960` (the seven ports, through `effects/css.ts`),
+`fafe9ca` (`uPointerFromCenter` reaches 1 at the middle of an edge, as in both references),
+`2e1ba25` (registration, the era rule, the 87-card page), `a39e2f9`. Then a side-by-side pass
+against poke-151, on the same art, found the ports' largest gaps and closed them:
+
+- **The reference stacks a card's layers by z-index**, not by markup: glitter 2, shine 3, and a
+  glare with **no** z-index paints _beneath_ the shine. Proven by lifting its `.card__glare2` to
+  z-index 4, which reproduced our wrong colour exactly. `Effect.beneath` holds such glares (still
+  ≤ 2 with `glare[]`); `ex-regular`'s glares (z-index 4) and the balls' `.card__glare` (5) stay
+  above. (`ab6c860`)
+- **A radial with no size is `farthest-corner`**, so its radius grows as the pointer leaves the
+  centre. `radial()` now emits a `radial-pointer` source with a `cssBox` that computes it per
+  fragment, in the card's own 63 × 88, held to a TypeScript twin and to brute-forced corners.
+  (`ab6c860`)
+- **An element can carry its own `clip`**, for a layer the reference clips unlike the card:
+  `illustration-rare`'s glare and the ball glyphs, to `borders`. (`3eb4c61`)
+- **The ball glyphs dodge onto the card** (`color-dodge`, with the group's `brightness(.75)` in
+  each element's filter), inside its border (`8ab6425`), drawn to measurements taken off the
+  reference's pattern images (`d9e9561`).
+- **`sv-rare-holo`** (`618d32c`). pokemon-cards-css's `regular-holo`, the scanlines, is not the
+  151 sequel's `regular-holo.css`, which multiplies bars onto a sunpillar holo. Modern `Rare` and
+  Pocket `Three Diamond` take a port of 151's; `regular-holo` keeps the older cards. The page is
+  30 sections, 90 cards.
+- **Owner's decision (2026-09-25): the SV ports only.** The 22 older effects are untouched —
+  their compiled `main()` checked byte-identical — although the stacking and radius findings
+  apply to them too. Changing them is the owner's call.
+- **Left as documented approximations** (each in its effect's header): `sv-rare-holo`'s
+  luminosity `:after` with alpha, which Chrome keeps near the group's own luminance where our
+  alpha-less stops darken; its bars' tilt, fixed at rest.
+
+Verified at `618d32c`: the root `pnpm vitest run` at 688 tests in 37 files, lint, typecheck and
+Prettier clean.
 
 ## Out of scope
 
@@ -219,4 +271,5 @@ page, equal tile heights, constant `viewKey`.
 - Prismatic Evolutions (`sv08.5`) also had Poké Ball / Master Ball reverses. Not in the reference, so
   not here; a one-line extension of the `sv03.5` rule if wanted later.
 - The rarity filter's substring bug in search and set views (found during the sections work):
-  separate fix.
+  separate fix. TCGdex's `eq:` prefix makes a filter exact (verified 2026-09-24); the fix waits
+  on the owner.

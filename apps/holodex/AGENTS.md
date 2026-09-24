@@ -72,9 +72,11 @@ return a `MountHandle`: a disposer that also carries an optional
   `CollectionView`, `EffectsView`, `NotFoundView` — one per `Route` case.
   `EffectsView` (`/effects`, `/effects/<effectId>`,
   `/effects/<effectId>?card=<cardId>`) gives every `EffectId` a section of its
-  own, with the rarities that select it and three real cards — 66 in all;
-  exactly one card on the whole page renders a live `HoloCard` at a time, the
-  other 65 are plain art.
+  own, with the rarities that select it and three real cards — 30 sections,
+  90 cards; exactly one card on the whole page renders a live `HoloCard` at a
+  time, the other 89 are plain art. A rarity whose effect depends on the
+  card's era appears in both its sections, each chip qualified by era
+  ("Rare · Scarlet & Violet, Mega", "Rare · before Scarlet & Violet").
 - `src/holo/` — eager (statically imported by `HoloCard.tsx`, so part of the
   main chunk): `select.ts` (rarity/layout/printing → `HoloSelection`),
   `regions.ts` (`ClipShape` → inset rect + `coversPoint`), `capability.ts`
@@ -82,16 +84,18 @@ return a `MountHandle`: a disposer that also carries an optional
   machine over an injected clock), `use-reduced-motion.ts`, `teardown.ts`
   (three-free indirection onto the shader cache's disposer — see "The holo
   chunk is lazy" below), `effect-gallery.ts` (the effects page's matrix: three
-  example cards per `EffectId`, rarities read off `EFFECT_BY_RARITY`, each card
-  checked against the real `selectHolo` on a captured TCGdex copy in
-  `effect-gallery.fixture.ts`), `canvas-key.ts` (`holoCanvasKey`, the key that
+  example cards per `EffectId`, rarities read off `EFFECT_BY_RARITY` and
+  `MODERN_EFFECT_BY_RARITY`, each card checked against the real `selectHolo`
+  on a captured TCGdex copy in `effect-gallery.fixture.ts`), `canvas-key.ts` (`holoCanvasKey`, the key that
   gives every scene a canvas of its own — see the fourth gotcha below),
   `HoloCard.tsx` itself (mount, pop/showcase, context-loss and off-screen
   handling). Lazy (only reachable through
   `HoloCard.tsx`'s dynamic `import('./scene')` — see below): `scene.ts`,
   `textures.ts`, `program-cache.ts`, `shader/` (`base.ts`, `blend.ts`,
-  `sources.ts`, `compile.ts`, `types.ts`), `effects/` (22 effect files, one
-  per `EffectId`, plus the `index.ts` registry and shared `palette.ts`).
+  `sources.ts`, `compile.ts`, `types.ts`), `effects/` (30 effect files, one
+  per `EffectId`, plus the `index.ts` registry, shared `palette.ts`, and
+  `css.ts`, which converts pokemon-cards-151's CSS for the eight Scarlet &
+  Violet ports — see "Two families of effects" below).
 - `src/styles/globals.css` — Tailwind v4 entry: `@theme` holo palette tokens
   (`--color-holo-bg/panel/line/text/muted/accent`) and the `.holodex` root
   class, applied instead of `<body>` so the remote never repaints the host page.
@@ -117,7 +121,19 @@ Base `https://api.tcgdex.net/v2/en`, no key, CORS-open. Verified live 2026-09-21
   and briefs carry no rarity to filter them back out. So a card's rarity comes
   from `GET /cards/{id}`, never from the query that found it: every card on the
   effects page was judged on its own, and an earlier draft that trusted the
-  query put a VMAX under `shiny-v`.
+  query put a VMAX under `shiny-v`. The app's own rarity filter (set and
+  search views) still sends the bare value and shows the bleed.
+- **An `eq:` prefix makes either filter exact**: `?rarity=eq:Shiny rare V`
+  returns just the 9, and `?set.id=eq:swsh1` just swsh1's 216 cards (verified
+  2026-09-24). The client does not use it yet — the fix for the bleed above,
+  and possibly for the set view's intersection, is waiting on the owner.
+- **A brand-new set's `variants` can be placeholders.** Every card of `30th`
+  (30th Celebration, released 2026-09-16) reads
+  `normal: true, holo: false, reverse: false`, Double rares and Special
+  illustration rares included, where the curated `me02` and `sv08` read
+  `holo: true` for all of those. Selection reads variant data nowhere for
+  that reason (select.ts says so where the era rule lives), and a card page
+  offers no reverse toggle on such a set until TCGdex curates it.
 - **~20% of card briefs have no `image`.** `lib/images.ts` returns `null` for a
   missing base and `CardImage` renders a placeholder at the same `63/88`
   aspect ratio so the grid never reflows.
@@ -152,18 +168,31 @@ canvas at a time — and only when `holo/capability.ts#supportsHolo` says the vi
 device qualifies (WebGL2 available, no `prefers-reduced-motion: reduce`,
 `hardwareConcurrency > 2`) — otherwise `HoloCard` stays on the plain `<img>`.
 
-**22 rarity-keyed effects, not four tiers.** `holo/select.ts#selectHolo(card,
-options)` maps all 42 TCGdex rarities onto 22 `EffectId`s (`EFFECT_BY_RARITY`),
-derived from — not ported from — [simeydotme/pokemon-cards-css](https://github.com/simeydotme/pokemon-cards-css).
-Two overrides apply on top of the rarity table, in order: (1) a card number
-matching `/^[tg]g/i` is a trainer-gallery printing and remaps its base effect
-to one of four gallery variants (`galleryEffect`); (2) `options.reverse` — an
-explicit flag, never read off the card — on a card whose table effect is
-`basic` or `regular-holo` becomes `reverse-holo` with `invert: true` instead.
+**30 rarity-keyed effects, not four tiers.** `holo/select.ts#selectHolo(card,
+options)` maps all 42 TCGdex rarities onto 30 `EffectId`s. Two tables do it:
+`EFFECT_BY_RARITY` for every rarity, and `MODERN_EFFECT_BY_RARITY` for the two
+whose look changed with the Scarlet & Violet era — a `Rare` (plain before,
+printed holo in SV and Mega: `sv-rare-holo`) and an `Ultra Rare` (the full-art
+V or GX before, the full-art ex after: `ex-full-art`). `eraOf(card)` reads the
+era off the set id (the card id less `-${localId}`): `/^sv(\d|p$)/i`,
+`/^me(\d|p$)/i`, and by exact id `30th` and `30th-c`, the two Mega Evolution
+sets whose ids do not start with `me` (checked against `GET /series/me`; a
+new set with an odd id needs the same check against its series). Three
+overrides apply on top, in order: (1) a `Promo` with a `suffix` (V, ex, GX…)
+is a holo chase card, `ex-regular` in the modern era and `v-regular` before;
+(2) a card number matching `/^[tg]g/i` is a trainer-gallery printing and
+remaps its base effect to one of four gallery variants (`galleryEffect`); (3)
+`options.reverse` — an explicit flag, never read off the card — on a card whose
+effect is `basic`, `regular-holo` or `sv-rare-holo` becomes a reverse foil
+with `invert: true`: `reverse-holo`, except on 151 (`sv03.5`), whose reverse
+holos are Poké Ball patterned (`poke-ball-holo`), or Master Ball for the
+reference's fixed card numbers 1, 4, 7, 25, 133, 144, 146 and 161
+(`masterball-holo`) — never its random 20% promotion, so a card renders the
+same every time.
 `options.reverse` has exactly two sources: the card page's normal/reverse
-toggle (`views/CardView.tsx`) set to reverse, and the effects page's
-reverse-holo section (`views/EffectsView.tsx`, via the gallery entry's
-`reverse`, for all three of its cards). `card.variants?.reverse` means "a reverse printing of this card
+toggle (`views/CardView.tsx`) set to reverse, and the effects page's three
+reverse sections (`views/EffectsView.tsx`, via each gallery entry's
+`reverse`). `card.variants?.reverse` means "a reverse printing of this card
 exists in TCGdex's data," not "show it," and only decides whether the toggle
 is offered at all — and so whether the card page honours `?variant=reverse`,
 which it ignores on a card with no reverse printing. An earlier version of
@@ -173,13 +202,51 @@ roughly half of TCGdex (~12,500 cards, every one whose reverse printing
 exists but isn't what a visitor is looking at) with inverted or unwarranted
 foil. An unmapped rarity falls back to `basic`,
 but never silently: a coverage test asserts every one of the 42 rarities has
-a table entry and that the four override-only effects (`reverse-holo` and
-the three gallery variants) never appear as a table value. `selectHolo` also
+a table entry and that the seven override-only effects (the three reverse
+foils and the four gallery variants) never appear as a table value. `selectHolo` also
 picks the card's `ClipShape` (`clipShape()` in the same file) from the
 resolved effect, the card's `category`/`stage`, and whether its rarity is
-literally `Full Art Trainer` — order matters, since `radiant-holo` and the
-gallery effects must claim `borders` before the full-art and trainer rules
-would otherwise take them.
+literally `Full Art Trainer` — order matters, since `radiant-holo`,
+`illustration-rare` and the gallery effects must claim `borders` before the
+full-art and trainer rules would otherwise take them. `ex-regular` (a
+`Double rare`, the standard-layout ex) must never be `full`: its reference
+confines its foil with a per-card mask we do not have, and the geometric art
+window stands in for it.
+
+**Two families of effects.** The 22 older effects were _derived_ from
+[simeydotme/pokemon-cards-css](https://github.com/simeydotme/pokemon-cards-css)
+by eye, their numbers carried across as they stood. The eight Scarlet & Violet
+ones (`ex-regular`, `ex-full-art`, `illustration-rare`,
+`ex-special-illustration-rare`, `hyper-rare`, `poke-ball-holo`,
+`masterball-holo`, `sv-rare-holo`) are _ported_ from
+[simeydotme/pokemon-cards-151](https://github.com/simeydotme/pokemon-cards-151)
+through `effects/css.ts`, which converts CSS instead of copying numbers (a CSS
+`200%` makes an image bigger where a DSL size makes it repeat) and lists the
+approximations every port shares; each port lists its own. The reference's
+per-rarity CSS is not the whole of it: `public/css/cards.css` holds
+`--angle`, `--space`, every texture variable and 151's clip regions, and
+`src/lib/components/Card.svelte` the pointer maths. Three things apply to the
+ports only, by the owner's choice, so the older effects look exactly as they
+did (their compiled `main()` is byte-identical): a converted radial draws
+with CSS's own `farthest-corner` geometry (the Source's `cssBox`, which grows
+as the pointer leaves the middle, where a hand-drawn radial keeps the DSL's
+fixed radius); glare stacks by the reference's z-index (below); and
+`effects/css.ts`'s filter and colour helpers. Per-card masks, the reference's
+realism ceiling, are out of reach for both families.
+
+**Glare stacks by z-index, as the reference's does.** poke-151 paints a
+card's layers in z-index order — `.card__glitter` 2, `.card__shine` 3
+(base.css) — not in markup order and not by `translateZ`. So a `.card__glare`
+or `.card__glare2` that its rarity's CSS gives no z-index paints _beneath_
+the shine, which then dodges or overlays a card the glare has already lit or
+darkened: a different picture from the same glare laid over the top. An
+`Effect` carries such glare in `beneath` (counted in glare's budget of two),
+and `glare` holds only what paints above; the shine's clip keeps whatever lies
+beneath it. Only `ex-regular` (both glares `z-index: 4`) and the balls' glare
+(`z-index: 5`) paint above. Checked in a headless browser: lifting the Poké
+Ball's glare2 to `z-index: 4` in the shipped reference reproduced exactly the
+olive text box this port showed while it painted every glare above.
+`sv-effects.test.ts`'s stacking table holds every port to its CSS.
 
 **Clip regions, and why reverse holo inverts.** `holo/regions.ts` maps each
 `ClipShape` (`regular`, `stage`, `trainer`, `borders`, `full`) to an inset
@@ -192,22 +259,36 @@ Everything else (basic, regular-holo, full-art effects, …) confines its
 foil _inside_ the region — a window over the art. `reverse-holo` is the one
 case that flips `invert` to `true`, painting the foil _outside_ the region
 instead (the card's border and text box), because that is what a real
-reverse-holo print actually looks like: foil everywhere except the art.
+reverse-holo print actually looks like: foil everywhere except the art. The
+151 ball foils invert the same way.
 
-**The effect DSL and the generator.** Each of the 22 files under
+An element can also carry a **clip of its own** (`Element.clip`, a region's
+rect, never inverted, never `stage`), which gates that element alone inside
+whatever the effect's region allows: the reference clips some
+pseudo-elements apart from their shine. The balls keep their glyphs inside
+the silver border (`borders`) while the shine's own dodge reaches it, and
+`illustration-rare`'s glare keeps to the border polygon. `insideRect()` in
+`shader/base.ts` draws it, and `compile.test.ts` runs the emitted GLSL
+against `coversPoint` as it does `coverage()`.
+
+**The effect DSL and the generator.** Each of the 30 effect files under
 `holo/effects/` (e.g. `cosmos-holo.ts`) is a declarative `Effect`
-(`holo/shader/types.ts`): 1-3 `shine` elements and 0-2 `glare` elements, each
+(`holo/shader/types.ts`): 1-3 `shine` elements and up to two glare elements,
+painted above the shine (`glare`) or beneath it (`beneath`), each
 a stack of `Layer`s (a `Source` — solid, linear/repeating-linear/conic/radial
 gradient, `card`, `scanlines`, or one of the generated textures: `glitter`,
 `grain`, `iri`, `birthday`, and the 151 set's `pokeball` / `pokeball-inner` /
 `masterball` / `masterball-inner` patterns — plus a `BlendMode`), an
-optional pointer-driven `Filter`, and its own `mixBlend`. Numbers can be
+optional pointer-driven `Filter`, its own `mixBlend`, and optionally its own
+`clip`. A radial converted from CSS also carries its `cssBox` (its centre
+and image size), and draws with CSS's `farthest-corner` geometry
+(`radialCssDistance` in `sources.ts`, twin `css.ts#radialT`). Numbers can be
 plain, or `PointerDriven` (a base plus coefficients over pointer-from-center /
 from-left / from-top, evaluated per fragment). `holo/shader/compile.ts`'s
 `compileEffect()` turns one `Effect` into one complete fragment shader —
-concatenating `base.ts` (varyings, clip uniforms, `coverage()`), `blend.ts`
-(the 15 CSS blend modes as GLSL functions, including the three non-separable
-HSL ones and `plus-lighter`, strictly a compositing operator) and `sources.ts`
+concatenating `base.ts` (varyings, clip uniforms, `coverage()`, `insideRect()`), `blend.ts`
+(16 blend modes as GLSL functions: CSS's own but `color`, including the three
+non-separable HSL ones, and `plus-lighter`, strictly a compositing operator) and `sources.ts`
 (one GLSL expression per `Source` kind) around
 per-effect layer/filter code generated from the `Effect` data. This is a
 declarative-description-compiled-to-GLSL design, not the hand-written GLSL
@@ -293,8 +374,14 @@ grid page got slow. Check after any change under `src/holo/` or `src/App.tsx`:
 
 ```bash
 pnpm --filter @ncam/holodex build
-grep -l 'ShaderMaterial\|WebGLRenderer' dist/assets/*.js
+grep -l -F 'THREE.WebGLRenderer' dist/assets/*.js
 ```
+
+The marker is a string inside three.js's own error messages, so only three.js
+itself carries it. The class names alone (`ShaderMaterial`, `WebGLRenderer`)
+are not safe to grep for: the SSR build is not minified and keeps doc
+comments, and `canvas-key.ts`'s mentions `WebGLRenderer`, which made that
+pattern match a third, three-free chunk.
 
 **Expect exactly two matches, not one.** `dist/assets/` holds both build
 targets: every file `dist-ssr/assets/` produces also lands, byte-for-byte
@@ -310,7 +397,7 @@ bundle — the one that actually matters for "never loads for a grid/list
 visitor" — exclude the SSR copies by filename:
 
 ```bash
-comm -23 <(grep -l 'ShaderMaterial\|WebGLRenderer' dist/assets/*.js | xargs -n1 basename | sort) \
+comm -23 <(grep -l -F 'THREE.WebGLRenderer' dist/assets/*.js | xargs -n1 basename | sort) \
          <(ls dist-ssr/assets | sort)
 # exactly one file: the client build's own scene-*.js
 ```
@@ -320,6 +407,13 @@ If either count changes, something started importing `holo/scene`,
 `import()`) — trace it from there.
 
 ## Bundle budget (§10) — measured 2026-09-22 at `d12c296`, fresh `pnpm --filter @ncam/holodex build`
+
+**Lazy chunk re-measured 2026-09-25 at `618d32c`**, after the eight Scarlet &
+Violet effects and their shaders landed: `scene-*.js` is 545.22 kB raw,
+**139.60 KB gz** against the 170 KB budget — a pass with 30.4 KB of headroom,
+up 8.20 KB from the 131.40 below. The main chunk was not re-traced; the
+change that made the new effects selectable reported it 0.61 KB gz larger.
+The rest of this section is the full measurement as of `d12c296`.
 
 (`dist/` and `dist-ssr/` deleted before the build below, so this is not a
 stale-cache figure — see the bundle-history note further down for exactly
@@ -410,7 +504,10 @@ instead of reaching for a global:
   the seeded PRNG (`mulberry32`), the whole `iri` texture as bytes, the
   `birthday` stars' shape, sizes and hues, the ball lattice, and the wrapped
   copies that make each texture tile. Browser-only and untested: the canvas
-  calls, including the ball glyphs' internal drawing. `scene.ts` binds a
+  calls, including the ball glyphs' internal drawing, whose geometry
+  (`GLYPH` and `BALL_RADIUS`) was measured off the reference's
+  pokeball/masterball mask images and checked by scanning the rendered
+  textures the same way in a headless browser. `scene.ts` binds a
   generated texture only when the selected effect samples it
   (`texturesUsedBy`), through `SHARED_TEXTURE_UNIFORM`, which `scene.test.ts`
   holds against the samplers `shader/sources.ts` declares.
@@ -418,8 +515,8 @@ instead of reaching for a global:
   `renderToString` under node — no DOM needed, since no effect runs —
   through `views/render-view.test-util.ts`, which wraps it in App's two
   providers and seeds cards straight into the query cache. That is how the
-  effects page is held to rendering every rarity once, to exactly one
-  `HoloCard` among its 66 cards whichever is live, and to handing `reverse` on
+  effects page is held to rendering every (rarity, era arm) once, to exactly one
+  `HoloCard` among its 90 cards whichever is live, and to handing `reverse` on
   to it (each read back off the HoloCard root's `data-effect`), and the card
   page to ignoring `?variant=reverse` on a card with no reverse printing.
 
@@ -433,8 +530,33 @@ three example cards on one page for that: click through the tiles. A selected
 tile whose card TCGdex serves without an image says so, since there is no art
 for the foil to render on.
 
+**Comparing an effect with the reference** is done headless, not by eye in a
+pane: Playwright 1.58 from the pnpm store (1.63 is there too, but 1.58's
+Chromium, build 1208, is the one cached) renders WebGL2 with no window. For
+each card, screenshot this app's card page (`/card/<id>`, plus
+`?variant=reverse` for a ball holo, after checking the root's `data-effect`)
+and `https://poke-151.simey.me/?poke=<card number>` (`?poke=` takes
+comma-separated numbers) at the same fractions of the card. What made the
+numbers trustworthy on this branch:
+
+- **Swap the reference's `<img>` for TCGdex's art** (`.card__front img`)
+  before the capture, so the two differ in effect and nothing else.
+- **Keep the pointer moving** while the springs settle: the reference's
+  `interactEnd` fires 500 ms after any bubbled `mouseout` and is never
+  cancelled, so a parked pointer lets its card snap back to rest.
+- **Decompose with injected CSS** (`display: none` on `.card__glare2`,
+  `.card__shine::after`…, or a z-index override) to find which layer
+  differs, and compare region statistics (10th percentile, median, 97th of
+  luminance) rather than eyeballing. A region that saturates at 255 in both
+  says nothing about contrast.
+- Expect ~6/255 of run-to-run noise in the reference: its `--seedx/--seedy`
+  are random per page load. So is a Poké Ball: the demo reverses a Common or
+  Uncommon on half its loads, and makes one reverse in five a Master Ball,
+  so reload until `.card`'s `data-rarity` ends in `pokeball holo`. Only 1,
+  4, 7, 25, 133, 144, 146 and 161 are Master Ball every time.
+
 Computed layout and scrolling need a browser too, so these are smoke-pass
-checks, not unit tests: every effects tile the same height across all 22
+checks, not unit tests: every effects tile the same height across all 30
 sections (a fixed caption — the name clamped to two lines and always two lines
 tall — under the fixed 63/88 art); a section the URL names scrolling into view
 on navigation, instantly on the landing and under reduced motion, and never for

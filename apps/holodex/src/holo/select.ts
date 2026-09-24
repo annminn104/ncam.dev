@@ -183,7 +183,7 @@ const MEGA_SET = /^me(\d|p$)/i;
  * also holds two sets whose ids do not start with `me` (GET /series/me,
  * verified 2026-09-24) — `30th` (30th Celebration) and `30th-c` (30th Classic
  * Collection) — so they are Mega by exact id. `30th`'s 18 `Rare` cards take
- * the modern arm, regular-holo. TCGdex marks them `variants.holo: false`, but
+ * the modern arm, sv-rare-holo. TCGdex marks them `variants.holo: false`, but
  * that is a new set's placeholder rather than a printing: every `30th` card
  * reads `normal: true, holo: false, reverse: false`, its Double, Illustration
  * and Special illustration rares included — foil by definition, and `holo:

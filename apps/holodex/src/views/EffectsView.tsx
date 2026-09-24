@@ -270,7 +270,7 @@ function TileFrame({
         )}
       >
         {children}
-        {/* Every tile on the page is one height, across all 29 sections —
+        {/* Every tile on the page is one height, across all 30 sections —
             separate grids, so a row's stretch cannot do it. The art is a
             fixed 63/88, and the caption under it a fixed height: the name
             clamped to two lines and always two lines tall, even for
