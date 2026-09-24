@@ -13,12 +13,12 @@ import type { Card } from '../lib/tcgdex';
  * `selectHolo` ever starts reading a field that is not here.
  */
 export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
-  'sm7.5-1': {
-    id: 'sm7.5-1',
+  'sm1-1': {
+    id: 'sm1-1',
     localId: '1',
-    name: 'Charmander',
+    name: 'Caterpie',
     category: 'Pokemon',
-    set: { id: 'sm7.5', name: 'Dragon Majesty', cardCount: { total: 78, official: 70 } },
+    set: { id: 'sm1', name: 'Sun & Moon', cardCount: { total: 172, official: 149 } },
     rarity: 'Common',
     stage: 'Basic',
     variants: { firstEdition: false, holo: false, normal: true, reverse: false, wPromo: false },
@@ -33,18 +33,14 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     stage: 'Basic',
     variants: { firstEdition: false, holo: true, normal: false, reverse: true, wPromo: false },
   },
-  'cel25cc-CC001': {
-    id: 'cel25cc-CC001',
-    localId: 'CC001',
-    name: 'Blastoise',
+  'sv10.5b-171': {
+    id: 'sv10.5b-171',
+    localId: '171',
+    name: 'Victini',
     category: 'Pokemon',
-    set: {
-      id: 'cel25cc',
-      name: 'Celebrations Classic Collection',
-      cardCount: { total: 25, official: 25 },
-    },
-    rarity: 'Classic Collection',
-    stage: 'Stage2',
+    set: { id: 'sv10.5b', name: 'Black Bolt', cardCount: { total: 172, official: 86 } },
+    rarity: 'Black White Rare',
+    stage: 'Basic',
     variants: { firstEdition: false, holo: true, normal: false, reverse: false, wPromo: false },
   },
   'swsh4-9': {
@@ -110,19 +106,15 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     stage: 'Basic',
     variants: { firstEdition: false, holo: true, normal: false, reverse: false, wPromo: false },
   },
-  'swsh4.5sv-SV105': {
-    id: 'swsh4.5sv-SV105',
-    localId: 'SV105',
-    name: 'Rillaboom V',
+  'sv04.5-212': {
+    id: 'sv04.5-212',
+    localId: '212',
+    name: 'Forretress ex',
     category: 'Pokemon',
-    set: {
-      id: 'swsh4.5sv',
-      name: 'Shining Fates Shiny Vault',
-      cardCount: { total: 122, official: 122 },
-    },
-    rarity: 'Shiny rare V',
-    stage: 'Basic',
-    suffix: 'V',
+    set: { id: 'sv04.5', name: 'Paldean Fates', cardCount: { total: 245, official: 91 } },
+    rarity: 'Shiny Ultra Rare',
+    stage: 'Stage1',
+    suffix: 'ex',
     variants: { firstEdition: false, holo: true, normal: false, reverse: false, wPromo: false },
   },
   'swsh4.5sv-SV106': {

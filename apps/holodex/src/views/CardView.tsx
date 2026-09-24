@@ -21,8 +21,10 @@ import { HoloCard } from '../holo/HoloCard';
 function PrintingToggle({ cardId, variant }: { cardId: string; variant?: 'reverse' }) {
   const navigate = useNavigate();
   const isReverse = variant === 'reverse';
+  // No `outline-none`: in Tailwind 4 it sets the `--tw-outline-style` that
+  // `outline-2` reads, which left a keyboard-focused button with no ring.
   const base =
-    'rounded-lg border px-3 py-1.5 text-sm outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-holo-accent';
+    'rounded-lg border px-3 py-1.5 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-holo-accent';
   const on = 'border-holo-accent text-holo-accent';
   const off = 'border-holo-line';
 
@@ -74,7 +76,12 @@ export function CardView({ cardId, variant }: { cardId: string; variant?: 'rever
             style={{ aspectRatio: '63 / 88' }}
           />
         ) : card ? (
-          <HoloCard card={card} reverse={variant === 'reverse'} />
+          // Only a printing that exists: `?variant=reverse` on a card with no
+          // reverse printing gets no toggle below, so nothing could undo it.
+          <HoloCard
+            card={card}
+            reverse={variant === 'reverse' && card.variants?.reverse === true}
+          />
         ) : (
           <CardImage name={cardId} quality="high" priority />
         )}

@@ -82,8 +82,10 @@ return a `MountHandle`: a disposer that also carries an optional
   chunk is lazy" below), `effect-gallery.ts` (the effects page's matrix: one
   example card per `EffectId`, rarities read off `EFFECT_BY_RARITY`, each card
   checked against the real `selectHolo` on a captured TCGdex copy in
-  `effect-gallery.fixture.ts`), `HoloCard.tsx` itself (mount, pop/showcase,
-  context-loss and off-screen handling). Lazy (only reachable through
+  `effect-gallery.fixture.ts`), `canvas-key.ts` (`holoCanvasKey`, the key that
+  gives every scene a canvas of its own — see the fourth gotcha below),
+  `HoloCard.tsx` itself (mount, pop/showcase, context-loss and off-screen
+  handling). Lazy (only reachable through
   `HoloCard.tsx`'s dynamic `import('./scene')` — see below): `scene.ts`,
   `textures.ts`, `program-cache.ts`, `shader/` (`base.ts`, `blend.ts`,
   `sources.ts`, `compile.ts`, `types.ts`), `effects/` (22 effect files, one
@@ -126,8 +128,9 @@ Dozens of tiles can be on screen in a set/search grid at once, so `CardTile`
 uses a pointer-driven `rotateX`/`rotateY` transform plus a CSS
 `linear-gradient` sheen — no GL context, cheap at any tile count. The full
 three.js holo shader (refraction, moving glare, rarity-keyed foil texture,
-device-tilt input) only exists on the **card detail page**, one canvas for one
-card, and only when `holo/capability.ts#supportsHolo` says the visitor's
+device-tilt input) only exists on the **card detail page** and the **effects
+page** (`/effects`, whose selected tile is the one live `HoloCard`) — one live
+canvas at a time — and only when `holo/capability.ts#supportsHolo` says the visitor's
 device qualifies (WebGL2 available, no `prefers-reduced-motion: reduce`,
 `hardwareConcurrency > 2`) — otherwise `HoloCard` stays on the plain `<img>`.
 
@@ -139,10 +142,13 @@ matching `/^[tg]g/i` is a trainer-gallery printing and remaps its base effect
 to one of four gallery variants (`galleryEffect`); (2) `options.reverse` — an
 explicit flag, never read off the card — on a card whose table effect is
 `basic` or `regular-holo` becomes `reverse-holo` with `invert: true` instead.
-`options.reverse` is true only when the card page's normal/reverse toggle
-(`views/CardView.tsx`) is set to reverse; `card.variants?.reverse` means "a
-reverse printing of this card exists in TCGdex's data," not "show it," and
-only decides whether that toggle is offered at all. An earlier version of
+`options.reverse` has exactly two sources: the card page's normal/reverse
+toggle (`views/CardView.tsx`) set to reverse, and the effects page's
+reverse-holo tile (`views/EffectsView.tsx`, via the gallery entry's
+`reverse`). `card.variants?.reverse` means "a reverse printing of this card
+exists in TCGdex's data," not "show it," and only decides whether the toggle
+is offered at all — and so whether the card page honours `?variant=reverse`,
+which it ignores on a card with no reverse printing. An earlier version of
 `selectHolo` read `card.variants?.reverse` directly instead of taking
 `options.reverse` — conflating "exists" with "show it" — and mis-rendered
 roughly half of TCGdex (~12,500 cards, every one whose reverse printing
@@ -197,9 +203,10 @@ compile failure logs once and falls back to `basic`; if `basic` itself fails,
 (`disposeMaterials`) on remote unmount without importing three.js themselves
 just to reach it — see "The holo chunk is lazy" below.
 
-**Three gotchas that cost real time on this branch** — none of them are
-caught by any test, and each one is silent (wrong colors, or a black screen)
-rather than an error if you get it wrong:
+**Four gotchas that cost real time on this branch** — none of them are
+caught by any unit test, and each one is silent to a visitor (wrong colors, a
+black screen, or a foil that quietly drops to the plain image) rather than an
+error if you get it wrong:
 
 - `shader/compile.ts` emits **no `#version` directive**. three.js prepends
   `#version 300 es` itself whenever `glslVersion: '300 es'` is set on the
@@ -230,6 +237,23 @@ src)`) — there is nothing beneath the first layer within its own element to
   the vertex flip, or a texture's `flipY` — and every effect mirrors
   vertically, or the card art does; no unit test renders a frame, so nothing
   catches it but eyes on a real card.
+- **A canvas never hosts a second scene.** A scene's `dispose()` calls
+  `renderer.forceContextLoss()` (it must: browsers cap live contexts near
+  16), and from then on `getContext()` on that canvas returns the same dead
+  context. three.js's `WebGLRenderer` constructor throws on it (`Cannot read
+properties of null (reading 'precision')`), `HoloCard` logs
+  `holo.unavailable`, and the foil is gone. The normal/reverse toggle shipped
+  like that, dying on the first click, and the context-restore path had done
+  it since v1. So `HoloCard` keys its `<canvas>` on `holoCanvasKey` — every
+  input a scene is built from — and its scene effect re-runs on that key
+  alone: every rebuild (toggle, restore) mounts a fresh canvas. Its
+  context-loss listeners live in that same effect run, on that run's canvas,
+  closing over that run's scene, and come off before `dispose()`. The
+  force-lost canvas's `webglcontextlost` is delivered a task later, after the
+  next scene already exists, and must reach nothing. `canvas-key.test.ts`
+  pins the key; the lifecycle needs a GPU smoke pass: toggle
+  `/card/swsh3-25` (a scene on both sides) and `/card/swsh3-3` over and over,
+  and lose/restore a live context with `WEBGL_lose_context`.
 
 **The holo chunk is lazy** — `HoloCard.tsx` only ever imports `./scene`
 dynamically (`void import('./scene')` inside an effect, gated by
@@ -361,9 +385,17 @@ instead of reaching for a global:
   itself untested (it's a one-line adapter, not logic).
 - `fetch` is `vi.stubGlobal`-mocked in `lib/tcgdex.ts` tests — nothing touches
   the network.
+- Views are tested as markup. `views/*.test.ts` render a view with
+  `renderToString` under node — no DOM needed, since no effect runs —
+  through `views/render-view.test-util.ts`, which wraps it in App's two
+  providers and seeds cards straight into the query cache. That is how the
+  effects page is held to rendering every rarity and to handing `reverse` on
+  to `HoloCard` (read back off its root's `data-effect`), and the card page to
+  ignoring `?variant=reverse` on a card with no reverse printing.
 
-**Not unit-tested, by design:** the three.js scene and the GLSL shaders —
-jsdom has no WebGL2 and this repo has no jsdom regardless. They sit behind
+**Not unit-tested, by design:** the three.js scene, the GLSL shaders and
+`HoloCard`'s canvas lifecycle (a fresh canvas per scene; context loss and
+restore) — jsdom has no WebGL2 and this repo has no jsdom regardless. They sit behind
 `capability.ts` (which is tested) so a visitor who can't run them never loads
 them, and they're checked by hand (`pnpm --filter @ncam/holodex dev`, open a
 card, confirm the holo reacts to the pointer). `/effects` puts every effect's

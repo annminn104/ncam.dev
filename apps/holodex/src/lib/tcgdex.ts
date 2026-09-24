@@ -87,7 +87,8 @@ export interface Variants {
    * foil. Whether the *current view* shows the reverse printing is a
    * separate, explicit choice — see `SelectOptions.reverse` in
    * `holo/select.ts` and the toggle in `views/CardView.tsx`. This field only
-   * decides whether that toggle is offered at all.
+   * decides whether that toggle is offered at all, and so whether the card
+   * page honours `?variant=reverse`.
    */
   reverse?: boolean;
   holo?: boolean;

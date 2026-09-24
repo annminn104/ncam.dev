@@ -9,6 +9,7 @@ import { createLogger } from '@ncam/logger';
 import { CardImage } from '../components/CardImage';
 import { imageUrl } from '../lib/images';
 import type { Card } from '../lib/tcgdex';
+import { holoCanvasKey } from './canvas-key';
 import { browserProbe, supportsHolo } from './capability';
 import { selectHolo } from './select';
 import { createShowcase, type Showcase } from './showcase';
@@ -17,13 +18,32 @@ import type { HoloScene } from './scene';
 
 const log = createLogger({ scope: 'holodex' });
 
-export function HoloCard({ card, reverse = false }: { card: Card; reverse?: boolean }) {
-  const hostRef = useRef<HTMLDivElement>(null);
+export function HoloCard({
+  card,
+  reverse = false,
+  decorative = false,
+}: {
+  card: Card;
+  reverse?: boolean;
+  /**
+   * Something beside the card already names it (an effects-page tile's
+   * caption), so the art is hidden from assistive technology instead of
+   * announcing the name a second time.
+   */
+  decorative?: boolean;
+}) {
+  const hostRef = useRef<HTMLSpanElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  /** The live scene, for the pointer, tilt and visibility handlers below.
+   *  Only the mount-effect run that built a scene sets or clears it. */
   const sceneRef = useRef<HoloScene | null>(null);
   const showcaseRef = useRef<Showcase | null>(null);
-  const [active, setActive] = useState(false);
-  /** Bumped to force a rebuild after a restored WebGL context. */
+  /** The canvas key whose scene is live, or null. Compared with the current
+   *  key below instead of being kept as a boolean, so the render that swaps in
+   *  a fresh canvas is already inactive: the plain art shows at once, rather
+   *  than a frame of the new, empty canvas until the old scene's cleanup runs. */
+  const [liveKey, setLiveKey] = useState<string | null>(null);
+  /** Bumped to rebuild, on a fresh canvas, after a restored WebGL context. */
   const [generation, setGeneration] = useState(0);
   /** Drives the wrapper's CSS scale on pointer-enter/leave. A ref would not
    *  re-render, so the transform would never actually apply. */
@@ -42,22 +62,24 @@ export function HoloCard({ card, reverse = false }: { card: Card; reverse?: bool
   // remount the scene (recompiling the shader and refetching the card) on
   // every render.
   //
-  // `reverse` is one of selectHolo's own inputs now, so it belongs in this
-  // list too, alongside the fields it's fed into — not because today's
-  // REVERSIBLE/clipShape rules happen to always change effect/invert in
-  // lockstep with it (they do, so eslint sees it as redundant), but because
-  // this memo shouldn't depend on that staying true. Miss it and a future
-  // tweak to selectHolo could leave toggling silently stuck on the
-  // pre-toggle foil.
+  // `reverse` is deliberately not a dependency: it reaches the scene only
+  // through these three fields. On a card it cannot change — one whose table
+  // effect is not basic or regular-holo that still lists a reverse printing —
+  // listing it here rebuilt the whole scene on every toggle for no visual
+  // change. If selectHolo ever grows an output that `reverse` changes, it
+  // becomes a fourth field here, and holoCanvasKey must read it too.
   const selection = useMemo(
     () => ({
       effect: freshSelection.effect,
       shape: freshSelection.shape,
       invert: freshSelection.invert,
     }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- reverse is deliberately explicit, see comment above
-    [freshSelection.effect, freshSelection.shape, freshSelection.invert, reverse],
+    [freshSelection.effect, freshSelection.shape, freshSelection.invert],
   );
+
+  // A new scene only ever builds on a new canvas: see holoCanvasKey.
+  const canvasKey = holoCanvasKey({ cardId: card.id, src, selection, generation });
+  const active = liveKey === canvasKey;
 
   useEffect(() => {
     // Computed once per effect run and reused below for the showcase's
@@ -68,23 +90,64 @@ export function HoloCard({ card, reverse = false }: { card: Card; reverse?: bool
     const holoSupported = supportsHolo(browserProbe());
     // Nothing to foil, or this visitor should not get WebGL at all.
     if (!src || selection.effect === 'basic' || !holoSupported) return;
+    // This run's own canvas, keyed on exactly this run's inputs. Captured now,
+    // not read off the ref later: by the time the import below settles, or
+    // this run's cleanup fires, canvasRef can already hold the next run's.
+    const canvas = canvasRef.current;
+    if (!canvas) return;
     let disposed = false;
+    let lost = false;
+    let scene: HoloScene | null = null;
     let showcaseRaf = 0;
+
+    // A lost context falls back to the plain image rather than a black
+    // rectangle. These listeners belong to this run alone: attached to this
+    // run's canvas, closing over this run's scene, and removed by this run's
+    // cleanup before it disposes anything. That is what keeps an outgoing
+    // canvas away from the incoming scene. dispose() force-loses the context,
+    // and the browser delivers the resulting webglcontextlost in a later task
+    // — after the next run has already built its scene on its own canvas. A
+    // listener that reached for sceneRef would stop that scene and hide it.
+    // These cannot: they are detached before the event is even queued, they
+    // only ever touch their own `scene`, and they clear `liveKey` only while
+    // it still names this run's canvas.
+    const onLost = (event: Event) => {
+      // preventDefault is what makes a restore possible at all.
+      event.preventDefault();
+      log.warn('holo.context-lost', { card: card.id });
+      lost = true;
+      scene?.stop();
+      setLiveKey((live) => (live === canvasKey ? null : live));
+    };
+    const onRestored = () => {
+      log.info('holo.context-restored', { card: card.id });
+      // This scene's GL objects died with the context, and its canvas must
+      // never host another scene. Bumping generation changes the canvas key:
+      // React mounts a fresh canvas, this run's cleanup disposes the old
+      // scene (releasing the restored context with it), and the next run
+      // builds on the new canvas.
+      setGeneration((value) => value + 1);
+    };
+    canvas.addEventListener('webglcontextlost', onLost);
+    canvas.addEventListener('webglcontextrestored', onRestored);
 
     // three.js lives behind this dynamic import: a grid or list view never
     // downloads it.
     void import('./scene')
       .then(async ({ createHoloScene }) => {
-        const canvas = canvasRef.current;
         const host = hostRef.current;
-        if (disposed || !canvas || !host) return;
-        const scene = createHoloScene(canvas);
-        sceneRef.current = scene;
-        scene.setSelection(selection);
-        scene.resize(host.clientWidth, host.clientHeight);
-        await scene.setCard(src);
-        if (disposed) return;
-        scene.start();
+        if (disposed || !host) return;
+        const built = createHoloScene(canvas);
+        scene = built;
+        sceneRef.current = built;
+        built.setSelection(selection);
+        built.resize(host.clientWidth, host.clientHeight);
+        await built.setCard(src);
+        // Torn down meanwhile, or the context died while the card loaded:
+        // going live now would show an empty canvas instead of the art. A
+        // restore, if one comes, rebuilds on a fresh canvas.
+        if (disposed || lost) return;
+        built.start();
 
         // The one-shot intro sweep. It needs its own per-frame driver since
         // the scene's RAF loop is private to scene.ts, and it is cancelled
@@ -104,12 +167,12 @@ export function HoloCard({ card, reverse = false }: { card: Card; reverse?: bool
         const driveShowcase = () => {
           if (!showcase.isActive()) return;
           const { x, y } = showcase.valueAt(performance.now());
-          sceneRef.current?.setPointer(x, y);
+          built.setPointer(x, y);
           showcaseRaf = requestAnimationFrame(driveShowcase);
         };
         showcaseRaf = requestAnimationFrame(driveShowcase);
 
-        setActive(true);
+        setLiveKey(canvasKey);
       })
       .catch((error) => {
         log.warn('holo.unavailable', {
@@ -119,13 +182,20 @@ export function HoloCard({ card, reverse = false }: { card: Card; reverse?: bool
 
     return () => {
       disposed = true;
+      // Detach first: dispose() below force-loses this canvas's context, and
+      // the webglcontextlost that causes must find no listener of ours.
+      canvas.removeEventListener('webglcontextlost', onLost);
+      canvas.removeEventListener('webglcontextrestored', onRestored);
       cancelAnimationFrame(showcaseRaf);
       showcaseRef.current = null;
-      sceneRef.current?.dispose();
-      sceneRef.current = null;
-      setActive(false);
+      if (sceneRef.current === scene) sceneRef.current = null;
+      scene?.dispose();
+      setLiveKey((live) => (live === canvasKey ? null : live));
     };
-  }, [src, selection, generation]);
+    // canvasKey is built from every other value here (holoCanvasKey), so this
+    // effect re-runs exactly when the <canvas> below is replaced, never on a
+    // canvas it has already used.
+  }, [canvasKey, card.id, selection, src]);
 
   // Pause when off-screen or the tab is hidden — an idle RAF loop on a
   // portfolio page is pure battery drain.
@@ -151,33 +221,6 @@ export function HoloCard({ card, reverse = false }: { card: Card; reverse?: bool
     };
   }, [active]);
 
-  // A lost context falls back to the plain image rather than a black rectangle.
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const onLost = (event: Event) => {
-      // preventDefault is what makes a restore possible at all.
-      event.preventDefault();
-      log.warn('holo.context-lost', { card: card.id });
-      sceneRef.current?.stop();
-      setActive(false);
-    };
-    const onRestored = () => {
-      log.info('holo.context-restored', { card: card.id });
-      // The old scene's GL objects died with the context. Drop it and let the
-      // mount effect rebuild by flipping its input.
-      sceneRef.current?.dispose();
-      sceneRef.current = null;
-      setGeneration((value) => value + 1);
-    };
-    canvas.addEventListener('webglcontextlost', onLost);
-    canvas.addEventListener('webglcontextrestored', onRestored);
-    return () => {
-      canvas.removeEventListener('webglcontextlost', onLost);
-      canvas.removeEventListener('webglcontextrestored', onRestored);
-    };
-  }, [card.id]);
-
   // Phone tilt. iOS needs a user gesture to grant this, and a denial is normal
   // — the pointer path already works, so a failure is silent by design.
   useEffect(() => {
@@ -197,7 +240,7 @@ export function HoloCard({ card, reverse = false }: { card: Card; reverse?: bool
     return () => window.removeEventListener('deviceorientation', onOrient);
   }, [active]);
 
-  const onPointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
+  const onPointerMove = (event: ReactPointerEvent<HTMLSpanElement>) => {
     const host = hostRef.current;
     if (!host) return;
     // Real pointer input has arrived — the intro sweep should not fight it.
@@ -220,12 +263,17 @@ export function HoloCard({ card, reverse = false }: { card: Card; reverse?: bool
   };
 
   return (
-    <div
+    // A <span> made block, not a <div>: on the effects page this sits inside
+    // a tile's <button>, whose content must be phrasing content. data-effect
+    // names the effect this card resolved to, for the effects page's tests and
+    // for anyone checking a card in devtools.
+    <span
       ref={hostRef}
+      data-effect={selection.effect}
       onPointerMove={onPointerMove}
       onPointerEnter={onPointerEnter}
       onPointerLeave={onPointerLeave}
-      className="relative"
+      className="relative block"
       style={{
         aspectRatio: '63 / 88',
         // Reduced motion means no animation at all, not just a faster one —
@@ -243,13 +291,17 @@ export function HoloCard({ card, reverse = false }: { card: Card; reverse?: bool
         name={card.name}
         quality="high"
         priority
+        decorative={decorative}
         className={active ? 'invisible' : undefined}
       />
+      {/* Keyed on every input of a scene, so each scene gets a canvas no
+          earlier scene has force-lost: see holoCanvasKey. */}
       <canvas
+        key={canvasKey}
         ref={canvasRef}
         aria-hidden="true"
         className={`absolute inset-0 h-full w-full rounded-lg ${active ? '' : 'hidden'}`}
       />
-    </div>
+    </span>
   );
 }

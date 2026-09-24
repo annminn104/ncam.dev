@@ -13,8 +13,16 @@ import { cn } from '../lib/utils';
 /** Counted off the gallery, so the intro cannot disagree with the tiles under it. */
 const RARITY_COUNT = EFFECT_GALLERY.reduce((sum, entry) => sum + entry.rarities.length, 0);
 
+/**
+ * No `outline-none` here. In Tailwind 4 it sets `--tw-outline-style: none`,
+ * and `outline-2` takes its style from that variable, so the two together
+ * compute `outline: none` on a keyboard-focused tile: no ring at all, worse
+ * than a plain button's default one. Without it the variable keeps its
+ * registered `solid`. (A bare `focus-visible:outline` would add nothing:
+ * `cn()` drops it in favour of `outline-2`.)
+ */
 const FOCUS_RING =
-  'outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-holo-accent';
+  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-holo-accent';
 
 /**
  * Every effect `selectHolo` can return, each on a real card
@@ -128,15 +136,15 @@ function ExampleTile({ cardId, ...props }: TileProps & { cardId: string }) {
       caption={`${card.name} · ${cardId}`}
       status={selected ? staticReason(entry, card) : null}
     >
-      {/* Each tile owns its HoloCard, so moving the selection unmounts one and
-          mounts a fresh one on a fresh canvas. Do not hoist this into a
-          shared stage that swaps `card`: scene.dispose() force-loses its
-          canvas's context, and a HoloCard handed a new card rebuilds on that
-          same canvas, where getContext() returns the dead context again. */}
+      {/* Each tile owns its HoloCard, so moving the selection unmounts one
+          and mounts the next. (HoloCard gives every rebuild a fresh canvas
+          itself — see holoCanvasKey — so this layout is not what keeps the
+          foil alive.) The art is decorative: the caption below names the
+          card, and the button's name should not say it twice. */}
       {selected ? (
-        <HoloCard card={card} reverse={entry.reverse} />
+        <HoloCard card={card} reverse={entry.reverse} decorative />
       ) : (
-        <CardImage base={card.image} name={card.name} />
+        <CardImage base={card.image} name={card.name} decorative />
       )}
     </TileFrame>
   );

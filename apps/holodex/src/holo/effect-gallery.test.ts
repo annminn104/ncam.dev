@@ -42,9 +42,10 @@ describe('EFFECT_GALLERY — all of EFFECT_BY_RARITY', () => {
     }
   });
 
-  it('shows every rarity in the table in exactly one tile', () => {
-    // This is what makes the page "all of EFFECT_BY_RARITY": a rarity missing
-    // here, or shown twice, is a tile that lies about what selects it.
+  it('lists every rarity in the table under exactly one tile', () => {
+    // The data only: a rarity missing here, or listed twice, is a tile that
+    // lies about what selects it. This passes whatever the page does with the
+    // list; views/EffectsView.test.ts checks what the page actually renders.
     const shown = EFFECT_GALLERY.flatMap((entry) => entry.rarities);
     expect([...shown].sort()).toEqual(Object.keys(EFFECT_BY_RARITY).sort());
   });
@@ -79,8 +80,9 @@ describe('EFFECT_GALLERY — a real card for every effect', () => {
 
   it('points every tile at a card the real selectHolo really gives that effect', () => {
     // The check the table itself can't make: an earlier draft of this list
-    // named a card that selected something else. `reverse` is passed exactly
-    // as EffectsView passes it to HoloCard.
+    // named a card that selected something else. `reverse` is passed as each
+    // entry declares it. Whether EffectsView really hands it on to HoloCard
+    // is only visible on the rendered page: views/EffectsView.test.ts.
     for (const entry of EFFECT_GALLERY) {
       if (entry.cardId === null) continue;
       const card = CAPTURED_CARDS[entry.cardId];

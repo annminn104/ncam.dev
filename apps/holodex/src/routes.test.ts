@@ -50,18 +50,19 @@ describe('parseRoute', () => {
   });
 
   it('treats anything other than the literal variant=reverse as the normal printing', () => {
-    // No `variant` key at all — not `variant: undefined` — so a plain
-    // `toEqual` on the plain route also proves the key is genuinely absent.
-    expect(parseRoute('/card/swsh3-136?variant=bogus')).toEqual({
+    // No `variant` key at all, not `variant: undefined`. That takes
+    // `toStrictEqual`: plain `toEqual` ignores undefined properties, so it
+    // would pass either way.
+    expect(parseRoute('/card/swsh3-136?variant=bogus')).toStrictEqual({
       view: 'card',
       cardId: 'swsh3-136',
     });
-    expect(parseRoute('/card/swsh3-136')).toEqual({ view: 'card', cardId: 'swsh3-136' });
+    expect(parseRoute('/card/swsh3-136')).toStrictEqual({ view: 'card', cardId: 'swsh3-136' });
   });
 
   it('parses the effects page, with and without a selected effect', () => {
-    // No `effect` key at all on the bare page, as with `variant` above.
-    expect(parseRoute('/effects')).toEqual({ view: 'effects' });
+    // No `effect` key at all on the bare page — strictly, as with `variant` above.
+    expect(parseRoute('/effects')).toStrictEqual({ view: 'effects' });
     expect(parseRoute('/effects/v-max')).toEqual({ view: 'effects', effect: 'v-max' });
   });
 

@@ -9,7 +9,11 @@ import { EFFECT_BY_RARITY, type EffectId } from './select';
  * TCGdex actually serves, never by reading a table — and
  * `effect-gallery.test.ts` keeps it that way against a captured copy of each
  * card (`effect-gallery.fixture.ts`). Swap an example only for a card that
- * passes the same check.
+ * passes the same check — and that TCGdex serves an image for, since HoloCard
+ * draws no foil without one. Five effects cannot meet that today: shiny-vmax
+ * and the four trainer-gallery-numbered ones. On 2026-09-23 not one of the 7
+ * `Shiny rare VMAX` cards, nor of the 190 cards in swsh9tg, swsh10tg,
+ * swsh11tg, swsh12tg and swsh12.5gg, had an image, so their tiles say so.
  *
  * Pure data over `select.ts`, which is already in the main chunk. Importing
  * `./scene`, `./effects` or three.js from here would drag the lazy holo chunk
@@ -47,16 +51,16 @@ const FROM_CARD_NUMBER = 'TG/GG card number';
  * Ultra Rare foils the whole card).
  */
 const EXAMPLES: Omit<EffectExample, 'rarities'>[] = [
-  { effect: 'basic', cardId: 'sm7.5-1' }, // Charmander
+  { effect: 'basic', cardId: 'sm1-1' }, // Caterpie
   { effect: 'regular-holo', cardId: 'swsh3-25' }, // Heatran, a Basic: the plain `regular` clip
-  { effect: 'cosmos-holo', cardId: 'cel25cc-CC001' }, // Blastoise
+  { effect: 'cosmos-holo', cardId: 'sv10.5b-171' }, // Victini, Black White Rare
   { effect: 'amazing-rare', cardId: 'swsh4-9' }, // Celebi
   { effect: 'radiant-holo', cardId: 'swsh10.5-004' }, // Radiant Venusaur
   { effect: 'rainbow-holo', cardId: 'sv06.5-095' }, // Pecharunt ex
   { effect: 'rainbow-alt', cardId: 'A1a-085' }, // Celebi ex
   { effect: 'secret-rare', cardId: 'sv06.5-090' }, // Okidogi ex
   { effect: 'shiny-rare', cardId: 'sv04.5-092' }, // Oddish
-  { effect: 'shiny-v', cardId: 'swsh4.5sv-SV105' }, // Rillaboom V
+  { effect: 'shiny-v', cardId: 'sv04.5-212' }, // Forretress ex, Shiny Ultra Rare
   { effect: 'shiny-vmax', cardId: 'swsh4.5sv-SV106' }, // Rillaboom VMAX
   { effect: 'v-regular', cardId: 'sv03.5-003' }, // Venusaur ex, Double rare: the ordinary ex
   { effect: 'v-full-art', cardId: 'sv03.5-182' }, // Venusaur ex, Ultra Rare: the real full art

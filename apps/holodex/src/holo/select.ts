@@ -40,9 +40,10 @@ export interface HoloSelection {
 }
 
 /**
- * Effects with no rarity of their own. `reverse-holo` comes from a printing
- * variant; the gallery effects come from the card number. A test asserts this
- * list is exactly the set of effects missing from EFFECT_BY_RARITY.
+ * Effects with no rarity of their own. `reverse-holo` comes from the caller's
+ * explicit `reverse` option (SelectOptions), never from the card; the gallery
+ * effects come from the card number. A test asserts this list is exactly the
+ * set of effects missing from EFFECT_BY_RARITY.
  */
 export const OVERRIDE_ONLY_EFFECTS: EffectId[] = [
   'reverse-holo',
@@ -142,12 +143,14 @@ const REVERSIBLE: ReadonlySet<EffectId> = new Set<EffectId>(['basic', 'regular-h
 export interface SelectOptions {
   /**
    * True only when the app is showing the reverse printing. This is an
-   * explicit display choice (the card page's normal/reverse toggle), never
-   * derived from the card itself — `card.variants?.reverse` means "a reverse
-   * printing of this card exists," not "this card is currently reversed."
-   * Conflating the two rendered roughly half of TCGdex with inverted or
-   * unwarranted foil; `card.variants?.reverse` still decides whether the
-   * toggle is offered at all (see `views/CardView.tsx`), just not this.
+   * explicit display choice made by the caller — the card page's
+   * normal/reverse toggle (`views/CardView.tsx`), or the effects page's
+   * reverse-holo tile (`views/EffectsView.tsx`) — never derived from the card
+   * itself: `card.variants?.reverse` means "a reverse printing of this card
+   * exists," not "this card is currently reversed." Conflating the two
+   * rendered roughly half of TCGdex with inverted or unwarranted foil.
+   * `card.variants?.reverse` still decides whether the card page offers the
+   * toggle at all, and whether it honours `?variant=reverse`, just not this.
    */
   reverse?: boolean;
 }
