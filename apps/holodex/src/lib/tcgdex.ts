@@ -197,16 +197,18 @@ export const DEFAULT_PER_PAGE = 24;
  * the operator its value goes out with. A bare value is a case-insensitive
  * substring match: right for a name typed in part, wrong for a rarity picked
  * from a list, where `Common` would bring every `Uncommon` and `Rare` most of
- * the catalogue. `eq:` matches exactly, case included, and every rarity
- * `CARD_RARITIES` offers is the API's own spelling: their 42 exact matches
- * partition all 23,736 cards (checked 2026-09-25). `set.id` bleeds too, and
- * selectSetCards intersects that away.
+ * the catalogue, and wrong for a set id, where `swsh1` brings swsh10 to
+ * swsh12.5 (1,272 rows for its 216 cards). `eq:` matches exactly, case
+ * included, which both can afford: every rarity `CARD_RARITIES` offers is the
+ * API's own spelling, and selectSetCards sends a set document's own id.
+ * Checked 2026-09-25, the exact matches of the 42 rarities partition all
+ * 23,736 cards, and so do those of the 220 sets.
  */
 const CARD_FILTERS: ReadonlyArray<readonly [keyof CardQuery, string, string]> = [
   ['name', 'name', ''],
   ['types', 'types', ''],
   ['rarity', 'rarity', 'eq:'],
-  ['setId', 'set.id', ''],
+  ['setId', 'set.id', 'eq:'],
 ];
 
 function positive(value: number | undefined, fallback: number): number {
@@ -294,7 +296,12 @@ export async function getCard(cardId: string, opts: RequestOpts = {}): Promise<C
 
 /** Rows per request when resolving a filtered set. */
 export const SET_QUERY_PAGE_SIZE = 600;
-/** Hard stop, so a pathological prefix can never fan out unbounded. */
+/**
+ * Hard stop on the requests one filtered set may make. With `set.id` asked
+ * exactly, one page holds any set's matches (the largest set, B1, is 331
+ * cards, checked 2026-09-25), so this only bounds an answer the API gets
+ * wrong.
+ */
 export const SET_QUERY_MAX_PAGES = 4;
 
 /**
@@ -321,10 +328,12 @@ export async function searchCards(q: CardQuery, opts: RequestOpts = {}): Promise
  * Unfiltered, the set document already carries the complete card list, so it
  * is paginated in memory and nothing is fetched at all.
  *
- * Filtered, the filters shrink the result hard, so `?set.id=` is affordable —
- * but it is a substring match, so the rows are intersected with the exact ids
- * from the set document. A response at exactly `SET_QUERY_PAGE_SIZE` means the
- * cap was hit and another page is fetched, up to `SET_QUERY_MAX_PAGES`.
+ * Filtered, the filters shrink the result hard, so `?set.id=` is affordable,
+ * asked exactly (see CARD_FILTERS). The rows are still intersected with the
+ * set document's ids, which also order them, so a filtered view never shows
+ * a card its own set's list lacks. A response at exactly `SET_QUERY_PAGE_SIZE`
+ * means the cap was hit and another page is fetched, up to
+ * `SET_QUERY_MAX_PAGES`.
  */
 export async function selectSetCards(
   set: SetDetail,

@@ -114,8 +114,9 @@ Base `https://api.tcgdex.net/v2/en`, no key, CORS-open. Verified live 2026-09-21
   Exact set membership therefore never comes from `?set.id=` — it comes from
   `GET /sets/{setId}`, which returns that one set's complete card list in a
   single response, paginated **in memory**. A _filtered_ set view still queries
-  `/cards?set.id=…` (cheap once filters shrink the result) but intersects the
-  rows with the exact id set from `/sets/{setId}` before showing anything.
+  `/cards?set.id=…` (cheap once filters shrink the result), asked exactly
+  since 2026-09-25 (below), and still intersects the rows with the exact id
+  set from `/sets/{setId}`, which also orders them, before showing anything.
 - **`?rarity=` is a substring match too.** `?rarity=Shiny rare V` returns the
   7 `Shiny rare VMAX` cards along with the 9 it names (verified 2026-09-24),
   and briefs carry no rarity to filter them back out. So a card's rarity comes
@@ -131,9 +132,11 @@ Base `https://api.tcgdex.net/v2/en`, no key, CORS-open. Verified live 2026-09-21
   most of the catalogue. The filter bar offers only `CARD_RARITIES`, the API's
   own spellings, whose 42 exact matches partition all 23,736 cards (checked
   2026-09-25); refresh it from `GET /rarities` if TCGdex adds one. A
-  hand-typed `?rarity=rare` now finds nothing. `set.id` still goes bare: the
-  set view's intersection above already makes it exact, and `eq:` there would
-  only spare it fetching the bled rows.
+  hand-typed `?rarity=rare` now finds nothing. `set.id` goes out the same
+  way, always a set document's own id, so a mis-cased URL still works: 33 of
+  the 220 set ids bled bare (`swsh1`: 1,272 rows for its 216 cards), and the
+  exact matches of all 220 partition the catalogue too. `wp` and `sp` list no
+  cards at all; bare, they matched `bwp`'s and `hgssp`'s.
 - **A brand-new set's `variants` can be placeholders.** Every card of `30th`
   (30th Celebration, released 2026-09-16) reads
   `normal: true, holo: false, reverse: false`, Double rares and Special

@@ -41,9 +41,10 @@ describe('buildCardUrl', () => {
     expect([...query.keys()].sort()).toEqual(['pagination:itemsPerPage', 'pagination:page']);
   });
 
-  it('maps setId onto the API set.id param', () => {
-    const query = new URL(buildCardUrl({ setId: 'swsh3' })).searchParams;
-    expect(query.get('set.id')).toBe('swsh3');
+  it('asks set.id for the set exactly, since a bare id matches every id containing it', () => {
+    // Bare, ?set.id=swsh1 also returns swsh10, swsh11, swsh12, swsh12.5…
+    const query = new URL(buildCardUrl({ setId: 'swsh1' })).searchParams;
+    expect(query.get('set.id')).toBe('eq:swsh1');
   });
 
   it('passes name and types through as typed, still substring matches', () => {
@@ -224,7 +225,7 @@ describe('selectSetCards (exact membership)', () => {
     expect(page.hasNext).toBe(false);
   });
 
-  it('drops the prefix bleed when a filter is active', async () => {
+  it('drops any row the set document does not list, when a filter is active', async () => {
     const ids = ['swsh1-1', 'swsh1-2', 'swsh1-3'];
     mockFetch(() => [brief('swsh1-1'), brief('swsh10-4'), brief('swsh12-9'), brief('swsh1-3')]);
     const page = await selectSetCards(setBody(ids), { types: 'Fire' }, 1, 20);
