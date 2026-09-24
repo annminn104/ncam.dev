@@ -522,3 +522,93 @@ describe('coverage() in GLSL agrees with coversPoint() in JS', () => {
     expect(coverage('regular', 0.5, 0.8, true)).toBe(1);
   });
 });
+
+type ElementClip = Exclude<ClipShape, 'stage'>;
+
+const clippedEffect = (clip: ElementClip): Effect => ({
+  id: 'test-element-clip',
+  shine: [{ layers: [{ source: { kind: 'card' }, blend: 'normal' }], mixBlend: 'normal', clip }],
+  glare: [],
+});
+
+/**
+ * An element's own `clip` (types.ts), as the compiler emits it: the region's
+ * insets written into a `clip_<prefix>` factor through base.ts's insideRect().
+ * Translated and run the way coverage() is above, from the emitted GLSL
+ * itself, so a swapped inset or a misread vec4 component cannot hide behind a
+ * copy of the arithmetic.
+ */
+function transpileElementClip(clip: ElementClip) {
+  const glsl = compileEffect(clippedEffect(clip));
+  const insets = /float clip_shine0 = insideRect\(vUv, vec4\(([^)]*)\)\);/.exec(glsl)?.[1];
+  const body = /float insideRect\(vec2 uv, vec4 inset\) \{\n([\s\S]*?)\n\}/.exec(glsl)?.[1];
+  if (!insets || !body) {
+    throw new Error('the element clip no longer has the shape this translation assumes');
+  }
+  const js = body
+    .replace(/^\s*\/\/.*$/gm, '')
+    .replace(/inset\.x/g, 'inset[0]')
+    .replace(/inset\.y/g, 'inset[1]')
+    .replace(/inset\.z/g, 'inset[2]')
+    .replace(/inset\.w/g, 'inset[3]');
+  expect(js).not.toMatch(/\b(?:float|vec[234]|uniform)\b/);
+
+  const values = insets.split(',').map(Number);
+  const step = (edge: number, v: number) => (v >= edge ? 1 : 0);
+  const run = new Function('uv', 'inset', 'step', js) as (
+    uv: { x: number; y: number },
+    inset: number[],
+    step: (edge: number, v: number) => number,
+  ) => number;
+  return (x: number, y: number) => run({ x, y }, values, step);
+}
+
+describe('an element’s own clip in GLSL agrees with coversPoint() in JS', () => {
+  const clips: ElementClip[] = ['full', 'regular', 'trainer', 'borders'];
+  const axis = Array.from({ length: 21 }, (_, i) => (i / 20) * 0.98 + 0.011);
+
+  for (const clip of clips) {
+    it(`agrees across the card for ${clip}`, () => {
+      const inside = transpileElementClip(clip);
+      const disagreements: string[] = [];
+      for (const x of axis) {
+        for (const y of axis) {
+          const gpu = inside(x, y) > 0.5;
+          const cpu = coversPoint(clip, x, y, false);
+          if (gpu !== cpu)
+            disagreements.push(`(${x.toFixed(3)}, ${y.toFixed(3)}) gpu=${gpu} cpu=${cpu}`);
+        }
+      }
+      expect(disagreements).toEqual([]);
+    });
+  }
+
+  it('actually exercises both verdicts, so agreement is not vacuous', () => {
+    const inside = transpileElementClip('borders');
+    expect(inside(0.5, 0.5)).toBe(1);
+    expect(inside(0.02, 0.5)).toBe(0);
+    expect(inside(0.5, 0.99)).toBe(0);
+  });
+
+  it('gates only the clipped element’s own mix, and leaves the others alone', () => {
+    const plain = {
+      layers: [{ source: { kind: 'card' as const }, blend: 'normal' as const }],
+      mixBlend: 'normal' as const,
+    };
+    const src = compileEffect({
+      id: 'test-element-clip-scope',
+      shine: [{ ...plain, clip: 'borders' }, plain],
+      glare: [plain],
+    });
+    const mixOf = (prefix: string) =>
+      src
+        .split('\n')
+        .find(
+          (line) => line.includes(`acc = mix(acc, blendWith(`) && line.includes(`stack_${prefix})`),
+        );
+    expect(mixOf('shine0')).toMatch(/\* clip_shine0\);$/);
+    expect(mixOf('shine1')).not.toMatch(/clip_/);
+    expect(mixOf('glare0')).not.toMatch(/clip_/);
+    expect(src.match(/float clip_/g)).toHaveLength(1);
+  });
+});

@@ -57,4 +57,14 @@ float coverage(vec2 uv) {
 
   return mix(inside, 1.0 - inside, uInvert);
 }
+
+/**
+ * Whether uv lies inside an inset rect: (top, right, bottom, left) as
+ * fractions, an element's own clip (types.ts's Element.clip), which the
+ * compiler writes in from regions.ts. The same comparisons as coverage()'s
+ * rect test above, so coversPoint is this one's tested twin as well.
+ */
+float insideRect(vec2 uv, vec4 inset) {
+  return step(inset.w, uv.x) * step(uv.x, 1.0 - inset.y) * step(inset.x, uv.y) * step(uv.y, 1.0 - inset.z);
+}
 `;

@@ -1,6 +1,7 @@
 import { BLEND_ID, blendGLSL } from './blend';
 import { sourcesGLSL } from './sources';
 import { baseGLSL, VERTEX_SHADER } from './base';
+import { regionFor } from '../regions';
 import type { Effect, Element, Filter, Layer, PointerDriven, Source } from './types';
 
 export { VERTEX_SHADER };
@@ -99,11 +100,20 @@ function filterCode(filter: Filter | undefined, prefix: string): string {
 function elementCode(element: Element, prefix: string): string {
   const layers = element.layers.map((l, i) => layerCode(l, i, prefix)).join('\n');
   const opacity = driven(element.opacity, 1);
+  // An element's own clip (types.ts) gates its mix alone; the effect's clip
+  // still applies to the whole shine after every element (compileEffect).
+  const clip = element.clip ? regionFor(element.clip) : undefined;
+  const weight = `clamp(${opacity} * uCardOpacity, 0.0, 1.0)${clip ? ` * clip_${prefix}` : ''}`;
   return [
     `  // --- ${prefix}`,
     layers,
     filterCode(element.filter, prefix),
-    `  acc = mix(acc, blendWith(${BLEND_ID[element.mixBlend]}, acc, stack_${prefix}), clamp(${opacity} * uCardOpacity, 0.0, 1.0));`,
+    ...(clip
+      ? [
+          `  float clip_${prefix} = insideRect(vUv, vec4(${f(clip.top)}, ${f(clip.right)}, ${f(clip.bottom)}, ${f(clip.left)}));`,
+        ]
+      : []),
+    `  acc = mix(acc, blendWith(${BLEND_ID[element.mixBlend]}, acc, stack_${prefix}), ${weight});`,
   ].join('\n');
 }
 

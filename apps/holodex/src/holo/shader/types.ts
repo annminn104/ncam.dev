@@ -1,3 +1,4 @@
+import type { ClipShape } from '../select';
 import type { BlendMode } from './blend';
 
 /**
@@ -57,7 +58,8 @@ export type Source =
    * and black where it does not. The reference applies them as alpha masks,
    * which this DSL has no notion of. Put one last in a stack with `multiply`
    * instead, and the layers beneath it show only through the glyphs; under a
-   * `plus-lighter` or `lighten` mixBlend the black adds nothing to the card.
+   * `color-dodge`, `plus-lighter` or `lighten` mixBlend the black leaves the
+   * card as it was.
    *
    * `-inner` is each ball's upper cap, on the same lattice as its outline, so
    * the two line up at the same scale and offset. The reference's caps are
@@ -100,6 +102,16 @@ export interface Element {
   /** how the finished element composites onto everything below it */
   mixBlend: BlendMode;
   opacity?: PointerDriven;
+  /**
+   * Confines this one element to a region of its own, inside whatever the
+   * effect's clip (select.ts#clipShape) allows every shine element — for a
+   * reference whose pseudo-elements carry a clip-path of their own, as
+   * poke-ball-holo's :before and :after clip to the card inside its border
+   * while their shine clips to the card less its art window. The region's
+   * rect only, never inverted; `stage`'s step-cut is not applied, so it is not
+   * offered.
+   */
+  clip?: Exclude<ClipShape, 'stage'>;
 }
 
 export interface Effect {
