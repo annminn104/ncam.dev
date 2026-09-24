@@ -79,6 +79,11 @@ deliberate approximation from a porting mistake.
 - **`iri` texture**: a fine coloured speckle — random dots on near-black, hues biased to violet / blue
   / white. The reference's `iri-8` is 300×300 of exactly this. Generate it in `textures.ts` like the
   existing `sparkle()`, deterministically seeded so it is identical every load.
+- **`pokeball`, `pokeball-inner`, `masterball` textures** — added after dispatch. The reference's
+  Poké Ball reverse uses three _shared_ pattern images as masks (`--pokeball`, `--pokeball-inner`,
+  `--masterball`): dark Poké Ball outline glyphs on light grey, two sizes, staggered, tiling. Unlike
+  per-card masks these are identical on every card, so they are generated. Task 2 layers them over the
+  gradient with `multiply` to stand in for masking.
 - **`birthday` texture**: multicoloured **four-pointed star** sparkles of varied size on black — the
   reference's `birthday-holo-dank` is 1140×2026 of rainbow-hued stars. Draw star shapes (two crossed
   thin diamonds) at random positions, sizes and hues, seeded.
@@ -135,6 +140,25 @@ Mapping changes (everything not listed keeps its current effect):
 | **Pocket** `Crown` (gold)           | —                | `hyper-rare`                                                                                                          |
 | **Pocket** `Three Diamond`          | —                | `regular-holo`                                                                                                        |
 | **Pocket** `Two Shiny` (shiny ex)   | —                | `shiny-v`                                                                                                             |
+
+**Clip regions for the new effects — read this before touching `clipShape()`.** Where the reference
+confines foil with `mask-image: var(--mask)` instead of a `clip-path`, dropping the mask (as the
+porting rules say) removes the _only_ thing confining it — and the foil spreads edge to edge. So
+our geometric clip must stand in for the mask, per effect:
+
+| Effect                              | Reference confines with                | Our `ClipShape`                                              |
+| ----------------------------------- | -------------------------------------- | ------------------------------------------------------------ |
+| `ex-regular`                        | **mask only, no `clip-path`**          | `regular` / `stage` / `trainer` by category — **not** `full` |
+| `ex-full-art`                       | `--mask: none`                         | `full`                                                       |
+| `ex-special-illustration-rare`      | mask (full-art card)                   | `full`                                                       |
+| `hyper-rare`                        | mask (full-art card)                   | `full`                                                       |
+| `illustration-rare`                 | `clip-path` — the border polygon       | `borders`                                                    |
+| `poke-ball-holo`, `masterball-holo` | pattern mask + `--clip-borders-invert` | as `reverse-holo`: its region with `invert: true`            |
+
+**`ex-regular` is the one that would silently regress.** It is `Double rare` — the standard-layout ex
+whose whole-card foil was fixed in `bc3740c`. Put it in `FULL_ART` and that bug returns. Keep the
+existing test asserting a `Double rare` card is not `full`, and confirm it still passes against the
+new effect.
 
 Reverse, when `options.reverse` is set on a reversible base:
 
