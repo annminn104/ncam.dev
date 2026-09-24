@@ -113,6 +113,16 @@ Base `https://api.tcgdex.net/v2/en`, no key, CORS-open. Verified live 2026-09-21
 - **~20% of card briefs have no `image`.** `lib/images.ts` returns `null` for a
   missing base and `CardImage` renders a placeholder at the same `63/88`
   aspect ratio so the grid never reflows.
+- **A subset set's cards never carry `image`, though their art exists.** All
+  312 cards of `swsh4.5sv` (Shining Fates' Shiny Vault), `swsh9tg`–`swsh12tg`
+  (the Trainer Galleries) and `swsh12.5gg` (Crown Zenith's Galarian Gallery)
+  come back without one, while each asset sits under the _parent_ set's path
+  (`swsh12tg-TG23` → `en/swsh/swsh12/TG23`). `lib/images.ts#cardImageBase`
+  recovers exactly those six sets, and every place that draws a card's art
+  (`CardTile`, `HoloCard`, the effects page) reads it through that function,
+  never `card.image` directly. Its doc comment holds the verification and why
+  `cel25cc` is deliberately left out: do not widen the rule to cases nobody
+  has checked.
 - **There is no total-count header** — `Content-Length`/`Content-Range` are the
   only exposed headers. Global search (and the unfiltered-set fallback) ask
   for `perPage + 1` rows: if the extra row comes back, `hasNext = true` and it

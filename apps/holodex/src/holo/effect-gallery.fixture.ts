@@ -7,16 +7,21 @@ import type { Card } from '../lib/tcgdex';
  *
  * Captured from `GET https://api.tcgdex.net/v2/en/cards/{id}` on 2026-09-23
  * and trimmed to what `selectHolo` reads (`rarity`, `suffix`, `localId`,
- * `category`, `stage`), the reverse-printing flag (`variants`) and what the
- * `Card` type requires. Every value is copied verbatim: never edit one by hand
- * to make a test pass — re-fetch the card instead. Re-capture them all if
- * `selectHolo` ever starts reading a field that is not here.
+ * `category`, `stage`), the reverse-printing flag (`variants`), the `image`
+ * the page draws, and what the `Card` type requires. `image` came from a
+ * re-fetch on 2026-09-24, which found every other field unchanged. The five
+ * subset-set cards (`swsh4.5sv-SV106` and the four from `swsh12tg`) have none
+ * because the API links none: `lib/images.ts#cardImageBase` finds their art.
+ * Every value is copied verbatim: never edit one by hand to make a test pass —
+ * re-fetch the card instead. Re-capture them all if `selectHolo`, or the page,
+ * ever starts reading a field that is not here.
  */
 export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
   'sm1-1': {
     id: 'sm1-1',
     localId: '1',
     name: 'Caterpie',
+    image: 'https://assets.tcgdex.net/en/sm/sm1/1',
     category: 'Pokemon',
     set: { id: 'sm1', name: 'Sun & Moon', cardCount: { total: 172, official: 149 } },
     rarity: 'Common',
@@ -27,6 +32,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     id: 'swsh3-25',
     localId: '25',
     name: 'Heatran',
+    image: 'https://assets.tcgdex.net/en/swsh/swsh3/25',
     category: 'Pokemon',
     set: { id: 'swsh3', name: 'Darkness Ablaze', cardCount: { total: 201, official: 189 } },
     rarity: 'Holo Rare',
@@ -37,6 +43,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     id: 'sv10.5b-171',
     localId: '171',
     name: 'Victini',
+    image: 'https://assets.tcgdex.net/en/sv/sv10.5b/171',
     category: 'Pokemon',
     set: { id: 'sv10.5b', name: 'Black Bolt', cardCount: { total: 172, official: 86 } },
     rarity: 'Black White Rare',
@@ -47,6 +54,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     id: 'swsh4-9',
     localId: '9',
     name: 'Celebi',
+    image: 'https://assets.tcgdex.net/en/swsh/swsh4/9',
     category: 'Pokemon',
     set: { id: 'swsh4', name: 'Vivid Voltage', cardCount: { total: 203, official: 185 } },
     rarity: 'Amazing Rare',
@@ -57,6 +65,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     id: 'swsh10.5-004',
     localId: '004',
     name: 'Radiant Venusaur',
+    image: 'https://assets.tcgdex.net/en/swsh/swsh10.5/004',
     category: 'Pokemon',
     set: { id: 'swsh10.5', name: 'Pokémon GO', cardCount: { total: 88, official: 78 } },
     rarity: 'Radiant Rare',
@@ -67,6 +76,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     id: 'sv06.5-095',
     localId: '095',
     name: 'Pecharunt ex',
+    image: 'https://assets.tcgdex.net/en/sv/sv06.5/095',
     category: 'Pokemon',
     set: { id: 'sv06.5', name: 'Shrouded Fable', cardCount: { total: 99, official: 64 } },
     rarity: 'Hyper rare',
@@ -78,6 +88,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     id: 'A1a-085',
     localId: '085',
     name: 'Celebi ex',
+    image: 'https://assets.tcgdex.net/en/tcgp/A1a/085',
     category: 'Pokemon',
     set: { id: 'A1a', name: 'Mythical Island', cardCount: { total: 86, official: 68 } },
     rarity: 'Three Star',
@@ -89,6 +100,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     id: 'sv06.5-090',
     localId: '090',
     name: 'Okidogi ex',
+    image: 'https://assets.tcgdex.net/en/sv/sv06.5/090',
     category: 'Pokemon',
     set: { id: 'sv06.5', name: 'Shrouded Fable', cardCount: { total: 99, official: 64 } },
     rarity: 'Special illustration rare',
@@ -100,6 +112,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     id: 'sv04.5-092',
     localId: '092',
     name: 'Oddish',
+    image: 'https://assets.tcgdex.net/en/sv/sv04.5/092',
     category: 'Pokemon',
     set: { id: 'sv04.5', name: 'Paldean Fates', cardCount: { total: 245, official: 91 } },
     rarity: 'Shiny rare',
@@ -110,6 +123,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     id: 'sv04.5-212',
     localId: '212',
     name: 'Forretress ex',
+    image: 'https://assets.tcgdex.net/en/sv/sv04.5/212',
     category: 'Pokemon',
     set: { id: 'sv04.5', name: 'Paldean Fates', cardCount: { total: 245, official: 91 } },
     rarity: 'Shiny Ultra Rare',
@@ -135,6 +149,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     id: 'sv03.5-003',
     localId: '003',
     name: 'Venusaur ex',
+    image: 'https://assets.tcgdex.net/en/sv/sv03.5/003',
     category: 'Pokemon',
     set: { id: 'sv03.5', name: '151', cardCount: { total: 207, official: 165 } },
     rarity: 'Double rare',
@@ -146,6 +161,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     id: 'sv03.5-182',
     localId: '182',
     name: 'Venusaur ex',
+    image: 'https://assets.tcgdex.net/en/sv/sv03.5/182',
     category: 'Pokemon',
     set: { id: 'sv03.5', name: '151', cardCount: { total: 207, official: 165 } },
     rarity: 'Ultra Rare',
@@ -157,6 +173,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     id: 'swsh3-2',
     localId: '2',
     name: 'Butterfree VMAX',
+    image: 'https://assets.tcgdex.net/en/swsh/swsh3/2',
     category: 'Pokemon',
     set: { id: 'swsh3', name: 'Darkness Ablaze', cardCount: { total: 201, official: 189 } },
     rarity: 'Holo Rare VMAX',
@@ -167,6 +184,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     id: 'swsh12-008',
     localId: '008',
     name: 'Serperior VSTAR',
+    image: 'https://assets.tcgdex.net/en/swsh/swsh12/008',
     category: 'Pokemon',
     set: { id: 'swsh12', name: 'Silver Tempest', cardCount: { total: 215, official: 195 } },
     rarity: 'Holo Rare VSTAR',
@@ -178,6 +196,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     id: 'sv03.5-166',
     localId: '166',
     name: 'Bulbasaur',
+    image: 'https://assets.tcgdex.net/en/sv/sv03.5/166',
     category: 'Pokemon',
     set: { id: 'sv03.5', name: '151', cardCount: { total: 207, official: 165 } },
     rarity: 'Illustration rare',
@@ -188,6 +207,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     id: '30th-023',
     localId: '023',
     name: 'Pikachu',
+    image: 'https://assets.tcgdex.net/en/me/30th/023',
     category: 'Pokemon',
     set: { id: '30th', name: '30th Celebration', cardCount: { total: 158, official: 128 } },
     rarity: 'Pikachu Rare',
@@ -198,6 +218,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     id: 'swsh3-3',
     localId: '3',
     name: 'Paras',
+    image: 'https://assets.tcgdex.net/en/swsh/swsh3/3',
     category: 'Pokemon',
     set: { id: 'swsh3', name: 'Darkness Ablaze', cardCount: { total: 201, official: 189 } },
     rarity: 'Common',

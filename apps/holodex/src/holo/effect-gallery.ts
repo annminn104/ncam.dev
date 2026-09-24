@@ -9,11 +9,12 @@ import { EFFECT_BY_RARITY, type EffectId } from './select';
  * TCGdex actually serves, never by reading a table — and
  * `effect-gallery.test.ts` keeps it that way against a captured copy of each
  * card (`effect-gallery.fixture.ts`). Swap an example only for a card that
- * passes the same check — and that TCGdex serves an image for, since HoloCard
- * draws no foil without one. Five effects cannot meet that today: shiny-vmax
- * and the four trainer-gallery-numbered ones. On 2026-09-23 not one of the 7
- * `Shiny rare VMAX` cards, nor of the 190 cards in swsh9tg, swsh10tg,
- * swsh11tg, swsh12tg and swsh12.5gg, had an image, so their tiles say so.
+ * passes the same check — and that has art, since HoloCard draws no foil
+ * without it: `lib/images.ts#cardImageBase` must find a base for it, which the
+ * same test file checks for every tile. Five examples have art only through
+ * cardImageBase. The cards for shiny-vmax and the four trainer-gallery-numbered
+ * effects sit in subset sets (swsh4.5sv, swsh12tg), which the API serves with
+ * no `image` at all, although the art exists under the parent set's path.
  *
  * Pure data over `select.ts`, which is already in the main chunk. Importing
  * `./scene`, `./effects` or three.js from here would drag the lazy holo chunk

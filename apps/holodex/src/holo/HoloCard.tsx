@@ -7,7 +7,7 @@ import {
 } from 'react';
 import { createLogger } from '@ncam/logger';
 import { CardImage } from '../components/CardImage';
-import { imageUrl } from '../lib/images';
+import { cardImageBase, imageUrl } from '../lib/images';
 import type { Card } from '../lib/tcgdex';
 import { holoCanvasKey } from './canvas-key';
 import { browserProbe, supportsHolo } from './capability';
@@ -53,7 +53,11 @@ export function HoloCard({
   // on supportsHolo()'s (which only guards the three.js scene).
   const reducedMotion = useReducedMotion();
 
-  const src = imageUrl(card.image, 'high');
+  // One base for both the plain art below and the scene's texture, so the two
+  // can never disagree — including on a subset-set card, whose art only
+  // cardImageBase can find.
+  const base = cardImageBase(card);
+  const src = imageUrl(base, 'high');
   const freshSelection = selectHolo(card, { reverse });
   // selectHolo returns a fresh object every render. Rebuilt here from its own
   // primitive fields so the result is referentially stable unless the
@@ -287,7 +291,7 @@ export function HoloCard({
       }}
     >
       <CardImage
-        base={card.image}
+        base={base}
         name={card.name}
         quality="high"
         priority

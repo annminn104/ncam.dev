@@ -1,4 +1,5 @@
 import { useRef, type PointerEvent as ReactPointerEvent } from 'react';
+import { cardImageBase } from '../lib/images';
 import type { CardBrief } from '../lib/tcgdex';
 import { CardImage } from './CardImage';
 
@@ -33,7 +34,7 @@ export function CardTile({ card, onOpen }: { card: CardBrief; onOpen: (id: strin
       className="group relative block w-full [perspective:900px] motion-reduce:[--tilt-x:0deg] motion-reduce:[--tilt-y:0deg]"
     >
       <span className="block transition-transform duration-100 [transform:rotateX(var(--tilt-x,0deg))_rotateY(var(--tilt-y,0deg))]">
-        <CardImage base={card.image} name={card.name} />
+        <CardImage base={cardImageBase(card)} name={card.name} />
         <span
           aria-hidden="true"
           className="pointer-events-none absolute inset-0 rounded-lg opacity-0 transition-opacity group-hover:opacity-60"

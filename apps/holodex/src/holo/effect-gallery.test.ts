@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { cardImageBase } from '../lib/images';
 import { EFFECT_GALLERY, selectedExample, type EffectExample } from './effect-gallery';
 import { CAPTURED_CARDS } from './effect-gallery.fixture';
 import { EFFECT_BY_RARITY, OVERRIDE_ONLY_EFFECTS, selectHolo, type EffectId } from './select';
@@ -71,6 +72,18 @@ describe('EFFECT_GALLERY — a real card for every effect', () => {
   it('explains any effect that has lost its card', () => {
     const unexplained = EFFECT_GALLERY.filter((entry) => entry.cardId === null && !entry.note);
     expect(unexplained.map((entry) => entry.effect)).toEqual([]);
+  });
+
+  it('has art for every tile: the image TCGdex links, or the one cardImageBase recovers', () => {
+    // None without art, and listed by effect rather than counted, so the one
+    // tile that loses its art (a card swapped in with none, or a subset set
+    // the rule stops reaching) fails here by name. The five subset-set cards
+    // have no `image` in the fixture because TCGdex serves them with none.
+    const artless = EFFECT_GALLERY.filter((entry) => {
+      const card = entry.cardId === null ? undefined : CAPTURED_CARDS[entry.cardId];
+      return !card || !cardImageBase(card);
+    }).map((entry) => entry.effect);
+    expect(artless).toEqual([]);
   });
 
   it('holds a captured TCGdex copy of exactly the cards it shows', () => {

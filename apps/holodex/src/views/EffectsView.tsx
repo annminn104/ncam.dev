@@ -6,6 +6,7 @@ import { EFFECT_GALLERY, selectedExample, type EffectExample } from '../holo/eff
 import { HoloCard } from '../holo/HoloCard';
 import type { EffectId } from '../holo/select';
 import { CARD_ASPECT } from '../lib/constants';
+import { cardImageBase } from '../lib/images';
 import { cardQuery } from '../lib/queries';
 import type { Card } from '../lib/tcgdex';
 import { cn } from '../lib/utils';
@@ -144,7 +145,7 @@ function ExampleTile({ cardId, ...props }: TileProps & { cardId: string }) {
       {selected ? (
         <HoloCard card={card} reverse={entry.reverse} decorative />
       ) : (
-        <CardImage base={card.image} name={card.name} decorative />
+        <CardImage base={cardImageBase(card)} name={card.name} decorative />
       )}
     </TileFrame>
   );
@@ -153,9 +154,11 @@ function ExampleTile({ cardId, ...props }: TileProps & { cardId: string }) {
 /**
  * Why the live tile shows plain art however capable the GPU: HoloCard's own
  * early returns, spelled out so a smoke pass does not read them as a failure.
+ * The art is judged by the base HoloCard itself draws from, cardImageBase —
+ * not `card.image`, which a subset-set card never has although its art exists.
  */
 function staticReason(entry: EffectExample, card: Card): string | null {
-  if (!card.image) return 'TCGdex has no image for this card, so there is no art to foil.';
+  if (!cardImageBase(card)) return 'TCGdex has no image for this card, so there is no art to foil.';
   if (entry.effect === 'basic') return 'basic draws no foil: HoloCard shows the plain art.';
   return null;
 }
