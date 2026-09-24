@@ -192,12 +192,21 @@ export interface RequestOpts {
 
 export const DEFAULT_PER_PAGE = 24;
 
-/** Whitelist: query key on `CardQuery` → the param name the API expects. */
-const CARD_FILTERS: ReadonlyArray<[keyof CardQuery, string]> = [
-  ['name', 'name'],
-  ['types', 'types'],
-  ['rarity', 'rarity'],
-  ['setId', 'set.id'],
+/**
+ * Whitelist: query key on `CardQuery` → the param name the API expects, and
+ * the operator its value goes out with. A bare value is a case-insensitive
+ * substring match: right for a name typed in part, wrong for a rarity picked
+ * from a list, where `Common` would bring every `Uncommon` and `Rare` most of
+ * the catalogue. `eq:` matches exactly, case included, and every rarity
+ * `CARD_RARITIES` offers is the API's own spelling: their 42 exact matches
+ * partition all 23,736 cards (checked 2026-09-25). `set.id` bleeds too, and
+ * selectSetCards intersects that away.
+ */
+const CARD_FILTERS: ReadonlyArray<readonly [keyof CardQuery, string, string]> = [
+  ['name', 'name', ''],
+  ['types', 'types', ''],
+  ['rarity', 'rarity', 'eq:'],
+  ['setId', 'set.id', ''],
 ];
 
 function positive(value: number | undefined, fallback: number): number {
@@ -208,9 +217,11 @@ function positive(value: number | undefined, fallback: number): number {
 /** Build a `/cards` URL. `perPage` is used verbatim — callers add any probe. */
 export function buildCardUrl(q: CardQuery, base: string = API_BASE): string {
   const url = new URL(`${base}/cards`);
-  for (const [key, param] of CARD_FILTERS) {
+  for (const [key, param, operator] of CARD_FILTERS) {
     const value = q[key];
-    if (typeof value === 'string' && value.trim() !== '') url.searchParams.set(param, value.trim());
+    if (typeof value === 'string' && value.trim() !== '') {
+      url.searchParams.set(param, operator + value.trim());
+    }
   }
   url.searchParams.set('pagination:page', String(positive(q.page, 1)));
   url.searchParams.set('pagination:itemsPerPage', String(positive(q.perPage, DEFAULT_PER_PAGE)));

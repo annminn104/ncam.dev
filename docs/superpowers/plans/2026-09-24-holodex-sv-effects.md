@@ -271,5 +271,5 @@ Prettier clean.
 - Prismatic Evolutions (`sv08.5`) also had Poké Ball / Master Ball reverses. Not in the reference, so
   not here; a one-line extension of the `sv03.5` rule if wanted later.
 - The rarity filter's substring bug in search and set views (found during the sections work):
-  separate fix. TCGdex's `eq:` prefix makes a filter exact (verified 2026-09-24); the fix waits
-  on the owner.
+  separate fix. TCGdex's `eq:` prefix makes a filter exact (verified 2026-09-24). _Fixed
+  2026-09-25:_ `lib/tcgdex.ts#buildCardUrl` sends every rarity as `eq:`.

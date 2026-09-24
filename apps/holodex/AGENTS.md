@@ -121,12 +121,19 @@ Base `https://api.tcgdex.net/v2/en`, no key, CORS-open. Verified live 2026-09-21
   and briefs carry no rarity to filter them back out. So a card's rarity comes
   from `GET /cards/{id}`, never from the query that found it: every card on the
   effects page was judged on its own, and an earlier draft that trusted the
-  query put a VMAX under `shiny-v`. The app's own rarity filter (set and
-  search views) still sends the bare value and shows the bleed.
-- **An `eq:` prefix makes either filter exact**: `?rarity=eq:Shiny rare V`
-  returns just the 9, and `?set.id=eq:swsh1` just swsh1's 216 cards (verified
-  2026-09-24). The client does not use it yet — the fix for the bleed above,
-  and possibly for the set view's intersection, is waiting on the owner.
+  query put a VMAX under `shiny-v`. The app's own rarity filter asks exactly
+  (below).
+- **An `eq:` prefix makes either filter exact, and case-sensitive**:
+  `?rarity=eq:Shiny rare V` returns just the 9 (`eq:shiny rare v` none), and
+  `?set.id=eq:swsh1` just swsh1's 216 cards (verified 2026-09-24).
+  `buildCardUrl` sends every rarity with it, so the set and search views'
+  rarity filter is exact: `Common` no longer brings the Uncommons, nor `Rare`
+  most of the catalogue. The filter bar offers only `CARD_RARITIES`, the API's
+  own spellings, whose 42 exact matches partition all 23,736 cards (checked
+  2026-09-25); refresh it from `GET /rarities` if TCGdex adds one. A
+  hand-typed `?rarity=rare` now finds nothing. `set.id` still goes bare: the
+  set view's intersection above already makes it exact, and `eq:` there would
+  only spare it fetching the bled rows.
 - **A brand-new set's `variants` can be placeholders.** Every card of `30th`
   (30th Celebration, released 2026-09-16) reads
   `normal: true, holo: false, reverse: false`, Double rares and Special

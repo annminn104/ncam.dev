@@ -46,13 +46,24 @@ describe('buildCardUrl', () => {
     expect(query.get('set.id')).toBe('swsh3');
   });
 
-  it('passes through the whitelisted filters', () => {
+  it('passes name and types through as typed, still substring matches', () => {
     const query = new URL(
       buildCardUrl({ name: 'char', types: 'Fire', rarity: 'Special illustration rare' }),
     ).searchParams;
     expect(query.get('name')).toBe('char');
     expect(query.get('types')).toBe('Fire');
-    expect(query.get('rarity')).toBe('Special illustration rare');
+  });
+
+  it('asks for a rarity exactly, since the API matches a bare value as a substring', () => {
+    // Bare, ?rarity=Common also returns every Uncommon: 10,790 cards, of which
+    // eq:Common is the 5,873 Commons (TCGdex, 2026-09-25).
+    const query = new URL(buildCardUrl({ rarity: 'Common' })).searchParams;
+    expect(query.get('rarity')).toBe('eq:Common');
+  });
+
+  it('trims a rarity before it asks for it exactly', () => {
+    const query = new URL(buildCardUrl({ rarity: '  Illustration rare ' })).searchParams;
+    expect(query.get('rarity')).toBe('eq:Illustration rare');
   });
 
   it('drops empty and whitespace-only filters, because the API returns [] for them', () => {
