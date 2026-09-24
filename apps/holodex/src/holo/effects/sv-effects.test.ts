@@ -245,8 +245,8 @@ describe('poke-ball-holo and masterball-holo', () => {
         for (const layer of el.layers.slice(i)) expect(layer.blend, kind).toBe('multiply');
         for (const fromCenter of [0, 0.5, 1]) {
           const f = filterAt(el, fromCenter);
-          // A black card area too: `lighten` shows a black lifted to grey only
-          // over something darker than that grey.
+          // Every kind of card area, black included: off the glyphs the filters
+          // must keep black black, which color-dodges the card to itself.
           for (const card of [grey(0), grey(0.2), [0.9, 0.6, 0.3] as RGB, grey(1)]) {
             // off the glyphs, black through the filter: the card as it was
             expectClose(blendRGB(el.mixBlend, card, filterRGB(grey(0), f)), card, kind);
@@ -266,6 +266,45 @@ describe('poke-ball-holo and masterball-holo', () => {
       };
       for (const kind of own) expect(calls(kind), kind).toBe(1);
       for (const kind of other) expect(calls(kind), kind).toBe(0);
+    });
+
+    it(`${effect.id}: dodges its glyphs onto the card through the shine’s filter, as the reference’s group does`, () => {
+      // poke-ball-holo.css: the :before and :after blend into .card__shine, whose
+      // brightness(.75) contrast(1) saturate(1) then color-dodges the whole group
+      const group = { brightness: 0.75, contrast: 1, saturate: 1 };
+      const caps = effect.shine.find((e) => e.layers.some((l) => l.source.kind === own[1]));
+      const outlines = effect.shine.find((e) => e.layers.some((l) => l.source.kind === own[0]));
+      if (!caps || !outlines) throw new Error(`${effect.id} is missing a glyph element`);
+      for (const el of [caps, outlines]) expect(el.mixBlend).toBe('color-dodge');
+      for (const fromCenter of [0, 0.5, 1]) {
+        for (const c of [grey(0.55), grey(0.65), [0.62, 0.55, 0.5] as RGB]) {
+          // :before: brightness(.75) contrast(2) saturate(calc(var(--pointer-from-center)))
+          const capsOwn = { brightness: 0.75, contrast: 2, saturate: fromCenter };
+          expectClose(
+            filterRGB(c, filterAt(caps, fromCenter)),
+            filterRGB(filterRGB(c, capsOwn), group),
+          );
+          // :after: saturate(calc(var(--pointer-from-center) * 1.1)); its brightness and
+          // contrast are baked into its gradient, ahead of the mask
+          const outlinesOwn = { brightness: 1, contrast: 1, saturate: 1.1 * fromCenter };
+          expectClose(
+            filterRGB(c, filterAt(outlines, fromCenter)),
+            filterRGB(filterRGB(c, outlinesOwn), group),
+          );
+        }
+      }
+    });
+
+    it(`${effect.id}: keeps its balls inside the silver border, which only the shine’s own dodge reaches`, () => {
+      // poke-ball-holo.css clips the :before and :after to --clip-borders-invert, inside a
+      // .card__shine clipped to --clip-invert, which takes the border in
+      const isGlyph = (e: Element) =>
+        e.layers.some((l) => (own as readonly string[]).includes(l.source.kind));
+      expect(effect.shine.filter(isGlyph)).toHaveLength(2);
+      for (const el of effect.shine)
+        expect(el.clip, JSON.stringify(el.layers[0].source.kind)).toBe(
+          isGlyph(el) ? 'borders' : undefined,
+        );
     });
 
     it(`${effect.id}: gives the caps 53% of the reference’s opacity for them`, () => {

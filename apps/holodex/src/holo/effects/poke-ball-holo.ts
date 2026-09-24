@@ -1,4 +1,4 @@
-import type { Effect, Layer } from '../shader/types';
+import type { Effect, Filter, Layer } from '../shader/types';
 import {
   BLACK,
   COVER,
@@ -6,6 +6,7 @@ import {
   POINTER_Y,
   SUNPILLAR,
   WHITE,
+  composeFilters,
   filtered,
   fixed,
   grey,
@@ -33,11 +34,19 @@ import {
  * on black (textures.ts), laid over the gradient with multiply (see the
  * :before and :after below).
  *
+ * The glow is a dodge. The reference lightens its :before and plus-lighters its
+ * :after onto the shine's grey inside the shine's isolated group, then
+ * color-dodges the whole group onto the card through the shine's filter. The
+ * DSL has no groups, so each glyph element color-dodges onto the card on its
+ * own, through its own filter and then the shine's (GROUP_FILTER): the balls
+ * brighten the card beneath them as the reference's do, rather than adding a
+ * dim tint over it.
+ *
  * Approximations:
- * - The :before and :after lighten and plus-lighter onto the card, where the
- *   reference's blend onto the shine's grey inside the shine's isolated
- *   group, which then color-dodges onto the card. The glyphs glow by adding
- *   light rather than by dodging the card beneath them.
+ * - Where the glyphs cross the shine's grey, the reference dodges once by
+ *   their lighten or plus-lighter; here the grey and the glyphs dodge in turn.
+ *   Two dodges compound, so a cap runs a little stronger than the reference's
+ *   over the grey and an outline a little weaker.
  * - The caps' opacity: the reference clamps `calc(var(--card-opacity) +
  *   var(--pointer-from-center) - 0.75)` at 1 before the caps' 53% applies;
  *   here the 53% scales it first, so past --pointer-from-center 0.75 the caps
@@ -49,12 +58,12 @@ import {
  * - The glare's clip-path, --viewport-edge-clip (the card less its art
  *   window), is not applied: the DSL's glare is unclipped by design
  *   (compile.ts).
- * - The reference clips its layers apart: the shine to --clip-invert (the
- *   card less its art window, border and all), the :before and :after also to
- *   --clip-borders-invert (the card inside its silver border), both from
- *   cards.css. The DSL clips every shine element to the one region select.ts
- *   picks, so the balls also cover the border strip the reference leaves
- *   plain.
+ * - The reference clips its layers apart, both regions from cards.css: the
+ *   shine to --clip-invert (the card less its art window, border and all),
+ *   the :before and :after also to --clip-borders-invert (the card inside its
+ *   silver border). Here the shine takes select.ts's region, and the glyph
+ *   elements also carry an element clip of `borders` (shader/types.ts), which
+ *   is that polygon less the small notch it cuts at the top-left corner.
  */
 
 // the reference's defaults for every ball holo
@@ -62,6 +71,18 @@ const SHINE = 0.8; // --shine
 const GLARE = 0.8; // --glare
 const GLARE_CONTRAST = 1; // --glare-contrast
 const OUTER_BRIGHTNESS = 0.55; // --outer-brightness
+
+/**
+ * .card__shine's `filter: brightness(.75) contrast(1) saturate(1)`, which the
+ * reference applies to its whole group — its own grey and both glyph layers —
+ * before color-dodging it onto the card. The glyph elements compose it after
+ * their own filters.
+ */
+const GROUP_FILTER: Filter = {
+  brightness: { base: 0.75 },
+  contrast: { base: 1 },
+  saturate: { base: 1 },
+};
 
 /**
  * The reference's inner caps are drawn about 53% opaque. Ours are drawn at
@@ -93,8 +114,8 @@ export interface BallPatterns {
  * `--mask: var(--pokeball)` / `--mask: var(--pokeball-inner)` (and the
  * masterball-holo overrides of both), with `mask-image: var(--mask)`,
  * `mask-size: 40% auto`, `mask-mode: alpha`: white keeps the gradient beneath
- * it, black turns it to the black that `lighten` and `plus-lighter` add
- * nothing for. The tile is square and 40% of the card wide, 2.5 across; its
+ * it, black turns it to black, which color-dodges the card to itself. The
+ * tile is square and 40% of the card wide, 2.5 across; its
  * `mask-position` is --seedx / --seedy, 0 here.
  */
 const pattern = (kind: BallPatterns['outer'] | BallPatterns['inner']): Layer => ({
@@ -126,7 +147,7 @@ export function ballHolo(id: string, patterns: BallPatterns): Effect {
             blend: 'normal',
           },
         ],
-        filter: { brightness: { base: 0.75 }, contrast: { base: 1 }, saturate: { base: 1 } },
+        filter: GROUP_FILTER,
         mixBlend: 'color-dodge',
       },
       // :before, the caps
@@ -148,16 +169,22 @@ export function ballHolo(id: string, patterns: BallPatterns): Effect {
           // radial the :after's mask also has.
           pattern(patterns.inner),
         ],
-        // A binary mask survives this filter after it: black stays black
-        // through a contrast of 2 and any saturate.
-        filter: {
-          brightness: { base: 0.75 },
-          contrast: { base: 2 },
-          saturate: { base: 0, fromCenter: 1 },
-        },
-        mixBlend: 'lighten',
+        // Its own filter, then the group's. A binary mask survives both after
+        // it: black stays black through a contrast of 2 and any saturate.
+        filter: composeFilters(
+          {
+            brightness: { base: 0.75 },
+            contrast: { base: 2 },
+            saturate: { base: 0, fromCenter: 1 },
+          },
+          GROUP_FILTER,
+        ),
+        // the group's dodge, standing in for its lighten into the group (see above)
+        mixBlend: 'color-dodge',
         // calc(var(--card-opacity) + (var(--pointer-from-center)) - 0.75), at the caps' 53%
         opacity: { base: 0.25 * INNER_CAP_ALPHA, fromCenter: INNER_CAP_ALPHA },
+        // clip-path: var(--clip-borders-invert)
+        clip: 'borders',
       },
       // :after, the outlines
       {
@@ -184,8 +211,12 @@ export function ballHolo(id: string, patterns: BallPatterns): Effect {
           // this layer's alpha is the radial's turned over, 0 at 20% and 1 at 80%.
           ...radialMask([stop(WHITE, 20, 0), stop(WHITE, 80, 1)], 0),
         ],
-        filter: { saturate: { base: 0, fromCenter: 1.1 } },
-        mixBlend: 'plus-lighter',
+        // its own saturate, then the group's filter
+        filter: composeFilters({ saturate: { base: 0, fromCenter: 1.1 } }, GROUP_FILTER),
+        // the group's dodge, standing in for its plus-lighter into the group (see above)
+        mixBlend: 'color-dodge',
+        // clip-path: var(--clip-borders-invert)
+        clip: 'borders',
       },
     ],
     glare: [
