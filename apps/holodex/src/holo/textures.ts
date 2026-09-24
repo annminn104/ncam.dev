@@ -237,8 +237,11 @@ export function birthdaySparkles(width: number, height: number, seed: number): S
 export const BALL_TILE = 512;
 /** Glyphs per side of the tile. Even, so the size checkerboard survives the wrap. */
 const BALL_CELLS = 2;
-/** A glyph's radius as a share of the lattice spacing: the reference's two sizes. */
-const BALL_RADIUS = { large: 0.42, small: 0.26 };
+/**
+ * A glyph's radius as a share of the lattice spacing: the reference's two
+ * sizes, measured off pokeball-outer.webp's pixels (0.4367 and 0.2593).
+ */
+const BALL_RADIUS = { large: 0.437, small: 0.26 };
 
 export interface BallGlyph {
   x: number;
@@ -367,28 +370,39 @@ const BARE = '#000';
 
 /**
  * A ball glyph at unit radius, y down; every number is a share of the glyph's
- * radius. The outline is an outer ring, a double band through the middle that
- * runs into a housing ring, and a small button ring at the centre. The cap is
- * the fill of the upper half, inside the ring, above the band and clear of the
- * housing, with a gap to each so it never touches the outline. The Master Ball
- * adds two lobes and an M to both.
+ * radius, measured off the reference's pokeball-outer.webp and
+ * pokeball-inner.webp by scanning across and down through a glyph's centre
+ * (2026-09-24). The outline is an outer ring, a housing ring and a button
+ * ring, joined by a band of three bars: one along the centre line, from the
+ * button out through the housing to the ring, and one above and below it,
+ * from the housing out to the ring only. The cap is the rest of the upper
+ * half: inside the ring, outside the housing, above the upper bar, touching
+ * each as the reference's does. The Master Ball's outline is the Poké Ball's
+ * stroke for stroke, and adds two lobes and an M to both.
  */
 const GLYPH = {
-  ring: { r: 0.93, width: 0.14 },
-  band: { y: 0.11, width: 0.075 },
-  housing: { r: 0.36, width: 0.075 },
-  button: { r: 0.17, width: 0.075 },
-  cap: { r: 0.84, bottom: -0.17, clear: 0.43 },
-  lobes: { x: 0.52, y: -0.5, r: 0.24 },
+  ring: { r: 0.93, width: 0.139 },
+  bars: { centre: 0.137, side: { y: 0.217, width: 0.122 } },
+  housing: { r: 0.476, width: 0.122 },
+  button: { r: 0.25, width: 0.135 },
+  cap: { r: 0.861, bottom: -0.278, clear: 0.537 },
+  // The Master Ball's two lobes: discs up and out on either side, reaching
+  // past the ball's edge, fitted to masterball-outer.webp's lobe stroke — a
+  // circle through each of its edges where it crosses rays at -150, -135 and
+  // -120 degrees, both about the same centre. Inside a lobe the outer ring
+  // thins to a rim and the rest is cap.
+  lobes: { x: 0.753, y: -0.8, r: 0.415, stroke: 0.091, rim: 0.965 },
+  // the M, its legs leaning in toward the top
   m: [
-    [-0.14, -0.46],
-    [-0.14, -0.74],
-    [0, -0.6],
-    [0.14, -0.74],
-    [0.14, -0.46],
+    [-0.126, -0.57],
+    [-0.095, -0.8],
+    [0, -0.625],
+    [0.095, -0.8],
+    [0.126, -0.57],
   ] as Point[],
   line: 0.075,
-  gap: 0.04,
+  // the sliver the Master Ball's cap keeps from its lobe strokes and M
+  gap: 0.01,
 };
 
 function ring(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, width: number) {
@@ -409,13 +423,19 @@ function drawBallOutline(ctx: CanvasRenderingContext2D) {
   ring(ctx, 0, 0, GLYPH.ring.r, GLYPH.ring.width);
   ring(ctx, 0, 0, GLYPH.housing.r, GLYPH.housing.width);
   ring(ctx, 0, 0, GLYPH.button.r, GLYPH.button.width);
-  // The double band: a bar either side of the centre line, on both sides of
-  // the housing, each running from under the ring's stroke to under the
-  // housing's.
-  const length = GLYPH.ring.r - GLYPH.housing.r;
-  for (const y of [-GLYPH.band.y, GLYPH.band.y]) {
+  // The centre bar, on both sides, from under the button's stroke out to under
+  // the ring's, across the housing.
+  const { centre, side } = GLYPH.bars;
+  const long = GLYPH.ring.r - GLYPH.button.r;
+  for (const x of [-GLYPH.ring.r, GLYPH.button.r]) {
+    ctx.fillRect(x, -centre / 2, long, centre);
+  }
+  // A bar above and below it, from under the housing's stroke out to under the
+  // ring's, on both sides.
+  const short = GLYPH.ring.r - GLYPH.housing.r;
+  for (const y of [-side.y, side.y]) {
     for (const x of [-GLYPH.ring.r, GLYPH.housing.r]) {
-      ctx.fillRect(x, y - GLYPH.band.width / 2, length, GLYPH.band.width);
+      ctx.fillRect(x, y - side.width / 2, short, side.width);
     }
   }
 }
@@ -433,25 +453,56 @@ function drawBallCap(ctx: CanvasRenderingContext2D) {
   ctx.restore();
 }
 
+/** Clip to one lobe's disc inside a circle of radius `within` about the ball's centre. */
+function clipToLobe(ctx: CanvasRenderingContext2D, side: number, within: number) {
+  const { x, y, r } = GLYPH.lobes;
+  ctx.beginPath();
+  ctx.arc(0, 0, within, 0, Math.PI * 2);
+  ctx.clip();
+  ctx.beginPath();
+  ctx.arc(side * x, y, r, 0, Math.PI * 2);
+  ctx.clip();
+}
+
 function drawMasterballOutline(ctx: CanvasRenderingContext2D) {
   drawBallOutline(ctx);
+  const { x, y, r, stroke, rim } = GLYPH.lobes;
   for (const side of [-1, 1]) {
-    ring(ctx, side * GLYPH.lobes.x, GLYPH.lobes.y, GLYPH.lobes.r, GLYPH.line);
+    // Inside the lobe the ring thins to a rim at the ball's edge.
+    ctx.save();
+    clipToLobe(ctx, side, 1.02);
+    ctx.fillStyle = BARE;
+    ctx.fillRect(-1.1, -1.1, 2.2, 2.2);
+    ctx.fillStyle = FOIL;
+    ring(ctx, 0, 0, (rim + 1) / 2, 1 - rim);
+    ctx.restore();
+    // The lobe's stroke, where its disc lies inside the rim.
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(0, 0, rim, 0, Math.PI * 2);
+    ctx.clip();
+    ring(ctx, side * x, y, r, stroke);
+    ctx.restore();
   }
   polyline(ctx, GLYPH.m, GLYPH.line);
 }
 
 function drawMasterballCap(ctx: CanvasRenderingContext2D) {
   drawBallCap(ctx);
-  // Cut the lobes' outlines and the M out of the cap, a little wider than the
-  // outline draws them, so the cap and the outline stay apart here too.
+  const { x, y, r, stroke, rim } = GLYPH.lobes;
+  // The lobes are cap as well, out to the rim.
+  for (const side of [-1, 1]) {
+    ctx.save();
+    clipToLobe(ctx, side, rim);
+    ctx.fillRect(-1.1, -1.1, 2.2, 2.2);
+    ctx.restore();
+  }
+  // Cut the lobes' strokes and the M out of the cap, a sliver wider than the
+  // outline draws them, so the two masks meet without overlapping.
   ctx.save();
   ctx.strokeStyle = BARE;
-  const cut = GLYPH.line + 2 * GLYPH.gap;
-  for (const side of [-1, 1]) {
-    ring(ctx, side * GLYPH.lobes.x, GLYPH.lobes.y, GLYPH.lobes.r, cut);
-  }
-  polyline(ctx, GLYPH.m, cut);
+  for (const side of [-1, 1]) ring(ctx, side * x, y, r, stroke + 2 * GLYPH.gap);
+  polyline(ctx, GLYPH.m, GLYPH.line + 2 * GLYPH.gap);
   ctx.restore();
 }
 
