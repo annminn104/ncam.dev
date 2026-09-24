@@ -106,7 +106,7 @@ describe('EFFECT_BY_RARITY', () => {
       ...Object.values(MODERN_EFFECT_BY_RARITY),
     ]);
     const declared = new Set<EffectId>([...used, ...OVERRIDE_ONLY_EFFECTS]);
-    expect(declared.size).toBe(29);
+    expect(declared.size).toBe(30);
   });
 
   it('splits by era only rarities the API returns, each into two different effects', () => {
@@ -394,12 +394,20 @@ describe('eraOf — Scarlet & Violet and Mega against everything older', () => {
 });
 
 describe('selectHolo — the era splits, both arms of each', () => {
-  it('selects regular-holo for a Scarlet & Violet or Mega Rare, and basic for an older one', () => {
-    // The reference promotes an SV `Rare` to `Rare Holo`. 30th Celebration's
-    // Rares are Mega by set, so they take that arm too.
-    expect(selectHolo(CAPTURED_CARDS['sv03.5-026']).effect).toBe('regular-holo');
-    expect(selectHolo(THIRTIETH_RARE).effect).toBe('regular-holo');
+  it('selects sv-rare-holo for a Scarlet & Violet or Mega Rare, and basic for an older one', () => {
+    // The reference promotes an SV `Rare` to `Rare Holo` and draws it with
+    // pokemon-cards-151's own regular holo. 30th Celebration's Rares are Mega
+    // by set, so they take that arm too.
+    expect(selectHolo(CAPTURED_CARDS['sv03.5-026']).effect).toBe('sv-rare-holo');
+    expect(selectHolo(CAPTURED_CARDS['me01-034']).effect).toBe('sv-rare-holo');
+    expect(selectHolo(THIRTIETH_RARE).effect).toBe('sv-rare-holo');
     expect(selectHolo(OLDER_RARE).effect).toBe('basic');
+  });
+
+  it('keeps pokemon-cards-css’s regular holo for the older holo rares', () => {
+    for (const id of ['hgss4-1', 'dp7-96', 'hgss3-83']) {
+      expect(selectHolo(CAPTURED_CARDS[id]).effect, id).toBe('regular-holo');
+    }
   });
 
   it('gives a Scarlet & Violet Ultra Rare the full-art ex, and an older one the full-art V or GX', () => {
@@ -425,7 +433,7 @@ describe('selectHolo — the Scarlet & Violet and Pocket rows, in every era', ()
     ['One Star', 'illustration-rare'],
     ['Two Star', 'ex-full-art'],
     ['Crown', 'hyper-rare'],
-    ['Three Diamond', 'regular-holo'],
+    ['Three Diamond', 'sv-rare-holo'],
     ['Two Shiny', 'shiny-v'],
     // Deliberately unmoved: without it rainbow-alt keeps only the two
     // Futuristic Rare cards TCGdex has.

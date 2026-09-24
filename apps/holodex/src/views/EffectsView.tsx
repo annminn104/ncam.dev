@@ -40,9 +40,9 @@ const FOCUS_RING =
 /**
  * Every effect `selectHolo` can return, each in a section of its own on three
  * real cards (`holo/effect-gallery.ts`): one page for a GPU smoke pass over
- * all of them, instead of 87 card URLs.
+ * all of them, instead of 90 card URLs.
  *
- * Exactly one card on the whole page renders a live `HoloCard`; the other 86
+ * Exactly one card on the whole page renders a live `HoloCard`; the other 89
  * are plain art. Each `HoloCard` builds its own three.js renderer, with its
  * own WebGL context, and browsers cap live contexts near 16, so a page of
  * live cards would knock its own earlier canvases out through the

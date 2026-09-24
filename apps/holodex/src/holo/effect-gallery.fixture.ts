@@ -9,10 +9,12 @@ import type { Card } from '../lib/tcgdex';
  * what `selectHolo` reads (`rarity`, `suffix`, `localId`, `category`,
  * `stage`, and the set id it takes off `id` for the card's era), the
  * reverse-printing flag (`variants`), the `image` the page draws, and what
- * the `Card` type requires. All 87 were fetched on 2026-09-24, when the page
- * grew to 29 sections: the 33 new to it were captured then, and the 54 it
- * kept from the 66-card page (captured 2026-09-23 and 2026-09-24) matched
- * that fetch in every field. The subset-set cards (`swsh4.5sv-…` and the
+ * the `Card` type requires. The first 87 were fetched on 2026-09-24, when the
+ * page grew to 29 sections: the 33 new to it were captured then, and the 54
+ * it kept from the 66-card page (captured 2026-09-23 and 2026-09-24) matched
+ * that fetch in every field. The last three, dp7-96, hgss3-83 and me01-034,
+ * came on 2026-09-25 with the page's 30th section, sv-rare-holo, whose two
+ * other cards moved over from regular-holo. The subset-set cards (`swsh4.5sv-…` and the
  * `swsh9tg`–`swsh12tg` Trainer Gallery ones) have no `image` because the API
  * links none: `lib/images.ts#cardImageBase` finds their art. Every value is
  * copied verbatim: never edit one by hand to make a test pass — re-fetch the
@@ -1049,5 +1051,39 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     rarity: 'Common',
     stage: 'Basic',
     variants: { firstEdition: false, holo: false, normal: true, reverse: true, wPromo: false },
+  },
+  'dp7-96': {
+    id: 'dp7-96',
+    localId: '96',
+    name: 'Dusknoir',
+    image: 'https://assets.tcgdex.net/en/dp/dp7/96',
+    category: 'Pokemon',
+    set: { id: 'dp7', name: 'Stormfront', cardCount: { total: 106, official: 100 } },
+    rarity: 'Rare Holo LV.X',
+    stage: 'LEVEL-UP',
+    variants: { firstEdition: false, holo: true, normal: false, reverse: false, wPromo: false },
+  },
+  'hgss3-83': {
+    id: 'hgss3-83',
+    localId: '83',
+    name: 'Raichu',
+    image: 'https://assets.tcgdex.net/en/hgss/hgss3/83',
+    category: 'Pokemon',
+    set: { id: 'hgss3', name: 'Undaunted', cardCount: { total: 91, official: 90 } },
+    rarity: 'Rare PRIME',
+    stage: 'Stage1',
+    suffix: 'Prime',
+    variants: { firstEdition: false, holo: true, normal: false, reverse: false, wPromo: false },
+  },
+  'me01-034': {
+    id: 'me01-034',
+    localId: '034',
+    name: 'Kyogre',
+    image: 'https://assets.tcgdex.net/en/me/me01/034',
+    category: 'Pokemon',
+    set: { id: 'me01', name: 'Mega Evolution', cardCount: { total: 188, official: 132 } },
+    rarity: 'Rare',
+    stage: 'Basic',
+    variants: { firstEdition: false, holo: true, normal: false, reverse: true, wPromo: false },
   },
 };

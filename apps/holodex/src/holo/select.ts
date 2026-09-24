@@ -35,7 +35,8 @@ export type EffectId =
   | 'ex-special-illustration-rare'
   | 'hyper-rare'
   | 'poke-ball-holo'
-  | 'masterball-holo';
+  | 'masterball-holo'
+  | 'sv-rare-holo';
 
 /** Which part of the card the foil is confined to. */
 export type ClipShape = 'regular' | 'stage' | 'trainer' | 'borders' | 'full';
@@ -94,7 +95,8 @@ export const EFFECT_BY_RARITY: Record<string, EffectId> = {
   'Rare Holo LV.X': 'regular-holo',
   'Rare PRIME': 'regular-holo',
   LEGEND: 'regular-holo',
-  'Three Diamond': 'regular-holo',
+  // Pocket's holo rare, in the Scarlet & Violet look Pocket shares
+  'Three Diamond': 'sv-rare-holo',
 
   'Classic Collection': 'cosmos-holo',
   'Black White Rare': 'cosmos-holo',
@@ -155,12 +157,14 @@ export const EFFECT_BY_RARITY: Record<string, EffectId> = {
  * takes on a Scarlet & Violet or Mega card (`eraOf`); every other card takes
  * EFFECT_BY_RARITY's. SV and Mega share one rarity system, in which a plain
  * `Rare` is printed holo — the reference's CardProxy rewrites an SV `Rare` to
- * `Rare Holo` before choosing — and `Ultra Rare` is the full-art ex, where
- * before them it was the full-art V or GX. The effects page lists both arms of
- * each, qualified by era, from this table and EFFECT_BY_RARITY.
+ * `Rare Holo` before choosing, and draws it with pokemon-cards-151's own
+ * regular holo, sv-rare-holo, not pokemon-cards-css's scanlines — and `Ultra
+ * Rare` is the full-art ex, where before them it was the full-art V or GX. The
+ * effects page lists both arms of each, qualified by era, from this table and
+ * EFFECT_BY_RARITY.
  */
 export const MODERN_EFFECT_BY_RARITY: Readonly<Record<string, EffectId>> = {
-  Rare: 'regular-holo',
+  Rare: 'sv-rare-holo',
   'Ultra Rare': 'ex-full-art',
 };
 
@@ -270,9 +274,13 @@ const BORDERS: ReadonlySet<EffectId> = new Set<EffectId>([
 
 /**
  * Effects a reverse printing is allowed to replace. A Scarlet & Violet or
- * Mega `Rare` counts: MODERN_EFFECT_BY_RARITY makes it regular-holo first.
+ * Mega `Rare` counts: MODERN_EFFECT_BY_RARITY makes it sv-rare-holo first.
  */
-const REVERSIBLE: ReadonlySet<EffectId> = new Set<EffectId>(['basic', 'regular-holo']);
+const REVERSIBLE: ReadonlySet<EffectId> = new Set<EffectId>([
+  'basic',
+  'regular-holo',
+  'sv-rare-holo',
+]);
 
 export interface SelectOptions {
   /**

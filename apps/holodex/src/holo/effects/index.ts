@@ -29,6 +29,7 @@ import { exSpecialIllustrationRare } from './ex-special-illustration-rare';
 import { hyperRare } from './hyper-rare';
 import { pokeBallHolo } from './poke-ball-holo';
 import { masterballHolo } from './masterball-holo';
+import { svRareHolo } from './sv-rare-holo';
 
 /**
  * Every effect `selectHolo` can return. The registry test asserts this covers
@@ -65,4 +66,5 @@ export const EFFECTS: Record<EffectId, Effect> = {
   'hyper-rare': hyperRare,
   'poke-ball-holo': pokeBallHolo,
   'masterball-holo': masterballHolo,
+  'sv-rare-holo': svRareHolo,
 };

@@ -95,15 +95,14 @@ const EXAMPLES: Omit<EffectExample, 'rarities'>[] = [
       'sm7-1', // Bellsprout
     ],
   },
-  // One card per way in: a classic Holo Rare, a 151 Rare (Scarlet & Violet
-  // prints its Rares holo, so they come here, not to basic) and Pocket's
-  // Three Diamond.
+  // One card per way in, all older than Scarlet & Violet, whose Rares have
+  // sv-rare-holo: a Holo Rare, a Rare Holo LV.X and a Rare PRIME.
   {
     effect: 'regular-holo',
     cardIds: [
       'hgss4-1', // Aggron, Holo Rare
-      'sv03.5-026', // Raichu, Rare
-      'A1-003', // Venusaur, Three Diamond
+      'dp7-96', // Dusknoir, Rare Holo LV.X
+      'hgss3-83', // Raichu, Rare PRIME
     ],
   },
   // Close to the ceiling: of the 29 cards that select cosmos-holo, only these
@@ -374,6 +373,16 @@ const EXAMPLES: Omit<EffectExample, 'rarities'>[] = [
     ],
     reverse: true,
     override: FROM_MASTER_BALL_REVERSE,
+  },
+  // One card per way in: a 151 Rare and a Mega one (both eras print their
+  // Rares holo) and Pocket's Three Diamond, in the look Pocket shares with them.
+  {
+    effect: 'sv-rare-holo',
+    cardIds: [
+      'sv03.5-026', // Raichu, Rare
+      'me01-034', // Kyogre, Rare
+      'A1-003', // Venusaur, Three Diamond
+    ],
   },
 ];
 

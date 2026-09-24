@@ -11,6 +11,7 @@ import { hyperRare } from './hyper-rare';
 import { illustrationRare } from './illustration-rare';
 import { masterballHolo } from './masterball-holo';
 import { pokeBallHolo } from './poke-ball-holo';
+import { svRareHolo } from './sv-rare-holo';
 
 /**
  * The seven Scarlet & Violet effects, keyed by the id each is registered under
@@ -29,6 +30,7 @@ const SV_EFFECTS: Record<string, Effect> = {
   'hyper-rare': hyperRare,
   'poke-ball-holo': pokeBallHolo,
   'masterball-holo': masterballHolo,
+  'sv-rare-holo': svRareHolo,
 };
 
 /** An element's filter, evaluated at a pointer. */
@@ -79,6 +81,8 @@ describe('the SV effects’ glares stack as the reference’s z-index stacks the
     // .card__glare2: none; .card__glare: z-index 5
     'poke-ball-holo': { beneath: ['multiply'], above: ['overlay'] },
     'masterball-holo': { beneath: ['multiply'], above: ['overlay'] },
+    // regular-holo.css's .card__glare: none
+    'sv-rare-holo': { beneath: ['overlay'], above: [] },
   };
 
   it('covers every SV effect', () => {
@@ -92,6 +96,33 @@ describe('the SV effects’ glares stack as the reference’s z-index stacks the
       expect(effect.glare.map((e) => e.mixBlend)).toEqual(want.above);
     });
   }
+});
+
+describe('sv-rare-holo', () => {
+  const [shine] = svRareHolo.shine;
+
+  it('stacks the shine as regular-holo.css composites its group', () => {
+    // luminosity(multiply(holo, screen(bars, bars)), radial), overlaid onto the
+    // card: multiply commutes, so the screened bars come first and the holo
+    // multiplies onto them
+    expect(shine.layers.map((l) => [l.source.kind, l.blend])).toEqual([
+      ['repeating-linear', 'normal'],
+      ['repeating-linear', 'screen'],
+      ['repeating-linear', 'multiply'],
+      ['radial-pointer', 'luminosity'],
+    ]);
+    expect(shine.mixBlend).toBe('overlay');
+  });
+
+  it('slides its two sets of bars opposite ways as the pointer moves down the card', () => {
+    // background-position: 50% calc(var(--background-y) * -1.2), and * 1.2
+    const drift = (layer: Layer) =>
+      gradientT(layer, [0.5, 0.5], { fromLeft: 0.5, fromTop: 1 }) -
+      gradientT(layer, [0.5, 0.5], { fromLeft: 0.5, fromTop: 0 });
+    const [lower, upper] = shine.layers;
+    expect(drift(lower)).not.toBe(0);
+    expect(Math.sign(drift(upper))).toBe(-Math.sign(drift(lower)));
+  });
 });
 
 describe('illustration-rare', () => {
