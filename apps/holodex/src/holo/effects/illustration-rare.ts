@@ -37,8 +37,8 @@ import {
  *   is folded into the shine as one last soft-light layer: its bands, with
  *   its dark radial (at its middle stop) and its own filter baked into their
  *   stops. Its sunpillar hue and its grain are dropped.
- * - The glares' clip-path, the same border polygon, is not applied: the
- *   DSL's glare is unclipped by design (compile.ts).
+ * - The glare's clip-path, the same border polygon, is the element clip
+ *   `borders`: that polygon less its small notch at the top-left corner.
  */
 
 const ANGLE = 133; // --angle
@@ -103,11 +103,15 @@ export const illustrationRare: Effect = {
       mixBlend: 'color-dodge',
     },
   ],
-  glare: [
+  // Neither glare has a z-index in illustration-rare.css, so both paint
+  // beneath the shine (base.css's z-index: 3), in markup order.
+  beneath: [
     {
       layers: [{ ...radial([stop(WHITE, 0), stop(BLACK, 100)]), blend: 'normal' }],
       filter: { brightness: { base: 0.9 }, contrast: { base: 1.2 } },
       mixBlend: 'overlay',
+      // clip-path: var(--clip), the border polygon
+      clip: 'borders',
     },
     {
       layers: [{ ...radial([stop(WHITE, 5), stop(BLACK, 120)]), blend: 'normal' }],
@@ -116,4 +120,5 @@ export const illustrationRare: Effect = {
       opacity: { base: 0, fromCenter: 1 },
     },
   ],
+  glare: [],
 };

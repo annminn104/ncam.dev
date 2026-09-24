@@ -37,14 +37,21 @@ function sourceExpr(source: Source, uv: string, decls: string[], id: string): st
     case 'linear':
       decls.push(stopsArray(`stops_${id}`, source.stops));
       return `srcLinear(${uv}, ${f(source.angleDeg)}, stops_${id}, ${source.stops.length})`;
-    case 'radial-pointer':
+    case 'radial-pointer': {
       decls.push(
         stopsArray(
           `stops_${id}`,
           source.stops.map((s) => s.color),
         ),
       );
+      if (source.cssBox) {
+        // CSS's farthest-corner geometry (types.ts), for a radial css.ts converted
+        const [cx, cy] = source.cssBox.centre.map((p) => driven(p, 0));
+        const [w, h] = source.cssBox.size;
+        return `srcRadialCss(${uv}, vec2(${cx}, ${cy}), vec2(${f(w)}, ${f(h)}), stops_${id}, ${source.stops.length})`;
+      }
       return `srcRadialPointer(${uv}, stops_${id}, ${source.stops.length})`;
+    }
     case 'conic':
       decls.push(stopsArray(`stops_${id}`, source.stops));
       return `srcConic(${uv}, stops_${id}, ${source.stops.length})`;
@@ -119,8 +126,14 @@ function elementCode(element: Element, prefix: string): string {
 
 /** An Effect becomes one complete fragment shader, constants and all. */
 export function compileEffect(effect: Effect): string {
+  const beneath = (effect.beneath ?? []).map((e, i) => elementCode(e, `beneath${i}`)).join('\n\n');
   const shine = effect.shine.map((e, i) => elementCode(e, `shine${i}`)).join('\n\n');
   const glare = effect.glare.map((e, i) => elementCode(e, `glare${i}`)).join('\n\n');
+  // Glare the reference paints beneath its shine (types.ts) lies on the card
+  // first, and the shine's clip keeps it: outside the region the card stays as
+  // that glare left it, not as the bare art.
+  const under = beneath ? `${beneath}\n\n  vec3 base = acc;\n` : '';
+  const backdrop = beneath ? 'base' : 'art';
 
   // NO `#version` directive here. three.js prepends `#version 300 es` itself
   // whenever `glslVersion` is set on the material (WebGLProgram.js builds
@@ -141,10 +154,10 @@ void main() {
   vec3 acc = art;
   float cov = coverage(vUv);
 
-${shine}
+${under}${shine}
 
   // the foil only exists inside the clip region
-  acc = mix(art, acc, cov);
+  acc = mix(${backdrop}, acc, cov);
 
   // Glare is applied AFTER the clip mix, so it is deliberately unclipped: it
   // sweeps the whole card while the shine stays inside the art window. That

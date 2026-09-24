@@ -120,7 +120,9 @@ export const exFullArt: Effect = {
       ),
     }),
   ],
-  glare: [
+  // The glare has no z-index in ex-full-art.css, so it paints beneath the
+  // shine (base.css's z-index: 3).
+  beneath: [
     {
       layers: [
         {
@@ -135,4 +137,5 @@ export const exFullArt: Effect = {
       mixBlend: 'hard-light',
     },
   ],
+  glare: [],
 };

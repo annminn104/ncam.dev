@@ -25,6 +25,7 @@ import {
   pxWide,
   radial,
   radialMask,
+  radialT,
   repeatingLinear,
   stop,
   sunpillarClr,
@@ -63,6 +64,28 @@ function cssLine(angleDeg: number, box: PlainBox, uv: [number, number]): number 
   const length = Math.abs(iw * Math.sin(rad)) + Math.abs(ih * Math.cos(rad));
   const start = [iw / 2 - (dir[0] * length) / 2, ih / 2 - (dir[1] * length) / 2];
   return ((x - start[0]) * dir[0] + (y - start[1]) * dir[1]) / length;
+}
+
+/**
+ * A CSS `radial-gradient(farthest-corner circle at <pointer>)`'s position at a
+ * point of the card, worked from the spec directly: the image placed by
+ * background-size and -position (in px of a 63 x 88 card), the circle at the
+ * pointer's fraction of the image, its radius the distance to whichever of the
+ * image's four corners lies farthest from it.
+ */
+function cssRadial(box: PlainBox, pointer: [number, number], uv: [number, number]): number {
+  const [W, H] = [63, 88];
+  const [iw, ih] = [box.size[0] * W, box.size[1] * H];
+  const [left, top] = [(W - iw) * box.position[0], (H - ih) * box.position[1]];
+  const [cx, cy] = [left + iw * pointer[0], top + ih * pointer[1]];
+  const corners = [
+    [left, top],
+    [left + iw, top],
+    [left, top + ih],
+    [left + iw, top + ih],
+  ];
+  const radius = Math.max(...corners.map(([x, y]) => Math.hypot(x - cx, y - cy)));
+  return Math.min(1, Math.hypot(uv[0] * W - cx, uv[1] * H - cy) / radius);
 }
 
 /** How far a is from b, modulo whole periods. */
@@ -251,33 +274,45 @@ describe('linear', () => {
 });
 
 describe('radial', () => {
-  it('keeps its centre where the reference’s radial is, in a stretched and placed image', () => {
-    const box = {
-      size: [2, 1] as [number, number],
-      position: [BACKGROUND_X, BACKGROUND_Y] as [PointerDriven, PointerDriven],
-    };
-    const layer = radial(DARK_RADIAL, box, grey(0.5));
-    const [sx, sy] = layer.size ?? [1, 1];
-    for (const at of POINTERS) {
-      const [pu, pv] = [at.fromLeft ?? 0, at.fromTop ?? 0];
-      // the image's left edge, plus --pointer-x of the image's width
-      const cssX = (1 - 2) * valueAt(BACKGROUND_X, at, 0) + 2 * pu;
-      const cssY = (1 - 1) * valueAt(BACKGROUND_Y, at, 0) + 1 * pv;
-      // the DSL's radial is centred where uv * size + offset reaches the pointer
-      expect((pu - valueAt(layer.offset?.x, at, 0)) / sx).toBeCloseTo(cssX, 9);
-      expect((pv - valueAt(layer.offset?.y, at, 0)) / sy).toBeCloseTo(cssY, 9);
+  it('reaches from the reference’s centre to its image’s farthest corner, as CSS’s does', () => {
+    // COVER, and the placed and stretched images the ports draw radials in
+    const boxes: Array<{ size: [number, number]; position: [PointerDriven, PointerDriven] }> = [
+      { size: [1, 1], position: [CENTER, CENTER] },
+      { size: [2, 1], position: [BACKGROUND_X, BACKGROUND_Y] },
+      { size: [1.2, 1.5], position: [CENTER, CENTER] },
+    ];
+    for (const box of boxes) {
+      const layer = radial(DARK_RADIAL, box, grey(0.5));
+      for (const at of POINTERS) {
+        const plain: PlainBox = {
+          size: box.size,
+          position: [valueAt(box.position[0], at, 0), valueAt(box.position[1], at, 0)],
+        };
+        const pointer: [number, number] = [at.fromLeft ?? 0, at.fromTop ?? 0];
+        for (const uv of POINTS) {
+          const where = `${JSON.stringify(box.size)} at ${JSON.stringify(at)}, ${uv}`;
+          expect(radialT(layer, uv, at), where).toBeCloseTo(cssRadial(plain, pointer, uv), 9);
+        }
+      }
     }
+  });
+
+  it('grows its radius as the pointer leaves the middle, as the DSL’s fixed one never did', () => {
+    const layer = radial([stop(WHITE, 0), stop(BLACK, 100)]);
+    // the same point, a quarter-card from the pointer, sits nearer the centre of
+    // a larger circle once the pointer has left the middle for a corner
+    const middle = radialT(layer, [0.75, 0.5], { fromLeft: 0.5, fromTop: 0.5 });
+    const corner = radialT(layer, [0.25, 0], { fromLeft: 0, fromTop: 0 });
+    expect(corner).toBeLessThan(middle);
   });
 
   it('places stops on the fewest even positions that hold them, else samples 8', () => {
     const exact = radial([stop(WHITE, 0), stop(BLACK, 100)]);
-    expect(exact.source).toEqual({
-      kind: 'radial-pointer',
-      stops: [
-        { at: 0, color: WHITE },
-        { at: 1, color: BLACK },
-      ],
-    });
+    if (exact.source.kind !== 'radial-pointer') throw new Error('not radial');
+    expect(exact.source.stops).toEqual([
+      { at: 0, color: WHITE },
+      { at: 1, color: BLACK },
+    ]);
     const sampled = radial([stop(WHITE, 5), stop(BLACK, 120)]);
     if (sampled.source.kind !== 'radial-pointer') throw new Error('not radial');
     expect(sampled.source.stops).toHaveLength(8);

@@ -108,6 +108,18 @@ describe('SHARED_TEXTURE_UNIFORM', () => {
 });
 
 describe('texturesUsedBy', () => {
+  it('names a texture sampled only by glare painted beneath the shine', () => {
+    const effect: Effect = {
+      id: 'beneath-only',
+      beneath: [
+        { layers: [{ source: { kind: 'grain', scale: 1 }, blend: 'normal' }], mixBlend: 'overlay' },
+      ],
+      shine: [{ layers: [{ source: { kind: 'card' }, blend: 'normal' }], mixBlend: 'normal' }],
+      glare: [],
+    };
+    expect(texturesUsedBy(effect)).toEqual(['grain']);
+  });
+
   it('names each texture an effect samples, once, from shine and glare alike', () => {
     const effect: Effect = {
       id: 'uses',

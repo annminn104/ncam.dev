@@ -31,12 +31,20 @@ export function uvTransform(
 }
 
 /**
+ * The card's height over its width, 88 over 63: what a CSS radial's circle is
+ * round in, where the shader's uv runs 0..1 along each side regardless.
+ */
+export const CARD_HEIGHT_OVER_WIDTH = 88 / 63;
+
+/**
  * The layer-source samplers. Gradient stops arrive as a uniform array so one
  * compiled program can serve every effect that uses the same source kinds;
  * only the data differs.
  */
 export const sourcesGLSL = /* glsl */ `
 #define MAX_STOPS 8
+
+const float CARD_HEIGHT_OVER_WIDTH = ${CARD_HEIGHT_OVER_WIDTH.toFixed(6)};
 
 uniform sampler2D uCard;
 uniform sampler2D uGlitter;
@@ -86,6 +94,27 @@ vec3 srcLinear(vec2 uv, float angleDeg, vec3 stops[MAX_STOPS], int count) {
   float a = radians(angleDeg);
   float t = clamp(uv.x * cos(a) + uv.y * sin(a), 0.0, 1.0);
   return gradientAt(stops, count, t * (1.0 - 1.0 / float(count)));
+}
+
+/**
+ * How far along a CSS radial-gradient(farthest-corner circle at the pointer) a
+ * fragment is, 0 at the centre and 1 at the radius: the radial css.ts converts
+ * (Source's cssBox). Lengths are in card widths, so the circle is round on the
+ * card. The centre sits at the pointer's fraction of an image of this size, so
+ * the corner farthest from it lies size * max(p, 1 - p) away along each axis.
+ * Written out in scalars so the test can run it; css.ts#radialT is its twin.
+ */
+float radialCssDistance(vec2 uv, vec2 centre, vec2 size) {
+  float rx = size.x * max(uPointerUV.x, 1.0 - uPointerUV.x);
+  float ry = size.y * max(uPointerUV.y, 1.0 - uPointerUV.y) * CARD_HEIGHT_OVER_WIDTH;
+  float dx = uv.x - centre.x;
+  float dy = (uv.y - centre.y) * CARD_HEIGHT_OVER_WIDTH;
+  return clamp(sqrt(dx * dx + dy * dy) / sqrt(rx * rx + ry * ry), 0.0, 1.0);
+}
+
+vec3 srcRadialCss(vec2 uv, vec2 centre, vec2 size, vec3 stops[MAX_STOPS], int count) {
+  float d = radialCssDistance(uv, centre, size);
+  return gradientAt(stops, count, d * (1.0 - 1.0 / float(count)));
 }
 
 vec3 srcRadialPointer(vec2 uv, vec3 stops[MAX_STOPS], int count) {

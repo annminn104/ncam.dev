@@ -59,6 +59,41 @@ describe('the SV effects, beyond the registry’s rules', () => {
   });
 });
 
+describe('the SV effects’ glares stack as the reference’s z-index stacks them', () => {
+  // The reference paints a card's layers by z-index (base.css: .card__glitter 2,
+  // .card__shine 3), whatever their order in the markup or their translateZ. A
+  // .card__glare or .card__glare2 its rarity's CSS gives no z-index paints
+  // beneath the shine; one it lifts over 3 paints above. Checked against the
+  // shipped poke-151 in a headless browser: lifting the Poké Ball's glare2 to
+  // z-index 4 turns its text box from green, rgb(190,223,69), to the olive
+  // rgb(171,173,99) this port showed while it painted every glare above.
+  const STACKING: Record<string, { beneath: BlendMode[]; above: BlendMode[] }> = {
+    // .card__glare and .card__glare2: z-index 4
+    'ex-regular': { beneath: [], above: ['color-burn', 'lighten'] },
+    // .card__glare: none
+    'ex-full-art': { beneath: ['hard-light'], above: [] },
+    // .card__glare and .card__glare2: none, in markup order
+    'illustration-rare': { beneath: ['overlay', 'screen'], above: [] },
+    'ex-special-illustration-rare': { beneath: ['multiply', 'overlay'], above: [] },
+    'hyper-rare': { beneath: ['multiply', 'overlay'], above: [] },
+    // .card__glare2: none; .card__glare: z-index 5
+    'poke-ball-holo': { beneath: ['multiply'], above: ['overlay'] },
+    'masterball-holo': { beneath: ['multiply'], above: ['overlay'] },
+  };
+
+  it('covers every SV effect', () => {
+    expect(Object.keys(STACKING).sort()).toEqual(Object.keys(SV_EFFECTS).sort());
+  });
+
+  for (const [id, want] of Object.entries(STACKING)) {
+    it(`${id}: ${want.beneath.length} beneath the shine, ${want.above.length} above it`, () => {
+      const effect = SV_EFFECTS[id];
+      expect((effect.beneath ?? []).map((e) => e.mixBlend)).toEqual(want.beneath);
+      expect(effect.glare.map((e) => e.mixBlend)).toEqual(want.above);
+    });
+  }
+});
+
 describe('illustration-rare', () => {
   const [shine] = illustrationRare.shine;
 

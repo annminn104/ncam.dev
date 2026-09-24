@@ -219,15 +219,11 @@ export function ballHolo(id: string, patterns: BallPatterns): Effect {
         clip: 'borders',
       },
     ],
-    glare: [
-      {
-        layers: [
-          { ...radial([stop(hsl(346, 25, 80), 10), stop(hsl(207, 30, 40), 90)]), blend: 'normal' },
-        ],
-        filter: { brightness: { base: 0.75 * SHINE }, contrast: { base: GLARE_CONTRAST } },
-        mixBlend: 'overlay',
-        opacity: { base: GLARE },
-      },
+    // The reference stacks by z-index: .card__glare2 has none, so it paints
+    // beneath the shine (3); poke-ball-holo.css gives .card__glare z-index: 5,
+    // above it. The shine dodges a card glare2 has already darkened, and the
+    // glare's overlay then works on the result.
+    beneath: [
       {
         // .card__glare2 keeps base.css's radial and multiplies it; its alpha
         // folds toward white, which multiply leaves unchanged.
@@ -242,6 +238,16 @@ export function ballHolo(id: string, patterns: BallPatterns): Effect {
           },
         ],
         mixBlend: 'multiply',
+      },
+    ],
+    glare: [
+      {
+        layers: [
+          { ...radial([stop(hsl(346, 25, 80), 10), stop(hsl(207, 30, 40), 90)]), blend: 'normal' },
+        ],
+        filter: { brightness: { base: 0.75 * SHINE }, contrast: { base: GLARE_CONTRAST } },
+        mixBlend: 'overlay',
+        opacity: { base: GLARE },
       },
     ],
   };

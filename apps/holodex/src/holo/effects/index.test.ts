@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { compileEffect } from '../shader/compile';
+import type { Effect } from '../shader/types';
 import { EFFECTS } from './index';
 import {
   EFFECT_BY_RARITY,
@@ -15,6 +16,13 @@ const ALL_EFFECT_IDS: EffectId[] = [
     ...Object.values(MODERN_EFFECT_BY_RARITY),
     ...OVERRIDE_ONLY_EFFECTS,
   ]),
+];
+
+/** Every element an effect paints: its shine, and its glare above and beneath that. */
+const elementsOf = (effect: Effect) => [
+  ...(effect.beneath ?? []),
+  ...effect.shine,
+  ...effect.glare,
 ];
 
 describe('EFFECTS registry', () => {
@@ -34,17 +42,19 @@ describe('EFFECTS registry', () => {
 
   it('keeps every effect within the reference’s element budget', () => {
     // The reference gives each card at most .card__shine + :before + :after and
-    // .card__glare + :after. `basic` legitimately has no shine at all.
+    // .card__glare + :after, whether a glare paints above the shine or beneath
+    // it. `basic` legitimately has no shine at all.
     for (const [key, effect] of Object.entries(EFFECTS)) {
+      const glares = effect.glare.length + (effect.beneath?.length ?? 0);
       expect(effect.shine.length, key).toBeLessThanOrEqual(3);
-      expect(effect.glare.length, key).toBeLessThanOrEqual(2);
-      expect(effect.shine.length + effect.glare.length, key).toBeGreaterThan(0);
+      expect(glares, key).toBeLessThanOrEqual(2);
+      expect(effect.shine.length + glares, key).toBeGreaterThan(0);
     }
   });
 
   it('gives every element at least one layer', () => {
     for (const [key, effect] of Object.entries(EFFECTS)) {
-      for (const el of [...effect.shine, ...effect.glare]) {
+      for (const el of elementsOf(effect)) {
         expect(el.layers.length, key).toBeGreaterThan(0);
       }
     }
@@ -57,7 +67,7 @@ describe('EFFECTS registry', () => {
     // first background. A non-'normal' blend at layers[0] is silently
     // dropped by the generator, so it is always a mistake in the data.
     for (const [key, effect] of Object.entries(EFFECTS)) {
-      for (const el of [...effect.shine, ...effect.glare]) {
+      for (const el of elementsOf(effect)) {
         expect(el.layers[0].blend, key).toBe('normal');
       }
     }
@@ -65,7 +75,7 @@ describe('EFFECTS registry', () => {
 
   it('keeps every gradient within the shader stop limit', () => {
     for (const [key, effect] of Object.entries(EFFECTS)) {
-      for (const el of [...effect.shine, ...effect.glare]) {
+      for (const el of elementsOf(effect)) {
         for (const layer of el.layers) {
           const s = layer.source;
           const count =
@@ -91,13 +101,11 @@ describe('EFFECTS registry', () => {
       // layerCode()/elementCode() actually emit instead: one `vec3 src_`
       // declaration per layer, and one `acc = mix(acc, blendWith(` per
       // element (that exact pattern excludes the unconditional clip-region
-      // line `acc = mix(art, acc, cov);`, which would otherwise be an
-      // off-by-one for every effect).
-      const layerCount = [...effect.shine, ...effect.glare].reduce(
-        (n, el) => n + el.layers.length,
-        0,
-      );
-      const elementCount = effect.shine.length + effect.glare.length;
+      // line `acc = mix(art, acc, cov);`, or `mix(base, …)` with glare beneath,
+      // which would otherwise be an off-by-one for every effect).
+      const elements = elementsOf(effect);
+      const layerCount = elements.reduce((n, el) => n + el.layers.length, 0);
+      const elementCount = elements.length;
       expect((src.match(/vec3 src_/g) ?? []).length, key).toBe(layerCount);
       expect((src.match(/acc = mix\(acc, blendWith\(/g) ?? []).length, key).toBe(elementCount);
     }

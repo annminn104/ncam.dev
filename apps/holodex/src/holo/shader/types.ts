@@ -35,6 +35,20 @@ export type Source =
       /** radial-gradient(circle at pointer, stops...) — the glare */
       kind: 'radial-pointer';
       stops: Array<{ at: number; color: [number, number, number] }>;
+      /**
+       * CSS's own `farthest-corner` geometry, for a radial converted from the
+       * reference's CSS (effects/css.ts#radial): the circle's centre on the
+       * card, following the pointer, and the size of the image it is drawn in,
+       * both as fractions of the card. Its radius then reaches the corner of
+       * that image farthest from the centre, in true lengths on the 63:88 card,
+       * and grows as the pointer leaves the middle, as the reference's does.
+       * Give such a layer no size or offset: it is drawn in the card's own uv.
+       *
+       * Left out, the radial keeps the DSL's own fixed radius, centred on the
+       * pointer in the layer's uv — what the effects drawn by hand, rather than
+       * converted, were tuned against.
+       */
+      cssBox?: { centre: [PointerDriven, PointerDriven]; size: [number, number] };
     }
   | { kind: 'conic'; stops: Array<[number, number, number]> }
   /** tiled value-noise sparkle, generated once into a texture */
@@ -118,6 +132,16 @@ export interface Effect {
   id: string;
   /** 1–3 elements, matching .card__shine and its :before / :after */
   shine: Element[];
-  /** 0–2 elements, matching .card__glare and its :after */
+  /** 0–2 elements, matching .card__glare and its :after, painted above the shine */
   glare: Element[];
+  /**
+   * Glare elements painted onto the card beneath the shine instead, counted in
+   * glare's budget of two. The reference stacks its card's layers by z-index:
+   * .card__glitter is 2 and .card__shine 3 (base.css), so a .card__glare or
+   * .card__glare2 its rarity's CSS gives no z-index paints below both, and the
+   * shine then dodges the card the glare has already lit or darkened — a
+   * different picture from the same glare laid over the shine. The effect's
+   * clip region applies to the shine alone, over whatever lies beneath it.
+   */
+  beneath?: Element[];
 }

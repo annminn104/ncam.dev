@@ -3,6 +3,19 @@ import { compileEffect, VERTEX_SHADER } from './compile';
 import { baseGLSL } from './base';
 import { coversPoint, regionFor, SHAPE_ID, STAGE_STEP, type RegionRect } from '../regions';
 import type { ClipShape } from '../select';
+import {
+  BACKGROUND_X,
+  BACKGROUND_Y,
+  BLACK,
+  CENTER,
+  WHITE,
+  radial,
+  radialT,
+  stop,
+  valueAt,
+  type CssBox,
+} from '../effects/css';
+import { sourcesGLSL } from './sources';
 import type { Effect } from './types';
 
 const minimal: Effect = {
@@ -520,6 +533,152 @@ describe('coverage() in GLSL agrees with coversPoint() in JS', () => {
     expect(coverage('regular', 0.5, 0.3, false)).toBe(1);
     expect(coverage('regular', 0.5, 0.8, false)).toBe(0);
     expect(coverage('regular', 0.5, 0.8, true)).toBe(1);
+  });
+});
+
+/**
+ * A css.ts radial's distance as the shader works it out (sources.ts's
+ * radialCssDistance), translated from the GLSL itself and held to css.ts's
+ * radialT, the twin css.test.ts holds to CSS's own farthest-corner geometry.
+ */
+function transpileRadialCss(glsl: string) {
+  const body = /float radialCssDistance\(vec2 uv, vec2 centre, vec2 size\) \{\n([\s\S]*?)\n\}/.exec(
+    glsl,
+  )?.[1];
+  const aspect = /const float CARD_HEIGHT_OVER_WIDTH = ([^;]+);/.exec(glsl)?.[1];
+  if (!body || !aspect) {
+    throw new Error('radialCssDistance() no longer has the shape this translation assumes');
+  }
+  const js = body
+    .replace(/^\s*\/\/.*$/gm, '')
+    .replace(/\bfloat /g, 'let ')
+    .replace(/uPointerUV/g, 'pointer')
+    .replace(/CARD_HEIGHT_OVER_WIDTH/g, String(Number(aspect)));
+  expect(js).not.toMatch(/\bu[A-Z]\w*/);
+  expect(js).not.toMatch(/\b(?:float|vec[234]|uniform)\b/);
+  type V = { x: number; y: number };
+  const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
+  // every GLSL built-in the function could reach for, so a mutant fails on its values
+  const run = new Function(
+    'uv',
+    'centre',
+    'size',
+    'pointer',
+    'min',
+    'max',
+    'sqrt',
+    'clamp',
+    js,
+  ) as (
+    ...args: [V, V, V, V, typeof Math.min, typeof Math.max, typeof Math.sqrt, typeof clamp]
+  ) => number;
+  return (uv: V, centre: V, size: V, pointer: V) =>
+    run(uv, centre, size, pointer, Math.min, Math.max, Math.sqrt, clamp);
+}
+
+describe('a converted radial’s reach in GLSL agrees with radialT() in JS', () => {
+  const distance = transpileRadialCss(sourcesGLSL);
+  const boxes: CssBox[] = [
+    { size: [1, 1], position: [CENTER, CENTER] },
+    { size: [2, 1], position: [BACKGROUND_X, BACKGROUND_Y] },
+    { size: [1.2, 1.5], position: [CENTER, CENTER] },
+  ];
+  const pointers = [
+    { fromLeft: 0, fromTop: 0 },
+    { fromLeft: 0.5, fromTop: 0.5 },
+    { fromLeft: 0.9, fromTop: 0.2 },
+  ];
+  const points: Array<[number, number]> = [
+    [0, 0],
+    [0.5, 0.5],
+    [0.3, 0.8],
+    [1, 1],
+  ];
+
+  it('works out the same distance at every point, pointer and image', () => {
+    for (const box of boxes) {
+      const layer = radial([stop(WHITE, 0), stop(BLACK, 100)], box);
+      if (layer.source.kind !== 'radial-pointer' || !layer.source.cssBox) {
+        throw new Error('radial() no longer draws with the CSS geometry');
+      }
+      const { centre, size } = layer.source.cssBox;
+      for (const at of pointers) {
+        const c = { x: valueAt(centre[0], at, 0), y: valueAt(centre[1], at, 0) };
+        const pointer = { x: at.fromLeft, y: at.fromTop };
+        for (const [u, v] of points) {
+          // to 6 places: the GLSL's CARD_HEIGHT_OVER_WIDTH is written to 6 decimals
+          expect(distance({ x: u, y: v }, c, { x: size[0], y: size[1] }, pointer)).toBeCloseTo(
+            radialT(layer, [u, v], at),
+            6,
+          );
+        }
+      }
+    }
+  });
+
+  it('draws a converted radial with that geometry and leaves a hand-drawn one on its own', () => {
+    const converted = radial([stop(WHITE, 0), stop(BLACK, 100)], {
+      size: [1.2, 1.5],
+      position: [CENTER, CENTER],
+    });
+    const handDrawn = {
+      source: {
+        kind: 'radial-pointer' as const,
+        stops: [
+          { at: 0, color: WHITE },
+          { at: 1, color: BLACK },
+        ],
+      },
+    };
+    const src = compileEffect({
+      id: 'test-radials',
+      shine: [
+        { layers: [{ ...converted, blend: 'normal' }], mixBlend: 'normal' },
+        { layers: [{ ...handDrawn, blend: 'normal' }], mixBlend: 'normal' },
+      ],
+      glare: [],
+    });
+    expect(src).toMatch(
+      /src_shine0_0 = srcRadialCss\(uv_shine0_0, vec2\(.*uPointerUV\.x.*\), vec2\(1\.200000, 1\.500000\), /,
+    );
+    expect(src).toMatch(/src_shine1_0 = srcRadialPointer\(uv_shine1_0, /);
+  });
+});
+
+describe('glare painted beneath the shine', () => {
+  const plain = {
+    layers: [{ source: { kind: 'card' as const }, blend: 'normal' as const }],
+    mixBlend: 'normal' as const,
+  };
+  const src = compileEffect({
+    id: 'test-beneath',
+    beneath: [{ ...plain, mixBlend: 'multiply' }],
+    shine: [{ ...plain, mixBlend: 'color-dodge' }],
+    glare: [{ ...plain, mixBlend: 'overlay' }],
+  });
+  const at = (needle: string) => {
+    const i = src.indexOf(needle);
+    if (i < 0) throw new Error(`missing: ${needle}`);
+    return i;
+  };
+
+  it('paints it onto the card first, then the shine over it, then the glare above', () => {
+    expect(at('// --- beneath0')).toBeLessThan(at('// --- shine0'));
+    expect(at('// --- shine0')).toBeLessThan(at('// --- glare0'));
+  });
+
+  it('clips the shine against what lies beneath it, so the clip keeps the glare', () => {
+    // the backdrop is taken after the beneath elements and before the shine
+    expect(at('vec3 base = acc;')).toBeGreaterThan(at('// --- beneath0'));
+    expect(at('vec3 base = acc;')).toBeLessThan(at('// --- shine0'));
+    expect(src).toContain('acc = mix(base, acc, cov);');
+    expect(src).not.toContain('acc = mix(art, acc, cov);');
+  });
+
+  it('leaves an effect with nothing beneath exactly as it compiled before', () => {
+    const without = compileEffect({ id: 'test-no-beneath', shine: [plain], glare: [plain] });
+    expect(without).toContain('acc = mix(art, acc, cov);');
+    expect(without).not.toMatch(/\/\/ --- beneath|vec3 base = acc/);
   });
 });
 

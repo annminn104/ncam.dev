@@ -61,7 +61,7 @@ export const SHARED_TEXTURE_UNIFORM: Record<TextureName, string> = {
  */
 export function texturesUsedBy(effect: Effect): TextureName[] {
   const names = new Set<TextureName>();
-  for (const element of [...effect.shine, ...effect.glare]) {
+  for (const element of [...(effect.beneath ?? []), ...effect.shine, ...effect.glare]) {
     for (const { source } of element.layers) {
       if (source.kind in SHARED_TEXTURE_UNIFORM) names.add(source.kind as TextureName);
     }

@@ -16,9 +16,6 @@
  * vUv. CSS sizes and positions are fractions of the card: 2 for `200%`.
  *
  * Approximations every port here shares:
- * - radial(): the DSL's radial has one fixed radius and spaces its stops
- *   evenly. The reference's `farthest-corner` radius grows as the pointer
- *   leaves the centre; stops are placed as if it never did.
  * - Stops the DSL cannot space evenly are resampled to 8, its limit.
  * - A stop's alpha is folded toward the colour its blend leaves unchanged
  *   (see colorAt). That is exact for a blend linear in the layer it applies
@@ -28,6 +25,7 @@
  * - --seedx/--seedy, the reference's random per-card pattern offsets, are 0:
  *   a card must look the same on every visit.
  */
+import { CARD_HEIGHT_OVER_WIDTH } from '../shader/sources';
 import type { Filter, Layer, PointerDriven, Source } from '../shader/types';
 
 export type RGB = [number, number, number];
@@ -364,22 +362,6 @@ export function linear(angleDeg: number, stops: CssStop[], box: CssBox): Backgro
   };
 }
 
-/**
- * Where the DSL's radial must be told the pointer is, for a centre that
- * follows it as `centre`. The shader centres its radial on the pointer in the
- * layer's own uv·size + offset, so a centre at c0 + c1·pointer needs a size of
- * 1/c1 and an offset of -c0/c1. That also stretches the radial by c1 along
- * that axis, as a CSS radial in a stretched image is.
- */
-function track(centre: PointerDriven, along: 'fromLeft' | 'fromTop'): [number, number] {
-  const slope = centre[along] ?? 0;
-  const strays = TERMS.filter((term) => term !== along && (centre[term] ?? 0) !== 0);
-  if (slope === 0 || strays.length > 0) {
-    throw new Error('the DSL can only centre a radial on the pointer');
-  }
-  return [1 / slope, -centre.base / slope];
-}
-
 /** Stop positions for a radial: the fewest even ones (2..8) its CSS stops fall on, else 8. */
 function radialSamples(stops: CssStop[]): number[] {
   const grid = (n: number) => Array.from({ length: n }, (_, i) => i / (n - 1));
@@ -394,24 +376,45 @@ function radialSamples(stops: CssStop[]): number[] {
 
 /**
  * `radial-gradient(farthest-corner circle at var(--pointer-x) var(--pointer-y),
- * stops)` in an image of this box, as a `radial-pointer` layer. Its centre
- * moves with the pointer as the reference's does. Its radius is the DSL's own
- * (css.ts's header). Stops with alpha need `neutral`: see colorAt.
+ * stops)` in an image of this box, as a `radial-pointer` layer drawn with
+ * CSS's own geometry (the Source's cssBox): centred at the pointer's fraction
+ * of the image as background-position places it, and reaching out to the
+ * image's farthest corner, so it grows as the pointer leaves the middle. Stops
+ * with alpha need `neutral`: see colorAt.
  */
 export function radial(stops: CssStop[], box: CssBox = COVER, neutral?: RGB): Background {
   const [width, height] = box.size;
+  // the image's left and top edges, plus the pointer's fraction of its size
   const centreX = plus(times(box.position[0], 1 - width), times(POINTER_X, width));
   const centreY = plus(times(box.position[1], 1 - height), times(POINTER_Y, height));
-  const [sizeX, offsetX] = track(centreX, 'fromLeft');
-  const [sizeY, offsetY] = track(centreY, 'fromTop');
   return {
     source: {
       kind: 'radial-pointer',
       stops: radialSamples(stops).map((at) => ({ at, color: colorAt(stops, at, neutral) })),
+      cssBox: { centre: [centreX, centreY], size: [width, height] },
     },
-    size: [sizeX, sizeY],
-    offset: { x: fixed(offsetX), y: fixed(offsetY) },
   };
+}
+
+/**
+ * How far along a converted radial (radial above) a point of the card lies, 0
+ * at its centre and 1 at its radius: sources.ts's radialCssDistance, in
+ * TypeScript, so a test can hold a layer to CSS's geometry and the GLSL to
+ * this.
+ */
+export function radialT(layer: Background, uv: [number, number], at: PointerAt = {}): number {
+  const s = layer.source;
+  if (s.kind !== 'radial-pointer' || !s.cssBox) {
+    throw new Error('not a radial converted with CSS geometry');
+  }
+  const [px, py] = [at.fromLeft ?? 0, at.fromTop ?? 0];
+  const [cx, cy] = s.cssBox.centre.map((p) => valueAt(p, at, 0));
+  const [w, h] = s.cssBox.size;
+  const rx = w * Math.max(px, 1 - px);
+  const ry = h * Math.max(py, 1 - py) * CARD_HEIGHT_OVER_WIDTH;
+  const dx = uv[0] - cx;
+  const dy = (uv[1] - cy) * CARD_HEIGHT_OVER_WIDTH;
+  return Math.min(1, Math.max(0, Math.hypot(dx, dy) / Math.hypot(rx, ry)));
 }
 
 type TextureKind = Extract<Source, { scale: number }>['kind'];

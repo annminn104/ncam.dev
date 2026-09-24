@@ -118,7 +118,9 @@ export const hyperRare: Effect = {
       mixBlend: 'color-dodge',
     },
   ],
-  glare: [
+  // Neither glare has a z-index in hyper-rare.css, so both paint beneath the
+  // glitter (base.css's z-index: 2) and the shine (3), in markup order.
+  beneath: [
     {
       layers: [{ ...radial([stop(hsl(0, 0, 80), 10), stop(hsl(0, 0, 50), 70)]), blend: 'normal' }],
       filter: { contrast: { base: 1.5 } },
@@ -130,4 +132,5 @@ export const hyperRare: Effect = {
       mixBlend: 'overlay',
     },
   ],
+  glare: [],
 };

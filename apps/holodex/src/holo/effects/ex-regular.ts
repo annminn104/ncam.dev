@@ -165,6 +165,8 @@ export const exRegular: Effect = {
       filter: { brightness: 1.2, contrast: 1, saturate: 2 },
     }),
   ],
+  // Above the shine, unlike the other SV glares: ex-regular.css gives both
+  // .card__glare and .card__glare2 z-index: 4, over base.css's shine at 3.
   glare: [
     {
       layers: [
