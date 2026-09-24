@@ -1,11 +1,16 @@
 /**
- * The CSS blend modes pokemon-cards-css composites its foil layers with,
- * as GLSL and as TypeScript.
+ * The CSS blend modes pokemon-cards-css and pokemon-cards-151 composite their
+ * foil layers with, as GLSL and as TypeScript.
  *
  * Both sides implement the W3C compositing formulas exactly. The TypeScript
  * twins are not used at runtime — they exist so the formulas can be tested
  * against known values, because a wrong soft-light is invisible in a
  * screenshot and obvious in an assertion.
+ *
+ * `plus-lighter` is strictly a compositing operator in CSS, not a blend: a
+ * semi-transparent source is scaled by its alpha *before* the add, where here
+ * element opacity lerps toward the clamped sum afterwards. The two agree until
+ * the sum saturates.
  */
 
 export type BlendMode =
@@ -22,7 +27,9 @@ export type BlendMode =
   | 'exclusion'
   | 'hue'
   | 'saturation'
-  | 'luminosity';
+  | 'luminosity'
+  | 'plus-lighter'
+  | 'color-burn';
 
 export const BLEND_ID: Record<BlendMode, number> = {
   normal: 0,
@@ -39,6 +46,8 @@ export const BLEND_ID: Record<BlendMode, number> = {
   hue: 11,
   saturation: 12,
   luminosity: 13,
+  'plus-lighter': 14,
+  'color-burn': 15,
 };
 
 // ---------------------------------------------------------------- TypeScript
@@ -123,6 +132,12 @@ export function blendRGB(mode: BlendMode, backdrop: RGB, source: RGB): Out {
       return setLum(setSat(backdrop, sat(source)), lum(backdrop)).map(clamp01) as Out;
     case 'luminosity':
       return setLum(backdrop, lum(source)).map(clamp01) as Out;
+    case 'plus-lighter':
+      return perChannel(backdrop, source, (b, s) => Math.min(1, b + s));
+    case 'color-burn':
+      return perChannel(backdrop, source, (b, s) =>
+        b >= 1 ? 1 : s <= 0 ? 0 : 1 - Math.min(1, (1 - b) / s),
+      );
   }
 }
 
@@ -190,6 +205,18 @@ vec3 blendHue(vec3 b, vec3 s) { return bSetLum(bSetSat(s, bSat(b)), bLum(b)); }
 vec3 blendSaturation(vec3 b, vec3 s) { return bSetLum(bSetSat(b, bSat(s)), bLum(b)); }
 vec3 blendLuminosity(vec3 b, vec3 s) { return bSetLum(b, bLum(s)); }
 
+vec3 blendPlusLighter(vec3 b, vec3 s) { return min(b + s, vec3(1.0)); }
+
+// W3C: b == 1 gives 1, else s == 0 gives 0, else 1 - min(1, (1 - b) / s). The
+// max() only keeps the division finite (0 / 0 is NaN, and NaN survives mix());
+// the two step() lines then apply the two special cases, white backdrop last
+// because it wins.
+vec3 blendColorBurn(vec3 b, vec3 s) {
+  vec3 r = 1.0 - min(vec3(1.0), (1.0 - b) / max(s, 1e-6));
+  r = mix(r, vec3(0.0), step(s, vec3(0.0)));
+  return mix(r, vec3(1.0), step(1.0, b));
+}
+
 vec3 blendWith(int mode, vec3 b, vec3 s) {
   switch (mode) {
     case ${BLEND_ID.multiply}: return blendMultiply(b, s);
@@ -205,6 +232,8 @@ vec3 blendWith(int mode, vec3 b, vec3 s) {
     case ${BLEND_ID.hue}: return blendHue(b, s);
     case ${BLEND_ID.saturation}: return blendSaturation(b, s);
     case ${BLEND_ID.luminosity}: return blendLuminosity(b, s);
+    case ${BLEND_ID['plus-lighter']}: return blendPlusLighter(b, s);
+    case ${BLEND_ID['color-burn']}: return blendColorBurn(b, s);
     case ${BLEND_ID.normal}: return s;
   }
   return s;

@@ -11,9 +11,11 @@ import {
   WebGLRenderer,
   type Texture,
 } from 'three';
+import { EFFECTS } from './effects';
 import { getMaterial } from './program-cache';
 import { regionFor, SHAPE_ID } from './regions';
 import type { HoloSelection } from './select';
+import type { Effect } from './shader/types';
 import { makeTexture, type TextureName } from './textures';
 
 export interface HoloScene {
@@ -28,7 +30,7 @@ export interface HoloScene {
 }
 
 /**
- * The glitter and grain CanvasTextures. Materials are cached per effect
+ * The generated CanvasTextures (textures.ts). Materials are cached per effect
  * (program-cache.ts) and shared across every scene that uses that effect, so
  * the textures they sample have to be shared too — built once per name here,
  * module-level, and never disposed by any one scene's dispose().
@@ -36,10 +38,42 @@ export interface HoloScene {
 const shared = new Map<TextureName, CanvasTexture>();
 
 /**
+ * The sampler uniform each shared texture is bound to. scene.test.ts holds
+ * this against the samplers shader/sources.ts actually declares, because a
+ * texture bound to the wrong uniform, or a sampler nothing feeds (which the
+ * GPU reads as black), is otherwise invisible until someone looks at a card.
+ */
+export const SHARED_TEXTURE_UNIFORM: Record<TextureName, string> = {
+  glitter: 'uGlitter',
+  grain: 'uGrain',
+  iri: 'uIri',
+  birthday: 'uBirthday',
+  pokeball: 'uPokeball',
+  'pokeball-inner': 'uPokeballInner',
+  masterball: 'uMasterball',
+  'masterball-inner': 'uMasterballInner',
+};
+
+/**
+ * The shared textures an effect's layers sample, each once. setSelection binds
+ * only these, so a texture is generated the first time an effect needs it, and
+ * a card whose effect uses none of the larger ones never pays to draw them.
+ */
+export function texturesUsedBy(effect: Effect): TextureName[] {
+  const names = new Set<TextureName>();
+  for (const element of [...effect.shine, ...effect.glare]) {
+    for (const { source } of element.layers) {
+      if (source.kind in SHARED_TEXTURE_UNIFORM) names.add(source.kind as TextureName);
+    }
+  }
+  return [...names];
+}
+
+/**
  * The vertex shader flips vUv to y-down (shader/base.ts), so every texture
  * the generated shaders sample must not flip too, or the two flips cancel
  * out and the art renders upside down. Pulled out so both call sites below
- * (the shared glitter/grain textures and the per-card texture in setCard)
+ * (the shared generated textures and the per-card texture in setCard)
  * share one implementation — and so a bare `new Texture()` can pin it in a
  * test without a live WebGL renderer.
  */
@@ -54,9 +88,10 @@ function sharedTexture(name: TextureName): CanvasTexture {
   const texture = new CanvasTexture(makeTexture(name));
   texture.wrapS = RepeatWrapping;
   texture.wrapT = RepeatWrapping;
-  // Tiling noise, so the flip is visually meaningless either way — but every
-  // texture in this pipeline agreeing on orientation (see the card texture
-  // in setCard below) is one fewer thing for the next person to re-derive.
+  // Tiling patterns, so for most of them the flip is visually meaningless —
+  // but the ball patterns have an up (the cap and the Master Ball's M sit on
+  // top), and every texture in this pipeline agreeing on orientation (see the
+  // card texture in setCard below) is one fewer thing to re-derive.
   orientTexture(texture);
   shared.set(name, texture);
   return texture;
@@ -177,8 +212,11 @@ export function createHoloScene(canvas: HTMLCanvasElement): HoloScene {
       if (!material) return;
 
       material.uniforms.uCard.value = cardTexture;
-      material.uniforms.uGlitter.value = sharedTexture('glitter');
-      material.uniforms.uGrain.value = sharedTexture('grain');
+      // If this effect failed to compile, `material` is basic's, which samples
+      // none of these; binding them to it anyway is harmless.
+      for (const name of texturesUsedBy(EFFECTS[selection.effect])) {
+        material.uniforms[SHARED_TEXTURE_UNIFORM[name]].value = sharedTexture(name);
+      }
 
       // vec4(top, right, bottom, left), matching the order coverage() in
       // shader/base.ts reads uClipRect in.
@@ -220,9 +258,9 @@ export function createHoloScene(canvas: HTMLCanvasElement): HoloScene {
       }
       cardTexture?.dispose();
       // The placeholder is this scene's own, never shared — safe to dispose
-      // whether or not it's still current. uGlitter/uGrain are module-level
-      // shared textures and a getMaterial() material outlives the scene, so
-      // neither is touched here; disposeMaterials() is the remote's
+      // whether or not it's still current. The generated textures are
+      // module-level and shared, and a getMaterial() material outlives the
+      // scene, so neither is touched here; disposeMaterials() is the remote's
       // teardown's job (mount.tsx / hydrate.tsx), not this scene's.
       placeholder.dispose();
       geometry.dispose();

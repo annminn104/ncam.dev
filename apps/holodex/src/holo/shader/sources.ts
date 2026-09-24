@@ -10,6 +10,12 @@ export const SOURCE_ID: Record<Source['kind'], number> = {
   grain: 6,
   card: 7,
   scanlines: 8,
+  iri: 9,
+  birthday: 10,
+  pokeball: 11,
+  'pokeball-inner': 12,
+  masterball: 13,
+  'masterball-inner': 14,
 };
 
 /**
@@ -35,6 +41,12 @@ export const sourcesGLSL = /* glsl */ `
 uniform sampler2D uCard;
 uniform sampler2D uGlitter;
 uniform sampler2D uGrain;
+uniform sampler2D uIri;
+uniform sampler2D uBirthday;
+uniform sampler2D uPokeball;
+uniform sampler2D uPokeballInner;
+uniform sampler2D uMasterball;
+uniform sampler2D uMasterballInner;
 uniform vec2 uPointer;        // -1..1 across the card
 uniform vec2 uPointerUV;      // 0..1, for radial gradients centred on it
 uniform float uPointerFromCenter;
@@ -89,6 +101,12 @@ vec3 srcConic(vec2 uv, vec3 stops[MAX_STOPS], int count) {
 
 vec3 srcGlitter(vec2 uv, float scale) { return texture(uGlitter, uv * scale).rgb; }
 vec3 srcGrain(vec2 uv, float scale) { return texture(uGrain, uv * scale).rgb; }
+vec3 srcIri(vec2 uv, float scale) { return texture(uIri, uv * scale).rgb; }
+vec3 srcBirthday(vec2 uv, float scale) { return texture(uBirthday, uv * scale).rgb; }
+vec3 srcPokeball(vec2 uv, float scale) { return texture(uPokeball, uv * scale).rgb; }
+vec3 srcPokeballInner(vec2 uv, float scale) { return texture(uPokeballInner, uv * scale).rgb; }
+vec3 srcMasterball(vec2 uv, float scale) { return texture(uMasterball, uv * scale).rgb; }
+vec3 srcMasterballInner(vec2 uv, float scale) { return texture(uMasterballInner, uv * scale).rgb; }
 vec3 srcCard(vec2 uv) { return texture(uCard, uv).rgb; }
 
 vec3 srcScanlines(vec2 uv, float spacing, float light, float dark) {

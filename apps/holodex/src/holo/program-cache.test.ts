@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { disposeMaterials, getMaterial } from './program-cache';
+import { buildMaterial, disposeMaterials, getMaterial } from './program-cache';
+import type { Layer } from './shader/types';
 
 /** Every `uniform <type> <name>;` declaration in a compiled fragment shader. */
 function declaredUniforms(source: string): string[] {
@@ -53,6 +54,43 @@ describe('getMaterial', () => {
         expect(m?.uniforms, `${id}: ${name}`).toHaveProperty(name);
       }
     }
+  });
+
+  it('provides the samplers an effect using the generated SV textures declares', () => {
+    // No registered effect samples these yet (the effects that will are still
+    // to be ported), so neither effect above would notice if one went missing
+    // the day uniform declarations stop being shared by every shader. Build a
+    // material for an effect that samples all six instead.
+    const kinds = [
+      'iri',
+      'birthday',
+      'pokeball',
+      'pokeball-inner',
+      'masterball',
+      'masterball-inner',
+    ] as const;
+    const layers: Layer[] = kinds.map((kind, i) => ({
+      source: { kind, scale: 2 },
+      blend: i === 0 ? 'normal' : 'multiply',
+    }));
+    const material = buildMaterial({
+      id: 'sv-textures',
+      shine: [{ layers, mixBlend: 'plus-lighter' }],
+      glare: [],
+    });
+    const declared = declaredUniforms(material.fragmentShader);
+    for (const uniform of [
+      'uIri',
+      'uBirthday',
+      'uPokeball',
+      'uPokeballInner',
+      'uMasterball',
+      'uMasterballInner',
+    ]) {
+      expect(declared, uniform).toContain(uniform);
+    }
+    for (const name of declared) expect(material.uniforms, name).toHaveProperty(name);
+    material.dispose();
   });
 
   it('falls back to basic when an effect cannot be compiled', () => {

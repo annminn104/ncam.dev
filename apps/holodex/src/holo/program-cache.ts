@@ -1,6 +1,7 @@
 import { ShaderMaterial, Vector2, Vector4 } from 'three';
 import { createLogger } from '@ncam/logger';
 import { compileEffect, VERTEX_SHADER } from './shader/compile';
+import type { Effect } from './shader/types';
 import { EFFECTS } from './effects';
 import type { EffectId } from './select';
 import { registerCacheDispose } from './teardown';
@@ -9,16 +10,27 @@ const log = createLogger({ scope: 'holodex' });
 
 const cache = new Map<EffectId, ShaderMaterial>();
 
-function build(id: EffectId): ShaderMaterial {
+/**
+ * A fresh, uncached material for one effect. Callers want `getMaterial`;
+ * this is exported so a test can build one for an effect the registry does
+ * not hold.
+ */
+export function buildMaterial(effect: Effect): ShaderMaterial {
   return new ShaderMaterial({
     glslVersion: '300 es',
     transparent: true,
     vertexShader: VERTEX_SHADER,
-    fragmentShader: compileEffect(EFFECTS[id]),
+    fragmentShader: compileEffect(effect),
     uniforms: {
       uCard: { value: null },
       uGlitter: { value: null },
       uGrain: { value: null },
+      uIri: { value: null },
+      uBirthday: { value: null },
+      uPokeball: { value: null },
+      uPokeballInner: { value: null },
+      uMasterball: { value: null },
+      uMasterballInner: { value: null },
       uPointer: { value: new Vector2(0, 0) },
       uPointerUV: { value: new Vector2(0.5, 0.5) },
       uPointerFromCenter: { value: 0 },
@@ -60,7 +72,7 @@ export function getMaterial(id: EffectId): ShaderMaterial | null {
   const hit = cache.get(id);
   if (hit) return hit;
   try {
-    const material = build(id);
+    const material = buildMaterial(EFFECTS[id]);
     cache.set(id, material);
     return material;
   } catch (error) {

@@ -340,8 +340,36 @@ describe('compileEffect', () => {
     for (const line of mixes) expect(line).toContain('uCardOpacity');
   });
 
+  it('compiles each generated-texture layer to a call on its own sampler', () => {
+    // Every sampler's definition is spliced into every shader, so finding its
+    // name in the source proves nothing. The statement below exists only
+    // because this layer asked for it: the right sampler, the layer's own uv,
+    // the layer's own scale. A case copied from its neighbour and left calling
+    // srcGlitter compiles, links and renders glitter where iri belongs.
+    const samplers = {
+      iri: 'srcIri',
+      birthday: 'srcBirthday',
+      pokeball: 'srcPokeball',
+      'pokeball-inner': 'srcPokeballInner',
+      masterball: 'srcMasterball',
+      'masterball-inner': 'srcMasterballInner',
+    } as const;
+    for (const [kind, sampler] of Object.entries(samplers) as Array<
+      [keyof typeof samplers, string]
+    >) {
+      const src = compileEffect({
+        id: `texture-${kind}`,
+        shine: [
+          { layers: [{ source: { kind, scale: 2.5 }, blend: 'normal' }], mixBlend: 'normal' },
+        ],
+        glare: [],
+      });
+      expect(src, kind).toContain(`vec3 src_shine0_0 = ${sampler}(uv_shine0_0, 2.500000);`);
+    }
+  });
+
   it('handles every source kind without throwing', () => {
-    // All 9 Source['kind'] variants (SOURCE_ID order) — repeating-linear,
+    // All 15 Source['kind'] variants (SOURCE_ID order) — repeating-linear,
     // radial-pointer and glitter were previously only exercised incidentally
     // by the `rich` fixture, not by this test's own layer list.
     const kinds: Effect['shine'][number]['layers'] = [
@@ -393,6 +421,12 @@ describe('compileEffect', () => {
       { source: { kind: 'grain', scale: 2 }, blend: 'normal' },
       { source: { kind: 'scanlines', spacing: 0.01, light: 0.4, dark: 0 }, blend: 'normal' },
       { source: { kind: 'card' }, blend: 'normal' },
+      { source: { kind: 'iri', scale: 3 }, blend: 'plus-lighter' },
+      { source: { kind: 'birthday', scale: 0.7 }, blend: 'color-burn' },
+      { source: { kind: 'pokeball', scale: 2.5 }, blend: 'multiply' },
+      { source: { kind: 'pokeball-inner', scale: 2.5 }, blend: 'multiply' },
+      { source: { kind: 'masterball', scale: 2.5 }, blend: 'multiply' },
+      { source: { kind: 'masterball-inner', scale: 2.5 }, blend: 'multiply' },
     ];
     const all: Effect = {
       id: 'all-kinds',

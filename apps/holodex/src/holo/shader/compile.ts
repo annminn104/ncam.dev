@@ -51,6 +51,18 @@ function sourceExpr(source: Source, uv: string, decls: string[], id: string): st
       return `srcGlitter(${uv}, ${f(source.scale)})`;
     case 'grain':
       return `srcGrain(${uv}, ${f(source.scale)})`;
+    case 'iri':
+      return `srcIri(${uv}, ${f(source.scale)})`;
+    case 'birthday':
+      return `srcBirthday(${uv}, ${f(source.scale)})`;
+    case 'pokeball':
+      return `srcPokeball(${uv}, ${f(source.scale)})`;
+    case 'pokeball-inner':
+      return `srcPokeballInner(${uv}, ${f(source.scale)})`;
+    case 'masterball':
+      return `srcMasterball(${uv}, ${f(source.scale)})`;
+    case 'masterball-inner':
+      return `srcMasterballInner(${uv}, ${f(source.scale)})`;
     case 'card':
       return `srcCard(${uv})`;
     case 'scanlines':

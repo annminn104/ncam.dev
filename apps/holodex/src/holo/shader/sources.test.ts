@@ -40,6 +40,12 @@ describe('SOURCE_ID', () => {
       'grain',
       'card',
       'scanlines',
+      'iri',
+      'birthday',
+      'pokeball',
+      'pokeball-inner',
+      'masterball',
+      'masterball-inner',
     ]) {
       expect(SOURCE_ID).toHaveProperty(kind);
     }
@@ -60,6 +66,30 @@ describe('sourcesGLSL', () => {
       'srcScanlines',
     ]) {
       expect(sourcesGLSL).toContain(fn);
+    }
+  });
+
+  it('samples each generated texture through its own uniform, and declares it', () => {
+    // A sampler copied from the line above and left reading its neighbour's
+    // uniform compiles and links, and renders the wrong texture; one reading
+    // an undeclared uniform fails only on a GPU.
+    const samplers = {
+      srcGlitter: 'uGlitter',
+      srcGrain: 'uGrain',
+      srcIri: 'uIri',
+      srcBirthday: 'uBirthday',
+      srcPokeball: 'uPokeball',
+      srcPokeballInner: 'uPokeballInner',
+      srcMasterball: 'uMasterball',
+      srcMasterballInner: 'uMasterballInner',
+    };
+    for (const [sampler, uniform] of Object.entries(samplers)) {
+      const body = new RegExp(`vec3 ${sampler}\\(vec2 uv, float scale\\) \\{([^}]*)\\}`).exec(
+        sourcesGLSL,
+      )?.[1];
+      const read = Array.from(body?.matchAll(/texture\((\w+),/g) ?? [], (m) => m[1]);
+      expect(read, sampler).toEqual([uniform]);
+      expect(sourcesGLSL, uniform).toContain(`uniform sampler2D ${uniform};`);
     }
   });
 

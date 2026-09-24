@@ -198,14 +198,17 @@ reverse-holo print actually looks like: foil everywhere except the art.
 `holo/effects/` (e.g. `cosmos-holo.ts`) is a declarative `Effect`
 (`holo/shader/types.ts`): 1-3 `shine` elements and 0-2 `glare` elements, each
 a stack of `Layer`s (a `Source` — solid, linear/repeating-linear/conic/radial
-gradient, `glitter`, `grain`, `card`, or `scanlines` — plus a `BlendMode`), an
+gradient, `card`, `scanlines`, or one of the generated textures: `glitter`,
+`grain`, `iri`, `birthday`, and the 151 set's `pokeball` / `pokeball-inner` /
+`masterball` / `masterball-inner` patterns — plus a `BlendMode`), an
 optional pointer-driven `Filter`, and its own `mixBlend`. Numbers can be
 plain, or `PointerDriven` (a base plus coefficients over pointer-from-center /
 from-left / from-top, evaluated per fragment). `holo/shader/compile.ts`'s
 `compileEffect()` turns one `Effect` into one complete fragment shader —
 concatenating `base.ts` (varyings, clip uniforms, `coverage()`), `blend.ts`
-(the 13 CSS blend modes as GLSL functions, including the three non-separable
-HSL ones) and `sources.ts` (one GLSL expression per `Source` kind) around
+(the 15 CSS blend modes as GLSL functions, including the three non-separable
+HSL ones and `plus-lighter`, strictly a compositing operator) and `sources.ts`
+(one GLSL expression per `Source` kind) around
 per-effect layer/filter code generated from the `Effect` data. This is a
 declarative-description-compiled-to-GLSL design, not the hand-written GLSL
 chunks the original plan sketched — the one deviation from the plan, also
@@ -249,7 +252,7 @@ src)`) — there is nothing beneath the first layer within its own element to
   stage cut-out in `regions.ts`, every effect's `fromTop` offset, and the
   CSS-derived gradients they all come from — is authored y-down. Every
   texture the generated shaders sample therefore has to agree: both the
-  shared glitter/grain textures and the per-card art texture set
+  shared generated textures and the per-card art texture set
   `flipY = false` through `scene.ts`'s `orientTexture()` helper, undoing
   three.js's own default of `flipY = true`. Get either half of this wrong —
   the vertex flip, or a texture's `flipY` — and every effect mirrors
@@ -403,6 +406,14 @@ instead of reaching for a global:
   itself untested (it's a one-line adapter, not logic).
 - `fetch` is `vi.stubGlobal`-mocked in `lib/tcgdex.ts` tests — nothing touches
   the network.
+- `holo/textures.ts` splits _what_ it paints from the painting. Pure, tested:
+  the seeded PRNG (`mulberry32`), the whole `iri` texture as bytes, the
+  `birthday` stars' shape, sizes and hues, the ball lattice, and the wrapped
+  copies that make each texture tile. Browser-only and untested: the canvas
+  calls, including the ball glyphs' internal drawing. `scene.ts` binds a
+  generated texture only when the selected effect samples it
+  (`texturesUsedBy`), through `SHARED_TEXTURE_UNIFORM`, which `scene.test.ts`
+  holds against the samplers `shader/sources.ts` declares.
 - Views are tested as markup. `views/*.test.ts` render a view with
   `renderToString` under node — no DOM needed, since no effect runs —
   through `views/render-view.test-util.ts`, which wraps it in App's two

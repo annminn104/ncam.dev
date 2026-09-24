@@ -36,6 +36,37 @@ export type Source =
   | { kind: 'glitter'; scale: number }
   /** tiled film grain, generated once into a texture */
   | { kind: 'grain'; scale: number }
+  /**
+   * tiled fine speckle, violet, blue and white dots on near-black: the
+   * reference's --iri1..9, and the stand-in for its per-card --foil
+   */
+  | { kind: 'iri'; scale: number }
+  /**
+   * rainbow four-pointed star sparkles on black, drawn in the card's own 63:88
+   * so they stay square on it: the reference's --birthday-dank / --birthday
+   */
+  | { kind: 'birthday'; scale: number }
+  /**
+   * The 151 set's Poké Ball and Master Ball patterns (the reference's
+   * --pokeball, --pokeball-inner, --masterball, --masterball-inner): a square
+   * tile of ball glyphs, white where the reference's mask lets foil through
+   * and black where it does not. The reference applies them as alpha masks,
+   * which this DSL has no notion of. Put one last in a stack with `multiply`
+   * instead, and the layers beneath it show only through the glyphs; under a
+   * `plus-lighter` or `lighten` mixBlend the black adds nothing to the card.
+   *
+   * `-inner` is each ball's upper cap, on the same lattice as its outline, so
+   * the two line up at the same scale and offset. The reference's caps are
+   * about 53% opaque; these are full strength, so put that 0.53 in the
+   * element's opacity. Baking it into the texture would not survive the
+   * element filter, which here runs after the layer stack where CSS filters
+   * before masking. The tile is square: to keep the balls round on the 63:88
+   * card, give the layer `size: [1, 88 / 63]`.
+   */
+  | { kind: 'pokeball'; scale: number }
+  | { kind: 'pokeball-inner'; scale: number }
+  | { kind: 'masterball'; scale: number }
+  | { kind: 'masterball-inner'; scale: number }
   /** the card art itself */
   | { kind: 'card' }
   /** horizontal scanlines, as in regular-holo */
