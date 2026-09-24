@@ -1,10 +1,20 @@
 import { describe, expect, it } from 'vitest';
 import { compileEffect } from '../shader/compile';
 import { EFFECTS } from './index';
-import { EFFECT_BY_RARITY, OVERRIDE_ONLY_EFFECTS, type EffectId } from '../select';
+import {
+  EFFECT_BY_RARITY,
+  MODERN_EFFECT_BY_RARITY,
+  OVERRIDE_ONLY_EFFECTS,
+  type EffectId,
+} from '../select';
 
+/** Every effect selection can return: both rarity tables' effects and the override-only ones. */
 const ALL_EFFECT_IDS: EffectId[] = [
-  ...new Set([...Object.values(EFFECT_BY_RARITY), ...OVERRIDE_ONLY_EFFECTS]),
+  ...new Set([
+    ...Object.values(EFFECT_BY_RARITY),
+    ...Object.values(MODERN_EFFECT_BY_RARITY),
+    ...OVERRIDE_ONLY_EFFECTS,
+  ]),
 ];
 
 describe('EFFECTS registry', () => {

@@ -22,10 +22,18 @@ import { trainerGalleryHolo } from './trainer-gallery-holo';
 import { trainerGalleryVRegular } from './trainer-gallery-v-regular';
 import { trainerGalleryVMax } from './trainer-gallery-v-max';
 import { trainerGallerySecretRare } from './trainer-gallery-secret-rare';
+import { exRegular } from './ex-regular';
+import { exFullArt } from './ex-full-art';
+import { illustrationRare } from './illustration-rare';
+import { exSpecialIllustrationRare } from './ex-special-illustration-rare';
+import { hyperRare } from './hyper-rare';
+import { pokeBallHolo } from './poke-ball-holo';
+import { masterballHolo } from './masterball-holo';
 
 /**
  * Every effect `selectHolo` can return. The registry test asserts this covers
- * exactly that set — a missing entry is a failing test, not a blank card.
+ * exactly that set — a missing entry is a failing test, not a blank card. The
+ * last seven are the Scarlet & Violet effects of simeydotme/pokemon-cards-151.
  */
 export const EFFECTS: Record<EffectId, Effect> = {
   basic,
@@ -50,4 +58,11 @@ export const EFFECTS: Record<EffectId, Effect> = {
   'trainer-gallery-v-max': trainerGalleryVMax,
   'trainer-gallery-secret-rare': trainerGallerySecretRare,
   'swsh-pikachu': swshPikachu,
+  'ex-regular': exRegular,
+  'ex-full-art': exFullArt,
+  'illustration-rare': illustrationRare,
+  'ex-special-illustration-rare': exSpecialIllustrationRare,
+  'hyper-rare': hyperRare,
+  'poke-ball-holo': pokeBallHolo,
+  'masterball-holo': masterballHolo,
 };

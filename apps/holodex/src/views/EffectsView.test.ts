@@ -1,8 +1,8 @@
 import { createElement } from 'react';
 import { describe, expect, it } from 'vitest';
-import { EFFECT_GALLERY } from '../holo/effect-gallery';
+import { EFFECT_GALLERY, ERA_QUALIFIER } from '../holo/effect-gallery';
 import { CAPTURED_CARDS } from '../holo/effect-gallery.fixture';
-import type { EffectId } from '../holo/select';
+import { MODERN_EFFECT_BY_RARITY, type EffectId } from '../holo/select';
 import { CARD_RARITIES } from '../lib/constants';
 import { cardImageBase } from '../lib/images';
 import type { Card } from '../lib/tcgdex';
@@ -35,12 +35,34 @@ const ENTITIES: Record<string, string> = {
   '&#x27;': "'",
 };
 
-/** Every text node in the markup, decoded. A rarity chip renders its rarity as exactly one. */
+const decode = (text: string) =>
+  text.replace(/&(?:amp|lt|gt|quot|#x27);/g, (entity) => ENTITIES[entity]);
+
+/** Every text node in the markup, decoded. A rarity chip renders its label as exactly one. */
 function textNodes(html: string): string[] {
-  return [...html.matchAll(/>([^<]+)</g)].map(([, text]) =>
-    text.replace(/&(?:amp|lt|gt|quot|#x27);/g, (entity) => ENTITIES[entity]),
+  return [...html.matchAll(/>([^<]+)</g)].map(([, text]) => decode(text));
+}
+
+interface Chip {
+  rarity: string;
+  /** Only on the chip of one arm of an era-split rarity. */
+  era: string | undefined;
+  text: string;
+}
+
+/** Every rarity chip in the markup: its `data-rarity`, its `data-era`, and its label. */
+function chips(html: string): Chip[] {
+  return [...html.matchAll(/<span\b([^>]*\bdata-rarity="[^"]*"[^>]*)>([^<]*)<\/span>/g)].map(
+    ([, attrs, text]) => ({
+      rarity: decode(/\bdata-rarity="([^"]*)"/.exec(attrs)?.[1] ?? ''),
+      era: /\bdata-era="([^"]*)"/.exec(attrs)?.[1],
+      text: decode(text),
+    }),
   );
 }
+
+/** A chip as one string, so lists of them compare and sort. */
+const chipKey = ({ rarity, era, text }: Chip) => `${rarity} | ${era ?? 'any era'} | ${text}`;
 
 const CARD_IDS = new Set(EFFECT_GALLERY.flatMap((entry) => entry.cardIds));
 
@@ -73,6 +95,7 @@ function sections(html: string) {
     id: /data-section="([^"]*)"/.exec(attrs)?.[1],
     headings: [...inner.matchAll(/<h2\b[^>]*>([^<]*)<\/h2>/g)].map(([, text]) => text),
     tiles: tiles(inner),
+    chips: chips(inner),
   }));
 }
 
@@ -89,7 +112,7 @@ const PLACEHOLDER_COUNT = UNLINKED_CARDS.filter((card) => !cardImageBase(card)).
 /** What a live tile says when its card has no art for the foil. */
 const NO_ART_NOTE = 'TCGdex has no image for this card, so there is no art to foil.';
 
-/** Every card the page can make live, with its section: all 66. */
+/** Every card the page can make live, with its section: all 87. */
 const SELECTIONS = EFFECT_GALLERY.flatMap((entry) =>
   entry.cardIds.map((card) => [entry.effect, card] as const),
 );
@@ -118,15 +141,33 @@ describe('EffectsView — one section per effect, three cards each', () => {
     }
   });
 
-  it('renders every TCGdex rarity exactly once', () => {
+  it('renders every (rarity, era arm) exactly once, qualifying only the era-split arms', () => {
     // Against the API's own list, not EFFECT_BY_RARITY: select.test.ts pins
     // the table to that list, and a table that lost an entry cannot shrink
-    // this one along with it.
-    const texts = textNodes(renderPage());
-    const count = (rarity: string) => texts.filter((text) => text === rarity).length;
-    expect(Object.fromEntries(CARD_RARITIES.map((rarity) => [rarity, count(rarity)]))).toEqual(
-      Object.fromEntries(CARD_RARITIES.map((rarity) => [rarity, 1])),
+    // this one along with it. A rarity the era splits (MODERN_EFFECT_BY_RARITY)
+    // has a chip per arm, each saying which era it is true of, in the section
+    // of the effect that arm selects; every other rarity has one chip, bare.
+    const html = renderPage();
+    const expected = CARD_RARITIES.flatMap((rarity): Chip[] =>
+      Object.hasOwn(MODERN_EFFECT_BY_RARITY, rarity)
+        ? (['modern', 'older'] as const).map((era) => ({
+            rarity,
+            era,
+            text: `${rarity} · ${ERA_QUALIFIER[era]}`,
+          }))
+        : [{ rarity, era: undefined, text: rarity }],
     );
+    expect(chips(html).map(chipKey).sort()).toEqual(expected.map(chipKey).sort());
+    // The two arms of a split never read alike.
+    expect(ERA_QUALIFIER.modern).not.toBe(ERA_QUALIFIER.older);
+    // And every chip is in the section whose effect it selects.
+    for (const section of sections(html)) {
+      const entry = EFFECT_GALLERY.find((candidate) => candidate.effect === section.id);
+      expect(
+        section.chips.map(({ rarity, era }) => `${rarity} | ${era ?? 'any era'}`),
+        section.id,
+      ).toEqual(entry?.rarities.map(({ rarity, era }) => `${rarity} | ${era ?? 'any era'}`));
+    }
   });
 });
 
@@ -152,10 +193,11 @@ describe('EffectsView — exactly one live card on the whole page', () => {
     },
   );
 
-  it('covers all three reverse-holo cards, the ones EffectsView must pass `reverse` for', () => {
+  it('covers all nine cards of the three reverse sections, the ones EffectsView must pass `reverse` for', () => {
     // Without `reverse`, their Commons and Uncommons render basic under a
-    // reverse-holo heading.
-    expect(SELECTIONS.filter(([effect]) => effect === 'reverse-holo')).toHaveLength(3);
+    // reverse-holo, poke-ball-holo or masterball-holo heading.
+    const reverseEffects: EffectId[] = ['reverse-holo', 'poke-ball-holo', 'masterball-holo'];
+    expect(SELECTIONS.filter(([effect]) => reverseEffects.includes(effect))).toHaveLength(9);
   });
 
   it.each(SELECTIONS)('renders one HoloCard, resolving to %s, with %s live', (effect, card) => {

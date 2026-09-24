@@ -1,7 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { CARD_RARITIES } from '../lib/constants';
 import type { Card } from '../lib/tcgdex';
-import { EFFECT_BY_RARITY, OVERRIDE_ONLY_EFFECTS, selectHolo, type EffectId } from './select';
+import { CAPTURED_CARDS } from './effect-gallery.fixture';
+import {
+  EFFECT_BY_RARITY,
+  MODERN_EFFECT_BY_RARITY,
+  OVERRIDE_ONLY_EFFECTS,
+  eraOf,
+  selectHolo,
+  type EffectId,
+} from './select';
 
 /** Minimal card; every test overrides only what it cares about. */
 function card(patch: Partial<Card> = {}): Card {
@@ -14,6 +22,46 @@ function card(patch: Partial<Card> = {}): Card {
     ...patch,
   } as Card;
 }
+
+/*
+ * Real cards for the era rule's edges, captured verbatim from
+ * `GET https://api.tcgdex.net/v2/en/cards/{id}` on 2026-09-24 and trimmed as
+ * effect-gallery.fixture.ts trims its own: Ho-Oh and Charizard from the two
+ * Mega sets whose ids do not start with `me`, and Accelgor, a Rare from
+ * before Scarlet & Violet.
+ */
+const THIRTIETH_RARE: Card = {
+  id: '30th-012',
+  localId: '012',
+  name: 'Ho-Oh',
+  image: 'https://assets.tcgdex.net/en/me/30th/012',
+  category: 'Pokemon',
+  set: { id: '30th', name: '30th Celebration', cardCount: { total: 158, official: 128 } },
+  rarity: 'Rare',
+  stage: 'Basic',
+  variants: { firstEdition: false, holo: false, normal: true, reverse: false, wPromo: false },
+};
+const THIRTIETH_CLASSIC: Card = {
+  id: '30th-c-001',
+  localId: '001',
+  name: 'Charizard',
+  category: 'Pokemon',
+  set: { id: '30th-c', name: '30th Classic Collection', cardCount: { total: 30, official: 0 } },
+  rarity: 'None',
+  stage: 'Stage2',
+  variants: { firstEdition: false, holo: false, normal: true, reverse: false, wPromo: false },
+};
+const OLDER_RARE: Card = {
+  id: 'swsh3-10',
+  localId: '10',
+  name: 'Accelgor',
+  image: 'https://assets.tcgdex.net/en/swsh/swsh3/10',
+  category: 'Pokemon',
+  set: { id: 'swsh3', name: 'Darkness Ablaze', cardCount: { total: 201, official: 189 } },
+  rarity: 'Rare',
+  stage: 'Stage1',
+  variants: { firstEdition: false, holo: false, normal: true, reverse: true, wPromo: false },
+};
 
 describe('EFFECT_BY_RARITY', () => {
   it('maps every rarity the API returns', () => {
@@ -33,23 +81,43 @@ describe('EFFECT_BY_RARITY', () => {
     // itself — comparing the constant to a filter of itself would pass even
     // if it were empty.
     expect([...OVERRIDE_ONLY_EFFECTS].sort()).toEqual([
+      'masterball-holo',
+      'poke-ball-holo',
       'reverse-holo',
+      'trainer-gallery-holo',
       'trainer-gallery-secret-rare',
       'trainer-gallery-v-max',
       'trainer-gallery-v-regular',
     ]);
   });
 
-  it('keeps every override-only effect out of the rarity table', () => {
-    const used = new Set(Object.values(EFFECT_BY_RARITY));
+  it('keeps every override-only effect out of both rarity tables', () => {
+    const used = new Set([
+      ...Object.values(EFFECT_BY_RARITY),
+      ...Object.values(MODERN_EFFECT_BY_RARITY),
+    ]);
     const leaked = OVERRIDE_ONLY_EFFECTS.filter((e) => used.has(e));
     expect(leaked).toEqual([]);
   });
 
   it('accounts for every effect: each is either mapped or override-only', () => {
-    const used = new Set<EffectId>(Object.values(EFFECT_BY_RARITY));
+    const used = new Set<EffectId>([
+      ...Object.values(EFFECT_BY_RARITY),
+      ...Object.values(MODERN_EFFECT_BY_RARITY),
+    ]);
     const declared = new Set<EffectId>([...used, ...OVERRIDE_ONLY_EFFECTS]);
-    expect(declared.size).toBe(22);
+    expect(declared.size).toBe(29);
+  });
+
+  it('splits by era only rarities the API returns, each into two different effects', () => {
+    // A split whose arms agree would put two chips for one rarity in the same
+    // section of the effects page, and select nothing different.
+    const splits = Object.entries(MODERN_EFFECT_BY_RARITY);
+    expect(splits.length).toBeGreaterThan(0);
+    for (const [rarity, modern] of splits) {
+      expect(CARD_RARITIES as readonly string[], rarity).toContain(rarity);
+      expect(modern, rarity).not.toBe(EFFECT_BY_RARITY[rarity]);
+    }
   });
 });
 
@@ -73,8 +141,10 @@ describe('selectHolo — rarity table', () => {
 
   it('maps the chase rarities', () => {
     expect(selectHolo(card({ rarity: 'Secret Rare' })).effect).toBe('secret-rare');
-    expect(selectHolo(card({ rarity: 'Special illustration rare' })).effect).toBe('secret-rare');
-    expect(selectHolo(card({ rarity: 'Hyper rare' })).effect).toBe('rainbow-holo');
+    expect(selectHolo(card({ rarity: 'Special illustration rare' })).effect).toBe(
+      'ex-special-illustration-rare',
+    );
+    expect(selectHolo(card({ rarity: 'Hyper rare' })).effect).toBe('hyper-rare');
     expect(selectHolo(card({ rarity: 'Radiant Rare' })).effect).toBe('radiant-holo');
     expect(selectHolo(card({ rarity: 'Amazing Rare' })).effect).toBe('amazing-rare');
     expect(selectHolo(card({ rarity: 'Pikachu Rare' })).effect).toBe('swsh-pikachu');
@@ -229,11 +299,13 @@ describe('selectHolo — clip shape', () => {
 });
 
 describe('selectHolo — Double rare is the standard-layout ex, not a full art', () => {
-  it('selects v-regular for a Double rare Pokemon card, clipped to the art window', () => {
+  it('selects ex-regular for a Double rare Pokemon card, clipped to the art window', () => {
     const selection = selectHolo(card({ rarity: 'Double rare', stage: 'Basic' }));
-    expect(selection.effect).toBe('v-regular');
+    expect(selection.effect).toBe('ex-regular');
     // The whole point of the fix: this must NOT be 'full' (that's what made
     // the foil cover the entire card, indistinguishable from a real full art).
+    // The reference confines ex-regular's foil with a per-card mask and no
+    // clip-path, so without the mask the art-window clip is all that does.
     expect(selection.shape).toBe('regular');
   });
 
@@ -245,17 +317,28 @@ describe('selectHolo — Double rare is the standard-layout ex, not a full art',
   it('still gives Ultra Rare the full-art treatment — the other ex tier', () => {
     // Regression guard: Double rare and Ultra Rare are both "ex" cards but
     // must stay on opposite sides of FULL_ART. If a future edit collapses
-    // them back together, this goes red.
-    const selection = selectHolo(card({ rarity: 'Ultra Rare' }));
-    expect(selection.effect).toBe('v-full-art');
+    // them back together, this goes red. The ex Ultra Rare is a Scarlet &
+    // Violet (or Mega) card: before them, Ultra Rare was the V/GX full art.
+    const selection = selectHolo(card({ id: 'sv03.5-182', localId: '182', rarity: 'Ultra Rare' }));
+    expect(selection.effect).toBe('ex-full-art');
     expect(selection.shape).toBe('full');
   });
 });
 
 describe('selectHolo — promo subtype foils', () => {
-  it('gives a Promo card with a subtype suffix the v-regular holo treatment', () => {
+  it('gives an older Promo card with a subtype suffix the v-regular holo treatment', () => {
     expect(selectHolo(card({ rarity: 'Promo', suffix: 'V' })).effect).toBe('v-regular');
     expect(selectHolo(card({ rarity: 'Promo', suffix: 'ex' })).effect).toBe('v-regular');
+  });
+
+  it('gives a Scarlet & Violet or Mega Promo with a suffix the standard-layout ex instead', () => {
+    // An svp promo ex is the Double rare's layout, so ex-regular, clipped to
+    // the art window like it rather than foiled edge to edge.
+    const promo = card({ id: 'svp-004', localId: '004', rarity: 'Promo', suffix: 'ex' });
+    expect(selectHolo(promo).effect).toBe('ex-regular');
+    expect(selectHolo({ ...promo, stage: 'Basic' }).shape).toBe('regular');
+    // No suffix, no foil, in this era too.
+    expect(selectHolo({ ...promo, suffix: undefined }).effect).toBe('basic');
   });
 
   it('leaves a plain Promo card with no suffix unfoiled', () => {
@@ -270,5 +353,180 @@ describe('selectHolo — promo subtype foils', () => {
     // a V holo.
     expect(selectHolo(card({ rarity: 'Common', suffix: 'V' })).effect).toBe('basic');
     expect(selectHolo(card({ rarity: 'Uncommon', suffix: 'ex' })).effect).toBe('basic');
+  });
+});
+
+describe('eraOf — Scarlet & Violet and Mega against everything older', () => {
+  // A card's set is its id less `-${localId}`, so a brief is enough.
+  const era = (id: string, localId: string) => eraOf({ id, localId });
+
+  it('calls the Scarlet & Violet and Mega sets modern, promos included', () => {
+    expect(era('sv03.5-026', '026')).toBe('modern');
+    expect(era('sv10.5w-173', '173')).toBe('modern');
+    expect(era('svp-004', '004')).toBe('modern');
+    expect(era('me05-120', '120')).toBe('modern');
+    expect(era('me04-122', '122')).toBe('modern');
+  });
+
+  it('calls every other set older, the ones that merely end in sv included', () => {
+    // The Shiny Vault and McDonald's collections end in `sv`.
+    expect(era('swsh4.5sv-SV105', 'SV105')).toBe('older');
+    expect(era('2023sv-1', '1')).toBe('older');
+    expect(era('2024sv-1', '1')).toBe('older');
+    expect(era('swsh3-10', '10')).toBe('older');
+    expect(era('sm9-1', '1')).toBe('older');
+    expect(era('A1-003', '003')).toBe('older');
+  });
+
+  it('only calls a set modern when its id STARTS with sv or me', () => {
+    // No TCGdex set has `sv` or `me` then a digit anywhere but at the start of
+    // its id, and nothing follows the `sv` of swsh4.5sv or 2023sv, so every
+    // real control above passes without the patterns' `^` too. These
+    // trainer-kit-style ids are made up, to hold the anchor itself.
+    expect(era('tk-sv1-1', '1')).toBe('older');
+    expect(era('tk-me1-1', '1')).toBe('older');
+  });
+
+  it('counts 30th Celebration and 30th Classic Collection as Mega, though neither id starts with me', () => {
+    expect(eraOf(THIRTIETH_RARE)).toBe('modern');
+    expect(eraOf(THIRTIETH_CLASSIC)).toBe('modern');
+  });
+});
+
+describe('selectHolo — the era splits, both arms of each', () => {
+  it('selects regular-holo for a Scarlet & Violet or Mega Rare, and basic for an older one', () => {
+    // The reference promotes an SV `Rare` to `Rare Holo`. 30th Celebration's
+    // Rares are Mega by set, so they take that arm too.
+    expect(selectHolo(CAPTURED_CARDS['sv03.5-026']).effect).toBe('regular-holo');
+    expect(selectHolo(THIRTIETH_RARE).effect).toBe('regular-holo');
+    expect(selectHolo(OLDER_RARE).effect).toBe('basic');
+  });
+
+  it('gives a Scarlet & Violet Ultra Rare the full-art ex, and an older one the full-art V or GX', () => {
+    const modern = selectHolo(CAPTURED_CARDS['sv03.5-182']);
+    const older = selectHolo(CAPTURED_CARDS['sm9-1']);
+    expect([modern.effect, modern.shape]).toEqual(['ex-full-art', 'full']);
+    expect([older.effect, older.shape]).toEqual(['v-full-art', 'full']);
+  });
+});
+
+describe('selectHolo — the Scarlet & Violet and Pocket rows, in every era', () => {
+  // From simeydotme/pokemon-cards-151's selectors, with Pocket's rarities
+  // beside the looks they share. None changes with the era, so each is held
+  // on an older card and a Scarlet & Violet one alike.
+  it.each<[string, EffectId]>([
+    ['Double rare', 'ex-regular'],
+    ['Illustration rare', 'illustration-rare'],
+    ['Special illustration rare', 'ex-special-illustration-rare'],
+    ['Hyper rare', 'hyper-rare'],
+    ['Mega Hyper Rare', 'hyper-rare'],
+    ['ACE SPEC Rare', 'rainbow-holo'],
+    ['Four Diamond', 'ex-regular'],
+    ['One Star', 'illustration-rare'],
+    ['Two Star', 'ex-full-art'],
+    ['Crown', 'hyper-rare'],
+    ['Three Diamond', 'regular-holo'],
+    ['Two Shiny', 'shiny-v'],
+    // Deliberately unmoved: without it rainbow-alt keeps only the two
+    // Futuristic Rare cards TCGdex has.
+    ['Three Star', 'rainbow-alt'],
+  ])('maps %s to %s', (rarity, effect) => {
+    expect(selectHolo(card({ rarity })).effect).toBe(effect);
+    expect(selectHolo(card({ id: 'sv03.5-026', localId: '026', rarity })).effect).toBe(effect);
+  });
+});
+
+describe('selectHolo — clip shape of the Scarlet & Violet effects', () => {
+  it('foils the whole card for the full-art ex, the special illustration rare and the gold tier', () => {
+    // Their reference CSS confines them with a per-card mask and no
+    // clip-path; with no mask to drop in, the foil covers the card.
+    expect(selectHolo(CAPTURED_CARDS['sv03.5-182']).shape).toBe('full');
+    expect(selectHolo(CAPTURED_CARDS['sv03.5-198']).shape).toBe('full');
+    expect(selectHolo(CAPTURED_CARDS['sv03.5-205']).shape).toBe('full');
+    // A Hyper rare trainer as well: FULL_ART comes before the trainer rule.
+    expect(selectHolo(CAPTURED_CARDS['sv03.5-206']).shape).toBe('full');
+  });
+
+  it('clips illustration-rare to the border, as its clip-path does', () => {
+    expect(selectHolo(CAPTURED_CARDS['sv03.5-166']).shape).toBe('borders');
+    expect(selectHolo(card({ rarity: 'One Star', stage: 'Stage1' })).shape).toBe('borders');
+  });
+});
+
+describe('selectHolo — 151 reverse holos', () => {
+  /** A 151 Common numbered `localId`, TCGdex-padded, shown reversed. */
+  const reversed = (localId: string) =>
+    selectHolo(card({ id: `sv03.5-${localId}`, localId, rarity: 'Common' }), { reverse: true });
+
+  it('gives exactly the reference’s eight card numbers the Master Ball pattern', () => {
+    for (const n of ['001', '004', '007', '025', '133', '144', '146', '161']) {
+      expect(reversed(n), n).toEqual({ effect: 'masterball-holo', shape: 'regular', invert: true });
+    }
+  });
+
+  it('gives every other 151 reverse the Poké Ball pattern, and the same one every time', () => {
+    // Neighbours of the Master Ball numbers, so an off-by-one shows. The
+    // reference promotes a random fifth of these to Master Ball; a card here
+    // must render the same on every call.
+    for (const n of ['002', '005', '008', '024', '026', '132', '134', '145', '147', '160', '162']) {
+      for (let call = 0; call < 3; call += 1) {
+        expect(reversed(n), n).toEqual({
+          effect: 'poke-ball-holo',
+          shape: 'regular',
+          invert: true,
+        });
+      }
+    }
+  });
+
+  it('clips both patterns to the card’s own region, inverted, as reverse-holo does', () => {
+    expect(selectHolo(CAPTURED_CARDS['sv03.5-002'], { reverse: true })).toEqual({
+      effect: 'poke-ball-holo',
+      shape: 'stage',
+      invert: true,
+    });
+    expect(selectHolo(CAPTURED_CARDS['sv03.5-001'], { reverse: true })).toEqual({
+      effect: 'masterball-holo',
+      shape: 'regular',
+      invert: true,
+    });
+  });
+
+  it('reverses a 151 Rare too, since a Scarlet & Violet Rare is regular-holo first', () => {
+    expect(selectHolo(CAPTURED_CARDS['sv03.5-026'], { reverse: true }).effect).toBe(
+      'poke-ball-holo',
+    );
+  });
+
+  it('shows no pattern unless the reverse printing is asked for, Master Ball numbers included', () => {
+    // The reference forces its eight numbers to reverse whatever was asked;
+    // here reverse stays the caller's choice. Both of these have a reverse
+    // printing in TCGdex (variants.reverse), which must not be enough.
+    expect(selectHolo(CAPTURED_CARDS['sv03.5-001'])).toEqual({
+      effect: 'basic',
+      shape: 'regular',
+      invert: false,
+    });
+    expect(selectHolo(CAPTURED_CARDS['sv03.5-002']).effect).toBe('basic');
+  });
+
+  it('never replaces a 151 chase rarity with a pattern', () => {
+    expect(selectHolo(CAPTURED_CARDS['sv03.5-166'], { reverse: true }).effect).toBe(
+      'illustration-rare',
+    );
+    expect(selectHolo(CAPTURED_CARDS['sv03.5-003'], { reverse: true }).effect).toBe('ex-regular');
+  });
+
+  it('leaves every other set on reverse-holo, other Scarlet & Violet and Mega sets included', () => {
+    // Prismatic Evolutions (sv08.5) printed Poké Ball reverses too, but the
+    // reference has none for it, so neither do we.
+    for (const id of ['sv08.5-001', 'sv01-001', 'me01-001', 'swsh3-3']) {
+      const localId = id.slice(id.lastIndexOf('-') + 1);
+      expect(selectHolo(card({ id, localId, rarity: 'Common' }), { reverse: true }), id).toEqual({
+        effect: 'reverse-holo',
+        shape: 'regular',
+        invert: true,
+      });
+    }
   });
 });

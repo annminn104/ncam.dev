@@ -2,7 +2,12 @@ import { useEffect, useEffectEvent, useId, useRef, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from '../app-context';
 import { CardImage } from '../components/CardImage';
-import { EFFECT_GALLERY, selectedCard, type EffectExample } from '../holo/effect-gallery';
+import {
+  EFFECT_GALLERY,
+  ERA_QUALIFIER,
+  selectedCard,
+  type EffectExample,
+} from '../holo/effect-gallery';
 import { HoloCard } from '../holo/HoloCard';
 import type { EffectId } from '../holo/select';
 import { useReducedMotion } from '../holo/use-reduced-motion';
@@ -12,8 +17,13 @@ import { cardQuery } from '../lib/queries';
 import type { Card } from '../lib/tcgdex';
 import { cn } from '../lib/utils';
 
-/** Counted off the gallery, so the intro cannot disagree with the sections under it. */
-const RARITY_COUNT = EFFECT_GALLERY.reduce((sum, entry) => sum + entry.rarities.length, 0);
+/**
+ * Counted off the gallery, so the intro cannot disagree with the sections under
+ * it. Rarities are counted once each, although an era-split one is in two.
+ */
+const RARITY_COUNT = new Set(
+  EFFECT_GALLERY.flatMap((entry) => entry.rarities.map(({ rarity }) => rarity)),
+).size;
 const CARD_COUNT = EFFECT_GALLERY.reduce((sum, entry) => sum + entry.cardIds.length, 0);
 
 /**
@@ -30,9 +40,9 @@ const FOCUS_RING =
 /**
  * Every effect `selectHolo` can return, each in a section of its own on three
  * real cards (`holo/effect-gallery.ts`): one page for a GPU smoke pass over
- * all of them, instead of 66 card URLs.
+ * all of them, instead of 87 card URLs.
  *
- * Exactly one card on the whole page renders a live `HoloCard`; the other 65
+ * Exactly one card on the whole page renders a live `HoloCard`; the other 86
  * are plain art. Each `HoloCard` builds its own three.js renderer, with its
  * own WebGL context, and browsers cap live contexts near 16, so a page of
  * live cards would knock its own earlier canvases out through the
@@ -260,7 +270,7 @@ function TileFrame({
         )}
       >
         {children}
-        {/* Every tile on the page is one height, across all 22 sections —
+        {/* Every tile on the page is one height, across all 29 sections —
             separate grids, so a row's stretch cannot do it. The art is a
             fixed 63/88, and the caption under it a fixed height: the name
             clamped to two lines and always two lines tall, even for
@@ -286,7 +296,12 @@ function TileFrame({
   );
 }
 
-/** The rarities that select this effect, or how it is reached when none does. */
+/**
+ * The rarities that select this effect, or how it is reached when none does. A
+ * rarity whose effect depends on the era says which arm this is: it has a chip
+ * in two sections, each qualified, and the one here is only true of that era.
+ * The chip's text is one string, the rarity and its qualifier together.
+ */
 function Rarities({ entry }: { entry: EffectExample }) {
   if (entry.rarities.length === 0) {
     return (
@@ -297,12 +312,14 @@ function Rarities({ entry }: { entry: EffectExample }) {
   }
   return (
     <p className="mt-2 flex flex-wrap gap-1">
-      {entry.rarities.map((rarity) => (
+      {entry.rarities.map(({ rarity, era }) => (
         <span
-          key={rarity}
+          key={`${rarity}|${era ?? ''}`}
+          data-rarity={rarity}
+          data-era={era}
           className="rounded border border-holo-line px-1.5 py-0.5 text-[0.7rem] leading-tight text-holo-muted"
         >
-          {rarity}
+          {era ? `${rarity} · ${ERA_QUALIFIER[era]}` : rarity}
         </span>
       ))}
     </p>

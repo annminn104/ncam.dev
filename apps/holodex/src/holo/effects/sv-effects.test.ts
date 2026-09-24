@@ -13,11 +13,13 @@ import { masterballHolo } from './masterball-holo';
 import { pokeBallHolo } from './poke-ball-holo';
 
 /**
- * The seven Scarlet & Violet effects, keyed by the id each will be registered
- * under. They are not in EFFECTS yet: the next task registers them with the
- * selection that reaches them, since the registry test requires every
- * registered effect to be reachable. index.test.ts cannot see them until
- * then, so this file holds them to the same rules it holds the registry to.
+ * The seven Scarlet & Violet effects, keyed by the id each is registered under
+ * in EFFECTS. The registry test (index.test.ts) holds them to every rule it
+ * holds the others to — id, element budget, layers, first-layer blend, stop
+ * limit, compiled source — so this file keeps only what it does not check:
+ * that each builds into a material providing every uniform its shader
+ * declares (program-cache.test.ts checks that for two effects and a synthetic
+ * one), and each effect's own port of its reference CSS.
  */
 const SV_EFFECTS: Record<string, Effect> = {
   'ex-regular': exRegular,
@@ -28,8 +30,6 @@ const SV_EFFECTS: Record<string, Effect> = {
   'poke-ball-holo': pokeBallHolo,
   'masterball-holo': masterballHolo,
 };
-
-const elements = (effect: Effect): Element[] => [...effect.shine, ...effect.glare];
 
 /** An element's filter, evaluated at a pointer. */
 const filterAt = (el: Element, fromCenter: number): FixedFilter => ({
@@ -45,65 +45,7 @@ const expectClose = (got: RGB, want: RGB, label?: string) =>
 const declaredUniforms = (source: string): string[] =>
   Array.from(source.matchAll(/uniform\s+\w+\s+(\w+)\s*(?:\[[^\]]*\])?\s*;/g), (match) => match[1]);
 
-describe('the SV effects, held to the registry’s rules', () => {
-  it('gives every effect an id matching its key', () => {
-    for (const [key, effect] of Object.entries(SV_EFFECTS)) expect(effect.id).toBe(key);
-  });
-
-  it('keeps every effect within the reference’s element budget', () => {
-    for (const [key, effect] of Object.entries(SV_EFFECTS)) {
-      expect(effect.shine.length, key).toBeLessThanOrEqual(3);
-      expect(effect.glare.length, key).toBeLessThanOrEqual(2);
-      expect(effect.shine.length + effect.glare.length, key).toBeGreaterThan(0);
-    }
-  });
-
-  it('gives every element at least one layer', () => {
-    for (const [key, effect] of Object.entries(SV_EFFECTS)) {
-      for (const el of elements(effect)) expect(el.layers.length, key).toBeGreaterThan(0);
-    }
-  });
-
-  it('never lets a first layer carry a blend the generator drops', () => {
-    // layerCode() seeds each element's stack straight from layers[0] and never
-    // blends it, as CSS ignores a bottom background's blend mode.
-    for (const [key, effect] of Object.entries(SV_EFFECTS)) {
-      for (const el of elements(effect)) expect(el.layers[0].blend, key).toBe('normal');
-    }
-  });
-
-  it('keeps every gradient within the shader stop limit', () => {
-    for (const [key, effect] of Object.entries(SV_EFFECTS)) {
-      for (const el of elements(effect)) {
-        for (const layer of el.layers) {
-          const s = layer.source;
-          const count =
-            s.kind === 'repeating-linear' || s.kind === 'linear' || s.kind === 'conic'
-              ? s.stops.length
-              : s.kind === 'radial-pointer'
-                ? s.stops.length
-                : 0;
-          expect(count, `${key}/${s.kind}`).toBeLessThanOrEqual(8);
-        }
-      }
-    }
-  });
-
-  it('compiles every effect to balanced shader source', () => {
-    for (const [key, effect] of Object.entries(SV_EFFECTS)) {
-      const src = compileEffect(effect);
-      expect((src.match(/\{/g) ?? []).length, key).toBe((src.match(/\}/g) ?? []).length);
-      // One `vec3 src_` per layer and one `acc = mix(acc, blendWith(` per
-      // element, as index.test.ts counts them: a dropped layer or element is a
-      // miscount, where 'void main()' would be there regardless.
-      const layerCount = elements(effect).reduce((n, el) => n + el.layers.length, 0);
-      expect((src.match(/vec3 src_/g) ?? []).length, key).toBe(layerCount);
-      expect((src.match(/acc = mix\(acc, blendWith\(/g) ?? []).length, key).toBe(
-        effect.shine.length + effect.glare.length,
-      );
-    }
-  });
-
+describe('the SV effects, beyond the registry’s rules', () => {
   it('builds each into a material that provides every uniform its shader declares', () => {
     for (const [key, effect] of Object.entries(SV_EFFECTS)) {
       const material = buildMaterial(effect);

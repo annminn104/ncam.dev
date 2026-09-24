@@ -2,14 +2,29 @@ import { describe, expect, it } from 'vitest';
 import { cardImageBase } from '../lib/images';
 import { EFFECT_GALLERY, isSectionCard, selectedCard } from './effect-gallery';
 import { CAPTURED_CARDS } from './effect-gallery.fixture';
-import { EFFECT_BY_RARITY, OVERRIDE_ONLY_EFFECTS, selectHolo, type EffectId } from './select';
+import {
+  EFFECT_BY_RARITY,
+  MODERN_EFFECT_BY_RARITY,
+  OVERRIDE_ONLY_EFFECTS,
+  selectHolo,
+  type EffectId,
+} from './select';
 
-// Derived the way effects/index.test.ts derives it — from the rarity table and
-// the override list, never typed out — so a newly selectable effect joins this
-// set on its own, and the page fails here until it grows a section for it.
+// Derived the way effects/index.test.ts derives it — from the two rarity
+// tables and the override list, never typed out — so a newly selectable effect
+// joins this set on its own, and the page fails here until it grows a section
+// for it.
 const ALL_EFFECT_IDS: EffectId[] = [
-  ...new Set([...Object.values(EFFECT_BY_RARITY), ...OVERRIDE_ONLY_EFFECTS]),
+  ...new Set([
+    ...Object.values(EFFECT_BY_RARITY),
+    ...Object.values(MODERN_EFFECT_BY_RARITY),
+    ...OVERRIDE_ONLY_EFFECTS,
+  ]),
 ];
+
+/** One (rarity, era arm) as a string, so lists of them compare and sort. */
+const arm = ({ rarity, era }: { rarity: string; era?: string }) =>
+  `${rarity} | ${era ?? 'any era'}`;
 
 const effects = EFFECT_GALLERY.map((entry) => entry.effect);
 /** Every card on the page, with the section it sits in, in page order. */
@@ -36,32 +51,48 @@ describe('EFFECT_GALLERY — one section per effect, three cards each', () => {
     expect(repeated(cardIds)).toEqual([]);
   });
 
-  it('opens v-regular and v-full-art, side by side, on one Pokémon at two rarities', () => {
+  it('opens ex-regular and ex-full-art, side by side, on one Pokémon at two rarities', () => {
     // Both Venusaur ex: Double rare keeps the art-window clip, Ultra Rare foils
-    // the whole card, and /effects/v-regular and /effects/v-full-art open on them.
+    // the whole card, and /effects/ex-regular and /effects/ex-full-art open on
+    // them. (The two ex tiers were v-regular and v-full-art before Scarlet &
+    // Violet had effects of its own.)
     const at = (effect: EffectId) => effects.indexOf(effect);
-    expect(at('v-regular')).toBeGreaterThanOrEqual(0);
-    expect(at('v-full-art') - at('v-regular')).toBe(1);
-    expect(section('v-regular')?.cardIds[0]).toBe('sv03.5-003');
-    expect(section('v-full-art')?.cardIds[0]).toBe('sv03.5-182');
+    expect(at('ex-regular')).toBeGreaterThanOrEqual(0);
+    expect(at('ex-full-art') - at('ex-regular')).toBe(1);
+    expect(section('ex-regular')?.cardIds[0]).toBe('sv03.5-003');
+    expect(section('ex-full-art')?.cardIds[0]).toBe('sv03.5-182');
+    expect(selectHolo(CAPTURED_CARDS['sv03.5-003']).shape).toBe('stage');
+    expect(selectHolo(CAPTURED_CARDS['sv03.5-182']).shape).toBe('full');
   });
 });
 
-describe('EFFECT_GALLERY — all of EFFECT_BY_RARITY', () => {
-  it('lists only rarities that really select the effect they are shown under', () => {
+describe('EFFECT_GALLERY — all of EFFECT_BY_RARITY, and both arms of each era split', () => {
+  it('lists only (rarity, era arm)s that really select the effect they are shown under', () => {
+    // An unqualified rarity must select its section's effect in every era, so
+    // it cannot be one the era splits; each arm of a split, only its own
+    // table's effect.
     for (const entry of EFFECT_GALLERY) {
-      for (const rarity of entry.rarities) {
-        expect(EFFECT_BY_RARITY[rarity], `${entry.effect}: ${rarity}`).toBe(entry.effect);
+      for (const { rarity, era } of entry.rarities) {
+        const label = `${entry.effect}: ${arm({ rarity, era })}`;
+        const split = Object.hasOwn(MODERN_EFFECT_BY_RARITY, rarity);
+        expect(split, label).toBe(era !== undefined);
+        const table = era === 'modern' ? MODERN_EFFECT_BY_RARITY : EFFECT_BY_RARITY;
+        expect(table[rarity], label).toBe(entry.effect);
       }
     }
   });
 
-  it('lists every rarity in the table under exactly one section', () => {
-    // The data only: a rarity missing here, or listed twice, is a section that
+  it('lists every (rarity, era arm) exactly once: a rarity in one section, an era-split one in two', () => {
+    // The data only: an arm missing here, or listed twice, is a section that
     // lies about what selects it. This passes whatever the page does with the
     // list; views/EffectsView.test.ts checks what the page actually renders.
-    const shown = EFFECT_GALLERY.flatMap((entry) => entry.rarities);
-    expect([...shown].sort()).toEqual(Object.keys(EFFECT_BY_RARITY).sort());
+    const shown = EFFECT_GALLERY.flatMap((entry) => entry.rarities.map(arm));
+    const expected = Object.keys(EFFECT_BY_RARITY).flatMap((rarity) =>
+      Object.hasOwn(MODERN_EFFECT_BY_RARITY, rarity)
+        ? [arm({ rarity, era: 'modern' }), arm({ rarity, era: 'older' })]
+        : [arm({ rarity })],
+    );
+    expect([...shown].sort()).toEqual(expected.sort());
   });
 
   it('labels exactly the override-only effects as override-driven, so no section lists nothing', () => {
@@ -109,9 +140,15 @@ describe('EFFECT_GALLERY — three real cards for every effect', () => {
     expect(artless).toEqual([]);
   });
 
-  it('shows reverse printings only in reverse-holo, all three of them, of cards that have one', () => {
+  it('shows reverse printings only in the three reverse sections, all three cards of each, of cards that have one', () => {
+    // reverse-holo, and 151's two patterns: the only effects a reverse
+    // printing selects.
     const reversed = EFFECT_GALLERY.filter((entry) => entry.reverse);
-    expect(reversed.map((entry) => entry.effect)).toEqual(['reverse-holo']);
+    expect(reversed.map((entry) => entry.effect)).toEqual([
+      'reverse-holo',
+      'poke-ball-holo',
+      'masterball-holo',
+    ]);
     const withoutOne = reversed.flatMap((entry) =>
       entry.cardIds.filter((cardId) => CAPTURED_CARDS[cardId]?.variants?.reverse !== true),
     );
@@ -119,7 +156,7 @@ describe('EFFECT_GALLERY — three real cards for every effect', () => {
   });
 
   it('keeps a Promo in v-regular that only its suffix lifts there', () => {
-    // svp-004 is there to exercise selectHolo's promo upgrade. Swap it for a
+    // xyp-XY84 is there to exercise selectHolo's promo upgrade. Swap it for a
     // plain Holo Rare V and that path leaves the page, with every check above
     // still passing.
     const promos = (section('v-regular')?.cardIds ?? []).filter(

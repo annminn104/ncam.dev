@@ -57,10 +57,11 @@ describe('getMaterial', () => {
   });
 
   it('provides the samplers an effect using the generated SV textures declares', () => {
-    // No registered effect samples these yet (the effects that will are still
-    // to be ported), so neither effect above would notice if one went missing
-    // the day uniform declarations stop being shared by every shader. Build a
-    // material for an effect that samples all six instead.
+    // Neither effect above samples these, so neither would notice if one went
+    // missing the day uniform declarations stop being shared by every shader,
+    // and no registered effect samples all six: each ball effect samples only
+    // its own pair (effects/sv-effects.test.ts). Build a material for an effect
+    // that samples all six instead.
     const kinds = [
       'iri',
       'birthday',
