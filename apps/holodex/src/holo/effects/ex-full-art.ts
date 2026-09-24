@@ -36,9 +36,9 @@ import {
  *   shine's filter and color-dodge. The DSL has no groups, so the :after is an
  *   element that color-dodges onto the card through its own filter and then
  *   the shine's, composed into one; its pointer-driven brightness makes that
- *   exact only at the centre and the corners. Both stacks are mostly dark with
- *   bright bands, which an exclusion unites much as two dodges do; where two
- *   bands cross, the exclusion would have dimmed them.
+ *   exact only where --pointer-from-center is 0 or 1. Both stacks are mostly
+ *   dark with bright bands, which an exclusion unites much as two dodges do;
+ *   where two bands cross, the exclusion would have dimmed them.
  * - The reference's `:not(.masked)` rules are not used. They are built around
  *   one texture, illusion.png, in a `hue` blend; with iri standing in, that
  *   blend would paint the whole stack iri's one violet hue. This port keeps

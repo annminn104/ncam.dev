@@ -24,9 +24,6 @@
  *   (see colorAt). That is exact for a blend linear in the layer it applies
  *   to (multiply, screen, overlay, hard-light, soft-light, exclusion) and
  *   close for the rest.
- * - --pointer-from-center: the DSL's reaches 1 at a corner, the reference's
- *   at the middle of an edge, clamped beyond. Coefficients are kept as the
- *   reference writes them, so a term on it runs up to 30% weaker mid-edge.
  * - Layers sized in px are converted at CARD_PX.
  * - --seedx/--seedy, the reference's random per-card pattern offsets, are 0:
  *   a card must look the same on every visit.
@@ -524,7 +521,8 @@ export function filtered(layer: Background, f: FixedFilter): Background {
  * affine map per channel, and saturate commutes with it, so two filters
  * compose into one exactly but for the clamp CSS applies between them. A
  * brightness on --pointer-from-center makes the product quadratic in it; the
- * result is exact at the card's centre and corners and linear between.
+ * result is exact where that is 0 or 1 (the centre, and from the middle of an
+ * edge outward) and linear between.
  */
 export function composeFilters(inner: Filter, outer: Filter): Filter {
   const parts = [inner.brightness, inner.contrast, inner.saturate];

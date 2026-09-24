@@ -339,7 +339,7 @@ describe('filters', () => {
     }
   });
 
-  it('composeFilters is exact at the centre and the corners when brightness follows the pointer', () => {
+  it('composeFilters is exact where --pointer-from-center is 0 or 1 when brightness follows it', () => {
     const driven = { base: 0.5, fromCenter: 0.4 };
     const inner = { brightness: driven, contrast: fixed(1.66) };
     const outer = { brightness: driven, contrast: fixed(2.5), saturate: fixed(0.66) };

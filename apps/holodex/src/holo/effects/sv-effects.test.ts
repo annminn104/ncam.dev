@@ -202,7 +202,7 @@ describe('ex-regular', () => {
 });
 
 describe('ex-full-art', () => {
-  it('puts its :after through its own filter, then the shine’s, brightening toward the corners', () => {
+  it('puts its :after through its own filter, then the shine’s, brightening away from the centre', () => {
     // brightness(calc((var(--pointer-from-center) * .4) + .5)) on both, with
     // contrast(2.5) saturate(.66) on the shine and contrast(1.66) on the :after
     const [shine, after] = exFullArt.shine;

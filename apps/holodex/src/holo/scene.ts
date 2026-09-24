@@ -110,6 +110,20 @@ export function pointerToUV(x: number, y: number): [number, number] {
   return [(x + 1) / 2, (1 - y) / 2];
 }
 
+/**
+ * `uPointerFromCenter`, the reference's --pointer-from-center: the pointer's
+ * distance from the card's centre over half the card, clamped at 1 (Card.svelte
+ * in pokemon-cards-151, and in pokemon-cards-css before it). It reaches 1 at
+ * the middle of an edge and holds there out to the corners, and in the -1..1
+ * pointer space that distance is simply the pointer's length. An earlier
+ * version divided by √2 to reach 1 only at a corner, which ran every effect's
+ * `fromCenter` term up to 29% weaker than the reference mid-edge. Pure for the
+ * same reason as pointerToUV.
+ */
+export function pointerFromCenter(x: number, y: number): number {
+  return Math.min(1, Math.hypot(x, y));
+}
+
 export function createHoloScene(canvas: HTMLCanvasElement): HoloScene {
   const renderer = new WebGLRenderer({ canvas, alpha: true, antialias: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -172,10 +186,7 @@ export function createHoloScene(canvas: HTMLCanvasElement): HoloScene {
     // pointerToUV above for the derivation and why the y term flips.
     const [pointerU, pointerV] = pointerToUV(current.x, current.y);
     material.uniforms.uPointerUV.value.set(pointerU, pointerV);
-    material.uniforms.uPointerFromCenter.value = Math.min(
-      1,
-      Math.hypot(current.x, current.y) / Math.SQRT2,
-    );
+    material.uniforms.uPointerFromCenter.value = pointerFromCenter(current.x, current.y);
     material.uniforms.uTime.value = (performance.now() - start0) / 1000;
     mesh.rotation.y = current.x * 0.18;
     mesh.rotation.x = -current.y * 0.18;

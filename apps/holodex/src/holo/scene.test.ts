@@ -1,7 +1,13 @@
 import { Texture } from 'three';
 import { describe, expect, it } from 'vitest';
 import { EFFECTS } from './effects';
-import { orientTexture, pointerToUV, SHARED_TEXTURE_UNIFORM, texturesUsedBy } from './scene';
+import {
+  orientTexture,
+  pointerFromCenter,
+  pointerToUV,
+  SHARED_TEXTURE_UNIFORM,
+  texturesUsedBy,
+} from './scene';
 import { sourcesGLSL } from './shader/sources';
 import type { Effect } from './shader/types';
 
@@ -29,6 +35,44 @@ describe('pointerToUV', () => {
   it('maps x straight through 0..1 with no flip', () => {
     expect(pointerToUV(-1, 0)[0]).toBe(0);
     expect(pointerToUV(1, 0)[0]).toBe(1);
+  });
+});
+
+// uPointerFromCenter, which every effect's `fromCenter` term reads. The
+// reference computes --pointer-from-center in Card.svelte (pokemon-cards-151,
+// and pokemon-cards-css before it) from the pointer's position in percent:
+// clamp(Math.sqrt((y - 50) * (y - 50) + (x - 50) * (x - 50)) / 50, 0, 1).
+describe('pointerFromCenter', () => {
+  const reference = (x: number, y: number) => {
+    const [u, v] = pointerToUV(x, y);
+    const [px, py] = [u * 100, v * 100];
+    return Math.min(Math.max(Math.hypot(px - 50, py - 50) / 50, 0), 1);
+  };
+
+  it('is 0 at the centre and reaches 1 at the middle of every edge', () => {
+    expect(pointerFromCenter(0, 0)).toBe(0);
+    for (const [x, y] of [
+      [1, 0],
+      [-1, 0],
+      [0, 1],
+      [0, -1],
+    ]) {
+      expect(pointerFromCenter(x, y)).toBeCloseTo(1, 12);
+    }
+  });
+
+  it('holds at 1 past the middle of an edge, out to the corners', () => {
+    expect(pointerFromCenter(1, 1)).toBe(1);
+    expect(pointerFromCenter(-0.8, 0.8)).toBe(1);
+  });
+
+  it('matches the reference at every point across the card', () => {
+    const steps = [-1, -0.75, -0.5, -0.25, 0, 0.25, 0.5, 0.75, 1];
+    for (const x of steps) {
+      for (const y of steps) {
+        expect(pointerFromCenter(x, y)).toBeCloseTo(reference(x, y), 12);
+      }
+    }
   });
 });
 

@@ -7,7 +7,11 @@ import type { BlendMode } from './blend';
  */
 export interface PointerDriven {
   base: number;
-  /** multiplied by distance from card centre, 0 at centre, 1 at a corner */
+  /**
+   * multiplied by distance from card centre: 0 at centre, 1 from the middle of
+   * an edge outward, as the reference's --pointer-from-center (scene.ts's
+   * pointerFromCenter)
+   */
   fromCenter?: number;
   /** multiplied by pointer position across the card, 0..1 */
   fromLeft?: number;
