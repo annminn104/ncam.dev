@@ -5,7 +5,7 @@
  * of what a Holodex URL means.
  */
 
-import { isGalleryEffect } from './holo/effect-gallery';
+import { isGalleryEffect, isSectionCard } from './holo/effect-gallery';
 import type { EffectId } from './holo/select';
 
 export interface Filters {
@@ -24,7 +24,12 @@ export type Route =
   | { view: 'search'; filters: Filters }
   | { view: 'card'; cardId: string; variant?: 'reverse' }
   | { view: 'collection' }
-  | { view: 'effects'; effect?: EffectId }
+  /**
+   * `/effects`, `/effects/<effect>` or `/effects/<effect>?card=<cardId>`: the
+   * section, and which of its three cards is live. `card` is only ever set
+   * alongside `effect`, and only to one of that section's own cards.
+   */
+  | { view: 'effects'; effect?: EffectId; card?: string }
   | { view: 'not-found'; path: string };
 
 function parseFilters(query: string): Filters {
@@ -54,9 +59,14 @@ export function parseRoute(input: string): Route {
   if (segments.length === 1 && head === 'collection') return { view: 'collection' };
   if (segments.length === 1 && head === 'effects') return { view: 'effects' };
   if (segments.length === 2 && head === 'effects' && second) {
-    // An id that names no tile is not a 404: the page exists, it just opens
-    // on its default tile.
-    return isGalleryEffect(second) ? { view: 'effects', effect: second } : { view: 'effects' };
+    // An id that names no section is not a 404: the page exists, it just
+    // opens on its default card. So does a card the section does not show,
+    // which opens that section on its first card.
+    if (!isGalleryEffect(second)) return { view: 'effects' };
+    const card = new URLSearchParams(query).get('card');
+    return card !== null && isSectionCard(second, card)
+      ? { view: 'effects', effect: second, card }
+      : { view: 'effects', effect: second };
   }
   if (segments.length === 2 && head === 'sets' && second) {
     return { view: 'set', setId: second, filters };
@@ -85,9 +95,10 @@ export function viewKey(route: Route): string {
     case 'search':
     case 'collection':
     case 'effects':
-      // For effects, the selected tile is state inside one view, like a
-      // filter: keying on it would remount the whole grid on every pick and
-      // drop focus off the tile just clicked.
+      // For effects, the section and the live card are state inside one
+      // view, like a filter: keying on either would remount the whole page on
+      // every pick — refetching every card query gone stale — and drop focus
+      // off the card just clicked.
       return route.view;
     case 'set':
       return `set:${route.setId}`;
@@ -115,7 +126,8 @@ export function formatRoute(route: Route): string {
     case 'collection':
       return '/collection';
     case 'effects':
-      return route.effect ? `/effects/${encodeURIComponent(route.effect)}` : '/effects';
+      if (!route.effect) return '/effects';
+      return `/effects/${encodeURIComponent(route.effect)}${route.card ? `?card=${encodeURIComponent(route.card)}` : ''}`;
     case 'card':
       return `/card/${encodeURIComponent(route.cardId)}${route.variant === 'reverse' ? '?variant=reverse' : ''}`;
     case 'search':

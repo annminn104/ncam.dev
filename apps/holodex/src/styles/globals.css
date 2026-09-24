@@ -9,8 +9,12 @@
   --color-holo-accent: #7c5cff;
 }
 
+/*
+ * No min-height here: Shell's `min-h-screen` sets it. This rule is unlayered,
+ * so whatever it declares beats every Tailwind utility (those sit in
+ * `@layer utilities`): a min-height here would silently override that class.
+ */
 .holodex {
   background: var(--color-holo-bg);
   color: var(--color-holo-text);
-  min-height: 100%;
 }

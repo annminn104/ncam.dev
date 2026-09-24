@@ -1,18 +1,20 @@
-import type { ReactNode } from 'react';
+import { useEffect, useEffectEvent, useId, useRef, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from '../app-context';
 import { CardImage } from '../components/CardImage';
-import { EFFECT_GALLERY, selectedExample, type EffectExample } from '../holo/effect-gallery';
+import { EFFECT_GALLERY, selectedCard, type EffectExample } from '../holo/effect-gallery';
 import { HoloCard } from '../holo/HoloCard';
 import type { EffectId } from '../holo/select';
+import { useReducedMotion } from '../holo/use-reduced-motion';
 import { CARD_ASPECT } from '../lib/constants';
 import { cardImageBase } from '../lib/images';
 import { cardQuery } from '../lib/queries';
 import type { Card } from '../lib/tcgdex';
 import { cn } from '../lib/utils';
 
-/** Counted off the gallery, so the intro cannot disagree with the tiles under it. */
+/** Counted off the gallery, so the intro cannot disagree with the sections under it. */
 const RARITY_COUNT = EFFECT_GALLERY.reduce((sum, entry) => sum + entry.rarities.length, 0);
+const CARD_COUNT = EFFECT_GALLERY.reduce((sum, entry) => sum + entry.cardIds.length, 0);
 
 /**
  * No `outline-none` here. In Tailwind 4 it sets `--tw-outline-style: none`,
@@ -26,42 +28,120 @@ const FOCUS_RING =
   'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-holo-accent';
 
 /**
- * Every effect `selectHolo` can return, each on a real card
- * (`holo/effect-gallery.ts`): one page for a GPU smoke pass over all of them,
- * instead of 22 card URLs.
+ * Every effect `selectHolo` can return, each in a section of its own on three
+ * real cards (`holo/effect-gallery.ts`): one page for a GPU smoke pass over
+ * all of them, instead of 66 card URLs.
  *
- * Exactly one tile renders a live `HoloCard`; every other tile is plain art.
- * Each `HoloCard` builds its own three.js renderer, with its own WebGL
- * context, and browsers cap live contexts near 16, so a grid of live cards
- * would knock its own earlier canvases out through the `holo.context-lost`
- * path. Picking a tile moves the live card.
+ * Exactly one card on the whole page renders a live `HoloCard`; the other 65
+ * are plain art. Each `HoloCard` builds its own three.js renderer, with its
+ * own WebGL context, and browsers cap live contexts near 16, so a page of
+ * live cards would knock its own earlier canvases out through the
+ * `holo.context-lost` path. Picking a card moves the live one there.
  *
- * Cards load client-side through the card page's own `cardQuery`. There is
- * deliberately no SSR prefetch for this diagnostic view.
+ * The route names the live card (`routes.ts`): `/effects/<effect>` is that
+ * section's first, `?card=<id>` another of its three. Both are state inside
+ * this one view (`viewKey` stays `effects`), so picking a card remounts
+ * nothing and refetches nothing: two tiles swap their art.
+ *
+ * Cards load client-side through the card page's own `cardQuery`, one query
+ * per tile, so a slow or dead card costs its own tile and nothing else. There
+ * is deliberately no SSR prefetch for this diagnostic view.
  */
-export function EffectsView({ effect }: { effect?: EffectId }) {
+export function EffectsView({ effect, card }: { effect?: EffectId; card?: string }) {
   const navigate = useNavigate();
-  const selected = selectedExample(effect);
+  const selected = selectedCard(effect, card);
+  const liveSection = selected.entry.effect;
+  const liveCard = selected.cardId;
+  // Only /effects/<effect> names a section to bring into view. Bare /effects
+  // opens on the first section's first card, and at the top of the page.
+  const named = effect !== undefined;
+
+  const pageRef = useRef<HTMLDivElement>(null);
+  /** The card a click on this page asked for, until the route brings it. */
+  const clickedRef = useRef<string | null>(null);
+  /** False until the effect below first runs: the render a deep link lands on. */
+  const settledRef = useRef(false);
+  const reducedMotion = useReducedMotion();
+
+  const scrollToSection = useEffectEvent((section: EffectId, instant: boolean) => {
+    // Instant on the landing, the way a #fragment lands — which is also
+    // before useReducedMotion has read the media query at all — and always
+    // under reduced motion. scrollIntoView moves no focus.
+    pageRef.current?.querySelector(`[data-section="${section}"]`)?.scrollIntoView({
+      block: 'start',
+      behavior: instant || reducedMotion ? 'auto' : 'smooth',
+    });
+  });
+
+  useEffect(() => {
+    // A card clicked here is on screen already: scrolling its section to the
+    // top would only pull the page out from under the pointer. Card ids are
+    // unique across the page (effect-gallery.test.ts), so the id is enough.
+    const ownClick = clickedRef.current === liveCard;
+    clickedRef.current = null;
+    if (named && !ownClick) scrollToSection(liveSection, !settledRef.current);
+    settledRef.current = true;
+  }, [named, liveSection, liveCard]);
+
+  const select = (section: EffectId, cardId: string) => {
+    if (cardId === liveCard) return;
+    clickedRef.current = cardId;
+    navigate({ view: 'effects', effect: section, card: cardId });
+  };
 
   return (
-    <section>
+    <div ref={pageRef}>
       <h1 className="text-2xl font-semibold tracking-tight">Effects</h1>
       <p className="mt-1 max-w-3xl text-sm text-holo-muted">
         All {EFFECT_GALLERY.length} holo effects, which of the {RARITY_COUNT} TCGdex rarities
-        selects each, and a real card for every one. Only the selected card renders its foil live —
-        pick a tile to move it there.
+        selects each, and three real cards for every one: {CARD_COUNT} in all. Only the selected
+        card renders its foil live; pick another to move it there.
       </p>
 
+      {EFFECT_GALLERY.map((entry) => (
+        <EffectSection
+          key={entry.effect}
+          entry={entry}
+          liveCard={entry.effect === liveSection ? liveCard : null}
+          onSelect={(cardId) => select(entry.effect, cardId)}
+        />
+      ))}
+    </div>
+  );
+}
+
+function EffectSection({
+  entry,
+  liveCard,
+  onSelect,
+}: {
+  entry: EffectExample;
+  /** The live card, when it is one of this section's; otherwise null. */
+  liveCard: string | null;
+  onSelect: (cardId: string) => void;
+}) {
+  return (
+    // scroll-mt keeps the heading clear of the Shell's sticky header when
+    // navigation scrolls this section into view.
+    <section
+      data-section={entry.effect}
+      className="mt-6 scroll-mt-20 border-t border-holo-line pt-6 lg:grid lg:grid-cols-[15rem_minmax(0,1fr)] lg:gap-6"
+    >
+      <div>
+        <h2 className="font-mono text-base font-semibold">{entry.effect}</h2>
+        <Rarities entry={entry} />
+      </div>
       <ul
-        aria-label="Holo effects"
-        className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4"
+        aria-label={`${entry.effect} cards`}
+        className="mt-4 grid grid-cols-3 gap-2 sm:gap-4 lg:mt-0"
       >
-        {EFFECT_GALLERY.map((entry) => (
-          <li key={entry.effect}>
-            <EffectTile
+        {entry.cardIds.map((cardId) => (
+          <li key={cardId}>
+            <ExampleTile
               entry={entry}
-              selected={entry.effect === selected.effect}
-              onSelect={() => navigate({ view: 'effects', effect: entry.effect })}
+              cardId={cardId}
+              selected={cardId === liveCard}
+              onSelect={() => onSelect(cardId)}
             />
           </li>
         ))}
@@ -72,31 +152,20 @@ export function EffectsView({ effect }: { effect?: EffectId }) {
 
 interface TileProps {
   entry: EffectExample;
+  cardId: string;
   selected: boolean;
   onSelect: () => void;
 }
 
-/** Split in two so the query hook is unconditional: a tile with no card has nothing to fetch. */
-function EffectTile(props: TileProps) {
-  const { entry } = props;
-  if (entry.cardId === null) {
-    return (
-      <TileFrame {...props} caption="No example card">
-        <ArtPlaceholder>{entry.note ?? 'No card selects this effect.'}</ArtPlaceholder>
-      </TileFrame>
-    );
-  }
-  return <ExampleTile {...props} cardId={entry.cardId} />;
-}
-
-function ExampleTile({ cardId, ...props }: TileProps & { cardId: string }) {
-  const { entry, selected } = props;
-  // One query per tile, so a dead id costs its own tile an error, never the page.
+function ExampleTile({ entry, cardId, selected, onSelect }: TileProps) {
+  // One query per tile, so a slow or dead card costs its own tile an error,
+  // never its section or the page.
   const { data: card, error, isPending, refetch } = useQuery(cardQuery(cardId));
+  const frame = { cardId, selected, onSelect };
 
   if (isPending) {
     return (
-      <TileFrame {...props} caption={cardId}>
+      <TileFrame {...frame}>
         <span
           aria-hidden="true"
           className="block animate-pulse rounded-lg bg-holo-panel"
@@ -109,8 +178,7 @@ function ExampleTile({ cardId, ...props }: TileProps & { cardId: string }) {
   if (error || !card) {
     return (
       <TileFrame
-        {...props}
-        caption={cardId}
+        {...frame}
         after={
           <button
             type="button"
@@ -132,16 +200,13 @@ function ExampleTile({ cardId, ...props }: TileProps & { cardId: string }) {
   }
 
   return (
-    <TileFrame
-      {...props}
-      caption={`${card.name} · ${cardId}`}
-      status={selected ? staticReason(entry, card) : null}
-    >
+    <TileFrame {...frame} name={card.name} status={selected ? staticReason(entry, card) : null}>
       {/* Each tile owns its HoloCard, so moving the selection unmounts one
-          and mounts the next. (HoloCard gives every rebuild a fresh canvas
-          itself — see holoCanvasKey — so this layout is not what keeps the
-          foil alive.) The art is decorative: the caption below names the
-          card, and the button's name should not say it twice. */}
+          and mounts the next: one live renderer on the page, ever. (HoloCard
+          gives every rebuild a fresh canvas itself — see holoCanvasKey — so
+          this layout is not what keeps the foil alive.) The art is
+          decorative: the caption below names the card, and the button's name
+          should not say it twice. */}
       {selected ? (
         <HoloCard card={card} reverse={entry.reverse} decorative />
       ) : (
@@ -164,24 +229,27 @@ function staticReason(entry: EffectExample, card: Card): string | null {
 }
 
 function TileFrame({
-  entry,
+  cardId,
+  name,
   selected,
   onSelect,
-  caption,
   status,
   after,
   children,
-}: TileProps & {
-  caption: string;
+}: Omit<TileProps, 'entry'> & {
+  /** The card's name, once it has loaded. */
+  name?: string;
   status?: string | null;
   after?: ReactNode;
   children: ReactNode;
 }) {
+  const statusId = useId();
   return (
     <>
       <button
         type="button"
         aria-pressed={selected}
+        aria-describedby={status ? statusId : undefined}
         onClick={onSelect}
         className={cn(
           'block w-full rounded-xl border p-2 text-left transition-colors',
@@ -192,13 +260,27 @@ function TileFrame({
         )}
       >
         {children}
-        {status ? <span className="mt-2 block text-xs text-holo-accent">{status}</span> : null}
-        <span className={cn('mt-2 block font-mono text-sm', selected && 'text-holo-accent')}>
-          {entry.effect}
+        {/* Every tile on the page is one height, across all 22 sections —
+            separate grids, so a row's stretch cannot do it. The art is a
+            fixed 63/88, and the caption under it a fixed height: the name
+            clamped to two lines and always two lines tall, even for
+            "Pikachu" or while loading, then the id on one. The clamp is
+            visual only: the button's accessible name keeps the whole name,
+            and `title` shows it on hover. */}
+        <span
+          title={name}
+          className={cn('mt-2 line-clamp-2 h-10 text-sm leading-5', selected && 'text-holo-accent')}
+        >
+          {name}
         </span>
-        <span className="block truncate text-xs text-holo-muted">{caption}</span>
-        <Rarities entry={entry} />
+        <span className="block truncate font-mono text-xs text-holo-muted">{cardId}</span>
       </button>
+      {/* Outside the button, so the live tile is no taller than the rest. */}
+      {status ? (
+        <p id={statusId} className="mt-2 text-xs text-holo-accent">
+          {status}
+        </p>
+      ) : null}
       {after}
     </>
   );
@@ -208,13 +290,13 @@ function TileFrame({
 function Rarities({ entry }: { entry: EffectExample }) {
   if (entry.rarities.length === 0) {
     return (
-      <span className="mt-2 block text-[0.7rem] text-holo-accent">
+      <p className="mt-2 text-[0.7rem] text-holo-accent">
         Override · {entry.override ?? 'no rarity of its own'}
-      </span>
+      </p>
     );
   }
   return (
-    <span className="mt-2 flex flex-wrap gap-1">
+    <p className="mt-2 flex flex-wrap gap-1">
       {entry.rarities.map((rarity) => (
         <span
           key={rarity}
@@ -223,14 +305,15 @@ function Rarities({ entry }: { entry: EffectExample }) {
           {rarity}
         </span>
       ))}
-    </span>
+    </p>
   );
 }
 
+/** overflow-hidden pins it to its aspect ratio: a long error message is clipped, never a taller tile. */
 function ArtPlaceholder({ children }: { children: ReactNode }) {
   return (
     <span
-      className="grid place-items-center rounded-lg border border-holo-line bg-holo-bg p-3 text-center text-xs text-holo-muted"
+      className="grid place-items-center overflow-hidden rounded-lg border border-holo-line bg-holo-bg p-3 text-center text-xs text-holo-muted"
       style={{ aspectRatio: CARD_ASPECT }}
     >
       {children}

@@ -70,17 +70,19 @@ return a `MountHandle`: a disposer that also carries an optional
   `ErrorPanel`, `Skeleton`.
 - `src/views/` — `SetsView`, `SetView`, `SearchView`, `CardView`,
   `CollectionView`, `EffectsView`, `NotFoundView` — one per `Route` case.
-  `EffectsView` (`/effects`, `/effects/<effectId>`) shows every `EffectId` on a
-  real card with the rarities that select it; exactly one tile renders a live
-  `HoloCard` at a time, the rest are plain art.
+  `EffectsView` (`/effects`, `/effects/<effectId>`,
+  `/effects/<effectId>?card=<cardId>`) gives every `EffectId` a section of its
+  own, with the rarities that select it and three real cards — 66 in all;
+  exactly one card on the whole page renders a live `HoloCard` at a time, the
+  other 65 are plain art.
 - `src/holo/` — eager (statically imported by `HoloCard.tsx`, so part of the
   main chunk): `select.ts` (rarity/layout/printing → `HoloSelection`),
   `regions.ts` (`ClipShape` → inset rect + `coversPoint`), `capability.ts`
   (`supportsHolo`), `showcase.ts` (the one-shot intro sweep, a pure state
   machine over an injected clock), `use-reduced-motion.ts`, `teardown.ts`
   (three-free indirection onto the shader cache's disposer — see "The holo
-  chunk is lazy" below), `effect-gallery.ts` (the effects page's matrix: one
-  example card per `EffectId`, rarities read off `EFFECT_BY_RARITY`, each card
+  chunk is lazy" below), `effect-gallery.ts` (the effects page's matrix: three
+  example cards per `EffectId`, rarities read off `EFFECT_BY_RARITY`, each card
   checked against the real `selectHolo` on a captured TCGdex copy in
   `effect-gallery.fixture.ts`), `canvas-key.ts` (`holoCanvasKey`, the key that
   gives every scene a canvas of its own — see the fourth gotcha below),
@@ -110,6 +112,12 @@ Base `https://api.tcgdex.net/v2/en`, no key, CORS-open. Verified live 2026-09-21
   single response, paginated **in memory**. A _filtered_ set view still queries
   `/cards?set.id=…` (cheap once filters shrink the result) but intersects the
   rows with the exact id set from `/sets/{setId}` before showing anything.
+- **`?rarity=` is a substring match too.** `?rarity=Shiny rare V` returns the
+  7 `Shiny rare VMAX` cards along with the 9 it names (verified 2026-09-24),
+  and briefs carry no rarity to filter them back out. So a card's rarity comes
+  from `GET /cards/{id}`, never from the query that found it: every card on the
+  effects page was judged on its own, and an earlier draft that trusted the
+  query put a VMAX under `shiny-v`.
 - **~20% of card briefs have no `image`.** `lib/images.ts` returns `null` for a
   missing base and `CardImage` renders a placeholder at the same `63/88`
   aspect ratio so the grid never reflows.
@@ -154,8 +162,8 @@ explicit flag, never read off the card — on a card whose table effect is
 `basic` or `regular-holo` becomes `reverse-holo` with `invert: true` instead.
 `options.reverse` has exactly two sources: the card page's normal/reverse
 toggle (`views/CardView.tsx`) set to reverse, and the effects page's
-reverse-holo tile (`views/EffectsView.tsx`, via the gallery entry's
-`reverse`). `card.variants?.reverse` means "a reverse printing of this card
+reverse-holo section (`views/EffectsView.tsx`, via the gallery entry's
+`reverse`, for all three of its cards). `card.variants?.reverse` means "a reverse printing of this card
 exists in TCGdex's data," not "show it," and only decides whether the toggle
 is offered at all — and so whether the card page honours `?variant=reverse`,
 which it ignores on a card with no reverse printing. An earlier version of
@@ -399,9 +407,10 @@ instead of reaching for a global:
   `renderToString` under node — no DOM needed, since no effect runs —
   through `views/render-view.test-util.ts`, which wraps it in App's two
   providers and seeds cards straight into the query cache. That is how the
-  effects page is held to rendering every rarity and to handing `reverse` on
-  to `HoloCard` (read back off its root's `data-effect`), and the card page to
-  ignoring `?variant=reverse` on a card with no reverse printing.
+  effects page is held to rendering every rarity once, to exactly one
+  `HoloCard` among its 66 cards whichever is live, and to handing `reverse` on
+  to it (each read back off the HoloCard root's `data-effect`), and the card
+  page to ignoring `?variant=reverse` on a card with no reverse printing.
 
 **Not unit-tested, by design:** the three.js scene, the GLSL shaders and
 `HoloCard`'s canvas lifecycle (a fresh canvas per scene; context loss and
@@ -409,9 +418,17 @@ restore) — jsdom has no WebGL2 and this repo has no jsdom regardless. They sit
 `capability.ts` (which is tested) so a visitor who can't run them never loads
 them, and they're checked by hand (`pnpm --filter @ncam/holodex dev`, open a
 card, confirm the holo reacts to the pointer). `/effects` puts every effect's
-example card on one page for that: click through the tiles. A selected tile
-whose card TCGdex serves without an image says so, since there is no art for
-the foil to render on.
+three example cards on one page for that: click through the tiles. A selected
+tile whose card TCGdex serves without an image says so, since there is no art
+for the foil to render on.
+
+Computed layout and scrolling need a browser too, so these are smoke-pass
+checks, not unit tests: every effects tile the same height across all 22
+sections (a fixed caption — the name clamped to two lines and always two lines
+tall — under the fixed 63/88 art); a section the URL names scrolling into view
+on navigation, instantly on the landing and under reduced motion, and never for
+a card clicked on the page; and every page at least one viewport tall, footer
+at the bottom (Shell's `min-h-screen`).
 
 ## Run standalone
 

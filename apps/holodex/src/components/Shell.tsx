@@ -20,7 +20,12 @@ export function Shell({ children }: { children: ReactNode }) {
   const route = useRoute();
   const navigate = useNavigate();
   return (
-    <div className="holodex flex min-h-full flex-col">
+    // A viewport-tall minimum, not a percentage one: 100% resolves against the
+    // mount target's height, which nothing sets, so it did nothing and a short
+    // page (a loading state, an empty collection, not-found) stopped short of
+    // the viewport with its footer mid-screen. With a real minimum, main's
+    // flex-1 pushes the footer to the bottom.
+    <div className="holodex flex min-h-screen flex-col">
       <header className="sticky top-0 z-10 border-b border-holo-line bg-holo-bg/85 backdrop-blur">
         <nav className="mx-auto flex max-w-6xl items-center gap-1 px-4 py-3" aria-label="Holodex">
           <span className="mr-4 text-sm font-semibold tracking-[0.2em] uppercase">Holodex</span>

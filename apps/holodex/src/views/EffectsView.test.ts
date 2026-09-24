@@ -6,6 +6,7 @@ import type { EffectId } from '../holo/select';
 import { CARD_RARITIES } from '../lib/constants';
 import { cardImageBase } from '../lib/images';
 import type { Card } from '../lib/tcgdex';
+import { formatRoute } from '../routes';
 import { EffectsView } from './EffectsView';
 import { dataEffects, renderView } from './render-view.test-util';
 
@@ -13,10 +14,15 @@ import { dataEffects, renderView } from './render-view.test-util';
 // page is built from; a page that dropped rarities or `reverse` on the way to
 // the screen passed every one of those checks.
 
-function renderPage(effect: EffectId | undefined, cards: readonly Card[] = []): string {
+interface Selection {
+  effect?: EffectId;
+  card?: string;
+}
+
+function renderPage(selection: Selection = {}, cards: readonly Card[] = []): string {
   return renderView(
-    createElement(EffectsView, { effect }),
-    effect ? `/effects/${effect}` : '/effects',
+    createElement(EffectsView, selection),
+    formatRoute({ view: 'effects', ...selection }),
     cards,
   );
 }
@@ -36,17 +42,46 @@ function textNodes(html: string): string[] {
   );
 }
 
-/** The inside of every <button> in the markup (none of them nest). */
-function buttons(html: string): string[] {
-  return [...html.matchAll(/<button\b[^>]*>([\s\S]*?)<\/button>/g)].map(([, inner]) => inner);
+const CARD_IDS = new Set(EFFECT_GALLERY.flatMap((entry) => entry.cardIds));
+
+interface Tile {
+  attrs: string;
+  inner: string;
+  pressed: boolean;
+  /** Loaded or not, a tile names its card id in a text node of its own. */
+  cardId: string | undefined;
+}
+
+/** Every card tile in the markup: the <button>s with aria-pressed (none of them nest). */
+function tiles(html: string): Tile[] {
+  return [...html.matchAll(/<button\b([^>]*)>([\s\S]*?)<\/button>/g)]
+    .filter(([, attrs]) => attrs.includes('aria-pressed='))
+    .map(([, attrs, inner]) => ({
+      attrs,
+      inner,
+      pressed: attrs.includes('aria-pressed="true"'),
+      cardId: textNodes(inner).find((text) => CARD_IDS.has(text)),
+    }));
+}
+
+/** The card id of every tile marked pressed: the live card, and only it. */
+const pressedCards = (html: string) => tiles(html).flatMap((t) => (t.pressed ? [t.cardId] : []));
+
+/** Every <section> in the markup (none of them nest), in order. */
+function sections(html: string) {
+  return [...html.matchAll(/<section\b([^>]*)>([\s\S]*?)<\/section>/g)].map(([, attrs, inner]) => ({
+    id: /data-section="([^"]*)"/.exec(attrs)?.[1],
+    headings: [...inner.matchAll(/<h2\b[^>]*>([^<]*)<\/h2>/g)].map(([, text]) => text),
+    tiles: tiles(inner),
+  }));
 }
 
 const ALL_CARDS = Object.values(CAPTURED_CARDS);
 
 /**
  * The same cards without the `image` the API links, to reach CardImage's
- * no-image placeholder. Not every tile gets there: the five subset-set cards
- * never had an `image`, and cardImageBase recovers their art from the id.
+ * no-image placeholder. Not every tile gets there: the subset-set cards never
+ * had an `image`, and cardImageBase recovers their art from the id.
  */
 const UNLINKED_CARDS = ALL_CARDS.map((card) => ({ ...card, image: undefined }));
 const PLACEHOLDER_COUNT = UNLINKED_CARDS.filter((card) => !cardImageBase(card)).length;
@@ -54,12 +89,40 @@ const PLACEHOLDER_COUNT = UNLINKED_CARDS.filter((card) => !cardImageBase(card)).
 /** What a live tile says when its card has no art for the foil. */
 const NO_ART_NOTE = 'TCGdex has no image for this card, so there is no art to foil.';
 
-describe('EffectsView — every rarity, on the page', () => {
+/** Every card the page can make live, with its section: all 66. */
+const SELECTIONS = EFFECT_GALLERY.flatMap((entry) =>
+  entry.cardIds.map((card) => [entry.effect, card] as const),
+);
+
+/** The page with every card loaded and `card` live, rendered once and shared below. */
+const livePages = new Map<string, string>();
+function livePage(effect: EffectId, card: string): string {
+  const key = `${effect} ${card}`;
+  const html = livePages.get(key) ?? renderPage({ effect, card }, ALL_CARDS);
+  livePages.set(key, html);
+  return html;
+}
+
+describe('EffectsView — one section per effect, three cards each', () => {
+  it('renders every effect as a section, in order, headed by its id, holding its three cards', () => {
+    // Loaded or not, so both with nothing in the cache and with every card.
+    for (const html of [renderPage(), renderPage({}, ALL_CARDS)]) {
+      const page = sections(html);
+      expect(page.map((s) => s.id)).toEqual(EFFECT_GALLERY.map((entry) => entry.effect));
+      expect(page.map((s) => s.headings)).toEqual(EFFECT_GALLERY.map((entry) => [entry.effect]));
+      expect(page.map((s) => s.tiles.map((t) => t.cardId))).toEqual(
+        EFFECT_GALLERY.map((entry) => [...entry.cardIds]),
+      );
+      // And no tile outside a section.
+      expect(tiles(html)).toHaveLength(CARD_IDS.size);
+    }
+  });
+
   it('renders every TCGdex rarity exactly once', () => {
     // Against the API's own list, not EFFECT_BY_RARITY: select.test.ts pins
     // the table to that list, and a table that lost an entry cannot shrink
     // this one along with it.
-    const texts = textNodes(renderPage(undefined));
+    const texts = textNodes(renderPage());
     const count = (rarity: string) => texts.filter((text) => text === rarity).length;
     expect(Object.fromEntries(CARD_RARITIES.map((rarity) => [rarity, count(rarity)]))).toEqual(
       Object.fromEntries(CARD_RARITIES.map((rarity) => [rarity, 1])),
@@ -67,71 +130,117 @@ describe('EffectsView — every rarity, on the page', () => {
   });
 });
 
-describe('EffectsView — the live tile renders the effect it is labelled with', () => {
-  // Only the selected tile mounts a HoloCard, whose root names the effect it
-  // resolved to. The reverse-holo row is the one that needs EffectsView to
-  // pass `reverse` through: without it, its Common card renders basic under
-  // a reverse-holo label.
-  const rows = EFFECT_GALLERY.flatMap((entry) =>
-    entry.cardId === null ? [] : [[entry.effect, CAPTURED_CARDS[entry.cardId]] as const],
-  );
+describe('EffectsView — exactly one live card on the whole page', () => {
+  // Only the live tile mounts a HoloCard, whose root names the effect it
+  // resolved to, so reading data-effect off the page counts every HoloCard on
+  // it. Every card is seeded, so every tile renders loaded: any other tile
+  // that rendered one would show up here too.
 
-  it('includes the reverse-holo tile', () => {
-    expect(rows.map(([effect]) => effect)).toContain('reverse-holo');
+  it('makes the first card of the first section live at bare /effects', () => {
+    const [first] = EFFECT_GALLERY;
+    const html = renderPage({}, ALL_CARDS);
+    expect(dataEffects(html)).toEqual([first.effect]);
+    expect(pressedCards(html)).toEqual([first.cardIds[0]]);
   });
 
-  it.each(rows)('renders the %s tile with that effect', (effect, card) => {
-    expect(dataEffects(renderPage(effect, [card]))).toEqual([effect]);
+  it.each(EFFECT_GALLERY.map((entry) => [entry.effect, entry.cardIds[0]] as const))(
+    'opens /effects/%s on its first card, %s',
+    (effect, first) => {
+      const html = renderPage({ effect }, ALL_CARDS);
+      expect(dataEffects(html)).toEqual([effect]);
+      expect(pressedCards(html)).toEqual([first]);
+    },
+  );
+
+  it('covers all three reverse-holo cards, the ones EffectsView must pass `reverse` for', () => {
+    // Without `reverse`, their Commons and Uncommons render basic under a
+    // reverse-holo heading.
+    expect(SELECTIONS.filter(([effect]) => effect === 'reverse-holo')).toHaveLength(3);
+  });
+
+  it.each(SELECTIONS)('renders one HoloCard, resolving to %s, with %s live', (effect, card) => {
+    const html = livePage(effect, card);
+    expect(dataEffects(html)).toEqual([effect]);
+    expect(pressedCards(html)).toEqual([card]);
   });
 });
 
 describe('EffectsView — every tile has the art of its card', () => {
   // The fixture is TCGdex's own copy: the API links an image for every card
-  // but the five in subset sets, whose art cardImageBase recovers. Each tile
-  // is rendered live in turn, which covers both of its paths (plain CardImage,
-  // and HoloCard) and the note a live tile shows when it has no art.
-  it.each(EFFECT_GALLERY.map((entry) => entry.effect))(
-    'draws art on every tile, and no no-art note, with %s live',
-    (effect) => {
-      const html = renderPage(effect, ALL_CARDS);
-      const tiles = buttons(html);
-      expect(tiles).toHaveLength(EFFECT_GALLERY.length);
-      const artless = EFFECT_GALLERY.filter((_, i) => !/<img\b/.test(tiles[i])).map(
-        (entry) => entry.effect,
-      );
-      expect(artless).toEqual([]);
-      expect(html).not.toContain(NO_ART_NOTE);
-    },
-  );
+  // but the subset-set ones, whose art cardImageBase recovers. Each card is
+  // made live in turn, which covers both paths of every tile (plain
+  // CardImage, and HoloCard) and the note a live tile shows when it has no art.
+  it.each(SELECTIONS)('draws art on every tile, and no no-art note, with %s %s live', (e, card) => {
+    const html = livePage(e, card);
+    const all = tiles(html);
+    expect(all).toHaveLength(CARD_IDS.size);
+    expect(all.filter((t) => !/<img\b/.test(t.inner)).map((t) => t.cardId)).toEqual([]);
+    expect(html).not.toContain(NO_ART_NOTE);
+  });
 
   it('still shows the note, word for word, on a live tile whose card has no art', () => {
     // Keeps the check above honest: the note it looks for is really rendered.
-    expect(renderPage('v-max', UNLINKED_CARDS)).toContain(NO_ART_NOTE);
+    expect(renderPage({ effect: 'v-max' }, UNLINKED_CARDS)).toContain(NO_ART_NOTE);
+  });
+});
+
+describe('EffectsView — loading, one tile at a time', () => {
+  it('lets a card still loading cost its own tile, never its section or the live card', () => {
+    const [first, second] = EFFECT_GALLERY;
+    const slow = second.cardIds[1];
+    const loaded = ALL_CARDS.filter((card) => card.id !== slow);
+    const html = renderPage({}, loaded);
+    const all = tiles(html);
+    expect(all).toHaveLength(CARD_IDS.size);
+    expect(all.filter((t) => !/<img\b/.test(t.inner)).map((t) => t.cardId)).toEqual([slow]);
+    expect(dataEffects(html)).toEqual([first.effect]);
+
+    // A live card still loading renders its skeleton, and no other card goes
+    // live in its place.
+    const waiting = renderPage({ effect: second.effect, card: slow }, loaded);
+    expect(dataEffects(waiting)).toEqual([]);
+    expect(pressedCards(waiting)).toEqual([slow]);
   });
 });
 
 describe('EffectsView — tile markup', () => {
+  it('makes every tile a real toggle button, with nothing that switches off its focus ring', () => {
+    // outline-none (or outline-hidden) beside FOCUS_RING's outline-2 leaves a
+    // keyboard-focused tile with no ring at all: see the comment on FOCUS_RING.
+    const all = tiles(renderPage({}, ALL_CARDS));
+    expect(all).toHaveLength(CARD_IDS.size);
+    for (const { attrs, cardId } of all) {
+      expect(attrs, cardId).toContain('type="button"');
+      expect(attrs, cardId).toMatch(/aria-pressed="(?:true|false)"/);
+      expect(attrs, cardId).not.toMatch(/\boutline-(?:none|hidden)\b/);
+    }
+  });
+
   it('puts no block-level element inside a tile button', () => {
     // A <button> takes phrasing content only. HoloCard's root and CardImage's
     // no-image placeholder, both inside a tile, used to be <div>s. Every card
     // is seeded without its linked image, so each tile renders loaded: one
     // live HoloCard, and plain art in the rest (the placeholder, or the
     // recovered <img> on a subset-set card).
-    const tiles = buttons(renderPage('reverse-holo', UNLINKED_CARDS));
-    expect(tiles).toHaveLength(EFFECT_GALLERY.length);
-    for (const inner of tiles) {
+    const all = tiles(renderPage({ effect: 'reverse-holo' }, UNLINKED_CARDS));
+    expect(all).toHaveLength(CARD_IDS.size);
+    for (const { inner } of all) {
       expect(inner).not.toMatch(/<(?:div|p|section|article|ul|ol|li|h[1-6]|table)\b/);
     }
   });
 
   it('keeps the art out of the tile name, which its caption already gives', () => {
     // As served, every tile reaches the <img> path, live tile included.
-    const alts = [...renderPage('reverse-holo', ALL_CARDS).matchAll(/<img\b[^>]*\balt="([^"]*)"/g)];
-    expect(alts).toHaveLength(EFFECT_GALLERY.length);
+    const alts = [
+      ...renderPage({ effect: 'reverse-holo' }, ALL_CARDS).matchAll(/<img\b[^>]*\balt="([^"]*)"/g),
+    ];
+    expect(alts).toHaveLength(CARD_IDS.size);
     expect(alts.map(([, alt]) => alt).filter(Boolean)).toEqual([]);
 
     // And with no image: the placeholder that repeats the name is hidden too.
-    const placeholders = [...renderPage('reverse-holo', UNLINKED_CARDS).matchAll(/<span\b[^>]*>/g)]
+    const placeholders = [
+      ...renderPage({ effect: 'reverse-holo' }, UNLINKED_CARDS).matchAll(/<span\b[^>]*>/g),
+    ]
       .map(([tag]) => tag)
       .filter((tag) => tag.includes('aspect-ratio:63 / 88') && tag.includes('bg-holo-panel'));
     expect(PLACEHOLDER_COUNT).toBeGreaterThan(0);

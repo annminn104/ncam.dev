@@ -36,7 +36,7 @@ function renderView(route: Route): ReactNode {
     case 'collection':
       return <CollectionView />;
     case 'effects':
-      return <EffectsView effect={route.effect} />;
+      return <EffectsView effect={route.effect} card={route.card} />;
     case 'not-found':
       return <NotFoundView path={route.path} />;
   }

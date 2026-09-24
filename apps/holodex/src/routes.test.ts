@@ -60,14 +60,36 @@ describe('parseRoute', () => {
     expect(parseRoute('/card/swsh3-136')).toStrictEqual({ view: 'card', cardId: 'swsh3-136' });
   });
 
-  it('parses the effects page, with and without a selected effect', () => {
-    // No `effect` key at all on the bare page — strictly, as with `variant` above.
+  it('parses the effects page, a section on it, and a card in that section', () => {
+    // No `effect` or `card` key at all where the URL names none — strictly,
+    // as with `variant` above.
+    const vMax = EFFECT_GALLERY.find((entry) => entry.effect === 'v-max');
+    const card = vMax?.cardIds[1] ?? '';
     expect(parseRoute('/effects')).toStrictEqual({ view: 'effects' });
-    expect(parseRoute('/effects/v-max')).toEqual({ view: 'effects', effect: 'v-max' });
+    expect(parseRoute('/effects/v-max')).toStrictEqual({ view: 'effects', effect: 'v-max' });
+    expect(parseRoute(`/effects/v-max?card=${card}`)).toStrictEqual({
+      view: 'effects',
+      effect: 'v-max',
+      card,
+    });
   });
 
-  it('opens the effects page on its default tile for an unknown effect, not a 404', () => {
-    expect(parseRoute('/effects/not-an-effect')).toEqual({ view: 'effects' });
+  it('opens the effects page on its defaults for an unknown effect or card, not a 404', () => {
+    const [first, second] = EFFECT_GALLERY;
+    expect(parseRoute('/effects/not-an-effect')).toStrictEqual({ view: 'effects' });
+    expect(parseRoute(`/effects/not-an-effect?card=${first.cardIds[1]}`)).toStrictEqual({
+      view: 'effects',
+    });
+    // A card the section does not show opens the section on its first card,
+    // another section's card included.
+    for (const card of ['not-a-card', first.cardIds[1], '']) {
+      expect(parseRoute(`/effects/${second.effect}?card=${card}`), card).toStrictEqual({
+        view: 'effects',
+        effect: second.effect,
+      });
+    }
+    // Without a section, a card names nothing.
+    expect(parseRoute(`/effects?card=${first.cardIds[1]}`)).toStrictEqual({ view: 'effects' });
     expect(parseRoute('/effects/v-max/extra')).toEqual({
       view: 'not-found',
       path: '/effects/v-max/extra',
@@ -118,11 +140,16 @@ describe('formatRoute', () => {
     expect(formatRoute(parseRoute(input))).toBe(input);
   });
 
-  it('round-trips the effects page and every tile on it', () => {
+  it('round-trips the effects page, every section on it, and every card in each', () => {
     expect(formatRoute(parseRoute('/effects'))).toBe('/effects');
-    for (const { effect } of EFFECT_GALLERY) {
-      expect(parseRoute(`/effects/${effect}`)).toEqual({ view: 'effects', effect });
+    for (const { effect, cardIds } of EFFECT_GALLERY) {
+      expect(parseRoute(`/effects/${effect}`)).toStrictEqual({ view: 'effects', effect });
       expect(formatRoute(parseRoute(`/effects/${effect}`))).toBe(`/effects/${effect}`);
+      for (const card of cardIds) {
+        const url = `/effects/${effect}?card=${card}`;
+        expect(parseRoute(url)).toStrictEqual({ view: 'effects', effect, card });
+        expect(formatRoute(parseRoute(url))).toBe(url);
+      }
     }
   });
 });
@@ -146,13 +173,17 @@ describe('viewKey', () => {
     );
   });
 
-  it('is constant across the selected effect — picking a tile must not remount the view', () => {
-    // Same bug as above if this keyed on the effect: the grid would be
-    // rebuilt on every pick and focus would drop off the tile just clicked.
+  it('is constant across every section and card — picking one must not remount the view', () => {
+    // Same bug as above if this keyed on either: the whole page would be
+    // rebuilt on every pick and focus would drop off the card just clicked.
     const bare = viewKey(parseRoute('/effects'));
-    for (const { effect } of EFFECT_GALLERY) {
+    for (const { effect, cardIds } of EFFECT_GALLERY) {
       expect(viewKey(parseRoute(`/effects/${effect}`)), effect).toBe(bare);
+      for (const card of cardIds) {
+        expect(viewKey(parseRoute(`/effects/${effect}?card=${card}`)), card).toBe(bare);
+      }
     }
+    expect(viewKey(parseRoute('/effects/not-an-effect?card=nope')), 'fallback').toBe(bare);
   });
 
   it('changes when the view genuinely changes', () => {
