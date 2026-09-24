@@ -79,11 +79,16 @@ deliberate approximation from a porting mistake.
 - **`iri` texture**: a fine coloured speckle — random dots on near-black, hues biased to violet / blue
   / white. The reference's `iri-8` is 300×300 of exactly this. Generate it in `textures.ts` like the
   existing `sparkle()`, deterministically seeded so it is identical every load.
-- **`pokeball`, `pokeball-inner`, `masterball` textures** — added after dispatch. The reference's
-  Poké Ball reverse uses three _shared_ pattern images as masks (`--pokeball`, `--pokeball-inner`,
-  `--masterball`): dark Poké Ball outline glyphs on light grey, two sizes, staggered, tiling. Unlike
-  per-card masks these are identical on every card, so they are generated. Task 2 layers them over the
-  gradient with `multiply` to stand in for masking.
+- **`pokeball`, `pokeball-inner`, `masterball`, `masterball-inner` textures** — added after dispatch.
+  The reference's Poké Ball reverse uses _shared_ pattern images (`--pokeball`, `--pokeball-inner`,
+  `--masterball`, `--masterball-inner`), identical on every card, so they are generated. **They are
+  alpha masks, not dark-on-light images**: `pokeball-outer` is about 80% fully transparent with opaque
+  glyph strokes, applied with `mask-mode: alpha`, so the foil shows **on** the glyphs — as on real 151
+  reverse holos. (An earlier version of this plan said "dark glyphs on light grey"; that light grey was
+  only the image viewer's rendering of transparency. Task 1 measured the pixels and caught it.) Ours are
+  drawn **white glyphs on black** (`7c28553`), so `multiply` over the gradient shows it only through the
+  glyphs. The reference's inner caps are about 53% opaque; ours are full strength because our element
+  filter runs after the layer stack, so put the 0.53 in the element's opacity instead.
 - **`birthday` texture**: multicoloured **four-pointed star** sparkles of varied size on black — the
   reference's `birthday-holo-dank` is 1140×2026 of rainbow-hued stars. Draw star shapes (two crossed
   thin diamonds) at random positions, sizes and hues, seeded.
