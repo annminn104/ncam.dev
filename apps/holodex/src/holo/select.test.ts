@@ -11,11 +11,13 @@ import {
   eraOf,
   foilBrightnessOf,
   glowOf,
+  layoutOf,
   selectHolo,
   type EffectId,
   type HoloSelection,
 } from './select';
 import { hsl } from './effects/css';
+import type { CardLayout } from './regions';
 
 /** What a selection shows: its effect, where it is confined, and whether that is inverted. */
 const shown = ({ effect, shape, invert }: HoloSelection) => ({ effect, shape, invert });
@@ -335,6 +337,14 @@ describe('selectHolo — clip shape', () => {
   it('gives a basic pokemon the regular region', () => {
     expect(selectHolo(card({ rarity: 'Holo Rare', stage: 'Basic' })).shape).toBe('regular');
   });
+
+  it('hands on the card’s frame, which places the art window of both', () => {
+    const dusknoir = selectHolo(
+      card({ id: 'dp1-2', localId: '2', rarity: 'Rare Holo', stage: 'Stage2' }),
+    );
+    expect([dusknoir.shape, dusknoir.layout]).toEqual(['stage', 'dp']);
+    expect(selectHolo(card({ rarity: 'Holo Rare', stage: 'Basic' })).layout).toBe('swsh');
+  });
 });
 
 describe('selectHolo — Double rare is the standard-layout ex, not a full art', () => {
@@ -429,6 +439,101 @@ describe('eraOf — Scarlet & Violet and Mega against everything older', () => {
   it('counts 30th Celebration and 30th Classic Collection as Mega, though neither id starts with me', () => {
     expect(eraOf(THIRTIETH_RARE)).toBe('modern');
     expect(eraOf(THIRTIETH_CLASSIC)).toBe('modern');
+  });
+});
+
+/**
+ * Every set of all 21 TCGdex series (GET /series/{id}, 2026-09-25), by the
+ * frame its cards are printed in: each series' sets in its own frame, and the
+ * trainer kits, POP Series and McDonald's collections, which TCGdex files in
+ * series of their own, in their era's.
+ */
+const SETS_BY_LAYOUT: Partial<Record<CardLayout, string[]>> = {
+  wotc: [
+    ...['base1', 'base2', 'basep', 'wp', 'base3', 'base4', 'base5', 'gym1', 'gym2', 'neo1'],
+    ...['neo2', 'si1', 'neo3', 'neo4', 'lc'],
+  ],
+  'e-card': ['ecard1', 'ecard2', 'ecard3'],
+  ex: [
+    ...['ex1', 'ex2', 'ex3', 'ex4', 'ex5', 'ex5.5', 'ex6', 'ex7', 'ex8', 'ex9', 'exu', 'ex10'],
+    ...['ex11', 'ex12', 'ex13', 'ex14', 'ex15', 'ex16', 'np', 'pop1', 'pop2', 'pop3', 'pop4'],
+    ...['pop5', 'tk-ex-latio', 'tk-ex-latia', 'tk-ex-p', 'tk-ex-m'],
+  ],
+  dp: [
+    ...['pop6', 'pop7', 'pop8', 'pop9', 'tk-dp-m', 'tk-dp-l', 'dp1', 'dpp', 'dp2', 'dp3', 'dp4'],
+    ...['dp5', 'dp6', 'dp7', 'pl1', 'pl2', 'pl3', 'pl4'],
+  ],
+  hgss: ['tk-hs-g', 'tk-hs-r', 'hgss1', 'hgssp', 'hgss2', 'hgss3', 'hgss4', 'col1'],
+  'bw-xy': [
+    ...['tk-bw-z', 'tk-bw-e', 'tk-xy-sy', 'tk-xy-n', 'tk-xy-w', 'tk-xy-b', 'tk-xy-latia'],
+    ...['tk-xy-latio', 'tk-xy-su', 'tk-xy-p', 'bw1', 'bwp', 'bw2', 'bw3', 'bw4', 'bw5', 'bw6'],
+    ...['dv1', 'bw7', 'bw8', 'bw9', 'bw10', 'bw11', 'rc', '2011bw', '2012bw', '2014xy', '2015xy'],
+    ...['2016xy', 'xyp', 'xy0', 'xya', 'xy1', 'xy2', 'xy3', 'xy4', 'xy5', 'dc1', 'xy6', 'xy7'],
+    ...['xy8', 'xy9', 'g1', 'xy10', 'xy11', 'xy12'],
+  ],
+  sm: [
+    ...['tk-sm-l', 'tk-sm-r', '2017sm', '2018sm', '2019sm', 'smp', 'sm1', 'sm2', 'sm3', 'sm3.5'],
+    ...['sm4', 'sm5', 'sm6', 'sm7', 'sm7.5', 'sm8', 'sm9', 'det1', 'sm10', 'sm11', 'sm115', 'sma'],
+    ...['sm12'],
+  ],
+  swsh: [
+    ...['2021swsh', '2022swsh', 'swshp', 'swsh1', 'swsh2', 'swsh3', 'fut2020', 'swsh3.5', 'swsh4'],
+    ...['swsh4.5sv', 'swsh4.5', 'swsh5', 'swsh6', 'swsh7', 'cel25', 'cel25cc', 'swsh8', 'swsh9'],
+    ...['swsh9tg', 'swsh10tg', 'swsh10', 'swsh10.5', 'swsh11tg', 'swsh11', 'swsh12tg', 'swsh12'],
+    ...['swsh12.5gg', 'swsh12.5'],
+  ],
+  // Unmeasured: Scarlet & Violet, Pocket and Mega; Pokémon Rumble's own
+  // frame; and the four sets with no card art at all.
+  other: [
+    ...['miscp', 'jumbo', 'sp', 'bog', 'ru1', '2023sv', '2024sv', 'svp', 'sve', 'sv01', 'sv02'],
+    ...['sv03', 'sv03.5', 'mfb', 'sv04', 'sv04.5', 'sv05', 'sv06', 'sv06.5', 'sv07', 'sv08'],
+    ...['sv08.5', 'sv09', 'sv10', 'sv10.5w', 'sv10.5b', 'A1', 'P-A', 'A1a', 'A2', 'A2a', 'A2b'],
+    ...['A3', 'A3a', 'A3b', 'A4', 'A4a', 'B1', 'B1a', 'B2', 'B2a', 'mee', 'mep', 'me01', 'me02'],
+    ...['me02.5', 'me03', 'me04', 'me05', '30th-c', '30th'],
+  ],
+};
+
+describe('layoutOf — the frame a card is printed in', () => {
+  // A card's set is its id less `-${localId}`, as for eraOf.
+  const layout = (set: string, patch: Partial<Card> = {}) =>
+    layoutOf({ id: `${set}-1`, localId: '1', name: 'Test', rarity: 'Holo Rare', ...patch });
+
+  it('puts every TCGdex set in its frame', () => {
+    const wrong: string[] = [];
+    for (const [expected, sets] of Object.entries(SETS_BY_LAYOUT)) {
+      for (const set of sets) {
+        if (layout(set) !== expected) wrong.push(`${set}: ${layout(set)}, not ${expected}`);
+      }
+    }
+    expect(wrong).toEqual([]);
+    const all = Object.values(SETS_BY_LAYOUT).flat();
+    expect(all).toHaveLength(220);
+    expect(new Set(all).size).toBe(220);
+  });
+
+  it('gives a LV.X, a Prime and a LEGEND their own frames, whatever the set', () => {
+    expect(layout('pl4', { rarity: 'Rare Holo LV.X', name: 'Arceus LV.X' })).toBe('lv-x');
+    expect(layout('hgss3', { rarity: 'Rare PRIME', name: 'Espeon' })).toBe('prime');
+    expect(layout('hgss3', { rarity: 'LEGEND', name: 'Kyogre & Groudon LEGEND' })).toBe('legend');
+  });
+
+  it('frames Platinum’s SP Pokémon by their owner’s title, and an SP LV.X as a LV.X', () => {
+    for (const name of ['Absol G', 'Luxray GL', 'Mr. Mime E4', 'Drifblim FB', 'Garchomp C']) {
+      expect(layout('pl2', { name })).toBe('dp-sp');
+    }
+    expect(layout('dpp', { name: 'Garchomp C' })).toBe('dp-sp');
+    expect(layout('pl1', { name: 'Ampharos' })).toBe('dp');
+    expect(layout('pl1', { name: 'Dialga G LV.X', rarity: 'Rare Holo LV.X' })).toBe('lv-x');
+  });
+
+  it('reads an SP title only in the Platinum sets and the DP promos', () => {
+    // Diamond & Pearl proper has an Unown C and an Unown G.
+    expect(layout('dp1', { name: 'Unown C' })).toBe('dp');
+    expect(layout('dp4', { name: 'Unown G' })).toBe('dp');
+  });
+
+  it('leaves a card whose id does not end in its number to other', () => {
+    expect(layoutOf({ id: 'dp1', localId: '2', name: 'Test', rarity: 'Holo Rare' })).toBe('other');
   });
 });
 

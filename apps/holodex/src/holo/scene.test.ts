@@ -1,7 +1,9 @@
 import { Texture } from 'three';
 import { describe, expect, it } from 'vitest';
 import { EFFECTS } from './effects';
+import { cutsFor } from './regions';
 import {
+  cutUniform,
   orientTexture,
   pointerFromCenter,
   pointerToUV,
@@ -89,6 +91,21 @@ describe('orientTexture', () => {
     // otherwise slip through untested.
     const texture = new Texture();
     expect(orientTexture(texture).flipY).toBe(false);
+  });
+});
+
+// setSelection hands each cut box to the shader through cutUniform, which is
+// pure: compile.test.ts runs coverage() on exactly these vectors.
+describe('cutUniform', () => {
+  it('lays a box out as inBox() reads it: x0, y0, x1, y1', () => {
+    const [banner, disc] = cutsFor('stage', 'dp');
+    expect(cutUniform(banner)).toEqual([0, 0, 0.57, 0.125]);
+    expect(cutUniform(disc)).toEqual([0, 0, 0.19, 0.165]);
+    expect(cutUniform(cutsFor('stage', 'ex')[0])).toEqual([0, 0.44, 0.18, 1]);
+  });
+
+  it('sends all zeros, which cut nothing, for a box the region lacks', () => {
+    expect(cutUniform(cutsFor('regular', 'swsh')[0])).toEqual([0, 0, 0, 0]);
   });
 });
 

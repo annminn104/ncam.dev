@@ -13,7 +13,7 @@ import {
 } from 'three';
 import { EFFECTS } from './effects';
 import { createMaterial } from './material';
-import { regionFor, SHAPE_ID } from './regions';
+import { cutsFor, regionFor, type CutBox } from './regions';
 import type { HoloSelection } from './select';
 import type { Effect } from './shader/types';
 import { makeTexture, type TextureName } from './textures';
@@ -134,6 +134,15 @@ export function pointerFromCenter(x: number, y: number): number {
   return Math.min(1, Math.hypot(x, y));
 }
 
+/**
+ * A cut box (regions.ts's cutsFor) as the vec4 shader/base.ts's inBox()
+ * reads — x0, y0, x1, y1 — or all zeros, which cuts nothing, where the region
+ * has no box to cut. Pure for the same reason as pointerToUV.
+ */
+export function cutUniform(box: CutBox | undefined): [number, number, number, number] {
+  return box ? [box.x0, box.y0, box.x1, box.y1] : [0, 0, 0, 0];
+}
+
 export function createHoloScene(canvas: HTMLCanvasElement): HoloScene {
   const renderer = new WebGLRenderer({ canvas, alpha: true, antialias: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -237,10 +246,13 @@ export function createHoloScene(canvas: HTMLCanvasElement): HoloScene {
       }
 
       // vec4(top, right, bottom, left), matching the order coverage() in
-      // shader/base.ts reads uClipRect in.
-      const region = regionFor(selection.shape);
+      // shader/base.ts reads uClipRect in; each cut vec4(x0, y0, x1, y1), the
+      // order its inBox() reads, and all zeros for a box the region lacks.
+      const region = regionFor(selection.shape, selection.layout);
       material.uniforms.uClipRect.value.set(region.top, region.right, region.bottom, region.left);
-      material.uniforms.uClipShape.value = SHAPE_ID[selection.shape];
+      const [cutA, cutB] = cutsFor(selection.shape, selection.layout);
+      material.uniforms.uCutA.value.set(...cutUniform(cutA));
+      material.uniforms.uCutB.value.set(...cutUniform(cutB));
       material.uniforms.uInvert.value = selection.invert ? 1 : 0;
       material.uniforms.uCardGlow.value.set(...selection.glow);
       material.uniforms.uFoilBrightness.value = selection.foilBrightness;

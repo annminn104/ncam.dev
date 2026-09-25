@@ -2,7 +2,15 @@ import { describe, expect, it } from 'vitest';
 import { BLEND_ID } from './blend';
 import { compileEffect, needsRGBA, VERTEX_SHADER } from './compile';
 import { baseGLSL } from './base';
-import { coversPoint, regionFor, SHAPE_ID, STAGE_STEP, type RegionRect } from '../regions';
+import {
+  coversPoint,
+  cutsFor,
+  MAX_CUTS,
+  regionFor,
+  type CardLayout,
+  type CutBox,
+  type RegionRect,
+} from '../regions';
 import type { ClipShape } from '../select';
 import {
   BACKGROUND_X,
@@ -310,17 +318,15 @@ describe('compileEffect', () => {
     expect(clip).toBeLessThan(firstGlareMix);
   });
 
-  it('takes the stage cut-out constants from regions.ts, not its own literals', () => {
-    // base.ts used to hardcode 0.57/0.16 while regions.ts owned the same pair
-    // for coversPoint. Editing either alone left the suite green with the CPU
-    // and GPU clips silently disagreeing.
+  it('takes its cut-out boxes from uniforms, one for each box regions.ts may cut', () => {
+    // base.ts used to hardcode the stage step while regions.ts owned the same
+    // pair for coversPoint, and editing either alone left the suite green with
+    // the CPU and GPU clips disagreeing. Now every number comes from
+    // regions.ts through the scene (cutsFor, cutUniform), and the shader
+    // holds none: only as many box uniforms as a region may cut.
     const src = compileEffect(minimal);
-    const x = /const float STAGE_STEP_X = ([0-9.]+);/.exec(src);
-    const y = /const float STAGE_STEP_Y = ([0-9.]+);/.exec(src);
-    expect(x).not.toBeNull();
-    expect(y).not.toBeNull();
-    expect(Number(x?.[1])).toBe(STAGE_STEP.x);
-    expect(Number(y?.[1])).toBe(STAGE_STEP.y);
+    expect(src.match(/uniform vec4 uCut[A-Z];/g)).toHaveLength(MAX_CUTS);
+    expect(src).not.toContain('STAGE_STEP');
   });
 
   it('emits the element filter rather than dropping it on the floor', () => {
@@ -469,24 +475,28 @@ describe('compileEffect', () => {
  * shader mutates what runs here.
  */
 function transpileCoverage(glsl: string) {
-  const consts = glsl.match(/const float STAGE_STEP_[XY] = [^;]+;/g) ?? [];
+  const inBox = /float inBox\(vec2 uv, vec4 box\) \{\n([\s\S]*?)\n\}/.exec(glsl)?.[1];
   const body = /float coverage\(vec2 uv\) \{\n([\s\S]*?)\n\}/.exec(glsl)?.[1];
-  if (consts.length !== 2 || !body) {
+  if (!inBox || !body) {
     throw new Error('coverage() no longer has the shape this translation assumes');
   }
 
-  const js = [...consts, body]
-    .join('\n')
-    .replace(/^\s*\/\/.*$/gm, '')
-    .replace(/const float /g, 'const ')
-    .replace(/\bfloat /g, 'let ')
-    .replace(/uClipRect\.x/g, 'rect.top')
-    .replace(/uClipRect\.y/g, 'rect.right')
-    .replace(/uClipRect\.z/g, 'rect.bottom')
-    .replace(/uClipRect\.w/g, 'rect.left')
-    .replace(/uClipShape/g, 'shapeId')
-    .replace(/uInvert/g, 'invert')
-    .replace(/ == /g, ' === ');
+  const toJS = (src: string) =>
+    src
+      .replace(/^\s*\/\/.*$/gm, '')
+      .replace(/\bfloat /g, 'let ')
+      .replace(/uClipRect\.x/g, 'rect.top')
+      .replace(/uClipRect\.y/g, 'rect.right')
+      .replace(/uClipRect\.z/g, 'rect.bottom')
+      .replace(/uClipRect\.w/g, 'rect.left')
+      .replace(/\bbox\.x\b/g, 'box.x0')
+      .replace(/\bbox\.y\b/g, 'box.y0')
+      .replace(/\bbox\.z\b/g, 'box.x1')
+      .replace(/\bbox\.w\b/g, 'box.y1')
+      .replace(/\buCutA\b/g, 'cutA')
+      .replace(/\buCutB\b/g, 'cutB')
+      .replace(/uInvert/g, 'invert');
+  const js = `const inBox = (uv, box) => {\n${toJS(inBox)}\n};\n${toJS(body)}`;
 
   // A translation that quietly left GLSL behind would be a twin all over
   // again, so fail loudly rather than evaluate something half-converted.
@@ -495,42 +505,66 @@ function transpileCoverage(glsl: string) {
 
   const step = (edge: number, v: number) => (v >= edge ? 1 : 0);
   const mix = (a: number, b: number, t: number) => a * (1 - t) + b * t;
-  const compiled = new Function('uv', 'rect', 'shapeId', 'invert', 'step', 'mix', js) as (
+  const compiled = new Function('uv', 'rect', 'cutA', 'cutB', 'invert', 'step', 'mix', js) as (
     uv: { x: number; y: number },
     rect: RegionRect,
-    shapeId: number,
+    cutA: CutBox,
+    cutB: CutBox,
     invert: number,
     step: (edge: number, v: number) => number,
     mix: (a: number, b: number, t: number) => number,
   ) => number;
 
-  return (shape: ClipShape, x: number, y: number, invert: boolean) =>
-    compiled({ x, y }, regionFor(shape), SHAPE_ID[shape], invert ? 1 : 0, step, mix);
+  // A box the region lacks reaches the shader as all zeros (scene.ts's cutUniform).
+  const none: CutBox = { x0: 0, y0: 0, x1: 0, y1: 0 };
+  return (shape: ClipShape, x: number, y: number, invert: boolean, layout?: CardLayout) => {
+    const [cutA = none, cutB = none] = cutsFor(shape, layout);
+    return compiled({ x, y }, regionFor(shape, layout), cutA, cutB, invert ? 1 : 0, step, mix);
+  };
 }
 
 describe('coverage() in GLSL agrees with coversPoint() in JS', () => {
   const coverage = transpileCoverage(baseGLSL);
   const shapes: ClipShape[] = ['full', 'regular', 'stage', 'trainer', 'borders'];
+  const layouts: CardLayout[] = [
+    'wotc',
+    'e-card',
+    'ex',
+    'dp',
+    'dp-sp',
+    'lv-x',
+    'hgss',
+    'prime',
+    'legend',
+    'bw-xy',
+    'sm',
+    'swsh',
+    'other',
+  ];
   // Deliberately offset off the round numbers so no sample lands exactly on an
-  // inset edge: float equality on the boundary is not what this pins.
-  const axis = Array.from({ length: 21 }, (_, i) => (i / 20) * 0.98 + 0.011);
+  // inset edge, and fine enough that each of the thin banners holds a row.
+  const axis = Array.from({ length: 81 }, (_, i) => (i / 80) * 0.98 + 0.0107);
 
-  for (const shape of shapes) {
-    for (const invert of [false, true]) {
-      it(`agrees across the card for ${shape}${invert ? ', inverted' : ''}`, () => {
-        const disagreements: string[] = [];
-        for (const x of axis) {
-          for (const y of axis) {
-            const gpu = coverage(shape, x, y, invert) > 0.5;
-            const cpu = coversPoint(shape, x, y, invert);
-            if (gpu !== cpu) {
-              disagreements.push(`(${x.toFixed(3)}, ${y.toFixed(3)}) gpu=${gpu} cpu=${cpu}`);
+  for (const layout of layouts) {
+    it(`agrees across the card for every shape on ${layout}, inverted or not`, () => {
+      const disagreements: string[] = [];
+      for (const shape of shapes) {
+        for (const invert of [false, true]) {
+          for (const x of axis) {
+            for (const y of axis) {
+              const gpu = coverage(shape, x, y, invert, layout) > 0.5;
+              const cpu = coversPoint(shape, x, y, invert, layout);
+              if (gpu !== cpu) {
+                disagreements.push(
+                  `${shape}${invert ? '/inv' : ''} (${x.toFixed(3)}, ${y.toFixed(3)}) gpu=${gpu} cpu=${cpu}`,
+                );
+              }
             }
           }
         }
-        expect(disagreements).toEqual([]);
-      });
-    }
+      }
+      expect(disagreements).toEqual([]);
+    });
   }
 
   it('actually exercises both verdicts, so agreement is not vacuous', () => {
@@ -538,6 +572,25 @@ describe('coverage() in GLSL agrees with coversPoint() in JS', () => {
     expect(coverage('regular', 0.5, 0.3, false)).toBe(1);
     expect(coverage('regular', 0.5, 0.8, false)).toBe(0);
     expect(coverage('regular', 0.5, 0.8, true)).toBe(1);
+  });
+
+  it('cuts out every box of every layout, where the art would take the foil', () => {
+    // The middle of each box's overlap with the art window: inside the rect,
+    // so only the box can keep the foil off it.
+    for (const layout of layouts) {
+      for (const shape of ['regular', 'stage'] as const) {
+        const r = regionFor(shape, layout);
+        for (const c of cutsFor(shape, layout)) {
+          const x = (Math.max(c.x0, r.left) + Math.min(c.x1, 1 - r.right)) / 2;
+          const y = (Math.max(c.y0, r.top) + Math.min(c.y1, 1 - r.bottom)) / 2;
+          const where = `${layout} ${shape} (${x.toFixed(3)}, ${y.toFixed(3)})`;
+          expect(x >= r.left && x <= 1 - r.right && y >= r.top && y <= 1 - r.bottom, where).toBe(
+            true,
+          );
+          expect(coverage(shape, x, y, false, layout), where).toBe(0);
+        }
+      }
+    }
   });
 });
 

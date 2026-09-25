@@ -98,7 +98,8 @@ return a `MountHandle`: a disposer that also carries an optional
   (every request a 404 without CORS headers) for about 20 minutes.
 - `src/holo/` — eager (statically imported by `HoloCard.tsx`, so part of the
   main chunk): `select.ts` (rarity/layout/printing → `HoloSelection`),
-  `regions.ts` (`ClipShape` → inset rect + `coversPoint`), `capability.ts`
+  `regions.ts` (`ClipShape` and the card's `CardLayout` → inset rect, cut-out
+  boxes and `coversPoint`), `capability.ts`
   (`supportsHolo`), `showcase.ts` (the one-shot intro sweep, a pure state
   machine over an injected clock), `use-reduced-motion.ts`,
   `effect-gallery.ts` (the effects page's matrix: three
@@ -333,11 +334,32 @@ and `legacy-glares.test.ts` the 22.
 
 **Clip regions, and why reverse holo inverts.** `holo/regions.ts` maps each
 `ClipShape` (`regular`, `stage`, `trainer`, `borders`, `full`) to an inset
-`RegionRect` — fractions of the card copied straight from the reference's CSS
-`inset()` percentages — plus `stage`'s extra step-cut for an evolution card's
-"evolves from" box. `coversPoint(shape, x, y, invert)` is the tested twin of
-the GLSL `coverage()` function in `shader/base.ts`: same constants, same
-result, one in TypeScript for the test suite and one in GLSL for the shader.
+`RegionRect` — fractions of the card — plus up to two boxes cut out of it
+(`cutsFor`). `trainer`, `borders` and `full` are the reference's CSS
+`inset()` percentages on every card. `regular` and `stage` are the art
+window of the card's **layout** (`CardLayout`), the frame it is printed in,
+which `select.ts#layoutOf` reads off its set (a table checked against all
+220 TCGdex sets: each series' in its own frame, the trainer kits, POP Series
+and McDonald's collections in their era's) or, for the three frames a rarity
+brings, its rarity (LV.X, Prime, LEGEND), and Platinum's SP Pokémon by the
+title their names end in. The boxes are what that frame prints over the
+art: the evolution badge, disc or banner of a `stage` card, a Diamond &
+Pearl or HGSS Basic's BASIC banner, an SP's owner portrait. Every window and
+box was measured off TCGdex's scans (2026-09-25; regions.ts says how) — the
+reference's `--clip` is a Sword & Shield card's, and on an HGSS card, say,
+left the art's outer 3% and bottom 4.6% bare. Sword & Shield keeps it, with
+its `--clip-stage` polygon as two boxes, banner and picture; Scarlet &
+Violet, Mega and Pocket (`other`, unmeasured) keep it too, with the one
+step-cut every evolution had before. A LEGEND half, all art, keeps its foil
+to the border. `coversPoint(shape, x, y, invert, layout)` is the tested twin
+of the GLSL `coverage()` in `shader/base.ts`, which reads the same numbers
+as uniforms (`uClipRect`, `uCutA`, `uCutB`, set by `scene.ts`, all zeros for
+a box the region lacks): `compile.test.ts` runs the emitted GLSL itself
+against it on every layout. The layout rides on `HoloSelection`, so
+`holoCanvasKey` reads it. Measure a new frame the same way — averaged edge
+maps, then the zoomed corners by eye — rather than copying another's
+numbers: the frames differ by several percent, and a stage box that fits
+one cuts art out of the next.
 Everything else (basic, regular-holo, full-art effects, …) confines its
 foil _inside_ the region — a window over the art. `reverse-holo` is the one
 case that flips `invert` to `true`, painting the foil _outside_ the region
@@ -352,7 +374,10 @@ pseudo-elements apart from their shine. The balls keep their glyphs inside
 the silver border (`borders`) while the shine's own dodge reaches it, and
 `illustration-rare`'s glare keeps to the border polygon. `insideRect()` in
 `shader/base.ts` draws it, and `compile.test.ts` runs the emitted GLSL
-against `coversPoint` as it does `coverage()`.
+against `coversPoint` as it does `coverage()`. An element's clip is
+compiled in, so it knows no layout: its `regular` is the reference's
+window, which fits the one element that takes it, radiant-holo's `:after`,
+as every Radiant Rare is a Sword & Shield card.
 
 **The effect DSL and the generator.** Each of the 30 effect files under
 `holo/effects/` (e.g. `cosmos-holo.ts`) is a declarative `Effect`
@@ -449,7 +474,7 @@ src)`) — there is nothing beneath the first layer within its own element to
 - The vertex shader **flips `vUv` to y-down** (`shader/base.ts`'s
   `VERTEX_SHADER`: `vUv = vec2(uv.x, 1.0 - uv.y)`), because three.js's
   `PlaneGeometry` is y-up but every consumer of `vUv` — the clip insets and
-  stage cut-out in `regions.ts`, every effect's `fromTop` offset, and the
+  cut-out boxes in `regions.ts`, every effect's `fromTop` offset, and the
   CSS-derived gradients they all come from — is authored y-down. Every
   texture the generated shaders sample therefore has to agree: both the
   shared generated textures and the per-card art texture set

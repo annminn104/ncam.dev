@@ -1,4 +1,5 @@
 import type { Card } from '../lib/tcgdex';
+import type { CardLayout } from './regions';
 
 /**
  * One effect per look in simeydotme/pokemon-cards-css (the first 22) and in
@@ -44,6 +45,12 @@ export type ClipShape = 'regular' | 'stage' | 'trainer' | 'borders' | 'full';
 export interface HoloSelection {
   effect: EffectId;
   shape: ClipShape;
+  /**
+   * The frame the card is printed in (layoutOf), which places the art window
+   * of `regular` and `stage` and cuts out what it prints over the art
+   * (regions.ts). The other shapes are the same on every card.
+   */
+  layout: CardLayout;
   /** reverse-holo inverts its clip: foil everywhere EXCEPT the region. */
   invert: boolean;
   /**
@@ -282,6 +289,58 @@ export function eraOf(card: Pick<Card, 'id' | 'localId'>): Era {
 }
 
 /**
+ * The frame each set prints its cards in, by set id, for regions.ts's
+ * measured layouts. Checked against every set of all 21 TCGdex series (GET
+ * /series/{id}, 2026-09-25; select.test.ts holds the whole list): each series'
+ * sets land in its frame — the promos, trainer kits (`tk-ex-…`, `tk-hs-…`),
+ * POP Series (1–5 the EX frame, 6–9 Diamond & Pearl's) and McDonald's
+ * collections (by year) in their era's. Left to `other`: Scarlet & Violet,
+ * Mega and Pocket, unmeasured; `ru1`, Pokémon Rumble's own frame; and the
+ * sets with no card art (`sp`, `bog`, `jumbo`, `miscp`).
+ */
+const LAYOUT_BY_SET: ReadonlyArray<readonly [RegExp, CardLayout]> = [
+  [/^(?:base\d|basep|wp|gym\d|neo\d|si1|lc)$/, 'wotc'],
+  [/^ecard\d$/, 'e-card'],
+  [/^(?:ex\d+|ex5\.5|exu|np|pop[1-5]|tk-ex-\w+)$/, 'ex'],
+  [/^(?:dp\d|dpp|pl\d|pop[6-9]|tk-dp-\w+)$/, 'dp'],
+  [/^(?:hgss\d|hgssp|col1|tk-hs-\w+)$/, 'hgss'],
+  [/^(?:bw\d+|bwp|dv1|rc|xy\d+|xy[pa]|dc1|g1|201[12]bw|201[456]xy|tk-(?:bw|xy)-\w+)$/, 'bw-xy'],
+  [/^(?:sm\d+|sm[37]\.5|smp|sma|det1|201[789]sm|tk-sm-\w+)$/, 'sm'],
+  [/^(?:swsh.*|fut2020|cel25(?:cc)?|202[12]swsh)$/, 'swsh'],
+];
+
+/**
+ * The rarities that bring a frame of their own, whatever the set: a LV.X's,
+ * a Prime's and a LEGEND half's.
+ */
+const LAYOUT_BY_RARITY: Readonly<Record<string, CardLayout>> = {
+  'Rare Holo LV.X': 'lv-x',
+  'Rare PRIME': 'prime',
+  LEGEND: 'legend',
+};
+
+/**
+ * Platinum's SP Pokémon, named for their owner's title: G (Team Galactic),
+ * GL (Gym Leader), E4 (Elite Four), FB (Frontier Brain) and C (Champion).
+ * TCGdex marks one `suffix: 'SP'` only now and then — Absol G has it,
+ * Drifblim FB not (checked 2026-09-25) — so the name decides, in the four
+ * Platinum sets and the DP promos alone. There it matches 103 cards, the SP
+ * Pokémon and one Trainer (whose clip takes no layout); in Diamond & Pearl
+ * proper it would match Unown C and Unown G. An SP LV.X is a LV.X first.
+ */
+const SP_NAME = / (?:G|GL|E4|FB|C)(?: LV\.X)?$/;
+const SP_SET = /^(?:pl\d|dpp)$/;
+
+/** Which frame a card is printed in: regions.ts's CardLayout. */
+export function layoutOf(card: Pick<Card, 'id' | 'localId' | 'name' | 'rarity'>): CardLayout {
+  const byRarity = card.rarity && LAYOUT_BY_RARITY[card.rarity];
+  if (byRarity) return byRarity;
+  const setId = setIdOf(card);
+  if (SP_SET.test(setId) && SP_NAME.test(card.name)) return 'dp-sp';
+  return LAYOUT_BY_SET.find(([pattern]) => pattern.test(setId))?.[1] ?? 'other';
+}
+
+/**
  * 151, whose reverse holos the reference draws Poké Ball and Master Ball
  * patterned. TCGdex lists no ball printing for the English 151 (its reverses
  * are plain, four with a cosmos one besides; checked 2026-09-25), so this is
@@ -488,6 +547,7 @@ export function selectHolo(card: Card, options: SelectOptions = {}): HoloSelecti
   return {
     effect,
     shape: clipShape(effect, card),
+    layout: layoutOf(card),
     invert,
     glow: glowOf(card),
     foilBrightness: foilBrightnessOf(card),

@@ -79,16 +79,17 @@ export function HoloCard({
   // through these fields. On a card it cannot change — one whose table
   // effect is not basic, regular-holo or sv-rare-holo that still lists a
   // reverse printing — listing it here rebuilt the whole scene on every toggle
-  // for no visual change. The glow and the foil brightness are the card's own,
-  // which `variant` never changes; they are fields here, the glow read by its
-  // three numbers, because the scene sets them (and so holoCanvasKey reads
-  // them too). If selectHolo ever grows
+  // for no visual change. The layout, the glow and the foil brightness are the
+  // card's own, which `variant` never changes; they are fields here, the glow
+  // read by its three numbers, because the scene sets them (and so
+  // holoCanvasKey reads them too). If selectHolo ever grows
   // another output, it joins these, and holoCanvasKey must read it as well.
   const [glowR, glowG, glowB] = freshSelection.glow;
   const selection = useMemo(
     () => ({
       effect: freshSelection.effect,
       shape: freshSelection.shape,
+      layout: freshSelection.layout,
       invert: freshSelection.invert,
       glow: [glowR, glowG, glowB] as [number, number, number],
       foilBrightness: freshSelection.foilBrightness,
@@ -96,6 +97,7 @@ export function HoloCard({
     [
       freshSelection.effect,
       freshSelection.shape,
+      freshSelection.layout,
       freshSelection.invert,
       glowR,
       glowG,

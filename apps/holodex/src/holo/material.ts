@@ -41,7 +41,9 @@ export function buildMaterial(effect: Effect): ShaderMaterial {
       uPointerFromCenter: { value: 0 },
       uTime: { value: 0 },
       uClipRect: { value: new Vector4(0, 0, 0, 0) },
-      uClipShape: { value: 0 },
+      // all zeros: no box cut until setSelection sets the card's own
+      uCutA: { value: new Vector4(0, 0, 0, 0) },
+      uCutB: { value: new Vector4(0, 0, 0, 0) },
       uInvert: { value: 0 },
       uCardOpacity: { value: 1 },
       // :root's --card-glow until setSelection sets the card's own

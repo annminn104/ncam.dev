@@ -8,6 +8,7 @@ const base: CanvasKeyInput = {
   selection: {
     effect: 'reverse-holo',
     shape: 'regular',
+    layout: 'swsh',
     invert: true,
     glow: [0.8, 1, 0.9833],
     foilBrightness: 0.55,
@@ -31,6 +32,7 @@ describe('holoCanvasKey', () => {
     ['the image going away', { src: null }],
     ['a different effect', { selection: { ...base.selection, effect: 'regular-holo' } }],
     ['a different clip shape', { selection: { ...base.selection, shape: 'stage' } }],
+    ['a different layout', { selection: { ...base.selection, layout: 'hgss' } }],
     ['the inversion flipping', { selection: { ...base.selection, invert: false } }],
     ['a different glow', { selection: { ...base.selection, glow: [0.9221, 0.3575, 0.2579] } }],
     ['a different foil brightness', { selection: { ...base.selection, foilBrightness: 0.7 } }],
