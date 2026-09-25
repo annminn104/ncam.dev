@@ -92,6 +92,10 @@ return a `MountHandle`: a disposer that also carries an optional
   card's era appears in both its sections, each chip qualified by era
   ("Rare · Scarlet & Violet, Mega", "Rare · before Scarlet & Violet").
   `basic`'s section says in a note beside its rarities that it draws no foil.
+  A section fetches its three cards only once it comes within 600px of the
+  viewport (the live section at once): landing on `/` asks TCGdex for nine
+  cards, where all 90 at once, reloaded a few times, got the visitor refused
+  (every request a 404 without CORS headers) for about 20 minutes.
 - `src/holo/` — eager (statically imported by `HoloCard.tsx`, so part of the
   main chunk): `select.ts` (rarity/layout/printing → `HoloSelection`),
   `regions.ts` (`ClipShape` → inset rect + `coversPoint`), `capability.ts`

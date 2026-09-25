@@ -1,4 +1,12 @@
-import { useEffect, useEffectEvent, useId, useRef, useState, type ReactNode } from 'react';
+import {
+  useEffect,
+  useEffectEvent,
+  useId,
+  useRef,
+  useState,
+  type ReactNode,
+  type RefObject,
+} from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { CardImage } from '../components/CardImage';
 import {
@@ -69,9 +77,10 @@ const BASIC_NOTE = 'basic draws no foil: HoloCard shows the plain art.';
  * swap their art.
  *
  * Cards load client-side through the card page's own `cardQuery`, one query
- * per tile, so a slow or dead card costs its own tile and nothing else. There
- * is deliberately no SSR prefetch: the page renders its skeletons, and each
- * tile fetches its card.
+ * per tile, so a slow or dead card costs its own tile and nothing else, and a
+ * section's only once the visitor nears it (`useNearViewport`), or at once for
+ * the live one: landing asks for nine cards, not 90. There is deliberately no
+ * SSR prefetch: the page renders its skeletons, and each tile fetches its card.
  */
 export function EffectsView({ effect, card }: { effect?: EffectId; card?: string }) {
   const [pick, setPick] = useState<GalleryPick | null>(null);
@@ -140,10 +149,15 @@ function EffectSection({
   liveCard: string | null;
   onSelect: (cardId: string) => void;
 }) {
+  const ref = useRef<HTMLElement>(null);
+  // The live section's cards load at once, wherever it is; the rest as the
+  // visitor nears them.
+  const active = useNearViewport(ref) || liveCard !== null;
   return (
     // scroll-mt keeps the heading clear of the Shell's sticky header when
     // navigation scrolls this section into view.
     <section
+      ref={ref}
       data-section={entry.effect}
       className="mt-6 scroll-mt-20 border-t border-holo-line pt-6 lg:grid lg:grid-cols-[15rem_minmax(0,1fr)] lg:gap-6"
     >
@@ -165,6 +179,7 @@ function EffectSection({
             <ExampleTile
               entry={entry}
               cardId={cardId}
+              active={active}
               selected={cardId === liveCard}
               onSelect={() => onSelect(cardId)}
             />
@@ -175,17 +190,55 @@ function EffectSection({
   );
 }
 
+/**
+ * True once the element has come within `margin` of the viewport, and from
+ * then on, so a section fetches its three cards only as the visitor nears it:
+ * the default page asks TCGdex for a screenful of cards, not all 90 at once, a
+ * burst TCGdex has answered by refusing the visitor for a while. Without
+ * IntersectionObserver every section counts as near; on the server none does.
+ */
+function useNearViewport(ref: RefObject<Element | null>, margin = '600px 0px'): boolean {
+  const [near, setNear] = useState(
+    () => typeof window !== 'undefined' && typeof IntersectionObserver === 'undefined',
+  );
+  useEffect(() => {
+    const element = ref.current;
+    if (near || !element) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((entry) => entry.isIntersecting)) return;
+        setNear(true);
+        observer.disconnect();
+      },
+      { rootMargin: margin },
+    );
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [ref, margin, near]);
+  return near;
+}
+
+/**
+ * A tile's card query: the card page's own, so the two share a cache, asked
+ * for only once its section is near (`active`).
+ */
+export function tileQuery(cardId: string, active: boolean) {
+  return { ...cardQuery(cardId), enabled: active };
+}
+
 interface TileProps {
   entry: EffectExample;
   cardId: string;
+  /** Whether its section is near enough to fetch its card. */
+  active: boolean;
   selected: boolean;
   onSelect: () => void;
 }
 
-function ExampleTile({ entry, cardId, selected, onSelect }: TileProps) {
+function ExampleTile({ entry, cardId, active, selected, onSelect }: TileProps) {
   // One query per tile, so a slow or dead card costs its own tile an error,
   // never its section or the page.
-  const { data: card, error, isPending, refetch } = useQuery(cardQuery(cardId));
+  const { data: card, error, isPending, refetch } = useQuery(tileQuery(cardId, active));
   const frame = { cardId, selected, onSelect };
 
   if (isPending) {
@@ -261,7 +314,7 @@ function TileFrame({
   status,
   after,
   children,
-}: Omit<TileProps, 'entry'> & {
+}: Omit<TileProps, 'entry' | 'active'> & {
   /** The card's name, once it has loaded. */
   name?: string;
   status?: string | null;

@@ -6,8 +6,9 @@ import { MODERN_EFFECT_BY_RARITY, type EffectId } from '../holo/select';
 import { CARD_RARITIES } from '../lib/constants';
 import { cardImageBase } from '../lib/images';
 import type { Card } from '../lib/tcgdex';
+import { cardQuery } from '../lib/queries';
 import { formatRoute } from '../routes';
-import { EffectsView } from './EffectsView';
+import { EffectsView, tileQuery } from './EffectsView';
 import { dataEffects, renderView } from './render-view.test-util';
 
 // These render the page itself. effect-gallery.test.ts checks the data the
@@ -309,5 +310,19 @@ describe('EffectsView — tile markup', () => {
     expect(PLACEHOLDER_COUNT).toBeGreaterThan(0);
     expect(placeholders).toHaveLength(PLACEHOLDER_COUNT);
     expect(placeholders.filter((tag) => !tag.includes('aria-hidden="true"'))).toEqual([]);
+  });
+});
+
+describe('EffectsView — a tile asks for its card only once its section is near', () => {
+  // The default page used to ask TCGdex for all 90 cards at once, a burst
+  // it has answered by refusing the visitor for a while.
+  it('uses the card page’s own query, so the two share a cache, disabled until then', () => {
+    const [entry] = EFFECT_GALLERY;
+    const cardId = entry.cardIds[0];
+    expect(tileQuery(cardId, false)).toMatchObject({
+      queryKey: cardQuery(cardId).queryKey,
+      enabled: false,
+    });
+    expect(tileQuery(cardId, true).enabled).toBe(true);
   });
 });
