@@ -8,10 +8,14 @@ import {
   BACKGROUND_Y,
   BLACK,
   CENTER,
+  MAX_CSS_STOPS,
   WHITE,
+  cssStopIndex,
   radial,
   radialT,
+  reach,
   stop,
+  turn,
   valueAt,
   type CssBox,
 } from '../effects/css';
@@ -536,48 +540,65 @@ describe('coverage() in GLSL agrees with coversPoint() in JS', () => {
   });
 });
 
+type V = { x: number; y: number };
+const V = (x: number, y: number): V => ({ x, y });
+
+/** Every GLSL built-in a translated function could reach for, so a mutant fails on its values. */
+const BUILTINS = {
+  min: Math.min,
+  max: Math.max,
+  sqrt: Math.sqrt,
+  clamp: (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v)),
+  mix: (a: number, b: number, t: number) => a * (1 - t) + b * t,
+  fract: (v: number) => v - Math.floor(v),
+  atan: (y: number, x: number) => Math.atan2(y, x),
+};
+
 /**
- * A css.ts radial's distance as the shader works it out (sources.ts's
- * radialCssDistance), translated from the GLSL itself and held to css.ts's
- * radialT, the twin css.test.ts holds to CSS's own farthest-corner geometry.
+ * A scalar function of sourcesGLSL translated into JS, so what runs here is
+ * the shader's own arithmetic, not a copy of it: mutate the GLSL and this
+ * mutates too.
  */
-function transpileRadialCss(glsl: string) {
-  const body = /float radialCssDistance\(vec2 uv, vec2 centre, vec2 size\) \{\n([\s\S]*?)\n\}/.exec(
-    glsl,
-  )?.[1];
-  const aspect = /const float CARD_HEIGHT_OVER_WIDTH = ([^;]+);/.exec(glsl)?.[1];
-  if (!body || !aspect) {
-    throw new Error('radialCssDistance() no longer has the shape this translation assumes');
-  }
+function transpileSource(signature: RegExp, params: string[]) {
+  const body = signature.exec(sourcesGLSL)?.[1];
+  const aspect = /const float CARD_HEIGHT_OVER_WIDTH = ([^;]+);/.exec(sourcesGLSL)?.[1];
+  if (!body || !aspect)
+    throw new Error(`${signature} no longer has the shape this translation assumes`);
   const js = body
     .replace(/^\s*\/\/.*$/gm, '')
-    .replace(/\bfloat /g, 'let ')
-    .replace(/uPointerUV/g, 'pointer')
+    .replace(/\bfloat\(/g, '(')
+    .replace(/\b(?:float|int) /g, 'let ')
+    .replace(/MAX_CSS_STOPS/g, String(MAX_CSS_STOPS))
     .replace(/CARD_HEIGHT_OVER_WIDTH/g, String(Number(aspect)));
+  // A translation that quietly left GLSL behind would be a twin all over again.
   expect(js).not.toMatch(/\bu[A-Z]\w*/);
-  expect(js).not.toMatch(/\b(?:float|vec[234]|uniform)\b/);
-  type V = { x: number; y: number };
-  const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
-  // every GLSL built-in the function could reach for, so a mutant fails on its values
-  const run = new Function(
-    'uv',
-    'centre',
-    'size',
-    'pointer',
-    'min',
-    'max',
-    'sqrt',
-    'clamp',
-    js,
-  ) as (
-    ...args: [V, V, V, V, typeof Math.min, typeof Math.max, typeof Math.sqrt, typeof clamp]
+  expect(js).not.toMatch(/\b(?:float|int|vec[234]|uniform)\b/);
+  const run = new Function(...params, ...Object.keys(BUILTINS), js) as (
+    ...args: unknown[]
   ) => number;
-  return (uv: V, centre: V, size: V, pointer: V) =>
-    run(uv, centre, size, pointer, Math.min, Math.max, Math.sqrt, clamp);
+  return (...args: unknown[]) => run(...args, ...Object.values(BUILTINS));
+}
+
+const radialReachGLSL = transpileSource(
+  /float radialReach\(vec2 uv, vec2 centre, vec2 size, vec2 at, float ellipse\) \{\n([\s\S]*?)\n\}/,
+  ['uv', 'centre', 'size', 'at', 'ellipse'],
+);
+
+/**
+ * A css.ts radial's distance as the shader works it out: sources.ts's
+ * radialCssDistance, which is radialReach at the pointer, as a circle,
+ * clamped. Held to css.ts's radialT, the twin css.test.ts holds to CSS's own
+ * farthest-corner geometry.
+ */
+function radialCssDistanceGLSL(uv: V, centre: V, size: V, pointer: V): number {
+  expect(sourcesGLSL).toMatch(
+    /float radialCssDistance\(vec2 uv, vec2 centre, vec2 size\) \{\n\s+return clamp\(radialReach\(uv, centre, size, uPointerUV, 0\.0\), 0\.0, 1\.0\);\n\}/,
+  );
+  return BUILTINS.clamp(radialReachGLSL(uv, centre, size, pointer, 0), 0, 1);
 }
 
 describe('a converted radial’s reach in GLSL agrees with radialT() in JS', () => {
-  const distance = transpileRadialCss(sourcesGLSL);
+  const distance = radialCssDistanceGLSL;
   const boxes: CssBox[] = [
     { size: [1, 1], position: [CENTER, CENTER] },
     { size: [2, 1], position: [BACKGROUND_X, BACKGROUND_Y] },
@@ -642,6 +663,53 @@ describe('a converted radial’s reach in GLSL agrees with radialT() in JS', () 
       /src_shine0_0 = srcRadialCss\(uv_shine0_0, vec2\(.*uPointerUV\.x.*\), vec2\(1\.200000, 1\.500000\), /,
     );
     expect(src).toMatch(/src_shine1_0 = srcRadialPointer\(uv_shine1_0, /);
+  });
+});
+
+describe('the exact gradients’ geometry in GLSL agrees with css.ts', () => {
+  const conicTurnGLSL = transpileSource(
+    /float conicTurn\(vec2 uv, vec2 centre, float from\) \{\n([\s\S]*?)\n\}/,
+    ['uv', 'centre', 'from'],
+  );
+  const cssStopIndexGLSL = transpileSource(
+    /float cssStopIndex\(float pos\[MAX_CSS_STOPS\], int count, float t\) \{\n([\s\S]*?)\n\}/,
+    ['pos', 'count', 't'],
+  );
+
+  it('radialReach: circles and ellipses, wherever their centre sits', () => {
+    for (const ellipse of [false, true]) {
+      for (const at of [
+        [0.5, 0.5],
+        [0.2, 0.7],
+        [0.9, 0.1],
+      ] as Array<[number, number]>) {
+        for (const uv of [
+          [0, 0],
+          [0.3, 0.8],
+          [1, 0.4],
+        ] as Array<[number, number]>) {
+          const want = reach([0.4, 0.6], [1.5, 2], at, ellipse, uv);
+          const got = radialReachGLSL(V(...uv), V(0.4, 0.6), V(1.5, 2), V(...at), ellipse ? 1 : 0);
+          expect(got).toBeCloseTo(want, 6);
+        }
+      }
+    }
+  });
+
+  it('conicTurn: all the way round, from wherever it starts', () => {
+    for (let k = 0; k < 16; k += 1) {
+      const a = (k / 16) * 2 * Math.PI;
+      const uv: [number, number] = [0.5 + 0.3 * Math.sin(a), 0.5 - 0.3 * Math.cos(a)];
+      expect(conicTurnGLSL(V(...uv), V(0.5, 0.5), 0.1)).toBeCloseTo(turn([0.5, 0.5], 0.1, uv), 6);
+    }
+  });
+
+  it('cssStopIndex: before, between, past hard edges, after', () => {
+    const pos = [0, 0.012, 0.0121, 0.024, 0.024, 0.5, 1];
+    const padded = [...pos, ...Array<number>(MAX_CSS_STOPS - pos.length).fill(1)];
+    for (const t of [-1, 0, 0.006, 0.012, 0.01205, 0.02, 0.024, 0.3, 0.99, 1, 2]) {
+      expect(cssStopIndexGLSL(padded, pos.length, t)).toBeCloseTo(cssStopIndex(pos, t), 6);
+    }
   });
 });
 

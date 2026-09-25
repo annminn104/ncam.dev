@@ -43,6 +43,7 @@ export const CARD_HEIGHT_OVER_WIDTH = 88 / 63;
  */
 export const sourcesGLSL = /* glsl */ `
 #define MAX_STOPS 8
+#define MAX_CSS_STOPS 32
 
 const float CARD_HEIGHT_OVER_WIDTH = ${CARD_HEIGHT_OVER_WIDTH.toFixed(6)};
 
@@ -59,6 +60,7 @@ uniform vec2 uPointer;        // -1..1 across the card
 uniform vec2 uPointerUV;      // 0..1, for radial gradients centred on it
 uniform float uPointerFromCenter;
 uniform float uTime;
+uniform vec3 uCardGlow;     // the card's --card-glow, for stops that are part glow
 
 vec2 uvTransform(vec2 uv, vec2 size, vec2 offset) {
   return uv * size + offset;
@@ -97,19 +99,33 @@ vec3 srcLinear(vec2 uv, float angleDeg, vec3 stops[MAX_STOPS], int count) {
 }
 
 /**
- * How far along a CSS radial-gradient(farthest-corner circle at the pointer) a
- * fragment is, 0 at the centre and 1 at the radius: the radial css.ts converts
- * (Source's cssBox). Lengths are in card widths, so the circle is round on the
- * card. The centre sits at the pointer's fraction of an image of this size, so
- * the corner farthest from it lies size * max(p, 1 - p) away along each axis.
- * Written out in scalars so the test can run it; css.ts#radialT is its twin.
+ * How far out along a CSS radial-gradient a fragment is, in radii, unclamped:
+ * CSS carries a stop past 100% beyond the ending shape. centre is on the
+ * card, size its image's, at the centre's fraction of that image, which CSS
+ * measures the farthest corner from, all as fractions of the card. A circle
+ * reaches the farthest corner; an ellipse (ellipse 1) keeps farthest-side's
+ * aspect and grows by √2 to pass through it. Lengths are in card widths, so
+ * the circle is round on the card. Written out in scalars so the test can
+ * run it; css.ts#reach is its twin.
  */
-float radialCssDistance(vec2 uv, vec2 centre, vec2 size) {
-  float rx = size.x * max(uPointerUV.x, 1.0 - uPointerUV.x);
-  float ry = size.y * max(uPointerUV.y, 1.0 - uPointerUV.y) * CARD_HEIGHT_OVER_WIDTH;
+float radialReach(vec2 uv, vec2 centre, vec2 size, vec2 at, float ellipse) {
+  float sideX = size.x * max(at.x, 1.0 - at.x);
+  float sideY = size.y * max(at.y, 1.0 - at.y) * CARD_HEIGHT_OVER_WIDTH;
   float dx = uv.x - centre.x;
   float dy = (uv.y - centre.y) * CARD_HEIGHT_OVER_WIDTH;
-  return clamp(sqrt(dx * dx + dy * dy) / sqrt(rx * rx + ry * ry), 0.0, 1.0);
+  float circle = sqrt(dx * dx + dy * dy) / sqrt(sideX * sideX + sideY * sideY);
+  float oval = sqrt((dx / sideX) * (dx / sideX) + (dy / sideY) * (dy / sideY)) / 1.4142136;
+  return mix(circle, oval, ellipse);
+}
+
+/**
+ * How far along a CSS radial-gradient(farthest-corner circle at the pointer) a
+ * fragment is, 0 at the centre and 1 at the radius: the radial css.ts
+ * converts for the older kinds (Source's cssBox), whose centre sits at the
+ * pointer's fraction of its image. css.ts#radialT is its twin.
+ */
+float radialCssDistance(vec2 uv, vec2 centre, vec2 size) {
+  return clamp(radialReach(uv, centre, size, uPointerUV, 0.0), 0.0, 1.0);
 }
 
 vec3 srcRadialCss(vec2 uv, vec2 centre, vec2 size, vec3 stops[MAX_STOPS], int count) {
@@ -126,6 +142,46 @@ vec3 srcConic(vec2 uv, vec3 stops[MAX_STOPS], int count) {
   vec2 d = uv - 0.5;
   float t = (atan(d.y, d.x) + 3.14159265) / 6.2831853;
   return gradientAt(stops, count, t);
+}
+
+/**
+ * Where a fragment falls around a CSS conic-gradient, in turns clockwise from
+ * from (itself in turns from the top), about centre, measured in the card's
+ * true proportions as CSS measures a conic's angle. css.ts#turn is its twin.
+ */
+float conicTurn(vec2 uv, vec2 centre, float from) {
+  float dx = uv.x - centre.x;
+  float dy = (uv.y - centre.y) * CARD_HEIGHT_OVER_WIDTH;
+  return fract(atan(dx, -dy) / 6.2831853 - from);
+}
+
+/**
+ * t's place among an exact gradient's stops, in stop indices: 0 at or before
+ * the first, count - 1 at or after the last, fractional between two, and past
+ * a hard edge (two stops at one place) at once. css.ts#cssStopIndex is its
+ * twin.
+ */
+float cssStopIndex(float pos[MAX_CSS_STOPS], int count, float t) {
+  float index = 0.0;
+  for (int i = 1; i < MAX_CSS_STOPS; i += 1) {
+    if (i >= count || t <= pos[i - 1]) break;
+    float span = pos[i] - pos[i - 1];
+    index = t >= pos[i] ? float(i) : float(i - 1) + (t - pos[i - 1]) / span;
+  }
+  return index;
+}
+
+/**
+ * An exact gradient's colour at t: its stops premultiplied, as CSS
+ * interpolates them, looked up where CSS puts them, and handed back as
+ * straight colour and alpha.
+ */
+vec4 cssStops(vec4 stops[MAX_CSS_STOPS], float pos[MAX_CSS_STOPS], int count, float t) {
+  float index = cssStopIndex(pos, count, t);
+  int i = int(floor(index));
+  int j = min(i + 1, count - 1);
+  vec4 c = mix(stops[i], stops[j], index - float(i));
+  return vec4(c.a > 0.0 ? c.rgb / c.a : vec3(0.0), c.a);
 }
 
 vec3 srcGlitter(vec2 uv, float scale) { return texture(uGlitter, uv * scale).rgb; }

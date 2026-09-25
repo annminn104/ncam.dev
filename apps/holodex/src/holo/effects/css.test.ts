@@ -5,6 +5,7 @@ import {
   BACKGROUND_X,
   BACKGROUND_Y,
   BLACK,
+  CARD_ASPECT,
   CENTER,
   DARK_RADIAL,
   POINTER_X,
@@ -14,6 +15,7 @@ import {
   affineLayers,
   colorAt,
   composeFilters,
+  cssStopIndex,
   filterRGB,
   fixed,
   gradientT,
@@ -26,12 +28,14 @@ import {
   radial,
   radialMask,
   radialT,
+  reach,
   repeatingLinear,
   stop,
   sunpillarClr,
   sunpillarStops,
   texture,
   times,
+  turn,
   valueAt,
   type CssStop,
   type PointerAt,
@@ -430,5 +434,67 @@ describe('stand-in layers', () => {
     expect(at(0)).toBeCloseTo(0.25, 12); // at the pointer, transparent: the neutral
     expect(at(kept.length - 1)).toBeCloseTo(0.9, 12); // at 100%: the stack
     expect(radialMask([stop(BLACK, 30, 0), stop(BLACK, 100, 1)], 0)).toHaveLength(1);
+  });
+});
+
+describe('reach, a CSS radial’s distance in radii', () => {
+  it('is 1 at the farthest corner for a circle at the centre', () => {
+    expect(reach([0.5, 0.5], [1, 1], [0.5, 0.5], false, [1, 1])).toBeCloseTo(1, 9);
+  });
+
+  it('keeps going past the ending shape, unclamped', () => {
+    expect(reach([0, 0], [1, 1], [0, 0], false, [1, 1])).toBeCloseTo(1, 9);
+    expect(reach([0.5, 0.5], [0.5, 0.5], [0.5, 0.5], false, [1, 1])).toBeCloseTo(2, 9);
+  });
+
+  it('makes an ellipse farthest-side’s shape, √2 larger, through the corner', () => {
+    // centred in a cover box: farthest sides half the card each way; the middle
+    // of the right edge is 0.5 / (0.5 · √2) out, the corner exactly 1
+    expect(reach([0.5, 0.5], [1, 1], [0.5, 0.5], true, [1, 0.5])).toBeCloseTo(Math.SQRT1_2, 9);
+    expect(reach([0.5, 0.5], [1, 1], [0.5, 0.5], true, [1, 1])).toBeCloseTo(1, 9);
+  });
+
+  it('measures the farthest corner from `at`, not the pointer', () => {
+    // a 3.5-wide box, its centre at a quarter of it: the farthest side is 0.75 · 3.5 away
+    const x = 0.5 + 0.75 * 3.5 * Math.SQRT2;
+    expect(reach([0.5, 0.5], [3.5, 3.5], [0.25, 0.25], true, [x, 0.5])).toBeCloseTo(1, 9);
+  });
+});
+
+describe('turn, where a point falls around a CSS conic', () => {
+  it('starts at the top and runs clockwise', () => {
+    expect(turn([0.5, 0.5], 0, [0.5, 0])).toBeCloseTo(0, 9);
+    expect(turn([0.5, 0.5], 0, [1, 0.5])).toBeCloseTo(0.25, 9);
+    expect(turn([0.5, 0.5], 0, [0.5, 1])).toBeCloseTo(0.5, 9);
+    expect(turn([0.5, 0.5], 0, [0, 0.5])).toBeCloseTo(0.75, 9);
+  });
+
+  it('measures angles in the card’s true proportions', () => {
+    // the corner is not at 45°: atan(63 / 88) from the vertical
+    expect(turn([0.5, 0.5], 0, [1, 0])).toBeCloseTo(Math.atan2(CARD_ASPECT, 1) / (2 * Math.PI), 9);
+  });
+
+  it('starts from `from`', () => {
+    expect(turn([0.5, 0.5], 0.25, [1, 0.5])).toBeCloseTo(0, 9);
+  });
+});
+
+describe('cssStopIndex, CSS’s stop lookup', () => {
+  const pos = [0.1, 0.3, 0.3, 0.9];
+
+  it('holds the first stop before it and the last after it', () => {
+    expect(cssStopIndex(pos, 0)).toBe(0);
+    expect(cssStopIndex(pos, 0.1)).toBe(0);
+    expect(cssStopIndex(pos, 1)).toBe(3);
+  });
+
+  it('runs linearly between two stops', () => {
+    expect(cssStopIndex(pos, 0.2)).toBeCloseTo(0.5, 9);
+    expect(cssStopIndex(pos, 0.6)).toBeCloseTo(2.5, 9);
+  });
+
+  it('passes a hard edge at once: its near colour on it, its far one just past', () => {
+    expect(cssStopIndex(pos, 0.3)).toBe(1);
+    expect(cssStopIndex(pos, 0.3000001)).toBeCloseTo(2, 5);
   });
 });

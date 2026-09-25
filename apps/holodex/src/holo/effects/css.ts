@@ -417,6 +417,63 @@ export function radialT(layer: Background, uv: [number, number], at: PointerAt =
   return Math.min(1, Math.max(0, Math.hypot(dx, dy) / Math.hypot(rx, ry)));
 }
 
+// ------------------------------------------------------- exact gradients
+
+/** How many stops an exact gradient holds (sources.ts's MAX_CSS_STOPS). */
+export const MAX_CSS_STOPS = 32;
+
+/**
+ * sources.ts's radialReach: how far out along a CSS radial a point of the
+ * card lies, in radii, unclamped. `centre` is on the card, `size` its
+ * image's, `at` the centre's fraction of that image, which CSS measures the
+ * farthest corner from. A circle reaches that corner; an ellipse keeps
+ * farthest-side's aspect and grows by √2 to pass through it. Lengths are in
+ * card widths.
+ */
+export function reach(
+  centre: [number, number],
+  size: [number, number],
+  at: [number, number],
+  ellipse: boolean,
+  uv: [number, number],
+): number {
+  const sideX = size[0] * Math.max(at[0], 1 - at[0]);
+  const sideY = size[1] * Math.max(at[1], 1 - at[1]) * CARD_HEIGHT_OVER_WIDTH;
+  const dx = uv[0] - centre[0];
+  const dy = (uv[1] - centre[1]) * CARD_HEIGHT_OVER_WIDTH;
+  return ellipse
+    ? Math.hypot(dx / sideX, dy / sideY) / Math.SQRT2
+    : Math.hypot(dx, dy) / Math.hypot(sideX, sideY);
+}
+
+/**
+ * sources.ts's conicTurn: where a point falls around a CSS conic, in turns
+ * clockwise from `from` (itself in turns from the top), measured in the
+ * card's true proportions as CSS measures a conic's angle.
+ */
+export function turn(centre: [number, number], from: number, uv: [number, number]): number {
+  const dx = uv[0] - centre[0];
+  const dy = (uv[1] - centre[1]) * CARD_HEIGHT_OVER_WIDTH;
+  const t = Math.atan2(dx, -dy) / (2 * Math.PI) - from;
+  return t - Math.floor(t);
+}
+
+/**
+ * sources.ts's cssStopIndex: t's place among stops at these positions, in
+ * stop indices — 0 at or before the first, the last index at or after the
+ * last, fractional between two, and past a hard edge (two stops at one
+ * place) at once. CSS's own lookup.
+ */
+export function cssStopIndex(pos: readonly number[], t: number): number {
+  let index = 0;
+  for (let i = 1; i < pos.length; i += 1) {
+    if (t <= pos[i - 1]) break;
+    const span = pos[i] - pos[i - 1];
+    index = t >= pos[i] ? i : i - 1 + (t - pos[i - 1]) / span;
+  }
+  return index;
+}
+
 type TextureKind = Extract<Source, { scale: number }>['kind'];
 
 /**

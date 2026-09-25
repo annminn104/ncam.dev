@@ -1,4 +1,4 @@
-import { ShaderMaterial, Vector2, Vector4 } from 'three';
+import { ShaderMaterial, Vector2, Vector3, Vector4 } from 'three';
 import { createLogger } from '@ncam/logger';
 import { compileEffect, VERTEX_SHADER } from './shader/compile';
 import type { Effect } from './shader/types';
@@ -35,6 +35,8 @@ export function buildMaterial(effect: Effect): ShaderMaterial {
       uClipShape: { value: 0 },
       uInvert: { value: 0 },
       uCardOpacity: { value: 1 },
+      // :root's --card-glow until setSelection sets the card's own
+      uCardGlow: { value: new Vector3(0.8, 1, 0.9833) },
     },
   });
 }
