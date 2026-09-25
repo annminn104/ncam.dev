@@ -650,8 +650,13 @@ describe('selectHolo — the era splits, both arms of each', () => {
       'stage',
       'sv-ultra-ex',
     ]);
-    // The older one keeps its set's frame: its foil covers the card whatever.
-    expect([older.effect, older.shape, older.layout]).toEqual(['v-full-art', 'full', 'sm']);
+    // The older one, a Sun & Moon GX with no mask to cut it by, takes the
+    // whole card.
+    expect([older.effect, older.shape, older.layout]).toEqual([
+      'v-full-art',
+      'regular',
+      'full-card',
+    ]);
   });
 });
 
@@ -722,6 +727,66 @@ describe('selectHolo — clip shape of the Scarlet & Violet effects', () => {
       }),
     );
     expect([ignition.shape, ignition.layout]).toEqual(['regular', 'sv-ultra']);
+  });
+
+  it('foils a Sword & Shield Ultra Rare’s whole card but its dark bars, by what it is', () => {
+    // The older reference's masks leave out a V's weakness bar and V rule
+    // box, and a Supporter's TRAINER header and rule box.
+    const scizor = selectHolo(
+      card({
+        id: 'swsh3-183',
+        localId: '183',
+        name: 'Scizor V',
+        rarity: 'Ultra Rare',
+        stage: 'Basic',
+      }),
+    );
+    expect([scizor.effect, scizor.shape, scizor.layout]).toEqual([
+      'v-full-art',
+      'regular',
+      'swsh-ultra-v',
+    ]);
+    const marnie = selectHolo(
+      card({
+        id: 'swsh1-200',
+        localId: '200',
+        name: 'Marnie',
+        category: 'Trainer',
+        trainerType: 'Supporter',
+        rarity: 'Ultra Rare',
+      }),
+    );
+    expect([marnie.effect, marnie.shape, marnie.layout]).toEqual([
+      'v-full-art',
+      'trainer',
+      'swsh-ultra',
+    ]);
+    // A VSTAR, with no mask to cut it by, keeps the whole card: it is no V here.
+    const arceus = selectHolo(
+      card({
+        id: 'swsh9-166',
+        localId: '166',
+        name: 'Arceus VSTAR',
+        rarity: 'Ultra Rare',
+        stage: 'VSTAR',
+      }),
+    );
+    expect([arceus.shape, arceus.layout]).toEqual(['regular', 'swsh-ultra']);
+    // An older Ultra Rare, an XY EX, has no masks at all: the whole card.
+    const venusaur = selectHolo(
+      card({
+        id: 'xy1-1',
+        localId: '1',
+        name: 'Venusaur EX',
+        rarity: 'Ultra Rare',
+        stage: 'Basic',
+      }),
+    );
+    expect([venusaur.effect, venusaur.layout]).toEqual(['v-full-art', 'full-card']);
+    // A V of another rarity keeps its own frame: the V rule is the Ultra Rare's.
+    expect(
+      layoutOf({ id: 'swsh3-19', localId: '19', name: 'Charizard V', rarity: 'Holo Rare V' }),
+    ).toBe('swsh');
   });
 
   it('foils a Pocket Two Star’s whole card, with no mask to cut it by', () => {

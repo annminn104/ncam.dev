@@ -25,6 +25,8 @@ const LAYOUTS: CardLayout[] = [
   'sv-hyper-ex',
   'sv-ultra',
   'sv-ultra-ex',
+  'swsh-ultra',
+  'swsh-ultra-v',
   'full-card',
   'other',
 ];
@@ -35,10 +37,11 @@ const MEASURED_TRAINER: CardLayout[] = [
   'sv-special-illustration',
   'sv-hyper',
   'sv-ultra',
+  'swsh-ultra',
   'full-card',
 ];
 /** The layouts that cut a trainer's window. */
-const CUT_TRAINER: CardLayout[] = ['sv-hyper', 'sv-ultra'];
+const CUT_TRAINER: CardLayout[] = ['sv-hyper', 'sv-ultra', 'swsh-ultra'];
 
 describe('regionFor', () => {
   it('returns the reference inset for a card no measured layout claims', () => {
@@ -183,6 +186,32 @@ describe('cutsFor', () => {
       expect(covers('stage', x, y, 'sv-ultra-ex'), `ex ${x}, ${y}`).toBe(true);
       expect(covers('trainer', x, y, 'sv-ultra'), `trainer ${x}, ${y}`).toBe(true);
     }
+  });
+
+  it('foils a Sword & Shield Ultra Rare’s whole card but its dark bars', () => {
+    const covers = (shape: ClipShape, x: number, y: number, layout: CardLayout) =>
+      coversPoint(shape, x, y, false, layout);
+    // A V: its weakness bar, and its V rule box into the black at the corner.
+    expect(covers('regular', 0.5, 0.873, 'swsh-ultra-v')).toBe(false);
+    expect(covers('regular', 0.7, 0.935, 'swsh-ultra-v')).toBe(false);
+    expect(covers('regular', 0.99, 0.95, 'swsh-ultra-v')).toBe(false);
+    // A Supporter: its TRAINER header and its rule box.
+    expect(covers('trainer', 0.5, 0.045, 'swsh-ultra')).toBe(false);
+    expect(covers('trainer', 0.6, 0.92, 'swsh-ultra')).toBe(false);
+    // Everything else, the border, the illustrator's corner and the art.
+    for (const [x, y] of [
+      [0.01, 0.5],
+      [0.5, 0.01],
+      [0.5, 0.99],
+      [0.2, 0.93],
+      [0.5, 0.5],
+    ]) {
+      expect(covers('regular', x, y, 'swsh-ultra-v'), `V ${x}, ${y}`).toBe(true);
+      expect(covers('trainer', x, y, 'swsh-ultra'), `Supporter ${x}, ${y}`).toBe(true);
+    }
+    // A VSTAR or an energy on the Supporters' frame: the whole card.
+    expect(covers('regular', 0.5, 0.873, 'swsh-ultra')).toBe(true);
+    expect(covers('regular', 0.5, 0.045, 'swsh-ultra')).toBe(true);
   });
 
   it('keeps the one stage box every card had for a card no measured layout claims', () => {

@@ -348,6 +348,29 @@ const EX_FRAME: Partial<Record<CardLayout, CardLayout>> = {
 };
 
 /**
+ * A Pokémon V, by its name, as TCGdex spells every one ("Mew V", "Origin
+ * Forme Dialga V"), and the frame that prints a V differently: a Sword &
+ * Shield Ultra Rare V carries its weakness bar and V rule box where a
+ * Supporter carries its header and rule box. A VMAX or VSTAR is not a V here.
+ */
+const V_NAME = / V$/;
+const V_FRAME: Partial<Record<CardLayout, CardLayout>> = {
+  'swsh-ultra': 'swsh-ultra-v',
+};
+
+/**
+ * The frame an Ultra Rare before Scarlet & Violet takes, by its set's: the
+ * V or GX full art, and, as TCGdex files them there too, some regular EX, GX
+ * and V (xy1's Venusaur EX, sm9's Celebi & Venusaur GX, swsh10's Starmie V).
+ * A Sword & Shield one has the older reference's masks to measure against
+ * (`swsh-ultra`); an older one has none, and takes the whole card
+ * (`full-card`), as all of them did before.
+ */
+const OLDER_ULTRA_RARE_FRAME: Partial<Record<CardLayout, CardLayout>> = {
+  swsh: 'swsh-ultra',
+};
+
+/**
  * The rarities that bring a frame of their own, whatever the set: a LV.X's,
  * a Prime's and a LEGEND half's, and the illustration rares' full art, a
  * Scarlet & Violet or Mega `Illustration rare` (511 cards, all Pokémon) and a
@@ -375,8 +398,7 @@ const LAYOUT_BY_RARITY: Readonly<Record<string, CardLayout>> = {
  * MODERN_EFFECT_BY_RARITY's effects did, and the frame a Scarlet & Violet or
  * Mega card of each takes: an `Ultra Rare` (363: 207 Pokémon, all ex, 155
  * trainers, one energy) is the full-art ex or trainer. Before them it is a V
- * or GX full art, which keeps its set's frame and foils the whole card
- * whatever that frame is (FULL_ART).
+ * or GX full art (OLDER_ULTRA_RARE_FRAME).
  */
 const MODERN_LAYOUT_BY_RARITY: Readonly<Record<string, CardLayout>> = {
   'Ultra Rare': 'sv-ultra',
@@ -397,12 +419,19 @@ const SP_SET = /^(?:pl\d|dpp)$/;
 /** Which frame a card is printed in: regions.ts's CardLayout. */
 export function layoutOf(card: Pick<Card, 'id' | 'localId' | 'name' | 'rarity'>): CardLayout {
   const setId = setIdOf(card);
+  const bySet = LAYOUT_BY_SET.find(([pattern]) => pattern.test(setId))?.[1] ?? 'other';
+  const modern = eraOf(card) === 'modern';
   const layout =
-    (card.rarity && eraOf(card) === 'modern' && MODERN_LAYOUT_BY_RARITY[card.rarity]) ||
+    (card.rarity && modern && MODERN_LAYOUT_BY_RARITY[card.rarity]) ||
+    (card.rarity === 'Ultra Rare' && !modern && (OLDER_ULTRA_RARE_FRAME[bySet] ?? 'full-card')) ||
     (card.rarity && LAYOUT_BY_RARITY[card.rarity]) ||
     (SP_SET.test(setId) && SP_NAME.test(card.name) ? 'dp-sp' : undefined) ||
-    (LAYOUT_BY_SET.find(([pattern]) => pattern.test(setId))?.[1] ?? 'other');
-  return (MODERN_EX_NAME.test(card.name) && EX_FRAME[layout]) || layout;
+    bySet;
+  return (
+    (MODERN_EX_NAME.test(card.name) && EX_FRAME[layout]) ||
+    (V_NAME.test(card.name) && V_FRAME[layout]) ||
+    layout
+  );
 }
 
 /**
@@ -459,7 +488,10 @@ function reverseEffect(card: Card): EffectId {
  * but for the parts a box can follow, which they leave out: an evolution's
  * pre-evolution picture, and a rule box. They take the whole card as their
  * rarity's frame (regions.ts's `sv-ultra`, `sv-special-illustration`,
- * `sv-hyper` and the rest) less those, by the rules below. For the older effects, the
+ * `sv-hyper` and the rest) less those, by the rules below. v-full-art is the
+ * same on a Sword & Shield card, whose frame the older reference has masks
+ * for (`swsh-ultra`), and every Ultra Rare it foils takes a whole-card frame
+ * (OLDER_ULTRA_RARE_FRAME). For the other older effects, the
  * shine ports (legacy-shines.test.ts) take the clip-path pokemon-cards-css's
  * unmasked path computes, which for these is none. A gallery V is styled by
  * v-full-art.css's rules and a gallery VMAX by rainbow-alt.css's, so they are
@@ -470,7 +502,6 @@ function reverseEffect(card: Card): EffectId {
  */
 const FULL_ART: ReadonlySet<EffectId> = new Set<EffectId>([
   'cosmos-holo',
-  'v-full-art',
   'trainer-gallery-v-regular',
   'trainer-gallery-v-max',
   'trainer-gallery-secret-rare',

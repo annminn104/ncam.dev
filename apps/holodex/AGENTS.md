@@ -497,6 +497,35 @@ parts the masks now agree with the region on 89.9% of the card, from 77.4%
 (each Supporter 70% to 94.5%). A Pocket `Two Star`, with no mask, takes
 the whole card (`full-card`), as before.
 
+`v-full-art`, the older `Ultra Rare`'s, left `FULL_ART` as well, on the
+same evidence from the older reference: `v-full-art.css` has no clip-path,
+and poke-holo.simey.me draws its cards with per-card masks
+(`poke-holo.b-cdn.net/foils/<set>/masks/upscaled/<number>_foil_etched_sunpillar_2x.webp`),
+which keep their foil in **alpha** (their colour is dark throughout), where
+151's keep it in luminance: read the right channel, or every pixel reads
+bare. Its six V full arts' and three Supporters' masks foil the whole card,
+the border included, but leave out the frame's dark bars: a V's weakness
+bar and V rule box (89% and 86% of them bare, where the etching leaves
+about half of a foiled part bare), and a Supporter's TRAINER header and
+rule box (94% and 92%). So a Sword & Shield `Ultra Rare` is the whole card
+less those (`swsh-ultra-v`, by the ` V` its name ends in, or `swsh-ultra`,
+whose trainer region carries the Supporter's cuts); a VMAX, VSTAR or energy
+there takes the whole card. The black V over a V's top-left is left out by
+the masks too, but it is a triangle whose silver outlines do take foil, and
+a colour-dodged shine leaves black black, so it keeps the region. Over the
+frame's top and bottom bands the nine masks agree with the region on 71.4%
+of the card, from 45.7%. An Ultra Rare of the frames before Sword & Shield
+(XY's EX, Sun & Moon's GX, Black & White's full arts), with no mask, takes
+the whole card (`full-card`), as before. TCGdex's older `Ultra Rare` is not
+only full arts: it files some regular EX, GX and V there too (xy1's Venusaur
+EX, sm9's Celebi & Venusaur GX, swsh10's Starmie V), which therefore foil
+their whole card; a Sword & Shield V's frame is laid out like its full art,
+so its cuts land there as well. Two differences from the reference are left
+as they are: it draws a rare ultra Supporter with `trainer-full-art.css`,
+where TCGdex's `Ultra Rare` Supporters take `v-full-art` here, and a
+Trainer Gallery `Ultra Rare` Supporter (`swsh11tg`'s) takes
+`trainer-gallery-holo` here (`galleryEffect`).
+
 **The effect DSL and the generator.** Each of the 30 effect files under
 `holo/effects/` (e.g. `cosmos-holo.ts`) is a declarative `Effect`
 (`holo/shader/types.ts`): 1-3 `shine` elements and up to two glare elements,

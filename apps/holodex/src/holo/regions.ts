@@ -51,6 +51,8 @@ export type CardLayout =
   | 'sv-hyper-ex'
   | 'sv-ultra'
   | 'sv-ultra-ex'
+  | 'swsh-ultra'
+  | 'swsh-ultra-v'
   | 'full-card'
   | 'other';
 
@@ -286,9 +288,34 @@ const LAYOUTS: Readonly<Record<CardLayout, LayoutClip>> = {
     regular: [box(0.36, 0.892, 0.975, 0.958)],
     stage: [box(0.36, 0.892, 0.975, 0.958), box(0.035, 0.07, 0.163, 0.18)],
   },
+  // A Sword & Shield Ultra Rare, the full-art V or Supporter. The older
+  // reference has no clip-path for either, only its per-card masks, which
+  // keep their foil in alpha, and its six V full arts' (Mew, Scizor, Unown,
+  // Celebi, Giratina and Origin Forme Dialga V) and three Supporters'
+  // (Peonia, Barry, Marnie) foil the whole card, the border included, but
+  // leave out the frame's dark bars (2026-09-25): a Supporter's TRAINER
+  // header and its rule box (94% and 92% of them bare, where its foiled
+  // parts are about half bare, their etching's lines). The black V drawn
+  // over a V's top-left is left out as well, but it is a triangle whose
+  // silver outlines take foil, and a color-dodged shine leaves black black.
+  'swsh-ultra': {
+    art: { top: 0, right: 0, bottom: 0, left: 0 },
+    regular: [],
+    stage: [],
+    trainer: { top: 0, right: 0, bottom: 0, left: 0 },
+    trainerCuts: [box(0.025, 0.023, 0.975, 0.068), box(0.338, 0.876, 0.972, 0.966)],
+  },
+  // A V's: the weakness, resistance and retreat bar and the V rule box
+  // below it, which runs into the black at the card's bottom right (89% and
+  // 86% bare).
+  'swsh-ultra-v': {
+    art: { top: 0, right: 0, bottom: 0, left: 0 },
+    regular: [box(0.04, 0.857, 1, 0.89), box(0.375, 0.905, 1, 0.965)],
+    stage: [box(0.04, 0.857, 1, 0.89), box(0.375, 0.905, 1, 0.965)],
+  },
   // The whole card, whatever it is: a Mega Hyper Rare, whose rule box is
-  // gold like the rest of it, and Pocket's Crown and Two Star, none with a
-  // mask to measure against.
+  // gold like the rest of it, Pocket's Crown and Two Star, and an Ultra Rare
+  // of the frames before Sword & Shield, none with a mask to measure against.
   'full-card': {
     art: { top: 0, right: 0, bottom: 0, left: 0 },
     regular: [],

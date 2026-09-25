@@ -16,6 +16,10 @@ const GLARE_FILTER = { brightness: 1, contrast: 1.2, saturate: 1 };
  * (one rule for Pokémon and supporters alike), hard-lit, beneath the shine
  * (legacy-glare.ts): a radial in an image 120% × 150% of the card, centred on
  * it. trainer-gallery-v-regular draws this shine too, by the same rule.
+ * The reference confines the foil with the card's own mask, never a
+ * clip-path; select.ts's clip region stands in: the whole card, less the
+ * dark bars a Sword & Shield Ultra Rare's masks leave out (regions.ts's
+ * `swsh-ultra` and `swsh-ultra-v`).
  *
  * Approximation: illusion is drawn here (textures.ts), not the reference's
  * image.
