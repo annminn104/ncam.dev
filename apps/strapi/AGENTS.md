@@ -4,9 +4,7 @@ The ncam.dev **blog CMS**: Strapi 5 (TypeScript), package `@ncam/strapi`, port
 **1337**. A backend service — NOT a federation remote (no Vite, no
 `defineRemote`, no `remoteEntry.js`). Posts are written in the Strapi admin
 (Blocks editor) and served through a **public, read-only REST API** that the
-portfolio host consumes (frontend wiring is a separate spec).
-
-Design spec: `docs/superpowers/specs/2026-09-15-strapi-blog-cms-design.md`.
+portfolio host consumes (through `@ncam/cms`, `packages/cms`).
 
 ## Commands
 
