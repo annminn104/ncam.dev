@@ -10,6 +10,35 @@
 
 **Spec:** `docs/superpowers/specs/2026-09-25-holodex-legacy-shine-ports-design.md`
 
+## How it landed (2026-09-25)
+
+Executed inline, task by task, each test-first and committed locally: 4527f42 (pins), 86ef386
+(compositing, `color`), 4b81149 (geometry), d467aa6 (RGBA path, groups), 2620dbf (converters),
+f76d972 (glow), 28aff11 (textures), 0959726 (secret-rare), e48997f (filter), 0e85fe6 (radiant).
+What the plan did not foresee:
+
+- **CSS filters are not what `applyFilter` does.** radiant-holo's first measurement missed the
+  gate on chroma. Swatches under a CSS filter, read back off a headless Chrome screenshot, showed
+  Chrome clamping after each of brightness, contrast and saturate, and saturating about CSS's own
+  luma (0.213, 0.715, 0.072): that model matches Chrome to 0.33 in 0..255, where `applyFilter`
+  (Rec. 601, clamped once) is 8 off on average and 55 at worst. The RGBA path now filters with
+  `applyCssFilter` (e48997f); the RGB path keeps `applyFilter`, so the Scarlet & Violet ports and
+  the ported glares, which were verified with it, are unchanged until their own sub-project.
+- **The harness's probe card is `.card.water`**, so the reference drew radiant's --card-glow blue
+  while ours drew the card's Grass green. `cmp/shine/ref.mjs` now sets the probe's type class to the
+  sample's.
+- **Playwright 1.58 left the pnpm store** mid-session (only 1.63 remains; its Chromium is not
+  cached). The scratch harness drives 1.63 with the cached Chromium 1208 headless shell.
+- A GLSL compile check (every effect's shader compiled and linked on a headless WebGL2 context,
+  through the dev server's own modules) caught nothing, and now runs after every shader change.
+
+**The gate passed.** With the reference fed our textures, at (0.3, 0.3) and (0.7, 0.7):
+secret-rare luminance 3.0 / 3.4 and chroma 2.3 / 4.1, radiant-holo 1.7 / 2.6 and 1.7 / 1.6, where
+the no-effect floor is 3.7 / 3.4 and 2.9 / 4.8, and 2.1 / 4.0 and 3.3 / 2.3. With the reference's
+own images the gaps barely move. Before: 33 and 27–29 for secret-rare, 21–22 and 14–20 for radiant.
+Tree: 851 tests, lint, typecheck, Prettier, split 2 / 1, lazy chunk 145.39 KB gz; GPU smoke on
+both card pages and both effects sections, with a lose/restore on each.
+
 ## Global Constraints
 
 - Never `git push`; commit locally only. Stage by explicit path (never `git add -A`; never stage `.claude/launch.json`). Commit with `git commit -F <file>`, body lines under 100 characters, ending `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
