@@ -583,6 +583,9 @@ describe('coverage() in GLSL agrees with coversPoint() in JS', () => {
     'sv-illustration',
     'pocket-illustration',
     'sv-special-illustration',
+    'sv-hyper',
+    'sv-hyper-ex',
+    'full-card',
     'other',
   ];
   // Deliberately offset off the round numbers so no sample lands exactly on an

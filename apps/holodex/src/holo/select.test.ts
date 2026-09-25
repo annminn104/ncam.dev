@@ -670,13 +670,51 @@ describe('selectHolo — the Scarlet & Violet and Pocket rows, in every era', ()
 });
 
 describe('selectHolo — clip shape of the Scarlet & Violet effects', () => {
-  it('foils the whole card for the full-art ex and the gold tier', () => {
-    // Their reference CSS confines them with a per-card mask and no
-    // clip-path; with no mask to drop in, the foil covers the card.
+  it('foils the whole card for the full-art ex', () => {
+    // Its reference CSS confines it with a per-card mask and no clip-path;
+    // with no mask to drop in, the foil covers the card.
     expect(selectHolo(CAPTURED_CARDS['sv03.5-182']).shape).toBe('full');
-    expect(selectHolo(CAPTURED_CARDS['sv03.5-205']).shape).toBe('full');
-    // A Hyper rare trainer as well: FULL_ART comes before the trainer rule.
-    expect(selectHolo(CAPTURED_CARDS['sv03.5-206']).shape).toBe('full');
+  });
+
+  it('foils a Hyper rare’s whole gold card but its silver rule box', () => {
+    // 151's masks leave the rule box out, on its ex and on its trainer.
+    const mew = selectHolo(CAPTURED_CARDS['sv03.5-205']);
+    expect([mew.effect, mew.shape, mew.layout]).toEqual(['hyper-rare', 'regular', 'sv-hyper-ex']);
+    const sw = selectHolo(CAPTURED_CARDS['sv03.5-206']);
+    expect([sw.effect, sw.shape, sw.layout]).toEqual(['hyper-rare', 'trainer', 'sv-hyper']);
+    // An energy has no rule box: its region is the whole card.
+    const energy = selectHolo(
+      card({
+        id: 'sv03.5-207',
+        localId: '207',
+        name: 'Basic Psychic Energy',
+        category: 'Energy',
+        rarity: 'Hyper rare',
+      }),
+    );
+    expect([energy.shape, energy.layout]).toEqual(['regular', 'sv-hyper']);
+  });
+
+  it('foils a Mega Hyper Rare’s and a Crown’s whole card, rule box and all', () => {
+    // A Mega's rule box is gold, and neither has a mask to measure against.
+    const mega = selectHolo(
+      card({
+        id: 'me02-130',
+        localId: '130',
+        name: 'Mega Charizard X ex',
+        rarity: 'Mega Hyper Rare',
+        stage: 'Stage2',
+      }),
+    );
+    expect([mega.effect, mega.shape, mega.layout]).toEqual(['hyper-rare', 'stage', 'full-card']);
+    const crown = selectHolo(
+      card({ id: 'A2b-111', localId: '111', category: 'Trainer', rarity: 'Crown' }),
+    );
+    expect([crown.effect, crown.shape, crown.layout]).toEqual([
+      'hyper-rare',
+      'trainer',
+      'full-card',
+    ]);
   });
 
   it('foils a special illustration rare’s whole card but an evolution’s pre-evolution picture', () => {

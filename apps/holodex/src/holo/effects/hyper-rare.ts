@@ -29,7 +29,9 @@ import {
  * glitter's opacity (0.3 of --pointer-from-center here, 0.5 there). The two
  * files are ported apart so that each answers to its own CSS. The reference
  * confines its glitter to the card's own foil mask; that is dropped, and
- * select.ts's clip region stands in.
+ * select.ts's clip region stands in: the whole card, less a Scarlet & Violet
+ * gold card's rule box, which those masks leave out (regions.ts's `sv-hyper`
+ * and `sv-hyper-ex`).
  *
  * Approximations:
  * - The shine has no background of its own. Its :before, the holo, lies over

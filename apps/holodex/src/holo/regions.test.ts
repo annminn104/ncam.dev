@@ -21,12 +21,14 @@ const LAYOUTS: CardLayout[] = [
   'sv-illustration',
   'pocket-illustration',
   'sv-special-illustration',
+  'sv-hyper',
+  'sv-hyper-ex',
+  'full-card',
   'other',
 ];
 const SHAPES: ClipShape[] = ['full', 'regular', 'stage', 'trainer', 'borders'];
-const FIXED: ClipShape[] = ['full', 'trainer', 'borders'];
 /** The layouts that measured a trainer's window of their own. */
-const MEASURED_TRAINER: CardLayout[] = ['sv', 'sv-special-illustration'];
+const MEASURED_TRAINER: CardLayout[] = ['sv', 'sv-special-illustration', 'sv-hyper', 'full-card'];
 
 describe('regionFor', () => {
   it('returns the reference inset for a card no measured layout claims', () => {
@@ -112,9 +114,37 @@ describe('cutsFor', () => {
     }
   });
 
-  it('cuts nothing out of a region that is not the art window', () => {
+  it('cuts nothing out of the border or the whole card, nor a trainer’s window unmeasured', () => {
     for (const layout of LAYOUTS) {
-      for (const shape of FIXED) expect(cutsFor(shape, layout)).toEqual([]);
+      for (const shape of ['full', 'borders'] as const) expect(cutsFor(shape, layout)).toEqual([]);
+      if (layout !== 'sv-hyper') expect(cutsFor('trainer', layout), layout).toEqual([]);
+    }
+  });
+
+  it('foils a gold card’s whole face but its rule box, by what it is', () => {
+    const covers = (shape: ClipShape, x: number, y: number, layout: CardLayout) =>
+      coversPoint(shape, x, y, false, layout);
+    // The rule box of an ex, and of a trainer (a Stadium's is the tallest).
+    expect(covers('regular', 0.6, 0.925, 'sv-hyper-ex')).toBe(false);
+    expect(covers('stage', 0.6, 0.925, 'sv-hyper-ex')).toBe(false);
+    expect(covers('trainer', 0.6, 0.88, 'sv-hyper')).toBe(false);
+    expect(covers('trainer', 0.6, 0.965, 'sv-hyper')).toBe(false);
+    // Everything else, the border and the gold beside the box included.
+    for (const [x, y] of [
+      [0.01, 0.5],
+      [0.5, 0.01],
+      [0.5, 0.99],
+      [0.2, 0.925],
+      [0.5, 0.5],
+    ]) {
+      expect(covers('regular', x, y, 'sv-hyper-ex'), `ex ${x}, ${y}`).toBe(true);
+      expect(covers('trainer', x, y, 'sv-hyper'), `trainer ${x}, ${y}`).toBe(true);
+    }
+    // An energy, which takes regular on the trainers' frame, has no box cut.
+    expect(covers('regular', 0.6, 0.925, 'sv-hyper')).toBe(true);
+    // A Mega Hyper Rare or a Crown keeps the whole card, rule box and all.
+    for (const shape of ['regular', 'stage', 'trainer'] as const) {
+      expect(covers(shape, 0.6, 0.925, 'full-card'), shape).toBe(true);
     }
   });
 

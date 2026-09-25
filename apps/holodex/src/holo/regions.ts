@@ -47,6 +47,9 @@ export type CardLayout =
   | 'sv-illustration'
   | 'pocket-illustration'
   | 'sv-special-illustration'
+  | 'sv-hyper'
+  | 'sv-hyper-ex'
+  | 'full-card'
   | 'other';
 
 /** How many boxes one region can cut: the shader's uCutA and uCutB. */
@@ -77,6 +80,8 @@ interface LayoutClip {
   stage: readonly CutBox[];
   /** A trainer's art window, where measured; the reference's --clip-trainer otherwise. */
   trainer?: RegionRect;
+  /** What the frame lays over a trainer's window, where measured. */
+  trainerCuts?: readonly CutBox[];
 }
 
 const box = (x0: number, y0: number, x1: number, y1: number): CutBox => ({ x0, y0, x1, y1 });
@@ -237,6 +242,35 @@ const LAYOUTS: Readonly<Record<CardLayout, LayoutClip>> = {
     stage: [box(0.035, 0.07, 0.163, 0.18)],
     trainer: { top: 0, right: 0, bottom: 0, left: 0 },
   },
+  // A Scarlet & Violet Hyper rare, the gold card, trainer or energy: the whole
+  // card, but a trainer's rule box, the silver-blue one over its gold at the
+  // bottom (an Item's, a Tool's or a Stadium's, the tallest). The reference
+  // has no clip-path, only its per-card masks, and 151's three foil the
+  // border and nearly all the gold, but leave out the rule box: 3% of it on
+  // Switch took foil (2026-09-25).
+  'sv-hyper': {
+    art: { top: 0, right: 0, bottom: 0, left: 0 },
+    regular: [],
+    stage: [],
+    trainer: { top: 0, right: 0, bottom: 0, left: 0 },
+    trainerCuts: [box(0.335, 0.875, 0.975, 0.968)],
+  },
+  // A Scarlet & Violet Hyper rare Pokémon, always an ex: the whole card but
+  // its silver "Pokémon ex rule" box (17% of it foiled on Mew ex's mask).
+  'sv-hyper-ex': {
+    art: { top: 0, right: 0, bottom: 0, left: 0 },
+    regular: [box(0.36, 0.892, 0.975, 0.958)],
+    stage: [box(0.36, 0.892, 0.975, 0.958)],
+  },
+  // The whole card, whatever it is: a Mega Hyper Rare, whose rule box is
+  // gold like the rest of it, and a Pocket Crown, neither with a mask to
+  // measure against.
+  'full-card': {
+    art: { top: 0, right: 0, bottom: 0, left: 0 },
+    regular: [],
+    stage: [],
+    trainer: { top: 0, right: 0, bottom: 0, left: 0 },
+  },
   other: {
     art: REFERENCE_ART,
     regular: [],
@@ -261,9 +295,14 @@ export function regionFor(shape: ClipShape, layout: CardLayout = 'other'): Regio
   return REGIONS[shape];
 }
 
-/** The boxes cut out of that rect: what the layout's frame prints over the art. */
+/**
+ * The boxes cut out of that rect: what the layout's frame prints over the
+ * art, or over a trainer's window where the layout measured it.
+ */
 export function cutsFor(shape: ClipShape, layout: CardLayout = 'other'): readonly CutBox[] {
-  return isArtWindow(shape) ? LAYOUTS[layout][shape] : [];
+  if (isArtWindow(shape)) return LAYOUTS[layout][shape];
+  if (shape === 'trainer') return LAYOUTS[layout].trainerCuts ?? [];
+  return [];
 }
 
 const insideRect = (r: RegionRect, x: number, y: number): boolean =>

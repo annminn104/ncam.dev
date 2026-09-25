@@ -468,6 +468,19 @@ and `trainer` on that frame: the whole card, less that picture on a Stage
 where the whole card agreed on 94.5% (the four evolutions 91.6% to 95.6%);
 the figure keeps the card as a whole at 80%.
 
+`hyper-rare`, whose CSS is the special illustration rare's with one number
+changed, left `FULL_ART` the same way. 151's three gold masks (#205 Mew ex,
+#206 Switch, #207 an energy) foil the border and nearly all the gold, but
+leave out the silver rule box (17% and 3% of it foiled), so a Scarlet &
+Violet `Hyper rare` is the whole card less its rule box: an ex's
+(`sv-hyper-ex`, by the ` ex` its name ends in, as every one of the 41
+does) or a trainer's (`sv-hyper`, whose trainer region carries the cut:
+`LayoutClip.trainerCuts`, the one frame so far that cuts a trainer); an
+energy has none. Cut, the two agree with their masks on 66.2% and 79.9% of
+the card, from 63.6% and 75.0%. A `Mega Hyper Rare`, whose rule box is gold
+like the rest of it, and a Pocket `Crown`, neither with a mask to measure
+against, take the whole card (`full-card`).
+
 **The effect DSL and the generator.** Each of the 30 effect files under
 `holo/effects/` (e.g. `cosmos-holo.ts`) is a declarative `Effect`
 (`holo/shader/types.ts`): 1-3 `shine` elements and up to two glare elements,
