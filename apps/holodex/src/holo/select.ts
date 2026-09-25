@@ -51,6 +51,12 @@ export interface HoloSelection {
    * (types.ts's GradientStop.glow, the shader's uCardGlow): radiant-holo's.
    */
   glow: [number, number, number];
+  /**
+   * The card's --foil-brightness (foilBrightnessOf), for an effect whose
+   * filter reads it (types.ts's PointerDriven.fromFoilBrightness, the shader's
+   * uFoilBrightness): reverse-holo's.
+   */
+  foilBrightness: number;
 }
 
 /**
@@ -79,6 +85,25 @@ export const DEFAULT_GLOW: [number, number, number] = [0.8, 1, 0.9833];
 /** The card's --card-glow, by its first type. */
 export function glowOf(card: Card): [number, number, number] {
   return GLOW_BY_TYPE[card.types?.[0] ?? ''] ?? DEFAULT_GLOW;
+}
+
+/**
+ * reverse-holo.css's --foil-brightness: 0.55, and brighter for the three types
+ * it classes apart (`.card.lightning` and the rest), keyed by the card's first
+ * type as the glow is.
+ */
+const FOIL_BRIGHTNESS_BY_TYPE: Readonly<Record<string, number>> = {
+  Lightning: 0.7,
+  Darkness: 0.8,
+  Metal: 0.6,
+};
+
+/** reverse-holo.css's own --foil-brightness. */
+export const DEFAULT_FOIL_BRIGHTNESS = 0.55;
+
+/** The card's --foil-brightness, by its first type. */
+export function foilBrightnessOf(card: Card): number {
+  return FOIL_BRIGHTNESS_BY_TYPE[card.types?.[0] ?? ''] ?? DEFAULT_FOIL_BRIGHTNESS;
 }
 
 /**
@@ -441,5 +466,11 @@ export function selectHolo(card: Card, options: SelectOptions = {}): HoloSelecti
     invert = true;
   }
 
-  return { effect, shape: clipShape(effect, card), invert, glow: glowOf(card) };
+  return {
+    effect,
+    shape: clipShape(effect, card),
+    invert,
+    glow: glowOf(card),
+    foilBrightness: foilBrightnessOf(card),
+  };
 }

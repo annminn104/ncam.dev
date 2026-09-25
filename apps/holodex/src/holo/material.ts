@@ -3,7 +3,7 @@ import { createLogger } from '@ncam/logger';
 import { compileEffect, VERTEX_SHADER } from './shader/compile';
 import type { Effect } from './shader/types';
 import { EFFECTS } from './effects';
-import { DEFAULT_GLOW, type EffectId } from './select';
+import { DEFAULT_FOIL_BRIGHTNESS, DEFAULT_GLOW, type EffectId } from './select';
 
 const log = createLogger({ scope: 'holodex' });
 
@@ -39,6 +39,8 @@ export function buildMaterial(effect: Effect): ShaderMaterial {
       uCardOpacity: { value: 1 },
       // :root's --card-glow until setSelection sets the card's own
       uCardGlow: { value: new Vector3(...DEFAULT_GLOW) },
+      // reverse-holo.css's --foil-brightness until setSelection sets the card's own
+      uFoilBrightness: { value: DEFAULT_FOIL_BRIGHTNESS },
     },
   });
 }

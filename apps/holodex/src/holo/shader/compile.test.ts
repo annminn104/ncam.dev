@@ -1160,3 +1160,26 @@ describe('the RGBA path’s filter, CSS’s chain as Chrome applies it', () => {
     expect(src.slice(src.indexOf('void main()'))).not.toContain('applyCssFilter');
   });
 });
+
+describe('a term on the card’s foil brightness', () => {
+  it('compiles to uFoilBrightness, and leaves a number without it as it was', () => {
+    const at = (brightness: PointerDriven) =>
+      compileEffect({
+        id: 'foil',
+        shine: [
+          {
+            layers: [{ source: { kind: 'card' }, blend: 'normal' }],
+            filter: { brightness },
+            mixBlend: 'color-dodge',
+          },
+        ],
+        glare: [],
+      });
+    expect(at({ base: 0, fromFoilBrightness: 1 })).toContain(
+      'applyFilter(stack_shine0, (0.000000 + 1.000000 * uFoilBrightness), 1.000000, 1.000000)',
+    );
+    expect(at({ base: 0.55 })).toContain(
+      'applyFilter(stack_shine0, (0.550000), 1.000000, 1.000000)',
+    );
+  });
+});

@@ -63,6 +63,8 @@ export interface PointerAt {
   fromCenter?: number;
   fromLeft?: number;
   fromTop?: number;
+  /** the card's --foil-brightness */
+  fromFoilBrightness?: number;
 }
 
 const MAX_STOPS = 8;
@@ -157,7 +159,7 @@ export const DARK_RADIAL: CssStop[] = [
 
 // ----------------------------------------------------- pointer-driven values
 
-const TERMS = ['fromCenter', 'fromLeft', 'fromTop'] as const;
+const TERMS = ['fromCenter', 'fromLeft', 'fromTop', 'fromFoilBrightness'] as const;
 
 export const fixed = (fraction: number): PointerDriven => ({ base: fraction });
 export const CENTER = fixed(0.5);

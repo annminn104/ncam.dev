@@ -68,6 +68,7 @@ uniform vec2 uPointerUV;      // 0..1, for radial gradients centred on it
 uniform float uPointerFromCenter;
 uniform float uTime;
 uniform vec3 uCardGlow;     // the card's --card-glow, for stops that are part glow
+uniform float uFoilBrightness; // the card's --foil-brightness, for reverse-holo's shine
 
 vec2 uvTransform(vec2 uv, vec2 size, vec2 offset) {
   return uv * size + offset;

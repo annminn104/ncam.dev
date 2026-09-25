@@ -34,6 +34,7 @@ import {
   hsl,
   linear,
   neutralBefore,
+  plus,
   pxWide,
   radial,
   radialMask,
@@ -666,5 +667,13 @@ describe('cssFilterRGB, CSS’s filter chain as Chrome applies it', () => {
     const filter = { brightness: 0.6, contrast: 3, saturate: 2 };
     expect(cssFilterRGB([0.2, 0.9, 0.2], filter)[1] * 255).toBeCloseTo(203.2, 0);
     expect(filterRGB([0.2, 0.9, 0.2], filter)[1] * 255).toBeGreaterThan(230);
+  });
+});
+
+describe('the foil brightness term', () => {
+  it('is carried by times and plus, and valued at the card’s own', () => {
+    const p = plus(times({ base: 0, fromFoilBrightness: 1 }, 2), { base: 0.1 });
+    expect(p).toEqual({ base: 0.1, fromFoilBrightness: 2 });
+    expect(valueAt(p, { fromFoilBrightness: 0.7 })).toBeCloseTo(1.5, 9);
   });
 });

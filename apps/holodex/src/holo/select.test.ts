@@ -6,8 +6,10 @@ import {
   EFFECT_BY_RARITY,
   MODERN_EFFECT_BY_RARITY,
   DEFAULT_GLOW,
+  DEFAULT_FOIL_BRIGHTNESS,
   OVERRIDE_ONLY_EFFECTS,
   eraOf,
+  foilBrightnessOf,
   glowOf,
   selectHolo,
   type EffectId,
@@ -709,5 +711,26 @@ describe('the card’s glow, base.css’s --card-glow', () => {
 
   it('hands the glow to the scene with the selection', () => {
     expect(selectHolo(typed(['Grass'])).glow).toEqual(glowOf(typed(['Grass'])));
+  });
+});
+
+describe('the card’s foil brightness, reverse-holo.css’s --foil-brightness', () => {
+  const typed = (types?: string[]) => card({ types });
+
+  it('is 0.7 for Lightning, 0.8 for Darkness and 0.6 for Metal', () => {
+    expect(foilBrightnessOf(typed(['Lightning']))).toBe(0.7);
+    expect(foilBrightnessOf(typed(['Darkness']))).toBe(0.8);
+    expect(foilBrightnessOf(typed(['Metal']))).toBe(0.6);
+  });
+
+  it('is 0.55 for every other type, and for a card with none', () => {
+    expect(DEFAULT_FOIL_BRIGHTNESS).toBe(0.55);
+    for (const types of [['Fire'], ['Colorless'], undefined]) {
+      expect(foilBrightnessOf(typed(types))).toBe(0.55);
+    }
+  });
+
+  it('hands it to the scene with the selection', () => {
+    expect(selectHolo(typed(['Metal'])).foilBrightness).toBe(0.6);
   });
 });

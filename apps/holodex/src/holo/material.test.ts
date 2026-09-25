@@ -115,3 +115,9 @@ describe('the card’s glow', () => {
     expect(glow?.toArray()).toEqual(DEFAULT_GLOW);
   });
 });
+
+describe('the card’s foil brightness', () => {
+  it('starts every material on reverse-holo.css’s default, until the scene sets the card’s', () => {
+    expect(createMaterial('reverse-holo')?.uniforms.uFoilBrightness.value).toBe(0.55);
+  });
+});

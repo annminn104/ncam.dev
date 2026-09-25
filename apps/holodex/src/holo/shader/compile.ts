@@ -16,6 +16,7 @@ function driven(p: PointerDriven | undefined, fallback: number): string {
   if (p.fromCenter) terms.push(`${f(p.fromCenter)} * uPointerFromCenter`);
   if (p.fromLeft) terms.push(`${f(p.fromLeft)} * (uPointerUV.x)`);
   if (p.fromTop) terms.push(`${f(p.fromTop)} * (uPointerUV.y)`);
+  if (p.fromFoilBrightness) terms.push(`${f(p.fromFoilBrightness)} * uFoilBrightness`);
   return `(${terms.join(' + ')})`;
 }
 

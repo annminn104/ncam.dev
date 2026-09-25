@@ -17,6 +17,11 @@ export interface PointerDriven {
   /** multiplied by pointer position across the card, 0..1 */
   fromLeft?: number;
   fromTop?: number;
+  /**
+   * multiplied by the card's --foil-brightness (the shader's uFoilBrightness,
+   * select.ts#foilBrightnessOf): reverse-holo's shine brightness
+   */
+  fromFoilBrightness?: number;
 }
 
 /**

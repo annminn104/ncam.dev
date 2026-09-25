@@ -21,7 +21,7 @@ export interface CanvasKeyInput {
  * mounts a new `<canvas>` element, and with it a fresh context.
  *
  * Every value the scene effect reads is here: the image it textures, the
- * four selection fields it sets, the card it logs, and `generation`. Leave
+ * five selection fields it sets, the card it logs, and `generation`. Leave
  * one out and a change to that value alone re-runs the effect on the canvas the
  * key kept — the bug this exists to prevent. JSON-encoded so that no two
  * different inputs can produce the same string.
@@ -34,6 +34,7 @@ export function holoCanvasKey({ cardId, src, selection, generation }: CanvasKeyI
     selection.shape,
     selection.invert,
     selection.glow,
+    selection.foilBrightness,
     generation,
   ]);
 }
