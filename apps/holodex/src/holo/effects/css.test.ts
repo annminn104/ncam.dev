@@ -7,17 +7,26 @@ import {
   BLACK,
   CARD_ASPECT,
   CENTER,
+  COVER,
   DARK_RADIAL,
   POINTER_X,
   POINTER_Y,
   SUNPILLAR,
   WHITE,
   affineLayers,
+  autoHeight,
   colorAt,
   composeFilters,
   cssStopIndex,
+  exactColorAt,
+  exactConic,
+  exactLinear,
+  exactRadial,
+  exactRepeatingLinear,
   filterRGB,
   fixed,
+  glowStop,
+  gradientLengthPx,
   gradientT,
   grey,
   hex,
@@ -496,5 +505,137 @@ describe('cssStopIndex, CSS’s stop lookup', () => {
   it('passes a hard edge at once: its near colour on it, its far one just past', () => {
     expect(cssStopIndex(pos, 0.3)).toBe(1);
     expect(cssStopIndex(pos, 0.3000001)).toBeCloseTo(2, 5);
+  });
+});
+
+describe('the exact converters', () => {
+  it('keep a radial’s stops where CSS wrote them, alpha and all', () => {
+    const { source } = exactRadial([stop(BLACK, 10, 0.98), stop(grey(0.95), 90, 0.15)]);
+    expect(source).toMatchObject({
+      kind: 'css-radial',
+      ellipse: false,
+      size: [1, 1],
+      stops: [
+        { at: 0.1, color: [0, 0, 0], alpha: 0.98 },
+        { at: 0.9, color: [0.95, 0.95, 0.95], alpha: 0.15 },
+      ],
+    });
+  });
+
+  it('centre a radial at the pointer’s fraction of a cover image by default', () => {
+    const { source } = exactRadial([stop(BLACK, 0), stop(BLACK, 100)]);
+    if (source.kind !== 'css-radial') throw new Error('not a css-radial');
+    expect(valueAt(source.centre[0], { fromLeft: 0.3 }, 0)).toBeCloseTo(0.3, 9);
+    expect(valueAt(source.centre[1], { fromTop: 0.8 }, 0)).toBeCloseTo(0.8, 9);
+    expect(source.at).toEqual([POINTER_X, POINTER_Y]);
+  });
+
+  it('centre a radial at `at` of its image, as background-position places the image', () => {
+    const at: [PointerDriven, PointerDriven] = [
+      { base: 0.25, fromLeft: 0.5 },
+      { base: 0.25, fromTop: 0.5 },
+    ];
+    const box = {
+      size: [3.5, 3.5] as [number, number],
+      position: [CENTER, CENTER] as [PointerDriven, PointerDriven],
+    };
+    const { source } = exactRadial([stop(BLACK, 0), stop(BLACK, 100)], box, { at, ellipse: true });
+    if (source.kind !== 'css-radial') throw new Error('not a css-radial');
+    // left edge 0.5 · (1 − 3.5) = −1.25; centre −1.25 + 3.5 · (0.25 + 0.5 p)
+    expect(valueAt(source.centre[0], { fromLeft: 0.5 }, 0)).toBeCloseTo(0.5, 9);
+    expect(valueAt(source.centre[0], { fromLeft: 0 }, 0)).toBeCloseTo(-0.375, 9);
+    expect(source.at).toEqual(at);
+    expect(source.ellipse).toBe(true);
+  });
+
+  it('write var(--card-glow) as a stop that is all glow', () => {
+    expect(glowStop(130)).toEqual({ color: BLACK, at: 1.3, alpha: 1, glow: 1 });
+    const { source } = exactRadial([stop(grey(0.95), 20), glowStop(130)]);
+    if (source.kind !== 'css-radial') throw new Error('not a css-radial');
+    expect(source.stops[1]).toEqual({ at: 1.3, color: [0, 0, 0], glow: 1 });
+  });
+
+  it('draw a linear gradient along the line CSS draws it on', () => {
+    // 90deg across a cover box: 0 at the left edge, 1 at the right
+    const { source } = exactLinear(90, [stop(BLACK, 0), stop(grey(1), 100)], COVER);
+    if (source.kind !== 'css-linear') throw new Error('not a css-linear');
+    const t = (u: number, v: number) =>
+      source.line.a * u + source.line.b * v + valueAt(source.line.c, {}, 0);
+    expect(t(0, 0.3)).toBeCloseTo(0, 9);
+    expect(t(1, 0.7)).toBeCloseTo(1, 9);
+    expect(source.repeating).toBe(false);
+  });
+
+  it('normalise a repeating gradient to one period, keeping its hard edges', () => {
+    const { source } = exactRepeatingLinear(
+      90,
+      [stop(grey(0.1), 0), stop(grey(0.1), 1.2), stop(grey(0.2), 1.21), stop(grey(0.2), 2.4)],
+      COVER,
+    );
+    if (source.kind !== 'css-linear') throw new Error('not a css-linear');
+    expect(source.repeating).toBe(true);
+    [0, 0.5, 1.21 / 2.4, 1].forEach((at, i) => expect(source.stops[i].at).toBeCloseTo(at, 12));
+    // 2.4% of the gradient line is one period: u = 0.024 is t = 1
+    const t = (u: number) => source.line.a * u + valueAt(source.line.c, {}, 0);
+    expect(t(0.024)).toBeCloseTo(1, 9);
+  });
+
+  it('turn a conic’s evenly spread colours into turns from the top', () => {
+    const { source } = exactConic([stop(BLACK, 0), stop(grey(1), 50), stop(BLACK, 100)]);
+    expect(source).toMatchObject({ kind: 'css-conic', centre: [0.5, 0.5], from: 0 });
+    if (source.kind !== 'css-conic') throw new Error('not a css-conic');
+    expect(source.stops.map((s) => s.at)).toEqual([0, 0.5, 1]);
+  });
+
+  it('move a stop CSS would move: never before an earlier one', () => {
+    const { source } = exactRadial([stop(BLACK, 50), stop(grey(1), 20)]);
+    if (source.kind !== 'css-radial') throw new Error('not a css-radial');
+    expect(source.stops.map((s) => s.at)).toEqual([0.5, 0.5]);
+  });
+
+  it('measure a gradient line in px, at CARD_PX', () => {
+    // 400% × 100% at 55deg: 1200 px wide, 300 / (63/88) px tall
+    const height = 300 / CARD_ASPECT;
+    const rad = (55 * Math.PI) / 180;
+    expect(gradientLengthPx(55, { size: [4, 1], position: [CENTER, CENTER] })).toBeCloseTo(
+      1200 * Math.sin(rad) + height * Math.cos(rad),
+      6,
+    );
+  });
+
+  it('size `auto` in proportion to the texture', () => {
+    // a square texture 25% of the card wide is 25% · 63/88 of it tall
+    expect(autoHeight(0.25, [208, 208])).toEqual([0.25, 0.25 * CARD_ASPECT]);
+    expect(autoHeight(0.6, [600, 400])).toEqual([0.6, 0.6 * (400 / 600) * CARD_ASPECT]);
+  });
+
+  it('look colours up premultiplied, as the shader does', () => {
+    // black at alpha 1 to white at alpha 0: halfway is black at alpha 0.5, not grey
+    const half = exactColorAt(
+      [
+        { at: 0, color: [0, 0, 0] },
+        { at: 1, color: [1, 1, 1], alpha: 0 },
+      ],
+      0.5,
+    );
+    expect(half.map((v) => +v.toFixed(6))).toEqual([0, 0, 0, 0.5]);
+    const glow = exactColorAt(
+      [
+        { at: 0, color: [0, 0, 0], glow: 1 },
+        { at: 1, color: [0, 0, 0], glow: 1 },
+      ],
+      0.3,
+      [0.2, 0.4, 0.6],
+    );
+    expect(glow.map((v) => +v.toFixed(6))).toEqual([0.2, 0.4, 0.6, 1]);
+  });
+
+  it('refuse a radial smaller than the card, which CSS would tile', () => {
+    expect(() =>
+      exactRadial([stop(BLACK, 0), stop(BLACK, 100)], {
+        size: [0.5, 1],
+        position: [CENTER, CENTER],
+      }),
+    ).toThrow(/tile/);
   });
 });

@@ -26,7 +26,7 @@
  *   a card must look the same on every visit.
  */
 import { CARD_HEIGHT_OVER_WIDTH } from '../shader/sources';
-import type { Filter, Layer, PointerDriven, Source } from '../shader/types';
+import type { Filter, GradientStop, Layer, PointerDriven, Source } from '../shader/types';
 
 export type RGB = [number, number, number];
 
@@ -36,6 +36,8 @@ export interface CssStop {
   /** position along the gradient, as a fraction: 0.05 for `5%` */
   at: number;
   alpha: number;
+  /** how much of it is the card's glow (uCardGlow): glowStop's 1; the exact gradients only */
+  glow?: number;
 }
 
 /** A CSS background image as a DSL layer, less the blend its stack gives it. */
@@ -472,6 +474,133 @@ export function cssStopIndex(pos: readonly number[], t: number): number {
     index = t >= pos[i] ? i : i - 1 + (t - pos[i - 1]) / span;
   }
   return index;
+}
+
+/** `var(--card-glow) at%`: a stop that is all the card's glow (uCardGlow). */
+export const glowStop = (atPercent: number, alpha = 1): CssStop => ({
+  color: BLACK,
+  at: atPercent / 100,
+  alpha,
+  glow: 1,
+});
+
+/**
+ * CSS stops as an exact gradient's: where CSS puts them (a stop placed before
+ * an earlier one moves up to it, as CSS moves it), alpha and glow kept,
+ * optionally mapped to another scale.
+ */
+function exactStops(stops: CssStop[], place: (at: number) => number = (at) => at): GradientStop[] {
+  let floor = -Infinity;
+  return stops.map((s) => {
+    floor = Math.max(floor, s.at);
+    const out: GradientStop = { at: place(floor), color: s.color };
+    if (s.alpha !== 1) out.alpha = s.alpha;
+    if (s.glow) out.glow = s.glow;
+    return out;
+  });
+}
+
+/** `linear-gradient(<angle>deg, stops)` in an image of this box, drawn exactly (the RGBA path). */
+export function exactLinear(angleDeg: number, stops: CssStop[], box: CssBox = COVER): Background {
+  const line = gradientLine(angleDeg, box);
+  return { source: { kind: 'css-linear', repeating: false, line, stops: exactStops(stops) } };
+}
+
+/**
+ * `repeating-linear-gradient(<angle>deg, stops)` in an image of this box,
+ * drawn exactly: one period, first stop to last, normalised to 0..1, which
+ * the shader wraps t into, as CSS repeats the stops.
+ */
+export function exactRepeatingLinear(
+  angleDeg: number,
+  stops: CssStop[],
+  box: CssBox = COVER,
+): Background {
+  const first = stops[0].at;
+  const span = stops[stops.length - 1].at - first;
+  if (!(span > 0)) throw new Error('a repeating gradient needs a period');
+  const line = along(gradientLine(angleDeg, box), first, span);
+  const period = exactStops(stops, (at) => (at - first) / span);
+  return { source: { kind: 'css-linear', repeating: true, line, stops: period } };
+}
+
+/**
+ * `radial-gradient(farthest-corner <circle|ellipse> at <at>, stops)` in an
+ * image of this box, drawn exactly: centred at `at` of the image (the
+ * pointer, unless given), as background-position places the image. An image
+ * smaller than the card would tile, which this does not draw.
+ */
+export function exactRadial(
+  stops: CssStop[],
+  box: CssBox = COVER,
+  options: { at?: [PointerDriven, PointerDriven]; ellipse?: boolean } = {},
+): Background {
+  const [width, height] = box.size;
+  if (width < 1 || height < 1) throw new Error('a radial smaller than the card would tile');
+  const at = options.at ?? [POINTER_X, POINTER_Y];
+  return {
+    source: {
+      kind: 'css-radial',
+      centre: [
+        plus(times(box.position[0], 1 - width), times(at[0], width)),
+        plus(times(box.position[1], 1 - height), times(at[1], height)),
+      ],
+      size: [width, height],
+      at,
+      ellipse: options.ellipse ?? false,
+      stops: exactStops(stops),
+    },
+  };
+}
+
+/** `conic-gradient([from <turns>,] stops)` over the whole card, about its centre, drawn exactly. */
+export function exactConic(stops: CssStop[], options: { from?: number } = {}): Background {
+  return {
+    source: {
+      kind: 'css-conic',
+      centre: [0.5, 0.5],
+      from: options.from ?? 0,
+      stops: exactStops(stops),
+    },
+  };
+}
+
+/** A gradient line's length in px at CARD_PX, for stops the CSS places in px. */
+export function gradientLengthPx(angleDeg: number, box: CssBox): number {
+  const rad = (angleDeg * Math.PI) / 180;
+  const width = box.size[0] * CARD_PX;
+  const height = (box.size[1] * CARD_PX) / CARD_ASPECT;
+  return Math.abs(width * Math.sin(rad)) + Math.abs(height * Math.cos(rad));
+}
+
+/** background-size `<width> auto` for a texture of this natural size, as fractions of the card. */
+export function autoHeight(width: number, natural: readonly [number, number]): [number, number] {
+  return [width, width * (natural[1] / natural[0]) * CARD_ASPECT];
+}
+
+/**
+ * An exact gradient's colour at t, as sources.ts's cssStops draws it: the
+ * stops premultiplied (a glow mixed in first), straight colour and alpha out.
+ */
+export function exactColorAt(
+  stops: GradientStop[],
+  t: number,
+  glow: RGB = BLACK,
+): [number, number, number, number] {
+  const index = cssStopIndex(
+    stops.map((s) => s.at),
+    t,
+  );
+  const i = Math.floor(index);
+  const j = Math.min(i + 1, stops.length - 1);
+  const premul = (s: GradientStop) => {
+    const a = s.alpha ?? 1;
+    const c = mix(s.color, glow, s.glow ?? 0);
+    return [c[0] * a, c[1] * a, c[2] * a, a];
+  };
+  const [p, q] = [premul(stops[i]), premul(stops[j])];
+  const m = p.map((v, k) => v + (q[k] - v) * (index - i));
+  return m[3] > 0 ? [m[0] / m[3], m[1] / m[3], m[2] / m[3], m[3]] : [0, 0, 0, 0];
 }
 
 type TextureKind = Extract<Source, { scale: number }>['kind'];
