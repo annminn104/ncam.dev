@@ -116,12 +116,12 @@ describe('EFFECT_GALLERY — three real cards for every effect', () => {
     // The check the table itself can't make, on each card's real rarity. An
     // earlier draft, built by searching TCGdex by rarity, put a Shiny rare
     // VMAX under shiny-v: `?rarity=` is a substring match. Keyed by card, so
-    // every card that breaks is named. `reverse` is passed as its section
+    // every card that breaks is named. `variant` is passed as its section
     // declares it; whether EffectsView really hands it on to HoloCard is only
     // visible on the rendered page: views/EffectsView.test.ts.
     const selects = cards.map(({ entry, cardId }) => [
       cardId,
-      selectHolo(CAPTURED_CARDS[cardId], { reverse: entry.reverse }).effect,
+      selectHolo(CAPTURED_CARDS[cardId], { variant: entry.variant }).effect,
     ]);
     expect(Object.fromEntries(selects)).toEqual(
       Object.fromEntries(cards.map(({ entry, cardId }) => [cardId, entry.effect])),
@@ -141,13 +141,13 @@ describe('EFFECT_GALLERY — three real cards for every effect', () => {
   });
 
   it('shows reverse printings only in the three reverse sections, all three cards of each, of cards that have one', () => {
-    // reverse-holo, and 151's two patterns: the only effects a reverse
-    // printing selects.
-    const reversed = EFFECT_GALLERY.filter((entry) => entry.reverse);
-    expect(reversed.map((entry) => entry.effect)).toEqual([
-      'reverse-holo',
-      'poke-ball-holo',
-      'masterball-holo',
+    // reverse-holo, and the two ball patterns: the only effects a reverse
+    // printing selects, the Master Ball's through its own printing.
+    const reversed = EFFECT_GALLERY.filter((entry) => entry.variant);
+    expect(reversed.map((entry) => [entry.effect, entry.variant])).toEqual([
+      ['reverse-holo', 'reverse'],
+      ['poke-ball-holo', 'reverse'],
+      ['masterball-holo', 'masterball'],
     ]);
     const withoutOne = reversed.flatMap((entry) =>
       entry.cardIds.filter((cardId) => CAPTURED_CARDS[cardId]?.variants?.reverse !== true),

@@ -9,48 +9,75 @@ import { ErrorPanel } from '../components/ErrorPanel';
 import { PricePanel } from '../components/PricePanel';
 import { StatPanel } from '../components/StatPanel';
 import { HoloCard } from '../holo/HoloCard';
+import { listsReverseFoil, type Printing } from '../holo/select';
+import type { Card } from '../lib/tcgdex';
 
 /**
- * Normal vs. reverse holo is an explicit display choice (see
+ * Which printing is shown is an explicit display choice (see
  * `holo/select.ts`'s `SelectOptions`), never derived from the card — this is
- * the control that supplies it, deep-linked through `?variant=reverse` (see
- * `routes.ts`). TCGdex serves exactly one image per card either way: a
- * reverse printing swaps the *foil*, not the artwork, so toggling only ever
- * changes what `<HoloCard>` renders on top of the same image, never `src`.
+ * the control that supplies it, deep-linked through `?variant=reverse` or
+ * `?variant=masterball` (see `routes.ts`). It offers only the printings the
+ * card has: the Master Ball one where TCGdex lists it. TCGdex serves exactly
+ * one image per card whichever is shown: a reverse printing swaps the *foil*,
+ * not the artwork, so toggling only ever changes what `<HoloCard>` renders on
+ * top of the same image, never `src`.
  */
-function PrintingToggle({ cardId, variant }: { cardId: string; variant?: 'reverse' }) {
+function PrintingToggle({
+  cardId,
+  variant,
+  masterBall,
+}: {
+  cardId: string;
+  variant?: Printing;
+  /** Whether the card lists a Master Ball printing, and so gets its button. */
+  masterBall: boolean;
+}) {
   const navigate = useNavigate();
-  const isReverse = variant === 'reverse';
   // No `outline-none`: in Tailwind 4 it sets the `--tw-outline-style` that
   // `outline-2` reads, which left a keyboard-focused button with no ring.
   const base =
     'rounded-lg border px-3 py-1.5 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-holo-accent';
   const on = 'border-holo-accent text-holo-accent';
   const off = 'border-holo-line';
+  const printings: Array<[Printing | undefined, string]> = [
+    [undefined, 'Normal'],
+    ['reverse', 'Reverse holo'],
+    ...(masterBall ? [['masterball', 'Master Ball'] as [Printing, string]] : []),
+  ];
 
   return (
     <div className="mt-3 flex gap-2" role="group" aria-label="Printing">
-      <button
-        type="button"
-        aria-pressed={!isReverse}
-        onClick={() => navigate({ view: 'card', cardId })}
-        className={cn(base, !isReverse ? on : off)}
-      >
-        Normal
-      </button>
-      <button
-        type="button"
-        aria-pressed={isReverse}
-        onClick={() => navigate({ view: 'card', cardId, variant: 'reverse' })}
-        className={cn(base, isReverse ? on : off)}
-      >
-        Reverse holo
-      </button>
+      {printings.map(([printing, label]) => (
+        <button
+          key={label}
+          type="button"
+          aria-pressed={variant === printing}
+          onClick={() =>
+            navigate(
+              printing ? { view: 'card', cardId, variant: printing } : { view: 'card', cardId },
+            )
+          }
+          className={cn(base, variant === printing ? on : off)}
+        >
+          {label}
+        </button>
+      ))}
     </div>
   );
 }
 
-export function CardView({ cardId, variant }: { cardId: string; variant?: 'reverse' }) {
+/**
+ * The printing to show: the one the URL asks for, if the card has it. A
+ * `?variant=` for a printing the card lacks gets no button below that could
+ * undo it, so it is ignored.
+ */
+function shownPrinting(card: Card, variant: Printing | undefined): Printing | undefined {
+  if (card.variants?.reverse !== true) return undefined;
+  if (variant === 'masterball') return listsReverseFoil(card, 'masterball') ? variant : undefined;
+  return variant;
+}
+
+export function CardView({ cardId, variant }: { cardId: string; variant?: Printing }) {
   const navigate = useNavigate();
   const { data: card, error, isPending, refetch } = useQuery(cardQuery(cardId));
 
@@ -76,19 +103,18 @@ export function CardView({ cardId, variant }: { cardId: string; variant?: 'rever
             style={{ aspectRatio: '63 / 88' }}
           />
         ) : card ? (
-          // Only a printing that exists: `?variant=reverse` on a card with no
-          // reverse printing gets no toggle below, so nothing could undo it.
-          <HoloCard
-            card={card}
-            reverse={variant === 'reverse' && card.variants?.reverse === true}
-          />
+          <HoloCard card={card} variant={shownPrinting(card, variant)} />
         ) : (
           <CardImage name={cardId} quality="high" priority />
         )}
         {/* Most cards have no reverse printing at all, so the control only
             appears for the ones that do — everyone else sees nothing here. */}
         {card?.variants?.reverse === true ? (
-          <PrintingToggle cardId={cardId} variant={variant} />
+          <PrintingToggle
+            cardId={cardId}
+            variant={shownPrinting(card, variant)}
+            masterBall={listsReverseFoil(card, 'masterball')}
+          />
         ) : null}
       </div>
 

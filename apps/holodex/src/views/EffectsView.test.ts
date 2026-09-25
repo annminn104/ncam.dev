@@ -193,8 +193,8 @@ describe('EffectsView — exactly one live card on the whole page', () => {
     },
   );
 
-  it('covers all nine cards of the three reverse sections, the ones EffectsView must pass `reverse` for', () => {
-    // Without `reverse`, their Commons and Uncommons render basic under a
+  it('covers all nine cards of the three reverse sections, the ones EffectsView must pass `variant` for', () => {
+    // Without `variant`, their Commons and Uncommons render basic under a
     // reverse-holo, poke-ball-holo or masterball-holo heading.
     const reverseEffects: EffectId[] = ['reverse-holo', 'poke-ball-holo', 'masterball-holo'];
     expect(SELECTIONS.filter(([effect]) => reverseEffects.includes(effect))).toHaveLength(9);

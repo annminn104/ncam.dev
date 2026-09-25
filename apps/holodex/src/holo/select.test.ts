@@ -206,7 +206,7 @@ describe('selectHolo — reverse holo override', () => {
   it('does NOT select reverse-holo just because a reverse printing exists — the regression guard', () => {
     // The defect this suite exists to catch: `variants.reverse` means "a
     // reverse printing of this card also exists in TCGdex," not "this card
-    // is the reverse printing." With no `reverse` option (the caller not
+    // is the reverse printing." With no `variant` option (the caller not
     // asking to show the reverse side), a Common card carrying
     // variants.reverse: true must still render as a plain basic card — this
     // is the single most important assertion in this file.
@@ -218,7 +218,7 @@ describe('selectHolo — reverse holo override', () => {
 
   it('selects reverse-holo, inverted, only once the caller explicitly asks for the reverse printing', () => {
     const c = card({ rarity: 'Common', variants: { reverse: true } });
-    const selection = selectHolo(c, { reverse: true });
+    const selection = selectHolo(c, { variant: 'reverse' });
     expect(selection.effect).toBe('reverse-holo');
     expect(selection.invert).toBe(true);
   });
@@ -228,14 +228,14 @@ describe('selectHolo — reverse holo override', () => {
     // but only ever exercised the 'basic' half; removing 'regular-holo' from
     // that set left the old test green.
     const c = card({ rarity: 'Holo Rare', variants: { reverse: true } });
-    const selection = selectHolo(c, { reverse: true });
+    const selection = selectHolo(c, { variant: 'reverse' });
     expect(selection.effect).toBe('reverse-holo');
     expect(selection.invert).toBe(true);
   });
 
   it('never downgrades a chase rarity, even when explicitly asked to reverse it', () => {
     const c = card({ rarity: 'Secret Rare', variants: { reverse: true } });
-    const selection = selectHolo(c, { reverse: true });
+    const selection = selectHolo(c, { variant: 'reverse' });
     expect(selection.effect).toBe('secret-rare');
     expect(selection.invert).toBe(false);
   });
@@ -246,7 +246,7 @@ describe('selectHolo — reverse holo override', () => {
 
   it('gives gallery override precedence over reverse holo, even when explicitly asked to reverse', () => {
     const c = card({ localId: 'TG10', rarity: 'Holo Rare', variants: { reverse: true } });
-    const selection = selectHolo(c, { reverse: true });
+    const selection = selectHolo(c, { variant: 'reverse' });
     expect(selection.effect).toBe('trainer-gallery-holo');
     expect(selection.invert).toBe(false);
   });
@@ -464,7 +464,9 @@ describe('selectHolo — clip shape of the Scarlet & Violet effects', () => {
 describe('selectHolo — 151 reverse holos', () => {
   /** A 151 Common numbered `localId`, TCGdex-padded, shown reversed. */
   const reversed = (localId: string) =>
-    selectHolo(card({ id: `sv03.5-${localId}`, localId, rarity: 'Common' }), { reverse: true });
+    selectHolo(card({ id: `sv03.5-${localId}`, localId, rarity: 'Common' }), {
+      variant: 'reverse',
+    });
 
   it('gives exactly the reference’s eight card numbers the Master Ball pattern', () => {
     for (const n of ['001', '004', '007', '025', '133', '144', '146', '161']) {
@@ -488,12 +490,12 @@ describe('selectHolo — 151 reverse holos', () => {
   });
 
   it('clips both patterns to the card’s own region, inverted, as reverse-holo does', () => {
-    expect(selectHolo(CAPTURED_CARDS['sv03.5-002'], { reverse: true })).toEqual({
+    expect(selectHolo(CAPTURED_CARDS['sv03.5-002'], { variant: 'reverse' })).toEqual({
       effect: 'poke-ball-holo',
       shape: 'stage',
       invert: true,
     });
-    expect(selectHolo(CAPTURED_CARDS['sv03.5-001'], { reverse: true })).toEqual({
+    expect(selectHolo(CAPTURED_CARDS['sv03.5-001'], { variant: 'reverse' })).toEqual({
       effect: 'masterball-holo',
       shape: 'regular',
       invert: true,
@@ -501,7 +503,7 @@ describe('selectHolo — 151 reverse holos', () => {
   });
 
   it('reverses a 151 Rare too, since a Scarlet & Violet Rare is sv-rare-holo first', () => {
-    expect(selectHolo(CAPTURED_CARDS['sv03.5-026'], { reverse: true }).effect).toBe(
+    expect(selectHolo(CAPTURED_CARDS['sv03.5-026'], { variant: 'reverse' }).effect).toBe(
       'poke-ball-holo',
     );
   });
@@ -519,10 +521,12 @@ describe('selectHolo — 151 reverse holos', () => {
   });
 
   it('never replaces a 151 chase rarity with a pattern', () => {
-    expect(selectHolo(CAPTURED_CARDS['sv03.5-166'], { reverse: true }).effect).toBe(
+    expect(selectHolo(CAPTURED_CARDS['sv03.5-166'], { variant: 'reverse' }).effect).toBe(
       'illustration-rare',
     );
-    expect(selectHolo(CAPTURED_CARDS['sv03.5-003'], { reverse: true }).effect).toBe('ex-regular');
+    expect(selectHolo(CAPTURED_CARDS['sv03.5-003'], { variant: 'reverse' }).effect).toBe(
+      'ex-regular',
+    );
   });
 
   it('leaves any other set on reverse-holo unless TCGdex lists a Poké Ball printing', () => {
@@ -532,7 +536,10 @@ describe('selectHolo — 151 reverse holos', () => {
     // holds the cards that do list one.
     for (const id of ['sv08.5-001', 'sv01-001', 'me01-001', 'swsh3-3']) {
       const localId = id.slice(id.lastIndexOf('-') + 1);
-      expect(selectHolo(card({ id, localId, rarity: 'Common' }), { reverse: true }), id).toEqual({
+      expect(
+        selectHolo(card({ id, localId, rarity: 'Common' }), { variant: 'reverse' }),
+        id,
+      ).toEqual({
         effect: 'reverse-holo',
         shape: 'regular',
         invert: true,
@@ -614,7 +621,7 @@ describe('selectHolo — the Poké Ball reverses TCGdex lists', () => {
 
   it('draws a reverse Poké Ball patterned when TCGdex lists a Poké Ball printing of it', () => {
     // Exeggcute lists a Master Ball printing too; reverse shows the Poké Ball.
-    expect(selectHolo(PRISMATIC_POKEMON, { reverse: true })).toEqual({
+    expect(selectHolo(PRISMATIC_POKEMON, { variant: 'reverse' })).toEqual({
       effect: 'poke-ball-holo',
       shape: 'regular',
       invert: true,
@@ -622,7 +629,7 @@ describe('selectHolo — the Poké Ball reverses TCGdex lists', () => {
   });
 
   it('does so for a trainer, which lists no Master Ball printing, in its own region', () => {
-    expect(selectHolo(PRISMATIC_TRAINER, { reverse: true })).toEqual({
+    expect(selectHolo(PRISMATIC_TRAINER, { variant: 'reverse' })).toEqual({
       effect: 'poke-ball-holo',
       shape: 'trainer',
       invert: true,
@@ -631,7 +638,7 @@ describe('selectHolo — the Poké Ball reverses TCGdex lists', () => {
 
   it('keeps reverse-holo for a plain reverse, and for one whose foil is not a ball', () => {
     for (const printed of [PLAIN_REVERSE, LEAGUE_REVERSE]) {
-      expect(selectHolo(printed, { reverse: true }), printed.id).toEqual({
+      expect(selectHolo(printed, { variant: 'reverse' }), printed.id).toEqual({
         effect: 'reverse-holo',
         shape: 'regular',
         invert: true,
@@ -645,5 +652,20 @@ describe('selectHolo — the Poké Ball reverses TCGdex lists', () => {
       shape: 'regular',
       invert: false,
     });
+  });
+
+  it('draws the Master Ball pattern when that printing is asked for, inverted as a reverse is', () => {
+    expect(selectHolo(PRISMATIC_POKEMON, { variant: 'masterball' })).toEqual({
+      effect: 'masterball-holo',
+      shape: 'regular',
+      invert: true,
+    });
+  });
+
+  it('never puts a Master Ball on a chase rarity, any more than a reverse', () => {
+    // 151's Venusaur ex, a Double rare: its own foil stands
+    expect(selectHolo(CAPTURED_CARDS['sv03.5-003'], { variant: 'masterball' }).effect).toBe(
+      'ex-regular',
+    );
   });
 });

@@ -49,6 +49,14 @@ describe('parseRoute', () => {
     });
   });
 
+  it('parses ?variant=masterball on a card route', () => {
+    expect(parseRoute('/card/sv08.5-001?variant=masterball')).toStrictEqual({
+      view: 'card',
+      cardId: 'sv08.5-001',
+      variant: 'masterball',
+    });
+  });
+
   it('treats anything other than the literal variant=reverse as the normal printing', () => {
     // No `variant` key at all, not `variant: undefined`. That takes
     // `toStrictEqual`: plain `toEqual` ignores undefined properties, so it
@@ -137,6 +145,11 @@ describe('formatRoute', () => {
 
   it('round-trips a card route with the reverse variant', () => {
     const input = '/card/swsh3-136?variant=reverse';
+    expect(formatRoute(parseRoute(input))).toBe(input);
+  });
+
+  it('round-trips a card route with the Master Ball variant', () => {
+    const input = '/card/sv08.5-001?variant=masterball';
     expect(formatRoute(parseRoute(input))).toBe(input);
   });
 

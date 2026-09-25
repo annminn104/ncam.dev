@@ -18,7 +18,9 @@ import type { Card } from '../lib/tcgdex';
  * section, sv-rare-holo, whose two other cards moved over from regular-holo.
  * All 90 were fetched again later that day, when selection began reading
  * `variants_detailed`: every field already here matched, and Prismatic
- * Evolutions' Eevee (sv08.5-074) replaced 151's Wartortle. The subset-set cards
+ * Evolutions' Eevee (sv08.5-074) replaced 151's Wartortle; with the Master
+ * Ball printing, its Exeggcute (sv08.5-001, captured the same day) replaced
+ * 151's Squirtle. The subset-set cards
  * (`swsh4.5sv-…` and the `swsh9tg`–`swsh12tg` Trainer Gallery ones) have no
  * `image` because the API links none: `lib/images.ts#cardImageBase` finds
  * their art. Every value is copied verbatim: never edit one by hand to make a
@@ -1154,21 +1156,21 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
       { type: 'reverse', foil: 'cosmos' },
     ],
   },
-  'sv03.5-007': {
-    id: 'sv03.5-007',
-    localId: '007',
-    name: 'Squirtle',
-    image: 'https://assets.tcgdex.net/en/sv/sv03.5/007',
+  'sv08.5-001': {
+    id: 'sv08.5-001',
+    localId: '001',
+    name: 'Exeggcute',
+    image: 'https://assets.tcgdex.net/en/sv/sv08.5/001',
     category: 'Pokemon',
-    set: { id: 'sv03.5', name: '151', cardCount: { total: 207, official: 165 } },
+    set: { id: 'sv08.5', name: 'Prismatic Evolutions', cardCount: { total: 180, official: 131 } },
     rarity: 'Common',
     stage: 'Basic',
     variants: { firstEdition: false, holo: false, normal: true, reverse: true, wPromo: false },
     variants_detailed: [
       { type: 'normal' },
       { type: 'reverse' },
-      { type: 'normal' },
-      { type: 'reverse', foil: 'cosmos' },
+      { type: 'reverse', foil: 'pokeball' },
+      { type: 'reverse', foil: 'masterball' },
     ],
   },
   'dp7-96': {

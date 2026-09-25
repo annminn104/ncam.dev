@@ -6,7 +6,7 @@
  */
 
 import { isGalleryEffect, isSectionCard } from './holo/effect-gallery';
-import type { EffectId } from './holo/select';
+import type { EffectId, Printing } from './holo/select';
 
 export interface Filters {
   q: string;
@@ -22,7 +22,7 @@ export type Route =
   | { view: 'home' }
   | { view: 'set'; setId: string; filters: Filters }
   | { view: 'search'; filters: Filters }
-  | { view: 'card'; cardId: string; variant?: 'reverse' }
+  | { view: 'card'; cardId: string; variant?: Printing }
   | { view: 'collection' }
   /**
    * `/effects`, `/effects/<effect>` or `/effects/<effect>?card=<cardId>`: the
@@ -43,9 +43,10 @@ function parseFilters(query: string): Filters {
   };
 }
 
-/** Anything other than the literal value `reverse` means the normal printing. */
-function parseVariant(query: string): 'reverse' | undefined {
-  return new URLSearchParams(query).get('variant') === 'reverse' ? 'reverse' : undefined;
+/** Anything other than the literal `reverse` or `masterball` means the normal printing. */
+function parseVariant(query: string): Printing | undefined {
+  const variant = new URLSearchParams(query).get('variant');
+  return variant === 'reverse' || variant === 'masterball' ? variant : undefined;
 }
 
 export function parseRoute(input: string): Route {
@@ -129,7 +130,7 @@ export function formatRoute(route: Route): string {
       if (!route.effect) return '/effects';
       return `/effects/${encodeURIComponent(route.effect)}${route.card ? `?card=${encodeURIComponent(route.card)}` : ''}`;
     case 'card':
-      return `/card/${encodeURIComponent(route.cardId)}${route.variant === 'reverse' ? '?variant=reverse' : ''}`;
+      return `/card/${encodeURIComponent(route.cardId)}${route.variant ? `?variant=${route.variant}` : ''}`;
     case 'search':
       return `/search${formatFilters(route.filters)}`;
     case 'set':

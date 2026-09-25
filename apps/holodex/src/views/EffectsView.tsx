@@ -218,7 +218,7 @@ function ExampleTile({ entry, cardId, selected, onSelect }: TileProps) {
           decorative: the caption below names the card, and the button's name
           should not say it twice. */}
       {selected ? (
-        <HoloCard card={card} reverse={entry.reverse} decorative />
+        <HoloCard card={card} variant={entry.variant} decorative />
       ) : (
         <CardImage base={cardImageBase(card)} name={card.name} decorative />
       )}

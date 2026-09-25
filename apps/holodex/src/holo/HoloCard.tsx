@@ -11,7 +11,7 @@ import { cardImageBase, imageUrl } from '../lib/images';
 import type { Card } from '../lib/tcgdex';
 import { holoCanvasKey } from './canvas-key';
 import { browserProbe, supportsHolo } from './capability';
-import { selectHolo } from './select';
+import { selectHolo, type Printing } from './select';
 import { createShowcase, type Showcase } from './showcase';
 import { useReducedMotion } from './use-reduced-motion';
 import type { HoloScene } from './scene';
@@ -20,11 +20,12 @@ const log = createLogger({ scope: 'holodex' });
 
 export function HoloCard({
   card,
-  reverse = false,
+  variant,
   decorative = false,
 }: {
   card: Card;
-  reverse?: boolean;
+  /** The printing shown, when not the normal one: selectHolo's `variant`. */
+  variant?: Printing;
   /**
    * Something beside the card already names it (an effects-page tile's
    * caption), so the art is hidden from assistive technology instead of
@@ -58,7 +59,7 @@ export function HoloCard({
   // cardImageBase can find.
   const base = cardImageBase(card);
   const src = imageUrl(base, 'high');
-  const freshSelection = selectHolo(card, { reverse });
+  const freshSelection = selectHolo(card, { variant });
   // selectHolo returns a fresh object every render. Rebuilt here from its own
   // primitive fields so the result is referentially stable unless the
   // effective selection actually changes — the mount effect below depends on
@@ -66,12 +67,12 @@ export function HoloCard({
   // remount the scene (recompiling the shader and refetching the card) on
   // every render.
   //
-  // `reverse` is deliberately not a dependency: it reaches the scene only
+  // `variant` is deliberately not a dependency: it reaches the scene only
   // through these three fields. On a card it cannot change — one whose table
-  // effect is not basic or regular-holo that still lists a reverse printing —
-  // listing it here rebuilt the whole scene on every toggle for no visual
-  // change. If selectHolo ever grows an output that `reverse` changes, it
-  // becomes a fourth field here, and holoCanvasKey must read it too.
+  // effect is not basic, regular-holo or sv-rare-holo that still lists a
+  // reverse printing — listing it here rebuilt the whole scene on every toggle
+  // for no visual change. If selectHolo ever grows an output that `variant`
+  // changes, it becomes a fourth field here, and holoCanvasKey must read it too.
   const selection = useMemo(
     () => ({
       effect: freshSelection.effect,

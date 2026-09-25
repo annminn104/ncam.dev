@@ -4,6 +4,7 @@ import {
   MODERN_EFFECT_BY_RARITY,
   type EffectId,
   type Era,
+  type Printing,
 } from './select';
 
 /**
@@ -60,12 +61,12 @@ export interface EffectExample {
    */
   cardIds: readonly [string, string, string];
   /**
-   * Show every card's reverse printing: passed through as
-   * `selectHolo(card, { reverse })` and `<HoloCard reverse>`. A reverse foil
-   * is a display choice, never read off the card, so without this the three
+   * Show every card's reverse or Master Ball printing: passed through as
+   * `selectHolo(card, { variant })` and `<HoloCard variant>`. A printing is a
+   * display choice, never read off the card, so without this the three
    * reverse sections would render `basic` under their headings.
    */
-  reverse?: boolean;
+  variant?: Printing;
 }
 
 /**
@@ -82,7 +83,7 @@ export const ERA_QUALIFIER: Readonly<Record<Era, string>> = {
 /** select.ts's two overrides, which reach the seven effects no rarity maps to. */
 const FROM_REVERSE_PRINTING = 'reverse printing, not 151, no Poké Ball one listed';
 const FROM_POKE_BALL_REVERSE = 'reverse printing, 151 or a listed Poké Ball one';
-const FROM_MASTER_BALL_REVERSE = `reverse printing, 151 nos. ${[...MASTER_BALL_NUMBERS].join(', ')}`;
+const FROM_MASTER_BALL_REVERSE = `Master Ball printing, or reverse on 151 nos. ${[...MASTER_BALL_NUMBERS].join(', ')}`;
 const FROM_CARD_NUMBER = 'TG/GG card number';
 
 /** In page order, each section's cards in the order it shows them. */
@@ -247,10 +248,10 @@ const EXAMPLES: Omit<EffectExample, 'rarities'>[] = [
       '30th-025', // Pikachu
     ],
   },
-  // A Common and two Uncommons, each with a reverse printing. `reverse: true`
-  // is what makes all three reverse-holo, passed through to HoloCard: reverse
-  // is a display choice, never derived from the card, so without it every one
-  // of them renders basic.
+  // A Common and two Uncommons, each with a reverse printing. `variant:
+  // 'reverse'` is what makes all three reverse-holo, passed through to
+  // HoloCard: the printing is a display choice, never derived from the card,
+  // so without it every one of them renders basic.
   {
     effect: 'reverse-holo',
     cardIds: [
@@ -258,7 +259,7 @@ const EXAMPLES: Omit<EffectExample, 'rarities'>[] = [
       'swsh3-4', // Parasect
       'swsh3-5', // Carnivine
     ],
-    reverse: true,
+    variant: 'reverse',
     override: FROM_REVERSE_PRINTING,
   },
   {
@@ -354,8 +355,8 @@ const EXAMPLES: Omit<EffectExample, 'rarities'>[] = [
   // numbers select.ts lists; the Master Ball list holds the three starters'
   // first stages, so the two sections split two lines between them. The
   // third Poké Ball card comes the other way in: a Prismatic Evolutions card,
-  // whose Poké Ball printing TCGdex lists. Both sections need `reverse: true`,
-  // as reverse-holo does.
+  // whose Poké Ball printing TCGdex lists. It needs `variant: 'reverse'`, as
+  // reverse-holo does.
   {
     effect: 'poke-ball-holo',
     cardIds: [
@@ -363,17 +364,20 @@ const EXAMPLES: Omit<EffectExample, 'rarities'>[] = [
       'sv03.5-005', // Charmeleon
       'sv08.5-074', // Eevee
     ],
-    reverse: true,
+    variant: 'reverse',
     override: FROM_POKE_BALL_REVERSE,
   },
+  // The Master Ball printing, shown explicitly: two of 151's reference
+  // Master Ball cards, and a Prismatic Evolutions card whose Master Ball
+  // printing TCGdex lists (the card page's third toggle state).
   {
     effect: 'masterball-holo',
     cardIds: [
       'sv03.5-001', // Bulbasaur
       'sv03.5-004', // Charmander
-      'sv03.5-007', // Squirtle
+      'sv08.5-001', // Exeggcute
     ],
-    reverse: true,
+    variant: 'masterball',
     override: FROM_MASTER_BALL_REVERSE,
   },
   // One card per way in: a 151 Rare and a Mega one (both eras print their

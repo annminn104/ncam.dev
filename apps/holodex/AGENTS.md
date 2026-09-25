@@ -204,27 +204,30 @@ overrides apply on top, in order: (1) a `Promo` with a `suffix` (V, ex, GX…)
 is a holo chase card, `ex-regular` in the modern era and `v-regular` before;
 (2) a card number matching `/^[tg]g/i` is a trainer-gallery printing and
 remaps its base effect to one of four gallery variants (`galleryEffect`); (3)
-`options.reverse` — an explicit flag, never read off the card — on a card whose
-effect is `basic`, `regular-holo` or `sv-rare-holo` becomes a reverse foil
-with `invert: true`: `reverse-holo`, except on 151 (`sv03.5`), whose reverse
+`options.variant` — the printing shown, an explicit choice never read off the
+card — on a card whose effect is `basic`, `regular-holo` or `sv-rare-holo`
+becomes a reverse foil with `invert: true`. `masterball` is `masterball-holo`;
+`reverse` is `reverse-holo`, except on 151 (`sv03.5`), whose reverse
 holos are Poké Ball patterned (`poke-ball-holo`), or Master Ball for the
 reference's fixed card numbers 1, 4, 7, 25, 133, 144, 146 and 161
 (`masterball-holo`) — never its random 20% promotion, so a card renders the
 same every time — and except where TCGdex lists a Poké Ball printing of the
 card (a `reverse` in `variants_detailed` with `foil: 'pokeball'`), which is
-`poke-ball-holo` too. A Master Ball printing listed beside it is not shown,
-and an Ascended Heroes card whose ball is another kind (Friend, Love, Quick,
-Dusk, Team Rocket) stays `reverse-holo`, since only the Poké Ball has a
-pattern here.
-`options.reverse` has exactly two sources: the card page's normal/reverse
-toggle (`views/CardView.tsx`) set to reverse, and the effects page's three
-reverse sections (`views/EffectsView.tsx`, via each gallery entry's
-`reverse`). `card.variants?.reverse` means "a reverse printing of this card
-exists in TCGdex's data," not "show it," and only decides whether the toggle
-is offered at all — and so whether the card page honours `?variant=reverse`,
-which it ignores on a card with no reverse printing. An earlier version of
-`selectHolo` read `card.variants?.reverse` directly instead of taking
-`options.reverse` — conflating "exists" with "show it" — and mis-rendered
+`poke-ball-holo` too. A Master Ball printing listed beside it is its own
+printing (`masterball`), and an Ascended Heroes card whose ball is another
+kind (Friend, Love, Quick, Dusk, Team Rocket) stays `reverse-holo`, since only
+the Poké Ball has a pattern here.
+`options.variant` has exactly two sources: the card page's printing toggle
+(`views/CardView.tsx`: Normal, Reverse holo, and Master Ball where TCGdex
+lists that printing, `listsReverseFoil`), deep-linked as `?variant=reverse` or
+`?variant=masterball`, and the effects page's three reverse sections
+(`views/EffectsView.tsx`, via each gallery entry's `variant`).
+`card.variants?.reverse` means "a reverse printing of this card exists in
+TCGdex's data," not "show it," and only decides whether the toggle is offered
+at all — and so whether the card page honours a `?variant=`, which it ignores
+on a card without that printing. An earlier version of
+`selectHolo` read `card.variants?.reverse` directly instead of taking the
+caller's choice — conflating "exists" with "show it" — and mis-rendered
 roughly half of TCGdex (~12,500 cards, every one whose reverse printing
 exists but isn't what a visitor is looking at) with inverted or unwarranted
 foil. An unmapped rarity falls back to `basic`,
@@ -565,9 +568,11 @@ instead of reaching for a global:
   through `views/render-view.test-util.ts`, which wraps it in App's two
   providers and seeds cards straight into the query cache. That is how the
   effects page is held to rendering every (rarity, era arm) once, to exactly one
-  `HoloCard` among its 90 cards whichever is live, and to handing `reverse` on
+  `HoloCard` among its 90 cards whichever is live, and to handing `variant` on
   to it (each read back off the HoloCard root's `data-effect`), and the card
-  page to ignoring `?variant=reverse` on a card with no reverse printing.
+  page to ignoring a `?variant=` for a printing the card lacks: `reverse` on a
+  card with no reverse printing, `masterball` on one TCGdex lists no Master
+  Ball printing for.
 
 **Not unit-tested, by design:** the three.js scene, the GLSL shaders and
 `HoloCard`'s canvas lifecycle (a fresh canvas per scene; context loss and

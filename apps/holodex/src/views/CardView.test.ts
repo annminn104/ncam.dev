@@ -4,10 +4,10 @@ import { CAPTURED_CARDS } from '../holo/effect-gallery.fixture';
 import { CardView } from './CardView';
 import { dataEffects, renderView } from './render-view.test-util';
 
-function renderCard(cardId: string, variant?: 'reverse'): string {
+function renderCard(cardId: string, variant?: 'reverse' | 'masterball'): string {
   return renderView(
     createElement(CardView, { cardId, variant }),
-    `/card/${cardId}${variant ? '?variant=reverse' : ''}`,
+    `/card/${cardId}${variant ? `?variant=${variant}` : ''}`,
     [CAPTURED_CARDS[cardId]],
   );
 }
@@ -34,5 +34,42 @@ describe('CardView — ?variant=reverse', () => {
     const html = renderCard(WITHOUT_REVERSE, 'reverse');
     expect(dataEffects(html)).toEqual(['basic']);
     expect(html).not.toContain('>Reverse holo</button>');
+  });
+});
+
+/**
+ * Prismatic Evolutions' Eevee lists a Master Ball reverse printing in TCGdex
+ * (variants_detailed, foil: 'masterball'); 151's Ivysaur has a reverse
+ * printing but no ball one listed.
+ */
+const WITH_MASTER_BALL = 'sv08.5-074'; // Eevee
+const WITHOUT_MASTER_BALL = 'sv03.5-002'; // Ivysaur
+
+describe('CardView — ?variant=masterball', () => {
+  it('starts from two cards with reverse printings, only one listing a Master Ball one', () => {
+    const foils = (id: string) =>
+      (CAPTURED_CARDS[id]?.variants_detailed ?? []).map((v) => v.foil).filter(Boolean);
+    expect(foils(WITH_MASTER_BALL)).toContain('masterball');
+    expect(foils(WITHOUT_MASTER_BALL)).not.toContain('masterball');
+  });
+
+  it('shows the Master Ball printing of a card that lists one, pressed in its toggle', () => {
+    const html = renderCard(WITH_MASTER_BALL, 'masterball');
+    expect(dataEffects(html)).toEqual(['masterball-holo']);
+    expect(html).toMatch(/aria-pressed="true"[^>]*>Master Ball<\/button>/);
+    expect(html).toMatch(/aria-pressed="false"[^>]*>Reverse holo<\/button>/);
+  });
+
+  it('offers the Master Ball button alongside the others, unpressed, on the normal printing', () => {
+    const html = renderCard(WITH_MASTER_BALL);
+    expect(dataEffects(html)).toEqual(['basic']);
+    expect(html).toMatch(/aria-pressed="false"[^>]*>Master Ball<\/button>/);
+  });
+
+  it('ignores it on a card that lists no Master Ball printing, which offers no such button', () => {
+    const html = renderCard(WITHOUT_MASTER_BALL, 'masterball');
+    expect(dataEffects(html)).toEqual(['basic']);
+    expect(html).not.toContain('>Master Ball</button>');
+    expect(html).toContain('>Reverse holo</button>');
   });
 });

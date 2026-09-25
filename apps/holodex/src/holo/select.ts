@@ -189,7 +189,7 @@ const MEGA_SET = /^me(\d|p$)/i;
  * and Special illustration rares included — foil by definition, and `holo:
  * true` in `me02` and `sv08` (checked 2026-09-24). Selection follows the
  * rarity system; the one variant datum it reads is a listed Poké Ball
- * printing (listsPokeBallReverse), whose absence is safe.
+ * printing (listsReverseFoil), whose absence is safe.
  *
  * Left out on purpose, since none holds a rarity that changes with the era:
  * `sve` and `mee`, the SV and Mega basic energies (all `Common`), and `mfb`
@@ -241,22 +241,21 @@ const BALL_REVERSE_SET = 'sv03.5';
 export const MASTER_BALL_NUMBERS: ReadonlySet<number> = new Set([1, 4, 7, 25, 133, 144, 146, 161]);
 
 /**
- * Whether TCGdex lists a Poké Ball-patterned reverse printing of this card: a
- * `variants_detailed` entry of type `reverse` with `foil: 'pokeball'`.
- * Prismatic Evolutions, Black Bolt and White Flare list one for every Common,
- * Uncommon and Rare, and Ascended Heroes for its cards whose ball is the Poké
- * Ball; its others name a Friend, Love, Quick or Dusk Ball or Team Rocket's
- * R, which have no pattern here, or no ball at all, and so stay plain
- * (checked 2026-09-25). A Master Ball printing listed beside it is not shown:
- * reverse draws the Poké Ball. This is the one variant datum selection reads,
- * and a safe one: it is there only where TCGdex curated it, and its absence,
- * a placeholder set's included, means a plain reverse, never a wrong pattern.
+ * Whether TCGdex lists a reverse printing of this card with this foil pattern:
+ * a `variants_detailed` entry of type `reverse` with `foil` set to it.
+ * Prismatic Evolutions, Black Bolt and White Flare list a `pokeball` one for
+ * every Common, Uncommon and Rare, and a `masterball` one for most, and
+ * Ascended Heroes a `pokeball` one for its cards whose ball is the Poké Ball;
+ * its others name a Friend, Love, Quick or Dusk Ball or Team Rocket's R, which
+ * have no pattern here, or no ball at all, and so stay plain (checked
+ * 2026-09-25). Plain reverse draws the Poké Ball; the Master Ball is its own
+ * printing (`variant: 'masterball'`), which the card page offers only where
+ * this finds one. This is the one variant datum selection reads, and a safe
+ * one: it is there only where TCGdex curated it, and its absence, a
+ * placeholder set's included, means a plain reverse, never a wrong pattern.
  */
-function listsPokeBallReverse(card: Card): boolean {
-  return (
-    card.variants_detailed?.some(({ type, foil }) => type === 'reverse' && foil === 'pokeball') ??
-    false
-  );
+export function listsReverseFoil(card: Card, foil: 'pokeball' | 'masterball'): boolean {
+  return card.variants_detailed?.some((v) => v.type === 'reverse' && v.foil === foil) ?? false;
 }
 
 /** The reverse foil a card gets once the caller asks for its reverse printing. */
@@ -266,7 +265,7 @@ function reverseEffect(card: Card): EffectId {
       ? 'masterball-holo'
       : 'poke-ball-holo';
   }
-  return listsPokeBallReverse(card) ? 'poke-ball-holo' : 'reverse-holo';
+  return listsReverseFoil(card, 'pokeball') ? 'poke-ball-holo' : 'reverse-holo';
 }
 
 /**
@@ -311,19 +310,23 @@ const REVERSIBLE: ReadonlySet<EffectId> = new Set<EffectId>([
   'sv-rare-holo',
 ]);
 
+/** A printing the app can show other than the normal one. */
+export type Printing = 'reverse' | 'masterball';
+
 export interface SelectOptions {
   /**
-   * True only when the app is showing the reverse printing. This is an
-   * explicit display choice made by the caller — the card page's
-   * normal/reverse toggle (`views/CardView.tsx`), or the effects page's
-   * reverse sections (`views/EffectsView.tsx`) — never derived from the card
-   * itself: `card.variants?.reverse` means "a reverse printing of this card
-   * exists," not "this card is currently reversed." Conflating the two
-   * rendered roughly half of TCGdex with inverted or unwarranted foil.
-   * `card.variants?.reverse` still decides whether the card page offers the
-   * toggle at all, and whether it honours `?variant=reverse`, just not this.
+   * The printing the app is showing, left out for the normal one: `reverse`,
+   * or `masterball`, the Master Ball-patterned reverse some sets print beside
+   * the Poké Ball one. This is an explicit display choice made by the caller
+   * — the card page's printing toggle (`views/CardView.tsx`), or the effects
+   * page's reverse sections (`views/EffectsView.tsx`) — never derived from
+   * the card itself: `card.variants?.reverse` means "a reverse printing of
+   * this card exists," not "this card is currently reversed." Conflating the
+   * two rendered roughly half of TCGdex with inverted or unwarranted foil.
+   * What the card lists still decides which buttons the card page offers,
+   * and which `?variant=` it honours, just not this.
    */
-  reverse?: boolean;
+  variant?: Printing;
 }
 
 /** The reference detects gallery cards from the card number, not a rarity. */
@@ -361,10 +364,11 @@ function clipShape(effect: EffectId, card: Card): ClipShape {
 /**
  * Which foil a card gets, where it is confined, and whether that is inverted.
  *
- * `options.reverse` is the only thing that selects a reverse foil —
- * `reverse-holo`, or `poke-ball-holo` / `masterball-holo` on 151 and
- * `poke-ball-holo` where TCGdex lists a Poké Ball printing (`reverseEffect`)
- * — see `SelectOptions`. Whether to reverse is never read off the card.
+ * `options.variant` is the only thing that selects a reverse foil: `reverse`
+ * draws `reverse-holo`, or `poke-ball-holo` / `masterball-holo` on 151 and
+ * `poke-ball-holo` where TCGdex lists a Poké Ball printing (`reverseEffect`);
+ * `masterball` draws `masterball-holo`. See `SelectOptions`. Which printing
+ * to show is never read off the card.
  */
 export function selectHolo(card: Card, options: SelectOptions = {}): HoloSelection {
   const modern = eraOf(card) === 'modern';
@@ -398,8 +402,8 @@ export function selectHolo(card: Card, options: SelectOptions = {}): HoloSelecti
 
   if (isTrainerGallery(card.localId)) {
     effect = galleryEffect(base);
-  } else if (REVERSIBLE.has(base) && options.reverse) {
-    effect = reverseEffect(card);
+  } else if (REVERSIBLE.has(base) && options.variant) {
+    effect = options.variant === 'masterball' ? 'masterball-holo' : reverseEffect(card);
     invert = true;
   }
 
