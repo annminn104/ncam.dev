@@ -7,11 +7,12 @@ import { HOME, NAV, Shell } from './Shell';
 /** The Shell alone, at `route`, around an empty page. */
 const renderShell = (route: string) => renderView(createElement(Shell, null, null), route);
 
-/** Every <button> in the header: its attributes and its text. */
+/** Every <button> in the header: its attributes, its markup and its text. */
 function buttons(html: string) {
   const header = /<header\b[\s\S]*?<\/header>/.exec(html)?.[0] ?? '';
   return [...header.matchAll(/<button\b([^>]*)>([\s\S]*?)<\/button>/g)].map(([, attrs, inner]) => ({
     attrs,
+    inner,
     text: inner.replace(/<[^>]*>/g, ''),
   }));
 }
@@ -30,6 +31,19 @@ describe('Shell', () => {
   it('makes the Holodex logo a button, like the tabs beside it', () => {
     const logo = buttons(renderShell('/')).find(({ text }) => text === 'Holodex');
     expect(logo?.attrs).toContain('type="button"');
+  });
+
+  it('shows a phone the tabs as icons, each still named', () => {
+    // The labels made the nav 512px wide at 375px: every page scrolled
+    // sideways and Effects, the default page, sat off the screen.
+    const tabs = buttons(renderShell('/')).filter(({ text }) => text !== 'Holodex');
+    expect(tabs.map(({ text }) => text)).toEqual(NAV.map(({ label }) => label));
+    for (const [index, { attrs, inner }] of tabs.entries()) {
+      const { label } = NAV[index];
+      expect(attrs, label).toContain(`aria-label="${label}"`);
+      expect(attrs, label).toContain(`title="${label}"`);
+      expect(inner, label).toContain(`<span class="hidden sm:inline">${label}</span>`);
+    }
   });
 
   it('marks Effects current on the default page and every effects URL, and Sets on its own', () => {

@@ -39,23 +39,27 @@ export function Shell({ children }: { children: ReactNode }) {
           <button
             type="button"
             onClick={() => navigate(HOME)}
-            className="mr-4 rounded-lg text-sm font-semibold tracking-[0.2em] uppercase hover:text-holo-accent"
+            className="mr-2 rounded-lg text-sm font-semibold tracking-[0.2em] uppercase hover:text-holo-accent sm:mr-4"
           >
             Holodex
           </button>
+          {/* Icons alone below sm: the labels made the row 512px wide on a
+              375px phone. aria-label and title keep each tab named there. */}
           {NAV.map(({ label, icon: Icon, route: target, match }) => (
             <button
               key={label}
               type="button"
               onClick={() => navigate(target)}
               aria-current={match.includes(route.view) ? 'page' : undefined}
+              aria-label={label}
+              title={label}
               className={cn(
-                'inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm text-holo-muted hover:text-holo-text',
+                'inline-flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm text-holo-muted hover:text-holo-text sm:px-3',
                 match.includes(route.view) && 'bg-holo-panel text-holo-text',
               )}
             >
               <Icon aria-hidden="true" className="h-4 w-4" />
-              {label}
+              <span className="hidden sm:inline">{label}</span>
             </button>
           ))}
         </nav>
