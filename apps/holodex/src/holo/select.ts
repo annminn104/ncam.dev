@@ -336,12 +336,16 @@ const MODERN_EX_NAME = / ex$/;
 
 /**
  * The rarities that bring a frame of their own, whatever the set: a LV.X's,
- * a Prime's and a LEGEND half's.
+ * a Prime's and a LEGEND half's, and the illustration rares' full art, a
+ * Scarlet & Violet or Mega `Illustration rare` (511 cards, all Pokémon) and a
+ * Pocket `One Star` (200, all Pokémon; checked 2026-09-25).
  */
 const LAYOUT_BY_RARITY: Readonly<Record<string, CardLayout>> = {
   'Rare Holo LV.X': 'lv-x',
   'Rare PRIME': 'prime',
   LEGEND: 'legend',
+  'Illustration rare': 'sv-illustration',
+  'One Star': 'pocket-illustration',
 };
 
 /**
@@ -450,12 +454,13 @@ const FULL_ART: ReadonlySet<EffectId> = new Set<EffectId>([
  * Effects the reference clips to the card's rounded border, not its art. A
  * shiny rare is neither: shiny-rare.css clips it to the card's own region
  * (--clip, or --clip-stage on an evolution), which the rules below give it.
+ * Nor is illustration-rare any more: its art window is its whole card inside
+ * the border already (regions.ts's `sv-illustration` and
+ * `pocket-illustration`, its rarity's frames), and the rules below give it
+ * that window less the stage tab, and an evolution's picture and band, which
+ * the border rect foiled.
  */
-const BORDERS: ReadonlySet<EffectId> = new Set<EffectId>([
-  'radiant-holo',
-  'illustration-rare',
-  'trainer-gallery-holo',
-]);
+const BORDERS: ReadonlySet<EffectId> = new Set<EffectId>(['radiant-holo', 'trainer-gallery-holo']);
 
 /**
  * Effects the reference clips to the art window whatever the card:
@@ -533,10 +538,10 @@ function galleryEffect(base: EffectId): EffectId {
 }
 
 function clipShape(effect: EffectId, card: Card): ClipShape {
-  // Order matters: radiant, illustration-rare and the gallery effects clip to
-  // the border, and would otherwise be claimed by the full-art or trainer
-  // rules below. Every reverse foil falls through to the card's own region,
-  // which selectHolo inverts.
+  // Order matters: radiant and the gallery effects clip to the border, and
+  // would otherwise be claimed by the full-art or trainer rules below. Every
+  // reverse foil falls through to the card's own region, which selectHolo
+  // inverts.
   if (BORDERS.has(effect)) return 'borders';
   if (ART_WINDOW.has(effect)) return 'regular';
   if (card.rarity === 'Full Art Trainer') return 'full';

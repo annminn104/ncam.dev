@@ -680,9 +680,33 @@ describe('selectHolo — clip shape of the Scarlet & Violet effects', () => {
     expect(selectHolo(CAPTURED_CARDS['sv03.5-206']).shape).toBe('full');
   });
 
-  it('clips illustration-rare to the border, as its clip-path does', () => {
-    expect(selectHolo(CAPTURED_CARDS['sv03.5-166']).shape).toBe('borders');
-    expect(selectHolo(card({ rarity: 'One Star', stage: 'Stage1' })).shape).toBe('borders');
+  it('clips illustration-rare to its full art’s frame, inside the border, by its stage', () => {
+    // The card inside its border, the stage tab out, as the reference's
+    // border polygon; an evolution's picture and band out too, as its masks.
+    const bulbasaur = selectHolo(CAPTURED_CARDS['sv03.5-166']);
+    expect([bulbasaur.effect, bulbasaur.shape, bulbasaur.layout, bulbasaur.invert]).toEqual([
+      'illustration-rare',
+      'regular',
+      'sv-illustration',
+      false,
+    ]);
+    const ivysaur = selectHolo(
+      card({ id: 'me01-134', localId: '134', rarity: 'Illustration rare', stage: 'Stage1' }),
+    );
+    expect([ivysaur.shape, ivysaur.layout]).toEqual(['stage', 'sv-illustration']);
+    const gloom = selectHolo(
+      card({ id: 'A1-228', localId: '228', rarity: 'One Star', stage: 'Stage1' }),
+    );
+    expect([gloom.effect, gloom.shape, gloom.layout]).toEqual([
+      'illustration-rare',
+      'stage',
+      'pocket-illustration',
+    ]);
+  });
+
+  it('still clips radiant and the trainer gallery to the border rect', () => {
+    expect(selectHolo(card({ rarity: 'Radiant Rare' })).shape).toBe('borders');
+    expect(selectHolo(card({ localId: 'TG05', rarity: 'Holo Rare' })).shape).toBe('borders');
   });
 });
 

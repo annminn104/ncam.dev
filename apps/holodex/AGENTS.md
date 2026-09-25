@@ -294,11 +294,12 @@ a table entry and that the seven override-only effects (the three reverse
 foils and the four gallery variants) never appear as a table value. `selectHolo` also
 picks the card's `ClipShape` (`clipShape()` in the same file) from the
 resolved effect, the card's `category`/`stage`, and whether its rarity is
-literally `Full Art Trainer` — order matters, since `radiant-holo`,
-`illustration-rare` and `trainer-gallery-holo` must claim `borders`, and
-`amazing-rare` the art window (`regular`, whatever the card's stage, as its
-unmasked CSS sets `--clip`), before the full-art and trainer rules would
-otherwise take them. The other three gallery effects are full art, as their
+literally `Full Art Trainer` — order matters, since `radiant-holo` and
+`trainer-gallery-holo` must claim `borders`, and `amazing-rare` the art
+window (`regular`, whatever the card's stage, as its unmasked CSS sets
+`--clip`), before the full-art and trainer rules would otherwise take them.
+`illustration-rare` takes `regular` or `stage` by the card's stage, on its
+rarity's own full-art frame (below). The other three gallery effects are full art, as their
 CSS's shine covers the whole card, and so is `cosmos-holo`, by the owner's
 choice (2026-09-25), though its CSS keeps the shine to the card's own region:
 a Black White Rare is foiled over the whole card. `ex-regular` (a
@@ -432,8 +433,8 @@ An element can also carry a **clip of its own** (`Element.clip`, a region's
 rect, never inverted, never `stage`), which gates that element alone inside
 whatever the effect's region allows: the reference clips some
 pseudo-elements apart from their shine. The balls keep their glyphs inside
-the silver border (`borders`) while the shine's own dodge reaches it, and
-`illustration-rare`'s glare keeps to the border polygon. `insideRect()` in
+the silver border (`borders`) while the shine's own dodge reaches it.
+`insideRect()` in
 `shader/base.ts` draws it, and `compile.test.ts` runs the emitted GLSL
 against `coversPoint` as it does `coverage()`. An element's clip is
 compiled in, so it knows no layout: its `regular` is the reference's
@@ -443,7 +444,20 @@ the effect's own region (`Element.withinRegion`: main()'s `cov`, layout and
 inversion included), which a glare needs where its reference clips it: the
 ball holos' glare (`--viewport-edge-clip`, the card inside its border less
 its art) is `clip: 'borders'` and `withinRegion`, so it spares the art
-window the shine spares, and no longer tints the art.
+window the shine spares, and no longer tints the art; `illustration-rare`'s
+`.card__glare` shares its shine's `--clip`, so it is `withinRegion` alone.
+
+**The illustration rares' full art.** An `Illustration rare` (Scarlet &
+Violet and Mega, 511 cards) and a Pocket `One Star` (200), all Pokémon,
+take a frame by their rarity (`sv-illustration`, `pocket-illustration`):
+the whole card inside the border, less what the frame prints over the
+illustration: the stage tab at the top-left, which pokemon-cards-151's
+border polygon cuts as a notch, and on an evolution its pre-evolution
+picture and "evolves from" band, which the reference's per-card masks leave
+out on all sixteen of 151's Illustration rares (#166 to #181; #182 to #193,
+whose masks foil the border, are the Ultra Rare ex). The border rect it took
+until 2026-09-25 foiled the tab, and the picture and band; over those frame
+parts it agreed with the masks on 90% of the card, the frame now on 99.5%.
 
 **The effect DSL and the generator.** Each of the 30 effect files under
 `holo/effects/` (e.g. `cosmos-holo.ts`) is a declarative `Effect`

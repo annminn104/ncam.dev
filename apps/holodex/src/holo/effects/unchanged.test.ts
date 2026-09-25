@@ -62,7 +62,7 @@ describe('code the shine ports must not change', () => {
         "ex-regular main()": "cbe1fdba3687626f",
         "ex-special-illustration-rare main()": "53fe34a12b606180",
         "hyper-rare main()": "0a096b10f228d3a3",
-        "illustration-rare main()": "aea351909d13f495",
+        "illustration-rare main()": "fbdce62086da4a64",
         "masterball-holo main()": "cd2a9017a504263e",
         "poke-ball-holo main()": "78f62aa48c72c938",
         "radiant-holo glare": "fcb2275f01e0eff5",

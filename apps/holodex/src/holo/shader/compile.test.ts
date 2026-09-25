@@ -580,6 +580,8 @@ describe('coverage() in GLSL agrees with coversPoint() in JS', () => {
     'sv',
     'pocket',
     'modern-ex',
+    'sv-illustration',
+    'pocket-illustration',
     'other',
   ];
   // Deliberately offset off the round numbers so no sample lands exactly on an
@@ -988,6 +990,15 @@ describe('an element’s own clip in GLSL agrees with coversPoint() in JS', () =
       const glare = EFFECTS[id].glare;
       expect(glare.map((e) => [e.clip, e.withinRegion])).toEqual([['borders', true]]);
     }
+  });
+
+  it('keeps illustration-rare’s glare to the shine’s region, as their shared --clip does', () => {
+    // .card__glare clips to var(--clip), .card__glare2 not at all.
+    const beneath = EFFECTS['illustration-rare'].beneath ?? [];
+    expect(beneath.map((e) => [e.clip, e.withinRegion])).toEqual([
+      [undefined, true],
+      [undefined, undefined],
+    ]);
   });
 });
 

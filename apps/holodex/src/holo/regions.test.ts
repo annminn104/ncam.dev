@@ -18,6 +18,8 @@ const LAYOUTS: CardLayout[] = [
   'sv',
   'pocket',
   'modern-ex',
+  'sv-illustration',
+  'pocket-illustration',
   'other',
 ];
 const SHAPES: ClipShape[] = ['full', 'regular', 'stage', 'trainer', 'borders'];
@@ -237,5 +239,43 @@ describe('coversPoint', () => {
     expect(coversPoint('stage', 0.5, 0.3, true, 'modern-ex')).toBe(false);
     expect(coversPoint('stage', 0.1, 0.1, true, 'modern-ex')).toBe(false);
     expect(cutsFor('stage', 'modern-ex')).toEqual([]);
+  });
+
+  it('foils an illustration rare’s whole card inside its border but its tab', () => {
+    const covers = (shape: ClipShape, x: number, y: number) =>
+      coversPoint(shape, x, y, false, 'sv-illustration');
+    // The illustration, to the border on every side, and the text over it.
+    for (const [x, y] of [
+      [0.5, 0.3],
+      [0.5, 0.7],
+      [0.05, 0.5],
+      [0.95, 0.5],
+      [0.5, 0.035],
+      [0.5, 0.965],
+    ]) {
+      expect(covers('regular', x, y), `${x}, ${y}`).toBe(true);
+    }
+    // The border itself, and the BASIC tab over the top-left.
+    for (const [x, y] of [
+      [0.02, 0.5],
+      [0.5, 0.015],
+      [0.5, 0.985],
+      [0.1, 0.05],
+    ]) {
+      expect(covers('regular', x, y), `${x}, ${y}`).toBe(false);
+    }
+    // A Basic keeps the art under where an evolution's picture sits.
+    expect(covers('regular', 0.1, 0.12)).toBe(true);
+  });
+
+  it('cuts an illustration rare evolution’s picture and band as well', () => {
+    for (const layout of ['sv-illustration', 'pocket-illustration'] as const) {
+      // The picture below the tab, the band beside it, art all around.
+      expect(coversPoint('stage', 0.1, 0.12, false, layout), layout).toBe(false);
+      expect(coversPoint('stage', 0.4, 0.105, false, layout), layout).toBe(false);
+      expect(coversPoint('stage', 0.4, 0.07, false, layout), layout).toBe(true);
+      expect(coversPoint('stage', 0.4, 0.14, false, layout), layout).toBe(true);
+      expect(coversPoint('stage', 0.1, 0.25, false, layout), layout).toBe(true);
+    }
   });
 });

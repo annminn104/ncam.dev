@@ -22,9 +22,9 @@ export interface CutBox {
 /**
  * The frame a card is printed in, as far as its foil's clip cares: where the
  * art window sits, and what the frame lays over it. select.ts's `layoutOf`
- * reads it off the card's set, or its rarity for the three frames a rarity
- * brings (LV.X, Prime, LEGEND), or its name for the ex frame of Scarlet &
- * Violet, Mega and Pocket. `other` is every card no measured layout claims
+ * reads it off the card's set, or its rarity for the frames a rarity brings
+ * (LV.X, Prime, LEGEND and the illustration rares' full art), or its name for
+ * the ex frame of Scarlet & Violet, Mega and Pocket. `other` is every card no measured layout claims
  * (Pokémon Rumble, the energies, the sets without card art) and keeps the
  * clip every card had before the layouts: the reference's.
  */
@@ -44,6 +44,8 @@ export type CardLayout =
   | 'sv'
   | 'pocket'
   | 'modern-ex'
+  | 'sv-illustration'
+  | 'pocket-illustration'
   | 'other';
 
 /** How many boxes one region can cut: the shader's uCutA and uCutB. */
@@ -203,6 +205,25 @@ const LAYOUTS: Readonly<Record<CardLayout, LayoutClip>> = {
     art: { top: 0.028, right: 0.04, bottom: 0.505, left: 0.038 },
     regular: [],
     stage: [],
+  },
+  // An Illustration rare of Scarlet & Violet or Mega: the illustration fills
+  // the card inside its silver border, and the frame prints its stage tab
+  // over the top-left, an evolution's round picture below the tab and its
+  // "evolves from" band beside the picture. pokemon-cards-151 clips it to the
+  // border polygon, which leaves out the tab, and the per-card masks it draws
+  // 151's sixteen with, their foil layers, leave out the picture and the band
+  // as well, on every one of them (2026-09-25).
+  'sv-illustration': {
+    art: { top: 0.028, right: 0.04, bottom: 0.027, left: 0.038 },
+    regular: [box(0, 0, 0.17, 0.064)],
+    stage: [box(0, 0, 0.185, 0.19), box(0.15, 0.095, 0.675, 0.12)],
+  },
+  // A Pocket One Star, the same full art: its patterned border, its tab, an
+  // evolution's octagon and band.
+  'pocket-illustration': {
+    art: { top: 0.033, right: 0.04, bottom: 0.03, left: 0.042 },
+    regular: [box(0, 0, 0.165, 0.083)],
+    stage: [box(0, 0, 0.17, 0.17), box(0.15, 0.093, 0.6, 0.12)],
   },
   other: {
     art: REFERENCE_ART,
