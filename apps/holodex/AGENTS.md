@@ -81,9 +81,8 @@ return a `MountHandle`: a disposer that also carries an optional
   main chunk): `select.ts` (rarity/layout/printing → `HoloSelection`),
   `regions.ts` (`ClipShape` → inset rect + `coversPoint`), `capability.ts`
   (`supportsHolo`), `showcase.ts` (the one-shot intro sweep, a pure state
-  machine over an injected clock), `use-reduced-motion.ts`, `teardown.ts`
-  (three-free indirection onto the shader cache's disposer — see "The holo
-  chunk is lazy" below), `effect-gallery.ts` (the effects page's matrix: three
+  machine over an injected clock), `use-reduced-motion.ts`,
+  `effect-gallery.ts` (the effects page's matrix: three
   example cards per `EffectId`, rarities read off `EFFECT_BY_RARITY` and
   `MODERN_EFFECT_BY_RARITY`, each card checked against the real `selectHolo`
   on a captured TCGdex copy in `effect-gallery.fixture.ts`), `canvas-key.ts` (`holoCanvasKey`, the key that
@@ -497,6 +496,12 @@ number moved twice, and both moves are fully explained — neither is drift:
    the client build, that is this split recurring — or a stale `dist/` from
    before `d12c296`. Delete `dist/` and `dist-ssr/` and rebuild before
    trusting any number that looks like either.
+
+Neither shim is left: since 2026-09-25 each scene owns its material ("A
+material per scene"), so there is no cache to free on unmount and
+`teardown.ts` is gone. Nothing outside `scene.ts` reaches the holo chunk's
+modules any more, statically or dynamically. The measurements above still
+name it because they describe the build as it was.
 
 Against the pre-branch baseline (126.49 KB gz lazy, ≈69 KB gz main, both by
 the same Vite-build-report method) this measurement is +4.91 KB on the lazy

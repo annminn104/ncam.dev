@@ -5,7 +5,6 @@ import css from './styles/globals.css?inline';
 import App from './App';
 import { createRouteController, type RouteController } from './route-controller';
 import { createQueryClient } from './lib/queries';
-import { disposeHoloCache } from './holo/teardown';
 
 const STYLE_ID = 'holodex-styles';
 const roots = new WeakMap<HTMLElement, { root: Root; controller: RouteController }>();
@@ -48,21 +47,6 @@ export function unmount(target: HTMLElement): void {
   queueMicrotask(() => {
     root.unmount();
     doc.getElementById(STYLE_ID)?.remove();
-    // Frees every cached holo shader program, through teardown.ts's
-    // three-free indirection rather than importing program-cache.ts here
-    // directly — program-cache.ts imports three.js, and a static or dynamic
-    // import of it here would pull that into this path whether or not a
-    // card ever rendered a holo foil. teardown.ts imports nothing from
-    // three, so this static import costs nothing on a mount that never saw
-    // a HoloCard, and disposeHoloCache() is a no-op until program-cache.ts
-    // has actually registered itself (which only happens via HoloCard's own
-    // dynamic import('./scene')).
-    //
-    // Correct as written because the remote is mounted once today — roots is
-    // keyed by target in a WeakMap, so if a page ever hosted two Holodex
-    // mounts, the first one to unmount would free materials the second mount
-    // is still using. Worth knowing if that ever changes.
-    disposeHoloCache();
   });
 }
 
