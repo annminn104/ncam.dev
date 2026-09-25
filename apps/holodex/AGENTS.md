@@ -92,9 +92,10 @@ return a `MountHandle`: a disposer that also carries an optional
   `HoloCard.tsx`'s dynamic `import('./scene')` — see below): `scene.ts`,
   `textures.ts`, `material.ts`, `shader/` (`base.ts`, `blend.ts`,
   `sources.ts`, `compile.ts`, `types.ts`), `effects/` (30 effect files, one
-  per `EffectId`, plus the `index.ts` registry, shared `palette.ts`, and
-  `css.ts`, which converts pokemon-cards-151's CSS for the eight Scarlet &
-  Violet ports — see "Two families of effects" below).
+  per `EffectId`, plus the `index.ts` registry; `css.ts`, which converts the
+  reference CSS every effect is ported from; and `legacy-glare.ts`,
+  `v-family.ts` and `rainbow-family.ts`, what the older effects share — see
+  "Two families of effects" below).
 - `src/styles/globals.css` — Tailwind v4 entry: `@theme` holo palette tokens
   (`--color-holo-bg/panel/line/text/muted/accent`) and the `.holodex` root
   class, applied instead of `<body>` so the remote never repaints the host page.
@@ -237,33 +238,54 @@ foils and the four gallery variants) never appear as a table value. `selectHolo`
 picks the card's `ClipShape` (`clipShape()` in the same file) from the
 resolved effect, the card's `category`/`stage`, and whether its rarity is
 literally `Full Art Trainer` — order matters, since `radiant-holo`,
-`illustration-rare` and the gallery effects must claim `borders` before the
-full-art and trainer rules would otherwise take them. `ex-regular` (a
+`illustration-rare` and `trainer-gallery-holo` must claim `borders`, and
+`amazing-rare` the art window (`regular`, whatever the card's stage, as its
+unmasked CSS sets `--clip`), before the full-art and trainer rules would
+otherwise take them. The other three gallery effects are full art, as their
+CSS's shine covers the whole card. `ex-regular` (a
 `Double rare`, the standard-layout ex) must never be `full`: its reference
 confines its foil with a per-card mask we do not have, and the geometric art
 window stands in for it.
 
-**Two families of effects.** The 22 older effects were _derived_ from
+**Two families of effects, both ported.** The 22 older effects come from
 [simeydotme/pokemon-cards-css](https://github.com/simeydotme/pokemon-cards-css)
-by eye, their numbers carried across as they stood. The eight Scarlet & Violet
-ones (`ex-regular`, `ex-full-art`, `illustration-rare`,
-`ex-special-illustration-rare`, `hyper-rare`, `poke-ball-holo`,
-`masterball-holo`, `sv-rare-holo`) are _ported_ from
-[simeydotme/pokemon-cards-151](https://github.com/simeydotme/pokemon-cards-151)
-through `effects/css.ts`, which converts CSS instead of copying numbers (a CSS
-`200%` makes an image bigger where a DSL size makes it repeat) and lists the
-approximations every port shares; each port lists its own. The reference's
-per-rarity CSS is not the whole of it: `public/css/cards.css` holds
-`--angle`, `--space`, every texture variable and 151's clip regions, and
-`src/lib/components/Card.svelte` the pointer maths. **The 22 older effects'
-glares are ported too** (2026-09-25, the owner's call; their shines stay
-derived by eye): each is its rarity's `.card__glare` (and `:after`) from
-pokemon-cards-css, through `css.ts` and `effects/legacy-glare.ts` (base.css's
-radial, the neutral a transparent glare folds toward, source-over for
-reverse-holo's unblended `:after`), drawn with CSS's own `farthest-corner`
-geometry (the Source's `cssBox`, which grows as the pointer leaves the
-middle) and stacked beneath the shine (below). `legacy-glares.test.ts` holds
-each to a table copied by hand from its CSS. `basic`'s port shows only as the
+(poke-holo.simey.me), the eight Scarlet & Violet ones (`ex-regular`,
+`ex-full-art`, `illustration-rare`, `ex-special-illustration-rare`,
+`hyper-rare`, `poke-ball-holo`, `masterball-holo`, `sv-rare-holo`) from
+[simeydotme/pokemon-cards-151](https://github.com/simeydotme/pokemon-cards-151).
+Every port goes through `effects/css.ts`, which converts CSS instead of
+copying numbers (a CSS `200%` makes an image bigger where a DSL size makes it
+repeat) and lists the approximations every port shares; each port lists its
+own. The reference's per-rarity CSS is not the whole of it: 151's
+`public/css/cards.css` holds `--angle`, `--space`, every texture variable and
+its clip regions; each reference's `src/lib/components/Card.svelte` holds
+the pointer maths; and pokemon-cards-css's sets `--foil`, `--mask`,
+`--cosmosbg` and the seeds inline on `.card__front`.
+
+The 22 were first _derived_ by eye, their numbers carried across as they
+stood; on 2026-09-25 (the owner's call) both their halves were ported
+instead. **Glares:** each is its rarity's `.card__glare` (and `:after`),
+through `css.ts` and `effects/legacy-glare.ts` (base.css's radial, the
+neutral a transparent glare folds toward, source-over for reverse-holo's
+unblended `:after`), drawn with CSS's own `farthest-corner` geometry (the
+Source's `cssBox`, which grows as the pointer leaves the middle) and stacked
+beneath the shine (below); `legacy-glares.test.ts` holds each to a table
+copied by hand from its CSS. **Shines:** each is its rarity's `.card__shine`
+with its `:before` and `:after`, on the reference's unmasked path (the CSS a
+card with no foil mask draws, since ours never has one), as one group with
+children, exact gradients and CSS's own filters (the DSL, below), over
+textures drawn here (`textures.ts`: by the owner's licence terms, none of the
+reference's images is copied). `v-family.ts` builds the shine the V family
+shares, and `rainbow-family.ts` the rainbow rares' colours and glitter box;
+`legacy-shines.test.ts` holds every shine to values copied by hand from its
+CSS, and `unchanged.test.ts` pins the shaders a port must not move. Measured
+against the reference, 13 of the 21 that draw a scene match it within the
+floor (the gap left between two cards that draw no effect at all); with the
+glare hidden on both sides 19 do, and the other two miss by 0.2 or less. The
+rest is glare (see "Comparing an effect with the reference"). The Scarlet
+& Violet ports predate groups and fold their pseudo-elements into flat
+layers on the RGB path; moving them onto groups, re-checked against
+poke-151, is a sub-project of its own. `basic`'s port shows only as the
 fallback material: `HoloCard` draws no scene for a `basic` card, so Commons
 and Uncommons stay plain art. Per-card masks, the reference's realism
 ceiling, are out of reach for both families.
@@ -315,27 +337,57 @@ against `coversPoint` as it does `coverage()`.
 `holo/effects/` (e.g. `cosmos-holo.ts`) is a declarative `Effect`
 (`holo/shader/types.ts`): 1-3 `shine` elements and up to two glare elements,
 painted above the shine (`glare`) or beneath it (`beneath`), each
-a stack of `Layer`s (a `Source` — solid, linear/repeating-linear/conic/radial
-gradient, `card`, `scanlines`, or one of the generated textures: `glitter`,
-`grain`, `iri`, `birthday`, and the 151 set's `pokeball` / `pokeball-inner` /
-`masterball` / `masterball-inner` patterns — plus a `BlendMode`, and
-optionally an `opacity` of its own, as a pseudo-element fades inside its
-element: cosmos-holo's `:after`), an
-optional pointer-driven `Filter`, its own `mixBlend`, and optionally its own
-`clip`. A radial converted from CSS also carries its `cssBox` (its centre
-and image size), and draws with CSS's `farthest-corner` geometry
-(`radialCssDistance` in `sources.ts`, twin `css.ts#radialT`). Numbers can be
-plain, or `PointerDriven` (a base plus coefficients over pointer-from-center /
-from-left / from-top, evaluated per fragment). `holo/shader/compile.ts`'s
-`compileEffect()` turns one `Effect` into one complete fragment shader —
-concatenating `base.ts` (varyings, clip uniforms, `coverage()`, `insideRect()`), `blend.ts`
-(16 blend modes as GLSL functions: CSS's own but `color`, including the three
-non-separable HSL ones, and `plus-lighter`, strictly a compositing operator) and `sources.ts`
-(one GLSL expression per `Source` kind) around
-per-effect layer/filter code generated from the `Effect` data. This is a
-declarative-description-compiled-to-GLSL design, not the hand-written GLSL
-chunks the original plan sketched — the one deviation from the plan, also
-recorded in the spec's Status line.
+a stack of `Layer`s (a `Source` — solid, a gradient, `card`, `scanlines`, or
+one of the textures `textures.ts` generates: `glitter`, `grain`, `iri`,
+`birthday`, `geometric`, `trainerbg`, `illusion` / `illusion-mask`,
+`ancient`, `vmaxbg`, `cosmos-bottom` / `cosmos-middle` / `cosmos-top`, and
+the 151 set's `pokeball` / `pokeball-inner` / `masterball` /
+`masterball-inner` patterns — plus a `BlendMode`, and optionally an `opacity`
+of its own, as a pseudo-element fades inside its element: cosmos-holo's
+glare `:after`), an optional pointer-driven `Filter`, its own `mixBlend`,
+optionally its own `opacity` and `clip`, and optionally `children`. A radial
+converted from CSS also carries its `cssBox` (its centre and image size), and
+draws with CSS's `farthest-corner` geometry (`radialCssDistance` in
+`sources.ts`, twin `css.ts#radialT`). Numbers can be plain, or
+`PointerDriven` (a base plus coefficients over pointer-from-center /
+from-left / from-top and the card's foil brightness, evaluated per
+fragment). `holo/shader/compile.ts`'s `compileEffect()` turns one `Effect`
+into one complete fragment shader — concatenating `base.ts` (varyings, clip
+uniforms, `coverage()`, `insideRect()`), `blend.ts` (17 blend modes as GLSL
+functions: CSS's sixteen, including the four non-separable HSL ones, and
+`plus-lighter`, strictly a compositing operator; and `compositeOver`, CSS's
+compositing of a colour with alpha onto another) and `sources.ts` (one GLSL
+expression per `Source` kind) around per-effect layer/filter code generated
+from the `Effect` data. This is a declarative-description-compiled-to-GLSL
+design, not the hand-written GLSL chunks the original plan sketched — the
+one deviation from the plan, also recorded in the spec's Status line.
+
+**Two compile paths.** An element compiles on the **RGB path** — its layers
+blended as opaque colour, each stop's alpha folded toward the colour its
+blend leaves unchanged (`css.ts#colorAt`), filtered by `applyFilter` —
+unless it needs alpha: children, an exact gradient or a texture with alpha
+(`compile.ts#needsRGBA`, `ALPHA_TEXTURES`) put it on the **RGBA path**,
+which draws as CSS does. Every layer keeps its alpha and composites by the
+W3C rule (the blend weighted by the backdrop's alpha, then source-over); a
+group paints its layers, then each child whole (its layers, its filter, then
+its opacity and clip on its alpha) by its own `mixBlend`, then filters the
+lot and composites it onto the card. The exact gradients (`css-linear`,
+repeating or not, `css-radial` and `css-conic`, built by `css.ts`'s
+`exact*` converters) put up to 32 stops where CSS puts them, hard edges
+included, interpolate premultiplied, and measure a radial's farthest corner
+(circle or ellipse, reaching stops past 100%) and a conic's angle (clockwise
+from the top, in the card's true proportions) as CSS does. The filter is
+`applyCssFilter`, CSS's chain as Chrome applies it: clamped after each of
+brightness, contrast and saturate, saturating about CSS's own luma (0.213,
+0.715, 0.072). A stop can be the card's type glow (`--card-glow`,
+`uCardGlow`: radiant-holo's) and a number its foil brightness
+(`--foil-brightness`, `uFoilBrightness`: reverse-holo's), both resolved per
+card type by `select.ts` into `HoloSelection`. The RGB path stays as it was:
+`effects/unchanged.test.ts` pins by hash the whole shader of the nine
+effects the shine ports left alone (the eight Scarlet & Violet and `basic`)
+and the 21 ported glares. Its `applyFilter` is not CSS's filter (against
+Chrome, 8 off in 0..255 on average and 55 at worst), which the Scarlet &
+Violet sub-project is to settle by moving those ports onto groups.
 
 **A material per scene.** `holo/material.ts#createMaterial(id)` builds a fresh
 `ShaderMaterial` for an effect on every call (`compileEffect` plus the shared
@@ -459,6 +511,9 @@ Violet effects and their shaders landed: `scene-*.js` is 545.22 kB raw,
 **139.60 KB gz** against the 170 KB budget — a pass with 30.4 KB of headroom,
 up 8.20 KB from the 131.40 below. The main chunk was not re-traced; the
 change that made the new effects selectable reported it 0.61 KB gz larger.
+**Again at `cca42f2`**, after the 22 older effects' shines were ported (the
+RGBA path, 21 group shaders and the textures drawn for them): 570.64 kB raw,
+**148.72 KB gz**, a pass with 21.3 KB of headroom, up 9.12 KB from 139.60.
 The rest of this section is the full measurement as of `d12c296`.
 
 (`dist/` and `dist-ssr/` deleted before the build below, so this is not a
@@ -554,15 +609,26 @@ instead of reaching for a global:
   the network.
 - `holo/textures.ts` splits _what_ it paints from the painting. Pure, tested:
   the seeded PRNG (`mulberry32`), the whole `iri` texture as bytes, the
-  `birthday` stars' shape, sizes and hues, the ball lattice, and the wrapped
-  copies that make each texture tile. Browser-only and untested: the canvas
-  calls, including the ball glyphs' internal drawing, whose geometry
-  (`GLYPH` and `BALL_RADIUS`) was measured off the reference's
-  pokeball/masterball mask images and checked by scanning the rendered
-  textures the same way in a headless browser. `scene.ts` binds a
+  `birthday` stars' shape, sizes and hues, the ball lattice, the wrapped
+  copies that make each texture tile, and every texture the legacy shines
+  sample, whole, as bytes too (`glitter`, `geometric`, `trainerbg`,
+  `illusion` and its mask, `grain`, `ancient`, `vmaxbg` and the three cosmos
+  layers: `*Pixels()`). Each of these stands in for one of the reference's
+  images, none of which is copied (the owner's licence terms): it
+  is drawn at that image's natural size (`TEXTURE_SIZE`, which the ports'
+  `background-size: auto` and `cover` read) to the motif, feature size,
+  density and tone measured off it headless, and `textures.test.ts` holds
+  those measurements (tone bounds and shares, crossings, counts), its
+  determinism, its tiling and its own structure (the cosmos layers draw one
+  list of objects, the mask draws illusion's bands). Browser-only and
+  untested: the canvas calls (`fromPixels` and the ball glyphs' drawing,
+  whose geometry, `GLYPH` and `BALL_RADIUS`, was measured off the
+  reference's pokeball/masterball mask images and checked by scanning the
+  rendered textures the same way in a headless browser). `scene.ts` binds a
   generated texture only when the selected effect samples it
-  (`texturesUsedBy`), through `SHARED_TEXTURE_UNIFORM`, which `scene.test.ts`
-  holds against the samplers `shader/sources.ts` declares.
+  (`texturesUsedBy`, children included), through `SHARED_TEXTURE_UNIFORM`,
+  which `scene.test.ts` holds against the samplers `shader/sources.ts`
+  declares.
 - Views are tested as markup. `views/*.test.ts` render a view with
   `renderToString` under node — no DOM needed, since no effect runs —
   through `views/render-view.test-util.ts`, which wraps it in App's two
@@ -585,8 +651,9 @@ tile whose card TCGdex serves without an image says so, since there is no art
 for the foil to render on.
 
 **Comparing an effect with the reference** is done headless, not by eye in a
-pane: Playwright 1.58 from the pnpm store (1.63 is there too, but 1.58's
-Chromium, build 1208, is the one cached) renders WebGL2 with no window. For
+pane: Playwright 1.63 from the pnpm store, launched on the cached Chromium
+1208 headless shell (`executablePath`; 1.63's own Chromium is not cached, and
+1.58, whose it is, has left the store), renders WebGL2 with no window. For
 each card, screenshot this app's card page (`/card/<id>`, plus
 `?variant=reverse` for a ball holo, after checking the root's `data-effect`)
 and `https://poke-151.simey.me/?poke=<card number>` (`?poke=` takes
@@ -612,15 +679,37 @@ numbers trustworthy on this branch:
 **For the 22 older effects, the reference is poke-holo.simey.me**
 (pokemon-cards-css), and every foil card there is `.masked`: it draws the
 card's own foil mask, which ours never has. So take any one of its cards,
-remove `masked`, pin `--mask`/`--foil` to `none`, set its `data-rarity`,
-`data-subtypes` and `data-supertype` to the effect and card being compared,
-and put our card's art in its `<img>`: it then draws exactly the unmasked CSS
-the ports come from. Pin its pointer variables with `!important` rather than
-hovering (two captures then differ by 0.00, where hovering ones differ by
-~11), at its own tilt for that pointer (Card.svelte:
+remove `masked`, set its `data-rarity`, `data-subtypes` and `data-supertype`
+(and `data-trainer-gallery`, `data-set` and `data-number`, which some
+rarities' CSS reads) to the effect and card being compared, give it that
+card's type class in place of its own (`.card.lightning` and the rest set
+`--card-glow` and `--foil-brightness`: the probe card was `.water`, and drew
+radiant's glow blue on a Grass card), and put our card's art in its `<img>`:
+it then draws exactly the unmasked CSS the ports come from. Pin `--foil`,
+`--mask` and `--cosmosbg` to `none` on `.card__front`, where Card.svelte sets
+them inline; pinned on `.card`, the inline values win, and amazing-rare drew
+the probe card's own foil. Pin its pointer variables with `!important`
+rather than hovering (two captures then differ by 0.00, where hovering ones
+differ by ~11), at its own tilt for that pointer (Card.svelte:
 `rotateY(-(x - 50) / 3.5)`, `rotateX((y - 50) / 3.5)`). And address it by a
 mark of your own: a Playwright locator by `data-rarity` re-queries on every
-use, and finds the next card once you change it.
+use, and finds the next card once you change it. Two more things the shine
+ports needed:
+
+- **Read the cascade off the browser**, not the CSS text alone: the text
+  says what a rule computes, but which rule wins and what each `var()`
+  resolves to on the probe card is `getComputedStyle`'s to say, on
+  `.card__shine` and on its `::before` and `::after`. regular-holo's
+  `--scanlines-space: .5px` sits in a media query (the probe computes 1px),
+  `.card.card[data-rarity…]` rules outrank a rarity's own (shiny-v's
+  `:after` is shiny-rare's), and the sunpillar rotation differs per
+  element. Dump each rarity's computed styles once and port from them
+  wherever they and the text disagree about the cascade.
+- **Feed the reference our textures** for the verdict: answer its requests
+  for `/img/glitter.png`, `/img/grain.webp` and the rest with ours, as PNGs
+  exported from the `*Pixels()` functions (`page.route`), so the two differ in
+  the effect alone; a capture with its own images then shows what the
+  textures add. Over the 21 the two means differed by less than 0.05.
 
 What the glare ports showed (2026-09-25): a whole-card gap measures the
 derived shines far more than the glares, and luminance statistics cannot see
@@ -636,7 +725,26 @@ effects' by-eye shines differ from the reference's. secret-rare's
 desaturated `lighten` erases the ported glare's darkening, whatever the
 stacking (painted above instead, it still measured 27); radiant's
 colour-dodge amplifies the glare it now lies beneath (above, 15 to 18). A
-shine re-port is what would close either.
+shine re-port is what would close either, and did (below).
+
+What the shine ports showed (2026-09-25), with the reference fed our
+textures and the pointer at (0.3, 0.3) and (0.7, 0.7): over the 21 that draw
+a scene, the mean whole-card gap was 17.25 in luminance and 20.77 in chroma
+with only the pilot's two ported, and is 3.93 and 3.70 with all of them
+(3.94 and 3.74 against the reference's own images), where two cards drawing
+no effect differ by 2.74 and 2.34. Held at each point to
+max(1.5 × floor, floor + 2), 13 pass whole, and 19 with the glare hidden on
+both sides; shiny-vmax and swsh-pikachu miss by 0.1 and 0.2 on chroma at
+(0.3, 0.3), on floors of 0.6 and 1.8, and look alike by eye. For the other
+six, what is left is the earlier glare port. Glare only, reverse-holo's
+luminance gap is 5.8 and 12.8, trainer-gallery-holo's 6.6 and 7.6 and
+trainer-full-art's 11.8 and 4.7; cosmos-holo's glare was already 3 to 6
+over; and two galleries draw a glare other than the reference's. On
+`trainer-gallery-v-regular` it computes to v-regular.css's radial (white
+0%, rgba(134, 138, 141, .33) 45%, rgba(51, 51, 51, .9) 130%), hard-light
+through brightness(.9) contrast(1.75) at opacity .4, where the port
+overlays base.css's; on `trainer-gallery-v-max` it is hard-lit, where the
+port overlays it. The shine ports left every glare as it was.
 
 Computed layout and scrolling need a browser too, so these are smoke-pass
 checks, not unit tests: every effects tile the same height across all 30

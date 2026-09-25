@@ -1,6 +1,7 @@
 /**
- * Translating pokemon-cards-151's CSS into this effect DSL, for the Scarlet &
- * Violet effects ported from it (illustration-rare.ts and the six beside it).
+ * Translating the reference CSS into this effect DSL: pokemon-cards-151's for
+ * the Scarlet & Violet effects (illustration-rare.ts and the six beside it),
+ * pokemon-cards-css's for the 22 older effects' glares and shines.
  *
  * The v2 effects were derived from pokemon-cards-css by eye, its numbers
  * carried across as they stood: a CSS `200% 700%` became a DSL size of
@@ -12,15 +13,28 @@
  * construct has no exact equivalent, the function says what it does instead,
  * and each effect file lists its own approximations.
  *
+ * Two sets of gradient converters, one per compile path (compile.ts#needsRGBA):
+ * - linear, repeatingLinear and radial make the RGB path's gradients: opaque,
+ *   their stops resampled (below). The Scarlet & Violet ports and the older
+ *   effects' glares use them.
+ * - exactLinear, exactRepeatingLinear, exactRadial and exactConic make the
+ *   RGBA path's css-linear, css-radial and css-conic, drawn as CSS draws
+ *   them: up to MAX_CSS_STOPS stops, each where CSS puts it with its own alpha
+ *   (or the card's glow, glowStop), interpolated premultiplied, and a
+ *   radial's farthest corner and a conic's angle measured as CSS measures
+ *   them. The older effects' shines use them. exactRadial draws no radial
+ *   smaller than the card, which CSS would tile, and exactConic only one
+ *   about the card's centre: all the shines ask for.
+ *
  * Coordinates are the shader's: u across and v down the card, both 0..1, as
  * vUv. CSS sizes and positions are fractions of the card: 2 for `200%`.
  *
  * Approximations every port here shares:
- * - Stops the DSL cannot space evenly are resampled to 8, its limit.
- * - A stop's alpha is folded toward the colour its blend leaves unchanged
- *   (see colorAt). That is exact for a blend linear in the layer it applies
- *   to (multiply, screen, overlay, hard-light, soft-light, exclusion) and
- *   close for the rest.
+ * - On the RGB path, stops the DSL cannot space evenly are resampled to 8,
+ *   its limit, and a stop's alpha is folded toward the colour its blend
+ *   leaves unchanged (see colorAt). That is exact for a blend linear in the
+ *   layer it applies to (multiply, screen, overlay, hard-light, soft-light,
+ *   exclusion) and close for the rest.
  * - Layers sized in px are converted at CARD_PX.
  * - --seedx/--seedy, the reference's random per-card pattern offsets, are 0:
  *   a card must look the same on every visit.
@@ -116,7 +130,7 @@ export const stop = (color: RGB, atPercent: number, alpha = 1): CssStop => ({
   alpha,
 });
 
-/** The 151 reference's --sunpillar-1..6 (base.css), paler than pokemon-cards-css's. */
+/** --sunpillar-1..6, as both references' base.css set them. */
 export const SUNPILLAR: RGB[] = [
   hsl(2, 100, 73),
   hsl(53, 100, 69),
