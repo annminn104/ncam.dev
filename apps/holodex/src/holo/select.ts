@@ -50,13 +50,14 @@ export interface HoloSelection {
 
 /**
  * Effects with no rarity of their own. The three reverse foils come from the
- * caller's explicit `reverse` option (SelectOptions), never from the card:
- * `reverse-holo` on every set but 151, whose reverse holos are Poké Ball and
- * Master Ball patterned (reverseEffect). The four gallery effects come from the
- * card number — `trainer-gallery-holo` too, now that `Illustration rare`, the
- * one rarity that used to select it, selects `illustration-rare`. A test
- * asserts this list is exactly the set of effects missing from
- * EFFECT_BY_RARITY.
+ * caller's explicit `variant` (SelectOptions), never from the card:
+ * `masterball` is `masterball-holo`, and `reverse` is `reverse-holo` unless
+ * reverseEffect finds the printing Poké Ball or Master Ball patterned (151's
+ * by set, or a Poké Ball printing TCGdex lists). The four gallery effects
+ * come from the card number — `trainer-gallery-holo` too, now that
+ * `Illustration rare`, the one rarity that used to select it, selects
+ * `illustration-rare`. A test asserts this list is exactly the set of effects
+ * missing from EFFECT_BY_RARITY.
  */
 export const OVERRIDE_ONLY_EFFECTS: EffectId[] = [
   'reverse-holo',
