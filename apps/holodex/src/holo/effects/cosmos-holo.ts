@@ -65,13 +65,17 @@ const LAYER_FILTER = fixedFilter({ brightness: 1.25, contrast: 1.75, saturate: 0
 /**
  * Cosmos foil, ported from pokemon-cards-css's cosmos-holo.css: the
  * starfield's bottom layer colour-burnt onto a rainbow multiplied onto a
- * pastel radial, colour-dodged inside the card's own region; then, above it by
+ * pastel radial, colour-dodged over the whole card; then, above it by
  * z-index, its middle layer lightened onto the rainbow, overlaid, and its top
  * layer multiplied onto it, multiplied, each layer's rainbow running at a
  * speed of its own. The glare is ported too, beneath the shine
  * (legacy-glare.ts): its radial, overlaid, and an :after radial soft-lit onto
  * it, which fades from opaque at the top of the card to a quarter at the
  * bottom.
+ *
+ * Departures: the reference clips the shine to the card's own region (--clip,
+ * --clip-stage, --clip-trainer); here it covers the whole card, the owner's
+ * call (select.ts's FULL_ART).
  *
  * Approximations: the three cosmos layers are drawn here (textures.ts), not
  * the reference's images; --cosmosbg's random offset is 0. The reference

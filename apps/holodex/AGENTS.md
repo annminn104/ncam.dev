@@ -242,7 +242,9 @@ literally `Full Art Trainer` — order matters, since `radiant-holo`,
 `amazing-rare` the art window (`regular`, whatever the card's stage, as its
 unmasked CSS sets `--clip`), before the full-art and trainer rules would
 otherwise take them. The other three gallery effects are full art, as their
-CSS's shine covers the whole card. `ex-regular` (a
+CSS's shine covers the whole card, and so is `cosmos-holo`, by the owner's
+choice (2026-09-25), though its CSS keeps the shine to the card's own region:
+a Black White Rare is foiled over the whole card. `ex-regular` (a
 `Double rare`, the standard-layout ex) must never be `full`: its reference
 confines its foil with a per-card mask we do not have, and the geometric art
 window stands in for it.
@@ -744,7 +746,10 @@ over; and two galleries draw a glare other than the reference's. On
 0%, rgba(134, 138, 141, .33) 45%, rgba(51, 51, 51, .9) 130%), hard-light
 through brightness(.9) contrast(1.75) at opacity .4, where the port
 overlays base.css's; on `trainer-gallery-v-max` it is hard-lit, where the
-port overlays it. The shine ports left every glare as it was.
+port overlays it. The shine ports left every glare as it was. cosmos-holo
+was measured on the reference's clip; its shine has since moved onto the
+whole card (the owner's call), so outside the card's own region it now
+differs from the reference by design.
 
 Computed layout and scrolling need a browser too, so these are smoke-pass
 checks, not unit tests: every effects tile the same height across all 30

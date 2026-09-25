@@ -335,9 +335,13 @@ function reverseEffect(card: Card): EffectId {
  * shine ports (legacy-shines.test.ts) take the clip-path pokemon-cards-css's
  * unmasked path computes, which for these is none. A gallery V is styled by
  * v-full-art.css's rules and a gallery VMAX by rainbow-alt.css's, so they are
- * unclipped too, as is a gallery secret rare.
+ * unclipped too, as is a gallery secret rare. cosmos-holo departs from its
+ * CSS, which clips the shine to the card's own region: the owner's call
+ * (2026-09-25), as a Black White Rare is foiled over the whole card. The
+ * Classic Collection cards it also covers have no art, so draw no scene.
  */
 const FULL_ART: ReadonlySet<EffectId> = new Set<EffectId>([
+  'cosmos-holo',
   'v-full-art',
   'trainer-gallery-v-regular',
   'trainer-gallery-v-max',

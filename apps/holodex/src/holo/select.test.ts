@@ -303,6 +303,13 @@ describe('selectHolo — clip shape', () => {
     ]);
   });
 
+  it('gives cosmos-holo the whole card, though its CSS keeps to the card’s own region', () => {
+    // the owner's call: a Black White Rare is foiled over the whole card
+    expect(selectHolo(CAPTURED_CARDS['sv10.5b-171']).shape).toBe('full');
+    const classic = selectHolo(card({ rarity: 'Classic Collection', stage: 'Stage1' }));
+    expect([classic.effect, classic.shape]).toEqual(['cosmos-holo', 'full']);
+  });
+
   it('gives an ordinary trainer the trainer region', () => {
     expect(selectHolo(card({ category: 'Trainer', rarity: 'Uncommon' })).shape).toBe('trainer');
   });
