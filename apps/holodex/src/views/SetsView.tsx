@@ -1,10 +1,13 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from '../app-context';
 import { setsQuery } from '../lib/queries';
 import { EMPTY_FILTERS } from '../routes';
 import { ErrorPanel } from '../components/ErrorPanel';
 import { Skeleton } from '../components/Skeleton';
+import { useImageFallback } from '../components/use-image-fallback';
+import { setImageUrls } from '../lib/images';
+import { cn } from '../lib/utils';
 
 export function SetsView() {
   const navigate = useNavigate();
@@ -52,7 +55,7 @@ export function SetsView() {
                 onClick={() => navigate({ view: 'set', setId: set.id, filters: EMPTY_FILTERS })}
                 className="flex w-full items-center gap-3 rounded-lg border border-holo-line bg-holo-panel p-3 text-left hover:border-holo-accent"
               >
-                <SetLogo logo={set.logo} />
+                <SetLogo set={set} />
                 <span className="min-w-0">
                   <span className="block truncate text-sm font-medium">{set.name}</span>
                   <span className="block text-xs text-holo-muted">
@@ -72,35 +75,47 @@ export function SetsView() {
   );
 }
 
-/** The files to try for a set logo, in order: WebP, then PNG. */
-export function logoUrls(logo: string): string[] {
-  return [`${logo}.webp`, `${logo}.png`];
-}
-
 /**
- * A set's logo. TCGdex serves most as WebP but three (basep, hgss3, xy3) only
- * as PNG, so a WebP that fails falls back to the PNG, and a PNG that fails to
- * the blank a set without a logo shows. An image that failed before hydration
- * fired its error event unheard, so mounting checks for one too.
+ * A set's image: its logo, then its symbol, each as WebP, then PNG
+ * (`setImageUrls`), fading in over a blurred placeholder; a set with neither,
+ * or whose files all failed, gets a badge of its id in place of a blank.
  */
-function SetLogo({ logo }: { logo?: string }) {
-  const [attempt, setAttempt] = useState(0);
-  const ref = useRef<HTMLImageElement>(null);
-  const src = logo ? logoUrls(logo)[attempt] : undefined;
-  useEffect(() => {
-    const image = ref.current;
-    if (image?.complete && image.naturalWidth === 0) setAttempt((n) => n + 1);
-  }, [src]);
-  if (!src) return <span aria-hidden="true" className="h-10 w-16 rounded bg-holo-bg" />;
+export function SetLogo({ set }: { set: { id: string; logo?: string; symbol?: string } }) {
+  const { src, loaded, ref, onLoad, onError } = useImageFallback(setImageUrls(set));
+  if (!src) {
+    return (
+      <span
+        data-fallback="badge"
+        aria-hidden="true"
+        className="grid h-10 w-16 shrink-0 place-items-center overflow-hidden rounded border border-holo-line bg-holo-bg px-1 font-mono text-[0.6rem] tracking-wide text-holo-muted"
+      >
+        {set.id.toUpperCase()}
+      </span>
+    );
+  }
   return (
-    <img
-      ref={ref}
-      src={src}
-      alt=""
-      loading="lazy"
-      decoding="async"
-      onError={() => setAttempt((n) => n + 1)}
-      className="h-10 w-16 object-contain"
-    />
+    <span className="relative h-10 w-16 shrink-0">
+      <span
+        data-placeholder="blur"
+        aria-hidden="true"
+        className={cn(
+          'absolute inset-1 rounded bg-holo-line blur-sm transition-opacity duration-300',
+          loaded ? 'opacity-0' : 'animate-pulse',
+        )}
+      />
+      <img
+        ref={ref}
+        src={src}
+        alt=""
+        loading="lazy"
+        decoding="async"
+        onLoad={onLoad}
+        onError={onError}
+        className={cn(
+          'relative h-10 w-16 object-contain transition-opacity duration-300',
+          loaded ? 'opacity-100' : 'opacity-0',
+        )}
+      />
+    </span>
   );
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cardImageBase, imageUrl, imageUrls } from './images';
+import { cardImageBase, imageUrl, imageUrls, setImageUrls } from './images';
 
 const BASE = 'https://assets.tcgdex.net/en/swsh/swsh3/136';
 
@@ -33,6 +33,26 @@ describe('imageUrls', () => {
   it('has nothing to try for a card without an image', () => {
     expect(imageUrls(undefined, 'low')).toEqual([]);
     expect(imageUrls(null, 'high')).toEqual([]);
+  });
+});
+
+describe('setImageUrls', () => {
+  const LOGO = 'https://assets.tcgdex.net/en/xy/xy3/logo';
+  const SYMBOL = 'https://assets.tcgdex.net/univ/xy/xy3/symbol';
+
+  it('tries the logo as WebP, then as the PNG basep, hgss3 and xy3 only have, then the symbol', () => {
+    // Checked 2026-09-25 across all 157 set logos: those three 404 as .webp.
+    expect(setImageUrls({ logo: LOGO, symbol: SYMBOL })).toEqual([
+      `${LOGO}.webp`,
+      `${LOGO}.png`,
+      `${SYMBOL}.webp`,
+      `${SYMBOL}.png`,
+    ]);
+  });
+
+  it('goes straight to the symbol for a set without a logo, and has nothing for one without either', () => {
+    expect(setImageUrls({ symbol: SYMBOL })).toEqual([`${SYMBOL}.webp`, `${SYMBOL}.png`]);
+    expect(setImageUrls({})).toEqual([]);
   });
 });
 

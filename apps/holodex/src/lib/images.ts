@@ -28,6 +28,15 @@ export function imageUrls(base: string | undefined | null, quality: ImageQuality
 }
 
 /**
+ * The files to try for a set's image, in order: its logo as WebP, then as PNG
+ * (basep, hgss3 and xy3 have only the PNG), then its symbol the same way.
+ * Empty for a set with neither.
+ */
+export function setImageUrls(set: { logo?: string; symbol?: string }): string[] {
+  return [set.logo, set.symbol].flatMap((base) => (base ? [`${base}.webp`, `${base}.png`] : []));
+}
+
+/**
  * A subset set's id: its parent's id plus `tg` (Trainer Gallery), `gg`
  * (Galarian Gallery) or `sv` (Shiny Vault). Anchored at both ends and only on
  * `swsh`, because the same letters sit elsewhere in real TCGdex ids: Scarlet &

@@ -295,9 +295,13 @@ describe('EffectsView — tile markup', () => {
 
   it('keeps the art out of the tile name, which its caption already gives', () => {
     // As served, every tile reaches the <img> path, live tile included.
+    // Placeholders aside: the live tile's high-res art stands on its low-res,
+    // blurred, which is aria-hidden and alt="" by construction.
     const alts = [
-      ...renderPage({ effect: 'reverse-holo' }, ALL_CARDS).matchAll(/<img\b[^>]*\balt="([^"]*)"/g),
-    ];
+      ...renderPage({ effect: 'reverse-holo' }, ALL_CARDS).matchAll(
+        /<img\b[^>]*\balt="([^"]*)"[^>]*>/g,
+      ),
+    ].filter(([tag]) => !tag.includes('data-placeholder'));
     expect(alts).toHaveLength(CARD_IDS.size);
     expect(alts.map(([, alt]) => alt).filter(Boolean)).toEqual([]);
 
