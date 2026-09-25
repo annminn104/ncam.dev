@@ -72,7 +72,10 @@ return a `MountHandle`: a disposer that also carries an optional
   wedge the whole app.
 - `src/lib/tcgdex.ts` — the TCGdex client (gotchas below). `src/lib/queries.ts`
   — react-query keys/options, single source of query config. `src/lib/images.ts`
-  — quality-suffixed asset URLs. `src/lib/collection.ts` — the localStorage
+  — quality-suffixed asset URLs. `src/lib/asset-proxy.ts` — Holodex's own
+  route to TCGdex's art for the WebGL texture (gotchas below), served by
+  `api/tcgdex-asset.ts` deployed and by a plugin in `vite.config.ts` in dev
+  and preview. `src/lib/collection.ts` — the localStorage
   owned/wishlist store. `src/lib/ssr-state.ts` — dehydrated-cache
   serialise/read for the `<script type="application/json">` handoff.
 - `src/components/` — `Shell`, `FilterBar`, `Pager`, `CardGrid` / `CardTile` /
@@ -120,6 +123,10 @@ return a `MountHandle`: a disposer that also carries an optional
   (`--color-holo-bg/panel/line/text/muted/accent`) and the `.holodex` root
   class, applied instead of `<body>` so the remote never repaints the host page.
 - `src/mount.tsx` / `ssr.tsx` / `hydrate.tsx` / `standalone.tsx` + `index.html`.
+- `api/tcgdex-asset.ts` — the one Vercel Function, the asset route deployed.
+  `vercel.json` is the other remotes' (static Vite build, `dist`, a blanket
+  `Access-Control-Allow-Origin: *`) with `/api/` left out of that header: the
+  route sets its own, and one more would double it.
 
 ## TCGdex gotchas (why the data layer looks the way it does)
 
@@ -198,6 +205,31 @@ Base `https://api.tcgdex.net/v2/en`, no key, CORS-open. Verified live 2026-09-21
   total and page count.
 - Page overflow is not an error (`?pagination:page=99999` → `200 []`), so an
   out-of-range page just renders an empty grid rather than throwing.
+- **The asset CDN doubles its CORS headers, so the texture goes through our
+  own route.** Since 2026-09-25 `assets.tcgdex.net` sends every file with two
+  `Access-Control-Allow-Origin: *` headers (two Cache-Controls as well; a
+  missing file comes back typed `text/html, image/webp`), and a browser
+  refuses a doubled Allow-Origin outright. A plain `<img>` asks without CORS
+  and never notices, but a WebGL texture must load with `crossOrigin`
+  (three.js's loaders ask `anonymous`), so every scene failed its texture:
+  `holo.unavailable`, no foil on any card. `scene.ts#setCard` therefore asks
+  `GET /api/tcgdex-asset?path=<path under assets.tcgdex.net>` at the root of
+  Holodex's own origin first (`BASE_URL` against the scene chunk's own URL,
+  so a hosted page, the portfolio's, still asks Holodex), and TCGdex
+  directly only if that fails (`lib/asset-proxy.ts#textureUrls`). The route
+  (`handleAssetProxy`, one handler in both places) fetches the file with
+  nothing of the visitor's request and answers with headers of its own:
+  one Allow-Origin, the type the path's extension names (never TCGdex's),
+  `nosniff`, a year's cache; 404 for a missing file (cached an hour), 400
+  for any path that is not a TCGdex image (a language, then segments that
+  start with a letter or digit, so no `..`, then `.webp`, `.png` or `.jpg`),
+  502 when TCGdex fails. Card tiles, CardImage and the LQIPs stay on TCGdex
+  itself. Check the header yourself with an Origin on the request, since
+  what TCGdex sends has changed under us before:
+
+  ```bash
+  node -e "fetch(process.argv[1],{headers:{Origin:'http://x'}}).then(r=>console.log(r.status,r.headers.get('access-control-allow-origin')))" 'http://localhost:9007/api/tcgdex-asset?path=en/swsh/swsh1/14/high.webp'
+  ```
 
 ## Grid tiles are CSS; the card detail is WebGL
 
@@ -816,6 +848,9 @@ pnpm --filter @ncam/holodex preview
 Standalone dev exercises the real `mount`/`routes` code path end to end
 (`standalone.tsx` wires `window.history` + `popstate` itself), so sets → set →
 filter → page → card → holo → collection → back all work with no host running.
+The dev and preview servers answer the asset route themselves (the
+`holodex:tcgdex-asset-proxy` plugin), so the foil draws on both; a static
+server of `dist` alone has no route, and falls back to TCGdex's own URL.
 
 ## Notes
 

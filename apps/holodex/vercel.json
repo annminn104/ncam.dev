@@ -1,0 +1,13 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "vite",
+  "buildCommand": "pnpm build",
+  "ignoreCommand": "npx turbo-ignore",
+  "outputDirectory": "dist",
+  "headers": [
+    {
+      "source": "/((?!api/).*)",
+      "headers": [{ "key": "Access-Control-Allow-Origin", "value": "*" }]
+    }
+  ]
+}

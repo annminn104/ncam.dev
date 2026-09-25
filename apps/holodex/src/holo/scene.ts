@@ -11,6 +11,7 @@ import {
   WebGLRenderer,
   type Texture,
 } from 'three';
+import { firstLoaded, textureUrls } from '../lib/asset-proxy';
 import { EFFECTS } from './effects';
 import { createMaterial } from './material';
 import { cutsFor, regionFor, type CutBox } from './regions';
@@ -212,7 +213,14 @@ export function createHoloScene(canvas: HTMLCanvasElement): HoloScene {
 
   return {
     async setCard(url) {
-      const texture = await new TextureLoader().loadAsync(url);
+      // Through Holodex's own asset proxy first (lib/asset-proxy.ts), which
+      // lives at the root of Holodex's origin, whatever page it is mounted
+      // on: BASE_URL is absolute in a deployed build (HOLODEX_BASE), and `/`
+      // in dev, where this module's own URL is on the dev server.
+      const origin = new URL(import.meta.env.BASE_URL, import.meta.url);
+      const texture = await firstLoaded(textureUrls(url, origin), (src) =>
+        new TextureLoader().loadAsync(src),
+      );
       if (disposed) {
         // The scene was torn down while this load was in flight. Assigning it
         // now would attach a texture to a dead material, and nothing would
