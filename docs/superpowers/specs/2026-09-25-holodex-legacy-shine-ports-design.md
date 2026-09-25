@@ -2,7 +2,9 @@
 
 **Status:** approved by the repo owner, 2026-09-25 ("Re-port 2 shines" as a
 pilot, then "Re-port all 22 shines"; approach "A: groups + alpha"; after the
-pilot, "Continue if it passes"). Branch `feat/holodex-holo-v2`, local commits
+pilot, "Continue if it passes"). Amended while planning, the same day:
+gradients on the RGBA path are exact (their stops where CSS puts them), where
+the approved draft resampled them; see "Exact gradients". Branch `feat/holodex-holo-v2`, local commits
 only. Licence terms, the owner's: port the CSS's structure and values, draw
 every texture ourselves, copy no image from either GPL-3.0 reference (the
 owner checks the licence question separately). This lifts the "SV ports
@@ -90,8 +92,8 @@ shiny-rare's (`z-index: 1`) therefore paint **after** `:after`; v-star's
 ### Alpha and compositing
 
 An element compiles to an **RGBA path** when it has children, or any of its
-layers (or its children's) carries alpha: a gradient stop with alpha below 1,
-or a texture with an alpha channel. Everything else keeps the RGB path
+layers (or its children's) is an exact gradient (below) or a texture with an
+alpha channel. Everything else keeps the RGB path
 byte-for-byte: the generated code of every element that uses no new feature
 is unchanged, which the tests pin for all eight Scarlet & Violet ports and
 for the 22 ported glares. (The shared preamble, `sources.ts` and
@@ -113,28 +115,42 @@ One GLSL function does this for a layer onto the layers beneath it
 group) and, with `αb = 1`, the group onto the card:
 `acc = mix(acc, B(acc, Cg), αg · weight)`. A layer's or child's opacity
 multiplies its alpha. Filters act on straight colour and leave alpha alone,
-as CSS's `brightness`, `contrast` and `saturate` do. Gradients interpolate in
-premultiplied colour, as CSS's do, in the shader and in `css.ts`'s
-resampling alike. A stop is `[r, g, b]` or `[r, g, b, a]`; a radial's stop
-`color` likewise.
+as CSS's `brightness`, `contrast` and `saturate` do.
 
-`css.ts` keeps folding alpha for the RGB path, as the Scarlet & Violet ports
-use it, and gains the unfolded conversion (`radial`, `linear`,
-`repeatingLinear` returning stops with alpha) for the new ports.
+### Exact gradients
+
+The RGBA path draws CSS gradients through three new source kinds,
+`css-linear` (optionally `repeating`), `css-radial` and `css-conic`, whose
+stops sit where CSS puts them: up to 32, each with its alpha, interpolated in
+premultiplied colour as CSS's are, the first colour held before the first stop
+and the last after the last. Nothing is resampled onto the older kinds' eight
+even stops, so a band pattern keeps its hard edges (radiant-holo's bars are
+twenty-one stops) and no alpha is folded. A `css-linear` carries its gradient
+line as a function of the card's uv, the line `css.ts` already works out for
+the older kinds; a `css-radial` its CSS geometry (below); a `css-conic` its
+centre and start angle, measured clockwise from the top in the card's true
+proportions, as CSS measures it. The older kinds keep their eight even RGB
+stops, and `css.ts` its folding, for the RGB path. (The approved draft put
+alpha on the older kinds' stops and kept the resampling; positioned stops are
+exact where that was not.)
 
 ### Radials: ellipses, and a centre of their own
 
-`cssBox` gains `shape?: 'ellipse'` (default circle) and `at?`: the gradient's
-centre as a fraction of its own image, which CSS measures the farthest corner
-from. Left out, `at` is the pointer, as every converted radial has it today.
+A `css-radial` carries its `centre` on the card and its image's `size`, as a
+converted radial's `cssBox` does, plus `at`, the centre as a fraction of its
+own image, which CSS measures the farthest corner from (the pointer, for every
+radial converted so far), and whether it is an `ellipse`.
 radiant-holo and trainer-gallery-holo centre at
 `calc(var(--pointer-x) * 0.5 + 25%)`, so theirs is `0.25 + 0.5 · pointer`.
 
 A `farthest-corner ellipse` keeps the aspect `farthest-side` would give it and
 grows to pass through the corner: radii `√2 · max(c, 1 − c)` of the image
 along each axis. A circle keeps today's geometry, generalised from the
-pointer to `at`. `css.ts#radialT` stays the TypeScript twin, and
-`compile.test.ts` keeps translating the GLSL itself and holding it to that.
+pointer to `at`, and the reach is left unclamped, since CSS carries a stop
+past 100% (the glares' 180%) beyond the ending shape. The older radials'
+`radialCssDistance` becomes that reach, clamped, at the pointer. A
+TypeScript twin in `css.ts` holds the geometry, and `compile.test.ts` keeps
+translating the GLSL itself and holding it to the twin.
 
 ### A per-card glow
 
@@ -142,9 +158,9 @@ pointer to `at`. `css.ts#radialT` stays the TypeScript twin, and
 `.card.fire`, … ten types; `hsl(175, 100%, 90%)` otherwise, trainers and
 Colorless included). `selectHolo` adds `glow` to `HoloSelection`, looked up
 from the card's first type in a table copied from base.css, and the scene
-sets it as `uCardGlow`. A radial stop may be part glow:
-`{ at, color, glow }` draws `mix(color, uCardGlow, glow)`, and `css.ts`
-resamples a stop written as the glow into those weights. Only radiant-holo
+sets it as `uCardGlow`. An exact gradient's stop may be part glow:
+`{ at, color, alpha, glow }` draws `mix(color, uCardGlow, glow)`, and
+`css.ts` writes `var(--card-glow)` as a stop of glow 1. Only radiant-holo
 uses it.
 
 ### The `color` blend, and a child's clip
@@ -229,8 +245,9 @@ The glares stay as ported; `basic` keeps an empty shine (base.css's
   worked by hand (an opaque source, a transparent one, a half-transparent
   source over a half-transparent backdrop, each blend family); a group's
   order (layers, then each child filtered, then the element's filter, then
-  the card); a child's opacity and clip on its alpha; the ellipse and `at`
-  geometry against `radialT`; the glow stops. Every element with no new
+  the card); a child's opacity and clip on its alpha; the exact gradients'
+  stop lookup, the ellipse and `at` geometry and the conic angle, each
+  translated from the GLSL and held to its twin; the glow stops. Every element with no new
   feature emits exactly what it did: the generated `main()` of each Scarlet
   & Violet port and of the 22 ported glares is pinned.
 - **Blend**: `color` against CSS's definition, as the other non-separable
