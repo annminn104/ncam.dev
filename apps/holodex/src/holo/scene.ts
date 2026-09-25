@@ -231,6 +231,7 @@ export function createHoloScene(canvas: HTMLCanvasElement): HoloScene {
       material.uniforms.uClipRect.value.set(region.top, region.right, region.bottom, region.left);
       material.uniforms.uClipShape.value = SHAPE_ID[selection.shape];
       material.uniforms.uInvert.value = selection.invert ? 1 : 0;
+      material.uniforms.uCardGlow.value.set(...selection.glow);
 
       // This scene's own, so the one it replaces (the placeholder, or an
       // earlier selection's) has no other user.

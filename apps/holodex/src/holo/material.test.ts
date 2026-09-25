@@ -1,5 +1,7 @@
+import { Vector3 } from 'three';
 import { describe, expect, it } from 'vitest';
 import { buildMaterial, createMaterial } from './material';
+import { DEFAULT_GLOW } from './select';
 import type { Layer } from './shader/types';
 
 /** Every `uniform <type> <name>;` declaration in a compiled fragment shader. */
@@ -103,5 +105,13 @@ describe('createMaterial', () => {
     const m = createMaterial('does-not-exist' as Parameters<typeof createMaterial>[0]);
     expect(m).not.toBeNull();
     expect(m?.fragmentShader).toBe(createMaterial('basic')?.fragmentShader);
+  });
+});
+
+describe('the card’s glow', () => {
+  it('starts every material on :root’s glow, until the scene sets the card’s', () => {
+    const glow = createMaterial('basic')?.uniforms.uCardGlow.value;
+    expect(glow).toBeInstanceOf(Vector3);
+    expect(glow?.toArray()).toEqual(DEFAULT_GLOW);
   });
 });

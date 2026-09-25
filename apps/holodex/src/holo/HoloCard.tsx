@@ -68,18 +68,22 @@ export function HoloCard({
   // every render.
   //
   // `variant` is deliberately not a dependency: it reaches the scene only
-  // through these three fields. On a card it cannot change — one whose table
+  // through these fields. On a card it cannot change — one whose table
   // effect is not basic, regular-holo or sv-rare-holo that still lists a
   // reverse printing — listing it here rebuilt the whole scene on every toggle
-  // for no visual change. If selectHolo ever grows an output that `variant`
-  // changes, it becomes a fourth field here, and holoCanvasKey must read it too.
+  // for no visual change. The glow is the card's own, which `variant` never
+  // changes; it is a field here, read by its three numbers, because the scene
+  // sets it (and so holoCanvasKey reads it too). If selectHolo ever grows
+  // another output, it joins these, and holoCanvasKey must read it as well.
+  const [glowR, glowG, glowB] = freshSelection.glow;
   const selection = useMemo(
     () => ({
       effect: freshSelection.effect,
       shape: freshSelection.shape,
       invert: freshSelection.invert,
+      glow: [glowR, glowG, glowB] as [number, number, number],
     }),
-    [freshSelection.effect, freshSelection.shape, freshSelection.invert],
+    [freshSelection.effect, freshSelection.shape, freshSelection.invert, glowR, glowG, glowB],
   );
 
   // A new scene only ever builds on a new canvas: see holoCanvasKey.

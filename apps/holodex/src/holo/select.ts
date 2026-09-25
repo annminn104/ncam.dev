@@ -46,6 +46,39 @@ export interface HoloSelection {
   shape: ClipShape;
   /** reverse-holo inverts its clip: foil everywhere EXCEPT the region. */
   invert: boolean;
+  /**
+   * The card's --card-glow (glowOf), for an effect whose stops are part glow
+   * (types.ts's GradientStop.glow, the shader's uCardGlow): radiant-holo's.
+   */
+  glow: [number, number, number];
+}
+
+/**
+ * base.css's --card-glow, which pokemon-cards-css classes a card by its type
+ * (`.card.water` and the rest), as RGB 0..1: its hsl() values converted, and
+ * Fighting's rgb(). select.test.ts holds each to css.ts#hsl. A card is keyed
+ * by its first type; anything else, Colorless and trainers included, keeps
+ * :root's.
+ */
+const GLOW_BY_TYPE: Readonly<Record<string, [number, number, number]>> = {
+  Water: [0.212, 0.8328, 0.988],
+  Fire: [0.9221, 0.3575, 0.2579],
+  Grass: [0.5933, 0.9335, 0.3665],
+  Lightning: [0.9519, 0.8875, 0.3081],
+  Psychic: [0.6755, 0.3196, 0.8404],
+  Fighting: [0.5686, 0.3529, 0.1529],
+  Darkness: [0.0621, 0.4155, 0.4779],
+  Metal: [0.64, 0.752, 0.76],
+  Dragon: [0.56, 0.497, 0.14],
+  Fairy: [1, 0.78, 0.9157],
+};
+
+/** :root's --card-glow, hsl(175, 100%, 90%). */
+export const DEFAULT_GLOW: [number, number, number] = [0.8, 1, 0.9833];
+
+/** The card's --card-glow, by its first type. */
+export function glowOf(card: Card): [number, number, number] {
+  return GLOW_BY_TYPE[card.types?.[0] ?? ''] ?? DEFAULT_GLOW;
 }
 
 /**
@@ -408,5 +441,5 @@ export function selectHolo(card: Card, options: SelectOptions = {}): HoloSelecti
     invert = true;
   }
 
-  return { effect, shape: clipShape(effect, card), invert };
+  return { effect, shape: clipShape(effect, card), invert, glow: glowOf(card) };
 }

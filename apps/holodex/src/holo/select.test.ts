@@ -5,11 +5,18 @@ import { CAPTURED_CARDS } from './effect-gallery.fixture';
 import {
   EFFECT_BY_RARITY,
   MODERN_EFFECT_BY_RARITY,
+  DEFAULT_GLOW,
   OVERRIDE_ONLY_EFFECTS,
   eraOf,
+  glowOf,
   selectHolo,
   type EffectId,
+  type HoloSelection,
 } from './select';
+import { hsl } from './effects/css';
+
+/** What a selection shows: its effect, where it is confined, and whether that is inverted. */
+const shown = ({ effect, shape, invert }: HoloSelection) => ({ effect, shape, invert });
 
 /** Minimal card; every test overrides only what it cares about. */
 function card(patch: Partial<Card> = {}): Card {
@@ -470,7 +477,11 @@ describe('selectHolo — 151 reverse holos', () => {
 
   it('gives exactly the reference’s eight card numbers the Master Ball pattern', () => {
     for (const n of ['001', '004', '007', '025', '133', '144', '146', '161']) {
-      expect(reversed(n), n).toEqual({ effect: 'masterball-holo', shape: 'regular', invert: true });
+      expect(shown(reversed(n)), n).toEqual({
+        effect: 'masterball-holo',
+        shape: 'regular',
+        invert: true,
+      });
     }
   });
 
@@ -480,7 +491,7 @@ describe('selectHolo — 151 reverse holos', () => {
     // must render the same on every call.
     for (const n of ['002', '005', '008', '024', '026', '132', '134', '145', '147', '160', '162']) {
       for (let call = 0; call < 3; call += 1) {
-        expect(reversed(n), n).toEqual({
+        expect(shown(reversed(n)), n).toEqual({
           effect: 'poke-ball-holo',
           shape: 'regular',
           invert: true,
@@ -490,12 +501,12 @@ describe('selectHolo — 151 reverse holos', () => {
   });
 
   it('clips both patterns to the card’s own region, inverted, as reverse-holo does', () => {
-    expect(selectHolo(CAPTURED_CARDS['sv03.5-002'], { variant: 'reverse' })).toEqual({
+    expect(shown(selectHolo(CAPTURED_CARDS['sv03.5-002'], { variant: 'reverse' }))).toEqual({
       effect: 'poke-ball-holo',
       shape: 'stage',
       invert: true,
     });
-    expect(selectHolo(CAPTURED_CARDS['sv03.5-001'], { variant: 'reverse' })).toEqual({
+    expect(shown(selectHolo(CAPTURED_CARDS['sv03.5-001'], { variant: 'reverse' }))).toEqual({
       effect: 'masterball-holo',
       shape: 'regular',
       invert: true,
@@ -512,7 +523,7 @@ describe('selectHolo — 151 reverse holos', () => {
     // The reference forces its eight numbers to reverse whatever was asked;
     // here reverse stays the caller's choice. Both of these have a reverse
     // printing in TCGdex (variants.reverse), which must not be enough.
-    expect(selectHolo(CAPTURED_CARDS['sv03.5-001'])).toEqual({
+    expect(shown(selectHolo(CAPTURED_CARDS['sv03.5-001']))).toEqual({
       effect: 'basic',
       shape: 'regular',
       invert: false,
@@ -537,7 +548,7 @@ describe('selectHolo — 151 reverse holos', () => {
     for (const id of ['sv08.5-001', 'sv01-001', 'me01-001', 'swsh3-3']) {
       const localId = id.slice(id.lastIndexOf('-') + 1);
       expect(
-        selectHolo(card({ id, localId, rarity: 'Common' }), { variant: 'reverse' }),
+        shown(selectHolo(card({ id, localId, rarity: 'Common' }), { variant: 'reverse' })),
         id,
       ).toEqual({
         effect: 'reverse-holo',
@@ -621,7 +632,7 @@ describe('selectHolo — the Poké Ball reverses TCGdex lists', () => {
 
   it('draws a reverse Poké Ball patterned when TCGdex lists a Poké Ball printing of it', () => {
     // Exeggcute lists a Master Ball printing too; reverse shows the Poké Ball.
-    expect(selectHolo(PRISMATIC_POKEMON, { variant: 'reverse' })).toEqual({
+    expect(shown(selectHolo(PRISMATIC_POKEMON, { variant: 'reverse' }))).toEqual({
       effect: 'poke-ball-holo',
       shape: 'regular',
       invert: true,
@@ -629,7 +640,7 @@ describe('selectHolo — the Poké Ball reverses TCGdex lists', () => {
   });
 
   it('does so for a trainer, which lists no Master Ball printing, in its own region', () => {
-    expect(selectHolo(PRISMATIC_TRAINER, { variant: 'reverse' })).toEqual({
+    expect(shown(selectHolo(PRISMATIC_TRAINER, { variant: 'reverse' }))).toEqual({
       effect: 'poke-ball-holo',
       shape: 'trainer',
       invert: true,
@@ -638,7 +649,7 @@ describe('selectHolo — the Poké Ball reverses TCGdex lists', () => {
 
   it('keeps reverse-holo for a plain reverse, and for one whose foil is not a ball', () => {
     for (const printed of [PLAIN_REVERSE, LEAGUE_REVERSE]) {
-      expect(selectHolo(printed, { variant: 'reverse' }), printed.id).toEqual({
+      expect(shown(selectHolo(printed, { variant: 'reverse' })), printed.id).toEqual({
         effect: 'reverse-holo',
         shape: 'regular',
         invert: true,
@@ -647,7 +658,7 @@ describe('selectHolo — the Poké Ball reverses TCGdex lists', () => {
   });
 
   it('shows no pattern unless the reverse printing is asked for', () => {
-    expect(selectHolo(PRISMATIC_POKEMON)).toEqual({
+    expect(shown(selectHolo(PRISMATIC_POKEMON))).toEqual({
       effect: 'basic',
       shape: 'regular',
       invert: false,
@@ -655,7 +666,7 @@ describe('selectHolo — the Poké Ball reverses TCGdex lists', () => {
   });
 
   it('draws the Master Ball pattern when that printing is asked for, inverted as a reverse is', () => {
-    expect(selectHolo(PRISMATIC_POKEMON, { variant: 'masterball' })).toEqual({
+    expect(shown(selectHolo(PRISMATIC_POKEMON, { variant: 'masterball' }))).toEqual({
       effect: 'masterball-holo',
       shape: 'regular',
       invert: true,
@@ -667,5 +678,36 @@ describe('selectHolo — the Poké Ball reverses TCGdex lists', () => {
     expect(selectHolo(CAPTURED_CARDS['sv03.5-003'], { variant: 'masterball' }).effect).toBe(
       'ex-regular',
     );
+  });
+});
+
+describe('the card’s glow, base.css’s --card-glow', () => {
+  const typed = (types?: string[]) => card({ types });
+  const table: Array<[string, [number, number, number]]> = [
+    ['Water', hsl(192, 97, 60)],
+    ['Fire', hsl(9, 81, 59)],
+    ['Grass', hsl(96, 81, 65)],
+    ['Lightning', hsl(54, 87, 63)],
+    ['Psychic', hsl(281, 62, 58)],
+    ['Fighting', [145 / 255, 90 / 255, 39 / 255]],
+    ['Darkness', hsl(189, 77, 27)],
+    ['Metal', hsl(184, 20, 70)],
+    ['Dragon', hsl(51, 60, 35)],
+    ['Fairy', hsl(323, 100, 89)],
+  ];
+
+  it.each(table)('%s glows as base.css colours it', (type, rgb) => {
+    glowOf(typed([type])).forEach((v, i) => expect(v).toBeCloseTo(rgb[i], 4));
+  });
+
+  it('keeps :root’s glow for Colorless and for a card with no type, and reads only the first', () => {
+    hsl(175, 100, 90).forEach((v, i) => expect(DEFAULT_GLOW[i]).toBeCloseTo(v, 4));
+    expect(glowOf(typed(['Colorless']))).toEqual(DEFAULT_GLOW);
+    expect(glowOf(typed(undefined))).toEqual(DEFAULT_GLOW);
+    expect(glowOf(typed(['Fire', 'Water']))).toEqual(glowOf(typed(['Fire'])));
+  });
+
+  it('hands the glow to the scene with the selection', () => {
+    expect(selectHolo(typed(['Grass'])).glow).toEqual(glowOf(typed(['Grass'])));
   });
 });
