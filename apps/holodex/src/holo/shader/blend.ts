@@ -1,6 +1,8 @@
 /**
  * The CSS blend modes pokemon-cards-css and pokemon-cards-151 composite their
- * foil layers with, as GLSL and as TypeScript.
+ * foil layers with, all sixteen of CSS's, as GLSL and as TypeScript, and CSS's
+ * compositing of one straight-alpha colour over another (compositeRGBA and
+ * compositeOver), which the RGBA path (shader/compile.ts) is built on.
  *
  * Both sides implement the W3C compositing formulas exactly. The TypeScript
  * twins are not used at runtime — they exist so the formulas can be tested
@@ -29,7 +31,8 @@ export type BlendMode =
   | 'saturation'
   | 'luminosity'
   | 'plus-lighter'
-  | 'color-burn';
+  | 'color-burn'
+  | 'color';
 
 export const BLEND_ID: Record<BlendMode, number> = {
   normal: 0,
@@ -48,6 +51,8 @@ export const BLEND_ID: Record<BlendMode, number> = {
   luminosity: 13,
   'plus-lighter': 14,
   'color-burn': 15,
+  // appended, so no older blend's id moves (effects/unchanged.test.ts)
+  color: 16,
 };
 
 // ---------------------------------------------------------------- TypeScript
@@ -138,7 +143,34 @@ export function blendRGB(mode: BlendMode, backdrop: RGB, source: RGB): Out {
       return perChannel(backdrop, source, (b, s) =>
         b >= 1 ? 1 : s <= 0 ? 0 : 1 - Math.min(1, (1 - b) / s),
       );
+    case 'color':
+      return setLum(source, lum(backdrop)).map(clamp01) as Out;
   }
+}
+
+export type RGBA = readonly [number, number, number, number];
+
+/**
+ * CSS compositing, W3C Compositing and Blending Level 1: `source` over
+ * `backdrop`, both straight (unpremultiplied) colour and alpha, the blend
+ * applied only where both are present. The RGBA path (shader/compile.ts)
+ * composites each layer onto the layers beneath it, each child onto its
+ * group and each group onto the card this way; compositeOver below is its
+ * GLSL.
+ */
+export function compositeRGBA(
+  mode: BlendMode,
+  backdrop: RGBA,
+  source: RGBA,
+): [number, number, number, number] {
+  const [bA, sA] = [backdrop[3], source[3]];
+  const blended = blendRGB(mode, backdrop.slice(0, 3), source.slice(0, 3));
+  const a = sA + bA * (1 - sA);
+  const channel = (i: number) =>
+    a > 0
+      ? (sA * (1 - bA) * source[i] + sA * bA * blended[i] + (1 - sA) * bA * backdrop[i]) / a
+      : 0;
+  return [channel(0), channel(1), channel(2), a];
 }
 
 // ---------------------------------------------------------------------- GLSL
@@ -217,6 +249,8 @@ vec3 blendColorBurn(vec3 b, vec3 s) {
   return mix(r, vec3(1.0), step(1.0, b));
 }
 
+vec3 blendColor(vec3 b, vec3 s) { return bSetLum(s, bLum(b)); }
+
 vec3 blendWith(int mode, vec3 b, vec3 s) {
   switch (mode) {
     case ${BLEND_ID.multiply}: return blendMultiply(b, s);
@@ -234,8 +268,31 @@ vec3 blendWith(int mode, vec3 b, vec3 s) {
     case ${BLEND_ID.luminosity}: return blendLuminosity(b, s);
     case ${BLEND_ID['plus-lighter']}: return blendPlusLighter(b, s);
     case ${BLEND_ID['color-burn']}: return blendColorBurn(b, s);
+    case ${BLEND_ID.color}: return blendColor(b, s);
     case ${BLEND_ID.normal}: return s;
   }
   return s;
+}
+
+// CSS compositing (compositeRGBA's twin), straight colour: the source's alpha
+// over the backdrop's, and each channel a mix of the source, the blend of the
+// two and the backdrop, weighted by which of them covers the fragment.
+float compositeAlpha(float bA, float sA) {
+  return sA + bA * (1.0 - sA);
+}
+
+float compositeChannel(float cb, float bA, float cs, float sA, float blended) {
+  float a = compositeAlpha(bA, sA);
+  return a > 0.0 ? (sA * (1.0 - bA) * cs + sA * bA * blended + (1.0 - sA) * bA * cb) / a : 0.0;
+}
+
+vec4 compositeOver(vec4 b, vec4 s, int mode) {
+  vec3 blended = blendWith(mode, b.rgb, s.rgb);
+  return vec4(
+    compositeChannel(b.r, b.a, s.r, s.a, blended.r),
+    compositeChannel(b.g, b.a, s.g, s.a, blended.g),
+    compositeChannel(b.b, b.a, s.b, s.a, blended.b),
+    compositeAlpha(b.a, s.a)
+  );
 }
 `;

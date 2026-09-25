@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BLEND_ID, blendGLSL, blendRGB, type BlendMode } from './blend';
+import { BLEND_ID, blendGLSL, blendRGB, compositeRGBA, type BlendMode, type RGBA } from './blend';
 
 const ALL: BlendMode[] = [
   'normal',
@@ -18,6 +18,7 @@ const ALL: BlendMode[] = [
   'luminosity',
   'plus-lighter',
   'color-burn',
+  'color',
 ];
 
 const close = (a: number, b: number) => Math.abs(a - b) < 1e-4;
@@ -264,6 +265,7 @@ describe('blendGLSL', () => {
       'blendHue',
       'blendSaturation',
       'blendLuminosity',
+      'blendColor',
       'blendWith',
     ]) {
       expect(blendGLSL).toContain(name);
@@ -291,4 +293,115 @@ describe('blendGLSL', () => {
       }
     });
   }
+});
+
+describe('the color blend', () => {
+  it('puts the source’s hue and saturation at the backdrop’s luminosity', () => {
+    // SetLum(red, 0.5): red + 0.2 = (1.2, 0.2, 0.2), clipped about l = 0.5
+    const out = blendRGB('color', [0.5, 0.5, 0.5], [1, 0, 0]);
+    expect(out[0]).toBeCloseTo(1, 5);
+    expect(out[1]).toBeCloseTo(2 / 7, 5);
+    expect(out[2]).toBeCloseTo(2 / 7, 5);
+  });
+
+  it('is appended, so no older blend changes its id', () => {
+    expect(BLEND_ID.color).toBe(16);
+    expect(blendGLSL).toContain(`case ${BLEND_ID.color}: return blendColor(b, s);`);
+  });
+});
+
+describe('compositeRGBA, CSS’s compositing', () => {
+  const near = (got: readonly number[], want: readonly number[]) =>
+    want.forEach((v, i) => expect(got[i], `channel ${i}`).toBeCloseTo(v, 6));
+
+  it('blends an opaque source onto an opaque backdrop', () => {
+    near(compositeRGBA('multiply', [0.8, 0.4, 0.2, 1], [0.5, 0.5, 0.5, 1]), [0.4, 0.2, 0.1, 1]);
+  });
+
+  it('draws an opaque source as itself over nothing, whatever the blend', () => {
+    near(compositeRGBA('difference', [0.3, 0.6, 0.9, 0], [0.2, 0.4, 0.6, 1]), [0.2, 0.4, 0.6, 1]);
+  });
+
+  it('leaves the backdrop alone under a transparent source', () => {
+    near(compositeRGBA('screen', [0.3, 0.6, 0.9, 0.7], [1, 1, 1, 0]), [0.3, 0.6, 0.9, 0.7]);
+  });
+
+  it('mixes half a source over half a backdrop by who covers what', () => {
+    // a = 0.75; (0.5 · 0.5 · 1 + 0.5 · 0.5 · 1 + 0.5 · 0.5 · 0) / 0.75
+    near(compositeRGBA('normal', [0, 0, 0, 0.5], [1, 1, 1, 0.5]), [2 / 3, 2 / 3, 2 / 3, 0.75]);
+  });
+
+  it('is mix(backdrop, blend, alpha) over an opaque backdrop', () => {
+    // screen(0.2, 0.6) = 0.68, halfway from 0.2
+    near(compositeRGBA('screen', [0.2, 0.2, 0.2, 1], [0.6, 0.6, 0.6, 0.5]), [0.44, 0.44, 0.44, 1]);
+  });
+});
+
+/** compositeAlpha and compositeChannel, translated from the GLSL itself. */
+function transpileComposite() {
+  const alpha = /float compositeAlpha\(float bA, float sA\) \{\n([\s\S]*?)\n\}/.exec(
+    blendGLSL,
+  )?.[1];
+  const channel =
+    /float compositeChannel\(float cb, float bA, float cs, float sA, float blended\) \{\n([\s\S]*?)\n\}/.exec(
+      blendGLSL,
+    )?.[1];
+  if (!alpha || !channel) throw new Error('the compositing functions changed shape');
+  const js = (body: string) => body.replace(/^\s*\/\/.*$/gm, '').replace(/\bfloat /g, 'let ');
+  expect(js(channel)).not.toMatch(/\b(?:float|vec[234]|uniform)\b/);
+  const compositeAlpha = new Function('bA', 'sA', js(alpha)) as (bA: number, sA: number) => number;
+  const compositeChannel = new Function(
+    'cb',
+    'bA',
+    'cs',
+    'sA',
+    'blended',
+    'compositeAlpha',
+    js(channel),
+  ) as (...args: [number, number, number, number, number, typeof compositeAlpha]) => number;
+  return {
+    compositeAlpha,
+    channel: (cb: number, bA: number, cs: number, sA: number, blended: number) =>
+      compositeChannel(cb, bA, cs, sA, blended, compositeAlpha),
+  };
+}
+
+describe('compositeOver in GLSL agrees with compositeRGBA', () => {
+  const glsl = transpileComposite();
+  const modes: BlendMode[] = [
+    'normal',
+    'multiply',
+    'screen',
+    'overlay',
+    'color-dodge',
+    'soft-light',
+    'difference',
+  ];
+  const alphas = [0, 0.25, 0.5, 1];
+
+  it('channel by channel, over a grid of alphas and blends', () => {
+    for (const mode of modes) {
+      for (const bA of alphas) {
+        for (const sA of alphas) {
+          const backdrop: RGBA = [0.2, 0.55, 0.9, bA];
+          const source: RGBA = [0.7, 0.35, 0.1, sA];
+          const blended = blendRGB(mode, backdrop.slice(0, 3), source.slice(0, 3));
+          const want = compositeRGBA(mode, backdrop, source);
+          for (let i = 0; i < 3; i += 1) {
+            expect(
+              glsl.channel(backdrop[i], bA, source[i], sA, blended[i]),
+              `${mode} ${bA} ${sA}`,
+            ).toBeCloseTo(want[i], 6);
+          }
+          expect(glsl.compositeAlpha(bA, sA)).toBeCloseTo(want[3], 6);
+        }
+      }
+    }
+  });
+
+  it('builds the vec4 from those two, channel by channel', () => {
+    expect(blendGLSL).toMatch(
+      /vec4 compositeOver\(vec4 b, vec4 s, int mode\) \{\n\s+vec3 blended = blendWith\(mode, b\.rgb, s\.rgb\);\n\s+return vec4\(\n\s+compositeChannel\(b\.r, b\.a, s\.r, s\.a, blended\.r\),\n\s+compositeChannel\(b\.g, b\.a, s\.g, s\.a, blended\.g\),\n\s+compositeChannel\(b\.b, b\.a, s\.b, s\.a, blended\.b\),\n\s+compositeAlpha\(b\.a, s\.a\)\n\s+\);\n\}/,
+    );
+  });
 });
