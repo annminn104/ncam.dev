@@ -51,16 +51,20 @@ export const SHARED_TEXTURE_UNIFORM: Record<TextureName, string> = {
   'pokeball-inner': 'uPokeballInner',
   masterball: 'uMasterball',
   'masterball-inner': 'uMasterballInner',
+  geometric: 'uGeometric',
+  trainerbg: 'uTrainerbg',
 };
 
 /**
- * The shared textures an effect's layers sample, each once. setSelection binds
- * only these, so a texture is generated the first time an effect needs it, and
- * a card whose effect uses none of the larger ones never pays to draw them.
+ * The shared textures an effect's layers sample, each once, children's
+ * included. setSelection binds only these, so a texture is generated the first
+ * time an effect needs it, and a card whose effect uses none of the larger
+ * ones never pays to draw them.
  */
 export function texturesUsedBy(effect: Effect): TextureName[] {
   const names = new Set<TextureName>();
-  for (const element of [...(effect.beneath ?? []), ...effect.shine, ...effect.glare]) {
+  const elements = [...(effect.beneath ?? []), ...effect.shine, ...effect.glare];
+  for (const element of elements.flatMap((el) => [el, ...(el.children ?? [])])) {
     for (const { source } of element.layers) {
       if (source.kind in SHARED_TEXTURE_UNIFORM) names.add(source.kind as TextureName);
     }

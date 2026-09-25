@@ -27,6 +27,8 @@ export function buildMaterial(effect: Effect): ShaderMaterial {
       uPokeballInner: { value: null },
       uMasterball: { value: null },
       uMasterballInner: { value: null },
+      uGeometric: { value: null },
+      uTrainerbg: { value: null },
       uPointer: { value: new Vector2(0, 0) },
       uPointerUV: { value: new Vector2(0.5, 0.5) },
       uPointerFromCenter: { value: 0 },

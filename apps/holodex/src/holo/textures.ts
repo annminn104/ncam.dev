@@ -4,18 +4,23 @@
  * Nothing is fetched, and none is a copy of the reference's own foil images,
  * which are their author's assets.
  *
- * The two older textures, glitter and grain, draw with Math.random and so
- * differ a little on every load. The six added for the Scarlet & Violet
- * effects are fixed: iri and birthday draw from a seeded PRNG, and the ball
- * patterns are a regular lattice with no randomness in them at all, so a card
- * looks the same on every visit.
+ * grain alone still draws with Math.random, and so differs a little on every
+ * load. Every other texture is fixed, so a card looks the same on every visit:
+ * glitter, iri and birthday draw from a seeded PRNG, geometric's maze from a
+ * seeded choice per cell, and trainerbg and the ball patterns are pure
+ * geometry. glitter, geometric and trainerbg stand in for the pokemon-cards-css
+ * images the legacy shine ports name (glitter.png, geometric.png,
+ * trainerbg.png): drawn to the motif, scale and tones measured off those
+ * images headless, at their natural sizes, so a CSS background-size means the
+ * same thing here (TEXTURE_SIZE).
  *
  * Tests run under node with no DOM, so the canvas painters at the bottom of
  * this file cannot run there. What they paint is decided by the pure functions
- * above them, which textures.test.ts holds to account: the PRNG, iri's pixels
- * (the whole texture, byte for byte), the star's shape, sizes and colours, the
- * ball lattice, and the wrapping that makes each texture tile. Left untested:
- * the canvas calls themselves, and the ball glyphs' internal drawing.
+ * above them, which textures.test.ts holds to account: the PRNG, the pixels of
+ * iri, glitter, geometric and trainerbg (each whole texture, byte for byte),
+ * the star's shape, sizes and colours, the ball lattice, and the wrapping that
+ * makes each texture tile. Left untested: the canvas calls themselves, and the
+ * ball glyphs' internal drawing.
  */
 
 export type TextureName =
@@ -26,7 +31,9 @@ export type TextureName =
   | 'pokeball'
   | 'pokeball-inner'
   | 'masterball'
-  | 'masterball-inner';
+  | 'masterball-inner'
+  | 'geometric'
+  | 'trainerbg';
 
 type Point = [number, number];
 
@@ -284,6 +291,284 @@ export function ballPlacements(tile: number): BallGlyph[] {
   );
 }
 
+const mod = (n: number, m: number) => ((n % m) + m) % m;
+
+// glitter: the reference's glitter.png is a 630 × 540 sheet, measured
+// headless at mean grey 51, 61% of it below 32 and 9% at 160 or above: a dark
+// grain lit by dense specks and a few star flares, thicker in some patches
+// than others. Drawn to those tones.
+
+export const GLITTER_WIDTH = 630;
+export const GLITTER_HEIGHT = 540;
+/** Any fixed value. Changing it redraws every legacy card's glitter. */
+export const GLITTER_SEED = 630;
+
+const GLITTER = {
+  /** the ground: an exponential spread of dark greys, capped */
+  ground: { mean: 28, max: 127 },
+  specks: { count: 9000, sizes: [1, 1, 1, 2, 2, 3, 4], low: 190, high: 255 },
+  stars: { count: 60, arm: [3, 9], low: 200, high: 255 },
+  /** patches: a smooth density over a coarse lattice, cells across and down, and its range */
+  patches: { across: 6, down: 5, low: 0.4, high: 1.6 },
+};
+
+/**
+ * A smooth, tiling field over the sheet: random values on a coarse lattice,
+ * blended between with smoothstep, wrapping at the edges. Where it is high the
+ * glitter is thicker and its ground a little brighter.
+ */
+export function glitterDensity(
+  width: number,
+  height: number,
+  random: () => number,
+): (x: number, y: number) => number {
+  const { across, down, low, high } = GLITTER.patches;
+  const lattice = Array.from({ length: across * down }, () => low + (high - low) * random());
+  const at = (i: number, j: number) => lattice[mod(j, down) * across + mod(i, across)];
+  const ease = (t: number) => t * t * (3 - 2 * t);
+  return (x, y) => {
+    const u = (x / width) * across;
+    const v = (y / height) * down;
+    const [i, j] = [Math.floor(u), Math.floor(v)];
+    const [fu, fv] = [ease(u - i), ease(v - j)];
+    const top = at(i, j) + (at(i + 1, j) - at(i, j)) * fu;
+    const bottom = at(i, j + 1) + (at(i + 1, j + 1) - at(i, j + 1)) * fu;
+    return top + (bottom - top) * fv;
+  };
+}
+
+/** A square speck of this grey, wrapped across the sheet's edges; the brighter value wins. */
+export function plotSpeck(
+  grey: Float32Array,
+  width: number,
+  height: number,
+  x: number,
+  y: number,
+  size: number,
+  value: number,
+): void {
+  for (let dy = 0; dy < size; dy += 1) {
+    for (let dx = 0; dx < size; dx += 1) {
+      const i = ((y + dy) % height) * width + ((x + dx) % width);
+      grey[i] = Math.max(grey[i], value);
+    }
+  }
+}
+
+/**
+ * A round speck `size` px across, full value at its middle and falling off
+ * toward its rim, wrapped; a 1 px one is a single pixel.
+ */
+function plotDot(
+  grey: Float32Array,
+  width: number,
+  height: number,
+  x: number,
+  y: number,
+  size: number,
+  value: number,
+): void {
+  const r = size / 2;
+  for (let dy = 0; dy < size; dy += 1) {
+    for (let dx = 0; dx < size; dx += 1) {
+      const d = Math.hypot(dx + 0.5 - r, dy + 0.5 - r) / r;
+      if (d > 1 && size > 1) continue;
+      const v = size > 1 ? value * (1 - 0.3 * d * d) : value;
+      plotSpeck(grey, width, height, (x + dx) % width, (y + dy) % height, 1, v);
+    }
+  }
+}
+
+/** A four-pointed flare: arms on the axes, fading out toward their tips, wrapped. */
+function plotStar(
+  grey: Float32Array,
+  width: number,
+  height: number,
+  x: number,
+  y: number,
+  arm: number,
+  value: number,
+): void {
+  plotSpeck(grey, width, height, x, y, 1, value);
+  for (let k = 1; k <= arm; k += 1) {
+    const v = value * (1 - k / (arm + 1));
+    for (const [dx, dy] of [
+      [k, 0],
+      [-k, 0],
+      [0, k],
+      [0, -k],
+    ]) {
+      plotSpeck(grey, width, height, (x + dx + width) % width, (y + dy + height) % height, 1, v);
+    }
+  }
+}
+
+/** The whole glitter sheet as opaque RGBA bytes, ready for putImageData. */
+export function glitterPixels(width: number, height: number, seed: number): Uint8ClampedArray {
+  const random = mulberry32(seed);
+  const density = glitterDensity(width, height, random);
+  const { ground, specks, stars, patches } = GLITTER;
+  const grey = new Float32Array(width * height);
+  for (let i = 0; i < grey.length; i += 1) {
+    const d = density(i % width, Math.floor(i / width));
+    grey[i] = Math.min(ground.max, -ground.mean * (0.7 + 0.3 * d) * Math.log(1 - random()));
+  }
+  for (let n = 0; n < specks.count;) {
+    const x = Math.floor(random() * width);
+    const y = Math.floor(random() * height);
+    // kept in proportion to the density there, so the patches show
+    if (random() * patches.high > density(x, y)) continue;
+    const size = specks.sizes[Math.floor(random() * specks.sizes.length)];
+    plotDot(grey, width, height, x, y, size, specks.low + random() * (specks.high - specks.low));
+    n += 1;
+  }
+  for (let n = 0; n < stars.count; n += 1) {
+    const x = Math.floor(random() * width);
+    const y = Math.floor(random() * height);
+    const arm = stars.arm[0] + Math.floor(random() * (stars.arm[1] - stars.arm[0] + 1));
+    plotStar(grey, width, height, x, y, arm, stars.low + random() * (stars.high - stars.low));
+  }
+  const pixels = new Uint8ClampedArray(width * height * 4);
+  for (let i = 0; i < grey.length; i += 1) pixels.set([grey[i], grey[i], grey[i], 255], i * 4);
+  return pixels;
+}
+
+// geometric: the reference's geometric.png, measured headless, is white
+// stripes on black at 45°, about 11.8 px apart and 3.3 px wide, turning in
+// nested Ls. Ours: 18 stripes a tile along each diagonal, 28% of each period
+// white, in maze cells six stripes across.
+
+export const GEOMETRIC_SIZE = 300;
+/** Any fixed value. Changing it redraws the maze. */
+export const GEOMETRIC_SEED = 300;
+
+const GEOMETRIC = { stripes: 18, white: 0.28, cellStripes: 6, samples: 4 };
+
+/**
+ * Which figure fills maze cell (i, j): stripes straight along either diagonal
+ * (0, 1), or nested Ls about one of the cell's four corners (2 to 5). Cells
+ * sit on the diagonals p = x + y and q = x - y, and the tile repeats every
+ * `cells` cells along both, as (i + cells, j ± cells), so a cell and its
+ * copies across the tile's edges draw the same figure.
+ */
+export function geometricFigure(i: number, j: number, cells: number, seed: number): number {
+  const u = mod(i + j, 2 * cells);
+  const v = mod(i - j, 2 * cells);
+  return Math.floor(mulberry32(seed * 7919 + u * 104729 + v * 1299709)() * 6);
+}
+
+/** The whole maze as opaque RGBA bytes, supersampled. */
+export function geometricPixels(size: number, seed: number): Uint8ClampedArray {
+  const period = size / GEOMETRIC.stripes;
+  const cell = period * GEOMETRIC.cellStripes;
+  const cells = size / cell;
+  const figures = new Map<string, number>();
+  const figure = (i: number, j: number) => {
+    const key = `${mod(i + j, 2 * cells)},${mod(i - j, 2 * cells)}`;
+    let found = figures.get(key);
+    if (found === undefined) {
+      found = geometricFigure(i, j, cells, seed);
+      figures.set(key, found);
+    }
+    return found;
+  };
+  const n = GEOMETRIC.samples;
+  const pixels = new Uint8ClampedArray(size * size * 4);
+  for (let y = 0; y < size; y += 1) {
+    for (let x = 0; x < size; x += 1) {
+      let white = 0;
+      for (let sy = 0; sy < n; sy += 1) {
+        for (let sx = 0; sx < n; sx += 1) {
+          const px = x + (sx + 0.5) / n;
+          const py = y + (sy + 0.5) / n;
+          const p = px + py;
+          const q = px - py;
+          const i = Math.floor(p / cell);
+          const j = Math.floor(q / cell);
+          const s = p - i * cell;
+          const t = q - j * cell;
+          const fig = figure(i, j);
+          const corner = fig - 2;
+          const d =
+            fig === 0
+              ? s
+              : fig === 1
+                ? t
+                : Math.max(corner & 1 ? cell - s : s, corner & 2 ? cell - t : t);
+          if (Math.abs(mod(d / period, 1) - 0.5) < GEOMETRIC.white / 2) white += 1;
+        }
+      }
+      const v = Math.round((white / (n * n)) * 255);
+      pixels.set([v, v, v, 255], (y * size + x) * 4);
+    }
+  }
+  return pixels;
+}
+
+// trainerbg: the reference's trainerbg.png, measured headless, is 16 blue
+// lines a 208 px tile, rising left to right, each waving twice across it about
+// 4.8 px either way and about 2.2 px thick, ink rgb(42, 176, 210) on white.
+
+export const TRAINERBG_SIZE = 208;
+
+const TRAINERBG = {
+  lines: 16,
+  waves: 2,
+  amplitude: 4.8,
+  width: 2.2,
+  ink: [42, 176, 210] as const,
+  samples: 4,
+};
+
+/** The whole wave pattern as opaque RGBA bytes, supersampled. */
+export function trainerbgPixels(size: number): Uint8ClampedArray {
+  const period = size / TRAINERBG.lines;
+  const k = (2 * Math.PI * TRAINERBG.waves) / size;
+  const n = TRAINERBG.samples;
+  const [r, g, b] = TRAINERBG.ink;
+  const pixels = new Uint8ClampedArray(size * size * 4);
+  for (let y = 0; y < size; y += 1) {
+    for (let x = 0; x < size; x += 1) {
+      let ink = 0;
+      for (let sy = 0; sy < n; sy += 1) {
+        for (let sx = 0; sx < n; sx += 1) {
+          const px = x + (sx + 0.5) / n;
+          const py = y + (sy + 0.5) / n;
+          // lines of constant phi rise left to right; the wave runs along them
+          const slope = TRAINERBG.amplitude * k * Math.cos(k * (px - py));
+          const phi = px + py + TRAINERBG.amplitude * Math.sin(k * (px - py));
+          const m = mod(phi, period);
+          const distance = Math.min(m, period - m) / Math.hypot(1 + slope, 1 - slope);
+          if (distance < TRAINERBG.width / 2) ink += 1;
+        }
+      }
+      const f = ink / (n * n);
+      pixels.set(
+        [255 + (r - 255) * f, 255 + (g - 255) * f, 255 + (b - 255) * f, 255],
+        (y * size + x) * 4,
+      );
+    }
+  }
+  return pixels;
+}
+
+/**
+ * Each texture's natural size in px, as its painter draws it: what a CSS
+ * `background-size` with an `auto` side measures against (css.ts#autoHeight).
+ */
+export const TEXTURE_SIZE: Record<TextureName, readonly [number, number]> = {
+  glitter: [GLITTER_WIDTH, GLITTER_HEIGHT],
+  grain: [1024, 1024],
+  iri: [IRI_SIZE, IRI_SIZE],
+  birthday: [BIRTHDAY_WIDTH, BIRTHDAY_HEIGHT],
+  pokeball: [BALL_TILE, BALL_TILE],
+  'pokeball-inner': [BALL_TILE, BALL_TILE],
+  masterball: [BALL_TILE, BALL_TILE],
+  'masterball-inner': [BALL_TILE, BALL_TILE],
+  geometric: [GEOMETRIC_SIZE, GEOMETRIC_SIZE],
+  trainerbg: [TRAINERBG_SIZE, TRAINERBG_SIZE],
+};
+
 // ------------------------------------------------ canvas, browser-only below
 
 const cache = new Map<TextureName, HTMLCanvasElement>();
@@ -300,15 +585,12 @@ function canvasOf(
   return { canvas, ctx };
 }
 
-function sparkle(): HTMLCanvasElement {
-  const { canvas, ctx } = canvasOf(512, 512);
-  ctx.fillStyle = '#000';
-  ctx.fillRect(0, 0, 512, 512);
-  for (let i = 0; i < 9000; i += 1) {
-    const value = Math.random();
-    ctx.fillStyle = `rgba(255,255,255,${(value * value).toFixed(3)})`;
-    ctx.fillRect(Math.random() * 512, Math.random() * 512, 1.4, 1.4);
-  }
+/** A canvas painted with these RGBA bytes. */
+function fromPixels(width: number, height: number, pixels: Uint8ClampedArray): HTMLCanvasElement {
+  const { canvas, ctx } = canvasOf(width, height);
+  const image = ctx.createImageData(width, height);
+  image.data.set(pixels);
+  ctx.putImageData(image, 0, 0);
   return canvas;
 }
 
@@ -339,11 +621,7 @@ function grain(): HTMLCanvasElement {
 }
 
 function iri(): HTMLCanvasElement {
-  const { canvas, ctx } = canvasOf(IRI_SIZE, IRI_SIZE);
-  const image = ctx.createImageData(IRI_SIZE, IRI_SIZE);
-  image.data.set(iriPixels(IRI_SIZE, IRI_SEED));
-  ctx.putImageData(image, 0, 0);
-  return canvas;
+  return fromPixels(IRI_SIZE, IRI_SIZE, iriPixels(IRI_SIZE, IRI_SEED));
 }
 
 function birthday(): HTMLCanvasElement {
@@ -524,7 +802,12 @@ function ballPattern(draw: (ctx: CanvasRenderingContext2D) => void): HTMLCanvasE
 }
 
 const GENERATORS: Record<TextureName, () => HTMLCanvasElement> = {
-  glitter: sparkle,
+  glitter: () =>
+    fromPixels(
+      GLITTER_WIDTH,
+      GLITTER_HEIGHT,
+      glitterPixels(GLITTER_WIDTH, GLITTER_HEIGHT, GLITTER_SEED),
+    ),
   grain,
   iri,
   birthday,
@@ -532,6 +815,9 @@ const GENERATORS: Record<TextureName, () => HTMLCanvasElement> = {
   'pokeball-inner': () => ballPattern(drawBallCap),
   masterball: () => ballPattern(drawMasterballOutline),
   'masterball-inner': () => ballPattern(drawMasterballCap),
+  geometric: () =>
+    fromPixels(GEOMETRIC_SIZE, GEOMETRIC_SIZE, geometricPixels(GEOMETRIC_SIZE, GEOMETRIC_SEED)),
+  trainerbg: () => fromPixels(TRAINERBG_SIZE, TRAINERBG_SIZE, trainerbgPixels(TRAINERBG_SIZE)),
 };
 
 /** Generated once at runtime, shared by every effect that names them. */

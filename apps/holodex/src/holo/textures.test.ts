@@ -4,16 +4,28 @@ import {
   BIRTHDAY_HEIGHT,
   BIRTHDAY_SEED,
   BIRTHDAY_WIDTH,
+  GEOMETRIC_SEED,
+  GEOMETRIC_SIZE,
+  GLITTER_HEIGHT,
+  GLITTER_SEED,
+  GLITTER_WIDTH,
   IRI_BACKGROUND,
   IRI_SEED,
   IRI_SIZE,
+  TEXTURE_SIZE,
+  TRAINERBG_SIZE,
   ballLattice,
   ballPlacements,
   birthdayHue,
   birthdaySparkles,
+  geometricFigure,
+  geometricPixels,
+  glitterPixels,
   iriPixels,
   mulberry32,
+  plotSpeck,
   starDiamonds,
+  trainerbgPixels,
 } from './textures';
 
 // textures.ts's canvas painters need a DOM this suite does not have. What they
@@ -324,5 +336,115 @@ describe('the ball lattice', () => {
       BALL_TILE,
       BALL_TILE,
     );
+  });
+});
+
+/** Share of pixels whose red channel falls in [lo, hi). */
+function share(px: Uint8ClampedArray, lo: number, hi: number): number {
+  let n = 0;
+  for (let i = 0; i < px.length; i += 4) if (px[i] >= lo && px[i] < hi) n += 1;
+  return n / (px.length / 4);
+}
+
+/** A channel's mean over every pixel. */
+function mean(px: Uint8ClampedArray, channel: number): number {
+  let sum = 0;
+  for (let i = channel; i < px.length; i += 4) sum += px[i];
+  return sum / (px.length / 4);
+}
+
+describe('glitter, drawn to stand in for the reference’s sheet', () => {
+  const px = glitterPixels(GLITTER_WIDTH, GLITTER_HEIGHT, GLITTER_SEED);
+
+  it('is the reference’s size, opaque, and the same on every load', () => {
+    expect(TEXTURE_SIZE.glitter).toEqual([630, 540]);
+    expect(px.length).toBe(630 * 540 * 4);
+    expect(glitterPixels(GLITTER_WIDTH, GLITTER_HEIGHT, GLITTER_SEED)).toEqual(px);
+    expect(mean(px, 3)).toBe(255);
+  });
+
+  it('keeps the reference’s tones: mostly near black, about a tenth bright', () => {
+    // measured off glitter.png headless: mean 51, 61% below 32, 9% at 160 or above
+    expect(mean(px, 0)).toBeGreaterThan(40);
+    expect(mean(px, 0)).toBeLessThan(62);
+    expect(share(px, 0, 32)).toBeGreaterThan(0.5);
+    expect(share(px, 0, 32)).toBeLessThan(0.7);
+    expect(share(px, 160, 256)).toBeGreaterThan(0.06);
+    expect(share(px, 160, 256)).toBeLessThan(0.12);
+  });
+
+  it('wraps a speck across the edges, so the sheet tiles', () => {
+    const grey = new Float32Array(4 * 3);
+    plotSpeck(grey, 4, 3, 3, 2, 2, 200);
+    // (3, 2), (0, 2), (3, 0) and (0, 0) lit, nothing else
+    expect([...grey]).toEqual([200, 0, 0, 200, 0, 0, 0, 0, 200, 0, 0, 200]);
+  });
+});
+
+describe('geometric, a diagonal line maze', () => {
+  const cells = 3;
+
+  it('draws the same figure in a cell and its copies across the tile’s edges', () => {
+    for (let i = -4; i < 4; i += 1) {
+      for (let j = -4; j < 4; j += 1) {
+        const figure = geometricFigure(i, j, cells, GEOMETRIC_SEED);
+        expect(geometricFigure(i + cells, j + cells, cells, GEOMETRIC_SEED)).toBe(figure);
+        expect(geometricFigure(i + cells, j - cells, cells, GEOMETRIC_SEED)).toBe(figure);
+        expect(figure).toBeGreaterThanOrEqual(0);
+        expect(figure).toBeLessThan(6);
+      }
+    }
+  });
+
+  it('mixes its figures', () => {
+    const seen = new Set<number>();
+    for (let u = 0; u < 2 * cells; u += 1) {
+      for (let v = 0; v < 2 * cells; v += 1) seen.add(geometricFigure(u, v, cells, GEOMETRIC_SEED));
+    }
+    expect(seen.size).toBeGreaterThanOrEqual(4);
+  });
+
+  const px = geometricPixels(GEOMETRIC_SIZE, GEOMETRIC_SEED);
+
+  it('is the reference’s size, the same on every load, about a quarter white', () => {
+    expect(TEXTURE_SIZE.geometric).toEqual([300, 300]);
+    expect(geometricPixels(GEOMETRIC_SIZE, GEOMETRIC_SEED)).toEqual(px);
+    // measured off geometric.png: about a quarter of it white
+    expect(mean(px, 0) / 255).toBeGreaterThan(0.22);
+    expect(mean(px, 0) / 255).toBeLessThan(0.34);
+  });
+
+  it('tiles: across its edges, neighbours differ no more than inside it', () => {
+    const at = (x: number, y: number) => px[(y * GEOMETRIC_SIZE + x) * 4];
+    let seam = 0;
+    let inner = 0;
+    for (let k = 0; k < GEOMETRIC_SIZE; k += 1) {
+      seam += Math.abs(at(0, k) - at(GEOMETRIC_SIZE - 1, k));
+      seam += Math.abs(at(k, 0) - at(k, GEOMETRIC_SIZE - 1));
+      inner += Math.abs(at(150, k) - at(149, k)) + Math.abs(at(k, 150) - at(k, 149));
+    }
+    expect(seam).toBeLessThan(inner * 1.5);
+  });
+});
+
+describe('trainerbg, blue wavy lines on white', () => {
+  const px = trainerbgPixels(TRAINERBG_SIZE);
+
+  it('is the reference’s size and colour', () => {
+    expect(TEXTURE_SIZE.trainerbg).toEqual([208, 208]);
+    // measured off trainerbg.png: mean rgb(204, 234, 245)
+    expect(mean(px, 0)).toBeGreaterThan(190);
+    expect(mean(px, 0)).toBeLessThan(215);
+    expect(mean(px, 1)).toBeGreaterThan(226);
+    expect(mean(px, 2)).toBeGreaterThan(238);
+  });
+
+  it('crosses a row 16 times, bunching as the lines wave', () => {
+    const size = TRAINERBG_SIZE;
+    const ink = Array.from({ length: size }, (_, x) => px[x * 4] < 128);
+    const starts = ink.flatMap((on, x) => (on && !ink[(x + size - 1) % size] ? [x] : []));
+    expect(starts).toHaveLength(16);
+    const gaps = starts.map((x, i) => (starts[(i + 1) % 16] - x + size) % size);
+    expect(Math.max(...gaps) - Math.min(...gaps)).toBeGreaterThan(4);
   });
 });

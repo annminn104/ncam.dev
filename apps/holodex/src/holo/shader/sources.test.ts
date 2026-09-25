@@ -49,6 +49,8 @@ describe('SOURCE_ID', () => {
       'css-linear',
       'css-radial',
       'css-conic',
+      'geometric',
+      'trainerbg',
     ]) {
       expect(SOURCE_ID).toHaveProperty(kind);
     }

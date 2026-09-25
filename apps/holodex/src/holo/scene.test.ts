@@ -143,6 +143,26 @@ describe('texturesUsedBy', () => {
     expect(texturesUsedBy(effect).sort()).toEqual(['iri', 'pokeball-inner']);
   });
 
+  it('names a texture sampled only inside a child', () => {
+    const effect: Effect = {
+      id: 'child-only',
+      shine: [
+        {
+          layers: [{ source: { kind: 'solid', color: [0, 0, 0] }, blend: 'normal' }],
+          mixBlend: 'screen',
+          children: [
+            {
+              layers: [{ source: { kind: 'geometric', scale: 1 }, blend: 'normal' }],
+              mixBlend: 'lighten',
+            },
+          ],
+        },
+      ],
+      glare: [],
+    };
+    expect(texturesUsedBy(effect)).toEqual(['geometric']);
+  });
+
   it('still hands the older effects the glitter and grain they sample, and basic nothing', () => {
     // Binding used to be unconditional for these two; it is now on use, so
     // this is the regression check for every effect already shipped.

@@ -71,6 +71,10 @@ function sourceExpr(source: Source, uv: string, decls: string[], id: string): st
       return `srcMasterball(${uv}, ${f(source.scale)})`;
     case 'masterball-inner':
       return `srcMasterballInner(${uv}, ${f(source.scale)})`;
+    case 'geometric':
+      return `srcGeometric(${uv}, ${f(source.scale)})`;
+    case 'trainerbg':
+      return `srcTrainerbg(${uv}, ${f(source.scale)})`;
     case 'card':
       return `srcCard(${uv})`;
     case 'scanlines':

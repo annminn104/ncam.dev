@@ -105,6 +105,13 @@ export type Source =
   | { kind: 'masterball'; scale: number }
   | { kind: 'masterball-inner'; scale: number }
   /**
+   * a diagonal line maze, white on black, standing in for pokemon-cards-css's
+   * geometric.png (textures.ts); 300 px square
+   */
+  | { kind: 'geometric'; scale: number }
+  /** blue wavy lines on white, standing in for its trainerbg.png; 208 px square */
+  | { kind: 'trainerbg'; scale: number }
+  /**
    * linear-gradient or repeating-linear-gradient drawn as CSS draws it, on
    * the RGBA path: t = a·u + b·v + c along its gradient line, 0 at the line's
    * start and 1 at its end (css.ts works the line out), its stops where CSS
