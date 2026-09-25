@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cardImageBase, imageUrl } from './images';
+import { cardImageBase, imageUrl, imageUrls } from './images';
 
 const BASE = 'https://assets.tcgdex.net/en/swsh/swsh3/136';
 
@@ -21,6 +21,18 @@ describe('imageUrl', () => {
 
   it('does not double the slash when the base has a trailing one', () => {
     expect(imageUrl(`${BASE}/`, 'low')).toBe(`${BASE}/low.webp`);
+  });
+});
+
+describe('imageUrls', () => {
+  it('tries a card’s art as WebP, then as PNG', () => {
+    expect(imageUrls(BASE, 'low')).toEqual([`${BASE}/low.webp`, `${BASE}/low.png`]);
+    expect(imageUrls(BASE, 'high')).toEqual([`${BASE}/high.webp`, `${BASE}/high.png`]);
+  });
+
+  it('has nothing to try for a card without an image', () => {
+    expect(imageUrls(undefined, 'low')).toEqual([]);
+    expect(imageUrls(null, 'high')).toEqual([]);
   });
 });
 

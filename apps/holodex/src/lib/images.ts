@@ -17,6 +17,17 @@ export function imageUrl(
 }
 
 /**
+ * The files to try for a card's art, in order: WebP, then PNG, as a set logo
+ * falls back (TCGdex serves three of its 157 set logos only as PNG). Empty for
+ * a card without an image.
+ */
+export function imageUrls(base: string | undefined | null, quality: ImageQuality): string[] {
+  const webp = imageUrl(base, quality, 'webp');
+  const png = imageUrl(base, quality, 'png');
+  return webp && png ? [webp, png] : [];
+}
+
+/**
  * A subset set's id: its parent's id plus `tg` (Trainer Gallery), `gg`
  * (Galarian Gallery) or `sv` (Shiny Vault). Anchored at both ends and only on
  * `swsh`, because the same letters sit elsewhere in real TCGdex ids: Scarlet &
