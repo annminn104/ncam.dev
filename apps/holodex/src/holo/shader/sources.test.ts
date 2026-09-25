@@ -55,6 +55,9 @@ describe('SOURCE_ID', () => {
       'illusion-mask',
       'ancient',
       'vmaxbg',
+      'cosmos-bottom',
+      'cosmos-middle',
+      'cosmos-top',
     ]) {
       expect(SOURCE_ID).toHaveProperty(kind);
     }

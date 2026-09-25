@@ -36,7 +36,10 @@ export type TextureName =
   | 'illusion'
   | 'illusion-mask'
   | 'ancient'
-  | 'vmaxbg';
+  | 'vmaxbg'
+  | 'cosmos-bottom'
+  | 'cosmos-middle'
+  | 'cosmos-top';
 
 type Point = [number, number];
 
@@ -794,6 +797,153 @@ export function vmaxbgPixels(width: number, height: number, seed: number): Uint8
   return pixels;
 }
 
+// cosmos: the reference's three cosmos images, measured headless, are one
+// 734 × 1024 starfield in layers that line up: the bottom opaque, near-black
+// (mean rgb(14, 15, 18)) under dim specks, pastel dots, planets, sparkles and
+// speckled clusters, 2% of it bright; the middle 17% opaque (the rest clear),
+// a dusky purple (mean rgb(62, 41, 76)), four fifths of it on the bottom's
+// objects; the top 3% opaque, grey (mean 156), half of it bright. Ours: one
+// seeded list of objects, every one drawn in the bottom, some again in the
+// middle's purples and a few in the top's greys, in place.
+
+export const COSMOS_WIDTH = 734;
+export const COSMOS_HEIGHT = 1024;
+/** Any fixed value. Changing it redraws the starfield. */
+export const COSMOS_SEED = 734;
+
+export type CosmosKind = 'speck' | 'dot' | 'planet' | 'sparkle';
+
+export interface CosmosObject {
+  kind: CosmosKind;
+  x: number;
+  y: number;
+  /** radius, or a sparkle's arm */
+  r: number;
+  /** 0..1, how bright it is in the bottom layer */
+  light: number;
+  /** its hue in the bottom layer, degrees */
+  hue: number;
+  /** whether it is drawn again in the middle layer, and in the top */
+  middle: boolean;
+  top: boolean;
+}
+
+/** How many of each, how big, and how often each is drawn again above. */
+const COSMOS = {
+  ground: [6, 7, 11] as const,
+  kinds: {
+    speck: { count: 62000, r: [0.6, 1.3], light: [0.04, 0.12], middle: 0.66, top: 0 },
+    dot: { count: 3400, r: [0.7, 1.8], light: [0.65, 1], middle: 0.3, top: 0.32 },
+    planet: { count: 42, r: [4, 17], light: [0.35, 0.8], middle: 0.7, top: 0.55 },
+    sparkle: { count: 90, r: [3, 9], light: [0.7, 1], middle: 0.4, top: 0.6 },
+  },
+  clusters: { count: 14, specks: 320, reach: 36 },
+  hues: [205, 330, 50, 275, 190],
+};
+
+/** The starfield's objects, one seeded list for all three layers. */
+export function cosmosObjects(width: number, height: number, seed: number): CosmosObject[] {
+  const random = mulberry32(seed);
+  const between = ([lo, hi]: number[]) => lo + random() * (hi - lo);
+  const objects: CosmosObject[] = [];
+  const add = (kind: CosmosKind, x: number, y: number) => {
+    const k = COSMOS.kinds[kind];
+    objects.push({
+      kind,
+      x,
+      y,
+      r: between(k.r),
+      light: between(k.light),
+      hue: COSMOS.hues[Math.floor(random() * COSMOS.hues.length)],
+      middle: random() < k.middle,
+      top: random() < k.top,
+    });
+  };
+  for (const kind of Object.keys(COSMOS.kinds) as CosmosKind[]) {
+    for (let n = 0; n < COSMOS.kinds[kind].count; n += 1)
+      add(kind, random() * width, random() * height);
+  }
+  // speckled clusters: specks crowded round a centre, drawn again above more often
+  for (let c = 0; c < COSMOS.clusters.count; c += 1) {
+    const [cx, cy] = [random() * width, random() * height];
+    for (let n = 0; n < COSMOS.clusters.specks; n += 1) {
+      const a = random() * 2 * Math.PI;
+      const d = COSMOS.clusters.reach * Math.sqrt(random());
+      add('speck', cx + d * Math.cos(a), cy + d * Math.sin(a));
+      objects[objects.length - 1].middle = random() < 0.85;
+    }
+  }
+  return objects;
+}
+
+/** How much of the pixel at (px, py) an object covers, 0..1, and how lit it is there. */
+function cosmosCoverage(o: CosmosObject, px: number, py: number): [number, number] {
+  const dx = px - o.x;
+  const dy = py - o.y;
+  if (o.kind === 'sparkle') {
+    // four arms on the axes, thinning out to their tips, and a bright heart
+    const along = Math.max(Math.abs(dx), Math.abs(dy));
+    const across = Math.min(Math.abs(dx), Math.abs(dy));
+    if (along > o.r || across > 1.2 * (1 - along / o.r) + 0.3) return [0, 0];
+    return [1, 1 - 0.6 * (along / o.r)];
+  }
+  const d = Math.hypot(dx, dy);
+  if (d > o.r + 0.5) return [0, 0];
+  const cover = Math.min(1, o.r + 0.5 - d);
+  // a planet is lit from the upper left
+  const lit = o.kind === 'planet' ? 0.55 + 0.45 * Math.max(0, (-dx - dy) / (Math.SQRT2 * o.r)) : 1;
+  return [cover, lit];
+}
+
+/** One of the three layers as RGBA bytes: 0 the opaque bottom, 1 the middle, 2 the top. */
+export function cosmosPixels(
+  width: number,
+  height: number,
+  seed: number,
+  layer: 0 | 1 | 2,
+): Uint8ClampedArray {
+  const pixels = new Uint8ClampedArray(width * height * 4);
+  if (layer === 0) {
+    for (let i = 0; i < width * height; i += 1) pixels.set([...COSMOS.ground, 255], i * 4);
+  }
+  for (const o of cosmosObjects(width, height, seed)) {
+    if ((layer === 1 && !o.middle) || (layer === 2 && !o.top)) continue;
+    const reach = Math.ceil(o.r + 1);
+    const colour =
+      layer === 0
+        ? hslBytes(o.hue, o.kind === 'speck' ? 0.25 : 0.45, o.light)
+        : layer === 1
+          ? hslBytes(o.hue === 50 ? 25 : 290, 0.35, 0.2 + 0.2 * o.light)
+          : hslBytes(0, 0, 0.5 + 0.5 * o.light);
+    for (
+      let y = Math.max(0, Math.floor(o.y - reach));
+      y <= Math.min(height - 1, o.y + reach);
+      y += 1
+    ) {
+      for (
+        let x = Math.max(0, Math.floor(o.x - reach));
+        x <= Math.min(width - 1, o.x + reach);
+        x += 1
+      ) {
+        const [cover, lit] = cosmosCoverage(o, x + 0.5, y + 0.5);
+        if (cover <= 0) continue;
+        const i = (y * width + x) * 4;
+        if (layer === 0) {
+          // over the ground, the brighter of what is there and the object wins
+          for (let c = 0; c < 3; c += 1) {
+            const v = pixels[i + c] + (colour[c] * lit - pixels[i + c]) * cover;
+            pixels[i + c] = Math.max(pixels[i + c], v);
+          }
+        } else if (cover >= 0.5) {
+          // the upper layers' alpha is all or nothing, as the reference's is
+          pixels.set([colour[0] * lit, colour[1] * lit, colour[2] * lit, 255], i);
+        }
+      }
+    }
+  }
+  return pixels;
+}
+
 /**
  * Each texture's natural size in px, as its painter draws it: what a CSS
  * `background-size` with an `auto` side measures against (css.ts#autoHeight).
@@ -813,6 +963,9 @@ export const TEXTURE_SIZE: Record<TextureName, readonly [number, number]> = {
   'illusion-mask': [ILLUSION_SIZE, ILLUSION_SIZE],
   ancient: [ANCIENT_SIZE, ANCIENT_SIZE],
   vmaxbg: [VMAXBG_WIDTH, VMAXBG_HEIGHT],
+  'cosmos-bottom': [COSMOS_WIDTH, COSMOS_HEIGHT],
+  'cosmos-middle': [COSMOS_WIDTH, COSMOS_HEIGHT],
+  'cosmos-top': [COSMOS_WIDTH, COSMOS_HEIGHT],
 };
 
 // ------------------------------------------------ canvas, browser-only below
@@ -1044,6 +1197,24 @@ const GENERATORS: Record<TextureName, () => HTMLCanvasElement> = {
   ancient: () => fromPixels(ANCIENT_SIZE, ANCIENT_SIZE, ancientPixels(ANCIENT_SIZE, ANCIENT_SEED)),
   vmaxbg: () =>
     fromPixels(VMAXBG_WIDTH, VMAXBG_HEIGHT, vmaxbgPixels(VMAXBG_WIDTH, VMAXBG_HEIGHT, VMAXBG_SEED)),
+  'cosmos-bottom': () =>
+    fromPixels(
+      COSMOS_WIDTH,
+      COSMOS_HEIGHT,
+      cosmosPixels(COSMOS_WIDTH, COSMOS_HEIGHT, COSMOS_SEED, 0),
+    ),
+  'cosmos-middle': () =>
+    fromPixels(
+      COSMOS_WIDTH,
+      COSMOS_HEIGHT,
+      cosmosPixels(COSMOS_WIDTH, COSMOS_HEIGHT, COSMOS_SEED, 1),
+    ),
+  'cosmos-top': () =>
+    fromPixels(
+      COSMOS_WIDTH,
+      COSMOS_HEIGHT,
+      cosmosPixels(COSMOS_WIDTH, COSMOS_HEIGHT, COSMOS_SEED, 2),
+    ),
 };
 
 /** Generated once at runtime, shared by every effect that names them. */

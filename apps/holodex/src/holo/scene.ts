@@ -57,6 +57,9 @@ export const SHARED_TEXTURE_UNIFORM: Record<TextureName, string> = {
   'illusion-mask': 'uIllusionMask',
   ancient: 'uAncient',
   vmaxbg: 'uVmaxbg',
+  'cosmos-bottom': 'uCosmosBottom',
+  'cosmos-middle': 'uCosmosMiddle',
+  'cosmos-top': 'uCosmosTop',
 };
 
 /**

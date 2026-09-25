@@ -25,6 +25,9 @@ export const SOURCE_ID: Record<Source['kind'], number> = {
   'illusion-mask': 21,
   ancient: 22,
   vmaxbg: 23,
+  'cosmos-bottom': 24,
+  'cosmos-middle': 25,
+  'cosmos-top': 26,
 };
 
 /**
@@ -71,6 +74,9 @@ uniform sampler2D uIllusion;
 uniform sampler2D uIllusionMask;
 uniform sampler2D uAncient;
 uniform sampler2D uVmaxbg;
+uniform sampler2D uCosmosBottom;
+uniform sampler2D uCosmosMiddle;
+uniform sampler2D uCosmosTop;
 uniform vec2 uPointer;        // -1..1 across the card
 uniform vec2 uPointerUV;      // 0..1, for radial gradients centred on it
 uniform float uPointerFromCenter;
@@ -229,6 +235,11 @@ vec3 srcIllusion(vec2 uv, float scale) { return texture(uIllusion, uv * scale).r
 vec3 srcIllusionMask(vec2 uv, float scale) { return texture(uIllusionMask, uv * scale).rgb; }
 vec3 srcAncient(vec2 uv, float scale) { return texture(uAncient, uv * scale).rgb; }
 vec3 srcVmaxbg(vec2 uv, float scale) { return texture(uVmaxbg, uv * scale).rgb; }
+vec3 srcCosmosBottom(vec2 uv, float scale) { return texture(uCosmosBottom, uv * scale).rgb; }
+vec3 srcCosmosMiddle(vec2 uv, float scale) { return texture(uCosmosMiddle, uv * scale).rgb; }
+vec3 srcCosmosTop(vec2 uv, float scale) { return texture(uCosmosTop, uv * scale).rgb; }
+vec4 srcCosmosMiddle4(vec2 uv, float scale) { return texture(uCosmosMiddle, uv * scale); }
+vec4 srcCosmosTop4(vec2 uv, float scale) { return texture(uCosmosTop, uv * scale); }
 // a texture sampled with its alpha, on the RGBA path
 vec4 srcIllusionMask4(vec2 uv, float scale) { return texture(uIllusionMask, uv * scale); }
 vec3 srcCard(vec2 uv) { return texture(uCard, uv).rgb; }

@@ -6,6 +6,9 @@ import {
   BIRTHDAY_HEIGHT,
   BIRTHDAY_SEED,
   BIRTHDAY_WIDTH,
+  COSMOS_HEIGHT,
+  COSMOS_SEED,
+  COSMOS_WIDTH,
   GEOMETRIC_SEED,
   GEOMETRIC_SIZE,
   GLITTER_HEIGHT,
@@ -28,6 +31,8 @@ import {
   ballPlacements,
   birthdayHue,
   birthdaySparkles,
+  cosmosObjects,
+  cosmosPixels,
   geometricFigure,
   geometricPixels,
   glitterPixels,
@@ -612,5 +617,60 @@ describe('vmaxbg, overlapping ringed discs', () => {
 
   it('tiles', () => {
     expect(tiles(px, VMAXBG_WIDTH, VMAXBG_HEIGHT)).toBe(true);
+  });
+});
+
+describe('the cosmos layers, one starfield in three', () => {
+  const [bottom, middle, top] = ([0, 1, 2] as const).map((layer) =>
+    cosmosPixels(COSMOS_WIDTH, COSMOS_HEIGHT, COSMOS_SEED, layer),
+  );
+  /** Share of the pixels that are opaque. */
+  const opaque = (px: Uint8ClampedArray) => {
+    let n = 0;
+    for (let i = 3; i < px.length; i += 4) if (px[i] > 127) n += 1;
+    return n / (px.length / 4);
+  };
+
+  it('are the reference’s size, and the same on every load', () => {
+    for (const kind of ['cosmos-bottom', 'cosmos-middle', 'cosmos-top'] as const) {
+      expect(TEXTURE_SIZE[kind]).toEqual([734, 1024]);
+    }
+    expect(cosmosPixels(COSMOS_WIDTH, COSMOS_HEIGHT, COSMOS_SEED, 1)).toEqual(middle);
+  });
+
+  it('keep the reference’s shares: the bottom opaque and dark, the middle a sixth, the top a few percent', () => {
+    // measured off the three images: 100%, 17% and 2.9% opaque; the bottom mean rgb(14, 15, 18)
+    expect(opaque(bottom)).toBe(1);
+    expect(mean(bottom, 0)).toBeLessThan(26);
+    expect(opaque(middle)).toBeGreaterThan(0.12);
+    expect(opaque(middle)).toBeLessThan(0.23);
+    expect(opaque(top)).toBeGreaterThan(0.01);
+    expect(opaque(top)).toBeLessThan(0.05);
+  });
+
+  it('only ever draw alpha all or nothing above, as the reference does', () => {
+    for (const px of [middle, top]) {
+      for (let i = 3; i < px.length; i += 4 * 101) expect([0, 255]).toContain(px[i]);
+    }
+  });
+
+  it('line up: whatever the upper layers draw lies on an object the bottom draws', () => {
+    const ground = [6, 7, 11];
+    let drawn = 0;
+    let onObject = 0;
+    for (const px of [middle, top]) {
+      for (let i = 0; i < px.length; i += 4) {
+        if (px[i + 3] !== 255) continue;
+        drawn += 1;
+        if ([0, 1, 2].some((c) => bottom[i + c] !== ground[c])) onObject += 1;
+      }
+    }
+    expect(onObject / drawn).toBeGreaterThan(0.99);
+  });
+
+  it('draw the upper layers from the bottom’s own objects', () => {
+    const objects = cosmosObjects(COSMOS_WIDTH, COSMOS_HEIGHT, COSMOS_SEED);
+    expect(objects.filter((o) => o.top).every((o) => o.kind !== 'speck')).toBe(true);
+    expect(objects.some((o) => o.kind === 'planet' && o.middle)).toBe(true);
   });
 });

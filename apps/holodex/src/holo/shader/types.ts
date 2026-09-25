@@ -127,6 +127,15 @@ export type Source =
   | { kind: 'ancient'; scale: number }
   /** overlapping ringed discs in embossed blue, standing in for its vmaxbg.jpg; 600 × 400 px */
   | { kind: 'vmaxbg'; scale: number }
+  /** a seeded starfield, opaque, standing in for its cosmos-bottom.png; 734 × 1024 px */
+  | { kind: 'cosmos-bottom'; scale: number }
+  /**
+   * the same starfield's middle and top layers, clear but for some of its
+   * objects, for its cosmos-middle-trans.png and cosmos-top-trans.png; sampled
+   * with their alpha (compile.ts's ALPHA_TEXTURES)
+   */
+  | { kind: 'cosmos-middle'; scale: number }
+  | { kind: 'cosmos-top'; scale: number }
   /**
    * linear-gradient or repeating-linear-gradient drawn as CSS draws it, on
    * the RGBA path: t = a·u + b·v + c along its gradient line, 0 at the line's

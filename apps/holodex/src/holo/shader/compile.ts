@@ -84,6 +84,12 @@ function sourceExpr(source: Source, uv: string, decls: string[], id: string): st
       return `srcAncient(${uv}, ${f(source.scale)})`;
     case 'vmaxbg':
       return `srcVmaxbg(${uv}, ${f(source.scale)})`;
+    case 'cosmos-bottom':
+      return `srcCosmosBottom(${uv}, ${f(source.scale)})`;
+    case 'cosmos-middle':
+      return `srcCosmosMiddle(${uv}, ${f(source.scale)})`;
+    case 'cosmos-top':
+      return `srcCosmosTop(${uv}, ${f(source.scale)})`;
     case 'card':
       return `srcCard(${uv})`;
     case 'scanlines':
@@ -164,11 +170,15 @@ function rgbElementCode(element: Element, prefix: string): string {
  */
 export const ALPHA_TEXTURES: ReadonlySet<Source['kind']> = new Set<Source['kind']>([
   'illusion-mask',
+  'cosmos-middle',
+  'cosmos-top',
 ]);
 
 /** Each alpha texture's sampler on the RGBA path, which keeps its alpha (sources.ts). */
 const ALPHA_SAMPLER: Partial<Record<Source['kind'], string>> = {
   'illusion-mask': 'srcIllusionMask4',
+  'cosmos-middle': 'srcCosmosMiddle4',
+  'cosmos-top': 'srcCosmosTop4',
 };
 
 /** sources.ts's MAX_CSS_STOPS. */
