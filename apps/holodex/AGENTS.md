@@ -91,7 +91,7 @@ return a `MountHandle`: a disposer that also carries an optional
   `HoloCard.tsx` itself (mount, pop/showcase, context-loss and off-screen
   handling). Lazy (only reachable through
   `HoloCard.tsx`'s dynamic `import('./scene')` — see below): `scene.ts`,
-  `textures.ts`, `program-cache.ts`, `shader/` (`base.ts`, `blend.ts`,
+  `textures.ts`, `material.ts`, `shader/` (`base.ts`, `blend.ts`,
   `sources.ts`, `compile.ts`, `types.ts`), `effects/` (30 effect files, one
   per `EffectId`, plus the `index.ts` registry, shared `palette.ts`, and
   `css.ts`, which converts pokemon-cards-151's CSS for the eight Scarlet &
@@ -323,22 +323,19 @@ declarative-description-compiled-to-GLSL design, not the hand-written GLSL
 chunks the original plan sketched — the one deviation from the plan, also
 recorded in the spec's Status line.
 
-**The program cache.** `holo/program-cache.ts#getMaterial(id)` builds a
-`ShaderMaterial` per `EffectId` on first use (`compileEffect` plus the shared
-`VERTEX_SHADER`) and keeps it at module scope, shared by every scene that uses
-that effect. What that saves is CPU work, the codegen and one construction per
-effect, **not** the GPU compile: three.js keeps its program cache on the
-`WebGLRenderer`, and every scene builds its own renderer and force-loses its
-context on `dispose()`, so each new card re-links its program however warm
-the map is. Sharing the material shares its uniforms too, a hazard that stays
-invisible only while one scene draws at a time (program-cache.ts spells it
-out). Restructuring it, with the compiled source cached and a material per
-scene, is an open decision for the owner. A build failure logs and falls back
-to `basic`; if `basic` itself fails, `getMaterial` returns `null` and
-`HoloCard` drops to the plain image.
-`teardown.ts` exists so `mount.tsx`/`hydrate.tsx` can free this cache
-(`disposeMaterials`) on remote unmount without importing three.js themselves
-just to reach it — see "The holo chunk is lazy" below.
+**A material per scene.** `holo/material.ts#createMaterial(id)` builds a fresh
+`ShaderMaterial` for an effect on every call (`compileEffect` plus the shared
+`VERTEX_SHADER`), and the scene that asked owns it: `setSelection` swaps it in
+and frees the one it replaces, and `dispose()` frees the last. Nothing is
+cached, because nothing would be saved: three.js keeps its program cache on
+the `WebGLRenderer`, every scene builds its own renderer and force-loses its
+context on `dispose()`, so each card links its program anyway, and
+`compileEffect()` costs about 0.016 ms. The module-level cache this replaced
+(`program-cache.ts`, until 2026-09-25) shared one material, and so one set of
+uniforms, across every scene on an effect, and outlived them all, so the
+remote had to free it on unmount through a three-free shim. A build failure
+logs `holo.compile-failed` and falls back to `basic`; if `basic` itself fails,
+`createMaterial` returns `null` and `HoloCard` drops to the plain image.
 
 **Four gotchas that cost real time on this branch** — none of them are
 caught by any unit test, and each one is silent to a visitor (wrong colors, a
@@ -347,7 +344,7 @@ error if you get it wrong:
 
 - `shader/compile.ts` emits **no `#version` directive**. three.js prepends
   `#version 300 es` itself whenever `glslVersion: '300 es'` is set on the
-  `ShaderMaterial` (`program-cache.ts`'s `buildMaterial()` sets it). Emitting one too
+  `ShaderMaterial` (`material.ts`'s `buildMaterial()` sets it). Emitting one too
   produces a duplicate directive — a GPU compile error, and one nothing in
   this plan's test suite can catch, because a `ShaderMaterial` is an inert JS
   object until a real GPU compiles it. `shader/compile.test.ts` pins this by

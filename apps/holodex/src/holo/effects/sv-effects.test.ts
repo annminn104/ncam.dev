@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildMaterial } from '../program-cache';
+import { buildMaterial } from '../material';
 import { BLEND_ID, blendRGB, type BlendMode } from '../shader/blend';
 import { compileEffect } from '../shader/compile';
 import type { Effect, Element, Layer, Source } from '../shader/types';
@@ -14,12 +14,12 @@ import { pokeBallHolo } from './poke-ball-holo';
 import { svRareHolo } from './sv-rare-holo';
 
 /**
- * The seven Scarlet & Violet effects, keyed by the id each is registered under
+ * The eight Scarlet & Violet effects, keyed by the id each is registered under
  * in EFFECTS. The registry test (index.test.ts) holds them to every rule it
  * holds the others to — id, element budget, layers, first-layer blend, stop
  * limit, compiled source — so this file keeps only what it does not check:
  * that each builds into a material providing every uniform its shader
- * declares (program-cache.test.ts checks that for two effects and a synthetic
+ * declares (material.test.ts checks that for two effects and a synthetic
  * one), and each effect's own port of its reference CSS.
  */
 const SV_EFFECTS: Record<string, Effect> = {
@@ -43,7 +43,7 @@ const filterAt = (el: Element, fromCenter: number): FixedFilter => ({
 const expectClose = (got: RGB, want: RGB, label?: string) =>
   got.forEach((v, i) => expect(v, label).toBeCloseTo(want[i], 9));
 
-/** Every `uniform <type> <name>;` a compiled shader declares, as program-cache.test.ts reads them. */
+/** Every `uniform <type> <name>;` a compiled shader declares, as material.test.ts reads them. */
 const declaredUniforms = (source: string): string[] =>
   Array.from(source.matchAll(/uniform\s+\w+\s+(\w+)\s*(?:\[[^\]]*\])?\s*;/g), (match) => match[1]);
 

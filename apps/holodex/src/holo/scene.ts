@@ -12,7 +12,7 @@ import {
   type Texture,
 } from 'three';
 import { EFFECTS } from './effects';
-import { getMaterial } from './program-cache';
+import { createMaterial } from './material';
 import { regionFor, SHAPE_ID } from './regions';
 import type { HoloSelection } from './select';
 import type { Effect } from './shader/types';
@@ -30,10 +30,9 @@ export interface HoloScene {
 }
 
 /**
- * The generated CanvasTextures (textures.ts). Materials are cached per effect
- * (program-cache.ts) and shared across every scene that uses that effect, so
- * the textures they sample have to be shared too — built once per name here,
- * module-level, and never disposed by any one scene's dispose().
+ * The generated CanvasTextures (textures.ts), built once per name here and
+ * shared by every scene: each is a canvas painted once, which every scene's
+ * renderer uploads for itself, so no one scene's dispose() frees it.
  */
 const shared = new Map<TextureName, CanvasTexture>();
 
@@ -134,15 +133,12 @@ export function createHoloScene(canvas: HTMLCanvasElement): HoloScene {
 
   const target = { x: 0, y: 0 };
   // Spring-smoothed toward `target` each frame so the card leans rather than
-  // snapping, then written into the *current* material's own uPointer
-  // uniforms in frame() below. Never held as a uniform's value object itself
-  // — that object belongs to a cached material this scene may not be the
-  // only user of.
+  // snapping, then written into the current material's uPointer uniforms in
+  // frame() below.
   const current = { x: 0, y: 0 };
 
-  // Stands in for `mesh.material` until the first successful setSelection().
-  // Unlike a material from getMaterial(), this one is never registered with
-  // the effect cache, so it is this scene's alone to dispose.
+  // Stands in for `mesh.material` until the first successful setSelection(),
+  // which disposes it.
   const placeholder = new ShaderMaterial({
     transparent: true,
     vertexShader: /* glsl */ `
@@ -172,8 +168,8 @@ export function createHoloScene(canvas: HTMLCanvasElement): HoloScene {
   let running = false;
   let disposed = false;
   const start0 = performance.now();
-  // Owned here, not read back off a uniform, because the uniform lives on a
-  // material this scene may be sharing with another live scene.
+  // The card art, owned here: setSelection binds it onto each material it
+  // creates, and dispose() frees it.
   let cardTexture: Texture | null = null;
 
   const frame = () => {
@@ -217,7 +213,7 @@ export function createHoloScene(canvas: HTMLCanvasElement): HoloScene {
       material.uniforms.uCard.value = texture;
     },
     setSelection(selection) {
-      const material = getMaterial(selection.effect);
+      const material = createMaterial(selection.effect);
       // basic itself failed to compile; leave the current mesh material
       // alone and let the React layer fall back to the plain image.
       if (!material) return;
@@ -236,6 +232,9 @@ export function createHoloScene(canvas: HTMLCanvasElement): HoloScene {
       material.uniforms.uClipShape.value = SHAPE_ID[selection.shape];
       material.uniforms.uInvert.value = selection.invert ? 1 : 0;
 
+      // This scene's own, so the one it replaces (the placeholder, or an
+      // earlier selection's) has no other user.
+      mesh.material.dispose();
       mesh.material = material;
     },
     setPointer(x, y) {
@@ -261,19 +260,11 @@ export function createHoloScene(canvas: HTMLCanvasElement): HoloScene {
       running = false;
       disposed = true;
       cancelAnimationFrame(raf);
-      // Only clear the shared material's uCard if it's still pointing at the
-      // texture we're about to free — a second live scene may already have
-      // pointed the same shared material at a texture of its own.
-      if (mesh.material.uniforms.uCard.value === cardTexture) {
-        mesh.material.uniforms.uCard.value = null;
-      }
       cardTexture?.dispose();
-      // The placeholder is this scene's own, never shared — safe to dispose
-      // whether or not it's still current. The generated textures are
-      // module-level and shared, and a getMaterial() material outlives the
-      // scene, so neither is touched here; disposeMaterials() is the remote's
-      // teardown's job (mount.tsx / hydrate.tsx), not this scene's.
-      placeholder.dispose();
+      // The current material, the placeholder or the selection's, is this
+      // scene's own. The generated textures are shared by every scene, so
+      // none is touched here.
+      mesh.material.dispose();
       geometry.dispose();
       // dispose() alone leaves the WebGL context alive until the canvas is
       // collected. Every card navigation builds a new canvas and renderer, and
