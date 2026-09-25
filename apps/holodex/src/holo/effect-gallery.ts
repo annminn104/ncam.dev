@@ -443,3 +443,27 @@ export function selectedCard(effect: EffectId | undefined, cardId?: string): Gal
   if (!entry) return { entry: EFFECT_GALLERY[0], cardId: EFFECT_GALLERY[0].cardIds[0] };
   return { entry, cardId: entry.cardIds.find((id) => id === cardId) ?? entry.cardIds[0] };
 }
+
+/** A card picked on the page, hovered or tapped, and the route it was picked under. */
+export interface GalleryPick {
+  /** The section and card the route named when the pick was made. */
+  under: { effect?: EffectId; card?: string };
+  effect: EffectId;
+  cardId: string;
+}
+
+/**
+ * The live card. A pick changes no URL, so it holds only while the route it
+ * was made under stands: before any pick, and once the route moves on (a
+ * tab, the logo, a deep link, back), the route's own card is live.
+ */
+export function liveSelection(
+  effect: EffectId | undefined,
+  cardId: string | undefined,
+  pick: GalleryPick | null,
+): GallerySelection {
+  if (pick && pick.under.effect === effect && pick.under.card === cardId) {
+    return selectedCard(pick.effect, pick.cardId);
+  }
+  return selectedCard(effect, cardId);
+}

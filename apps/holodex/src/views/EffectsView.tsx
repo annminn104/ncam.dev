@@ -1,12 +1,13 @@
-import { useEffect, useEffectEvent, useId, useRef, type ReactNode } from 'react';
+import { useEffect, useEffectEvent, useId, useRef, useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useNavigate } from '../app-context';
 import { CardImage } from '../components/CardImage';
 import {
   EFFECT_GALLERY,
   ERA_QUALIFIER,
+  liveSelection,
   selectedCard,
   type EffectExample,
+  type GalleryPick,
 } from '../holo/effect-gallery';
 import { HoloCard } from '../holo/HoloCard';
 import type { EffectId } from '../holo/select';
@@ -38,37 +39,52 @@ const FOCUS_RING =
   'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-holo-accent';
 
 /**
+ * How long the pointer rests on a tile before its card goes live: long enough
+ * that sweeping across the grid builds and tears down no WebGL context for
+ * every tile it passes.
+ */
+const HOVER_DWELL_MS = 150;
+
+/** Why basic's section is plain art whichever card is live: HoloCard draws no scene for it. */
+const BASIC_NOTE = 'basic draws no foil: HoloCard shows the plain art.';
+
+/**
  * Every effect `selectHolo` can return, each in a section of its own on three
- * real cards (`holo/effect-gallery.ts`): one page for a GPU smoke pass over
- * all of them, instead of 90 card URLs.
+ * real cards (`holo/effect-gallery.ts`): the default page, and one page for a
+ * GPU smoke pass over all of them, instead of 90 card URLs.
  *
  * Exactly one card on the whole page renders a live `HoloCard`; the other 89
  * are plain art. Each `HoloCard` builds its own three.js renderer, with its
  * own WebGL context, and browsers cap live contexts near 16, so a page of
  * live cards would knock its own earlier canvases out through the
- * `holo.context-lost` path. Picking a card moves the live one there.
+ * `holo.context-lost` path. Hovering a card (or focusing or tapping it, as a
+ * touch screen has no hover) moves the live one there.
  *
- * The route names the live card (`routes.ts`): `/effects/<effect>` is that
- * section's first, `?card=<id>` another of its three. Both are state inside
- * this one view (`viewKey` stays `effects`), so picking a card remounts
- * nothing and refetches nothing: two tiles swap their art.
+ * The route names the card live on arrival (`routes.ts`): `/effects/<effect>`
+ * is that section's first, `?card=<id>` another of its three. A card picked
+ * on the page changes no URL (`liveSelection`): hovering would push a history
+ * entry for every tile, and in the host every navigation resets the window's
+ * scroll (TanStack Router's `resetScroll`), which jumped the page to its top
+ * on each pick. Either way nothing remounts and nothing refetches: two tiles
+ * swap their art.
  *
  * Cards load client-side through the card page's own `cardQuery`, one query
  * per tile, so a slow or dead card costs its own tile and nothing else. There
- * is deliberately no SSR prefetch for this diagnostic view.
+ * is deliberately no SSR prefetch: the page renders its skeletons, and each
+ * tile fetches its card.
  */
 export function EffectsView({ effect, card }: { effect?: EffectId; card?: string }) {
-  const navigate = useNavigate();
-  const selected = selectedCard(effect, card);
+  const [pick, setPick] = useState<GalleryPick | null>(null);
+  const selected = liveSelection(effect, card, pick);
   const liveSection = selected.entry.effect;
   const liveCard = selected.cardId;
-  // Only /effects/<effect> names a section to bring into view. Bare /effects
-  // opens on the first section's first card, and at the top of the page.
+  // What the route itself names. Only /effects/<effect> names a section to
+  // bring into view; the root opens on the first section's first card, at the
+  // top of the page. A pick is on screen already, and scrolls nothing.
+  const routed = selectedCard(effect, card);
   const named = effect !== undefined;
 
   const pageRef = useRef<HTMLDivElement>(null);
-  /** The card a click on this page asked for, until the route brings it. */
-  const clickedRef = useRef<string | null>(null);
   /** False until the effect below first runs: the render a deep link lands on. */
   const settledRef = useRef(false);
   const reducedMotion = useReducedMotion();
@@ -84,19 +100,13 @@ export function EffectsView({ effect, card }: { effect?: EffectId; card?: string
   });
 
   useEffect(() => {
-    // A card clicked here is on screen already: scrolling its section to the
-    // top would only pull the page out from under the pointer. Card ids are
-    // unique across the page (effect-gallery.test.ts), so the id is enough.
-    const ownClick = clickedRef.current === liveCard;
-    clickedRef.current = null;
-    if (named && !ownClick) scrollToSection(liveSection, !settledRef.current);
+    if (named) scrollToSection(routed.entry.effect, !settledRef.current);
     settledRef.current = true;
-  }, [named, liveSection, liveCard]);
+  }, [named, routed.entry.effect, routed.cardId]);
 
   const select = (section: EffectId, cardId: string) => {
     if (cardId === liveCard) return;
-    clickedRef.current = cardId;
-    navigate({ view: 'effects', effect: section, card: cardId });
+    setPick({ under: { effect, card }, effect: section, cardId });
   };
 
   return (
@@ -104,8 +114,8 @@ export function EffectsView({ effect, card }: { effect?: EffectId; card?: string
       <h1 className="text-2xl font-semibold tracking-tight">Effects</h1>
       <p className="mt-1 max-w-3xl text-sm text-holo-muted">
         All {EFFECT_GALLERY.length} holo effects, which of the {RARITY_COUNT} TCGdex rarities
-        selects each, and three real cards for every one: {CARD_COUNT} in all. Only the selected
-        card renders its foil live; pick another to move it there.
+        selects each, and three real cards for every one: {CARD_COUNT} in all. One card at a time
+        renders its foil live; hover another, or tap it, to move the foil there.
       </p>
 
       {EFFECT_GALLERY.map((entry) => (
@@ -140,6 +150,11 @@ function EffectSection({
       <div>
         <h2 className="font-mono text-base font-semibold">{entry.effect}</h2>
         <Rarities entry={entry} />
+        {entry.effect === 'basic' ? (
+          <p className="mt-3 rounded-lg border border-holo-line bg-holo-panel px-3 py-2 text-xs leading-5 text-holo-muted">
+            {BASIC_NOTE}
+          </p>
+        ) : null}
       </div>
       <ul
         aria-label={`${entry.effect} cards`}
@@ -210,7 +225,7 @@ function ExampleTile({ entry, cardId, selected, onSelect }: TileProps) {
   }
 
   return (
-    <TileFrame {...frame} name={card.name} status={selected ? staticReason(entry, card) : null}>
+    <TileFrame {...frame} name={card.name} status={selected ? staticReason(card) : null}>
       {/* Each tile owns its HoloCard, so moving the selection unmounts one
           and mounts the next: one live renderer on the page, ever. (HoloCard
           gives every rebuild a fresh canvas itself — see holoCanvasKey — so
@@ -227,14 +242,14 @@ function ExampleTile({ entry, cardId, selected, onSelect }: TileProps) {
 }
 
 /**
- * Why the live tile shows plain art however capable the GPU: HoloCard's own
- * early returns, spelled out so a smoke pass does not read them as a failure.
- * The art is judged by the base HoloCard itself draws from, cardImageBase —
- * not `card.image`, which a subset-set card never has although its art exists.
+ * Why the live tile shows plain art however capable the GPU, spelled out so a
+ * smoke pass does not read it as a failure. The art is judged by the base
+ * HoloCard itself draws from, cardImageBase — not `card.image`, which a
+ * subset-set card never has although its art exists. (basic, which never
+ * draws a foil, says so once, in its section's note: BASIC_NOTE.)
  */
-function staticReason(entry: EffectExample, card: Card): string | null {
+function staticReason(card: Card): string | null {
   if (!cardImageBase(card)) return 'TCGdex has no image for this card, so there is no art to foil.';
-  if (entry.effect === 'basic') return 'basic draws no foil: HoloCard shows the plain art.';
   return null;
 }
 
@@ -254,12 +269,42 @@ function TileFrame({
   children: ReactNode;
 }) {
   const statusId = useId();
+  /** The pending hover: the card goes live once the pointer has rested HOVER_DWELL_MS. */
+  const dwellRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cancelDwell = () => {
+    if (dwellRef.current === null) return;
+    clearTimeout(dwellRef.current);
+    dwellRef.current = null;
+  };
+  // A tile leaving the page takes its pending hover with it.
+  useEffect(() => {
+    const dwell = dwellRef;
+    return () => {
+      if (dwell.current !== null) clearTimeout(dwell.current);
+    };
+  }, []);
   return (
     <>
       <button
         type="button"
         aria-pressed={selected}
         aria-describedby={status ? statusId : undefined}
+        onPointerEnter={(event) => {
+          // A touch has no hover: its tap is a click, which selects at once.
+          if (event.pointerType === 'touch') return;
+          cancelDwell();
+          dwellRef.current = setTimeout(() => {
+            dwellRef.current = null;
+            onSelect();
+          }, HOVER_DWELL_MS);
+        }}
+        onPointerLeave={cancelDwell}
+        // The keyboard's hover: a tile tabbed to goes live. Only a visible
+        // focus, so a window regaining focus does not bring back a card the
+        // pointer has since moved on from.
+        onFocus={(event) => {
+          if (event.currentTarget.matches(':focus-visible')) onSelect();
+        }}
         onClick={onSelect}
         className={cn(
           'block w-full rounded-xl border p-2 text-left transition-colors',

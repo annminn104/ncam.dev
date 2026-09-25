@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { cardImageBase } from '../lib/images';
-import { EFFECT_GALLERY, isSectionCard, selectedCard } from './effect-gallery';
+import { EFFECT_GALLERY, isSectionCard, liveSelection, selectedCard } from './effect-gallery';
 import { CAPTURED_CARDS } from './effect-gallery.fixture';
 import {
   EFFECT_BY_RARITY,
@@ -203,6 +203,55 @@ describe('selectedCard', () => {
         first.cardIds[0],
       ]);
     }
+  });
+});
+
+describe('liveSelection', () => {
+  const [first, second, third] = EFFECT_GALLERY;
+  const shown = (s: ReturnType<typeof liveSelection>) => [s.entry.effect, s.cardId];
+
+  it('is the route’s own card until one is picked on the page', () => {
+    expect(shown(liveSelection(second.effect, second.cardIds[1], null))).toEqual(
+      shown(selectedCard(second.effect, second.cardIds[1])),
+    );
+    expect(shown(liveSelection(undefined, undefined, null))).toEqual([
+      first.effect,
+      first.cardIds[0],
+    ]);
+  });
+
+  it('is the card picked on the page, in its own section, while the route stands', () => {
+    const pick = {
+      under: { effect: second.effect },
+      effect: third.effect,
+      cardId: third.cardIds[2],
+    };
+    expect(shown(liveSelection(second.effect, undefined, pick))).toEqual([
+      third.effect,
+      third.cardIds[2],
+    ]);
+    const onDefault = { under: {}, effect: second.effect, cardId: second.cardIds[1] };
+    expect(shown(liveSelection(undefined, undefined, onDefault))).toEqual([
+      second.effect,
+      second.cardIds[1],
+    ]);
+  });
+
+  it('is the route’s own again once the route moves on', () => {
+    const pick = { under: {}, effect: third.effect, cardId: third.cardIds[2] };
+    expect(shown(liveSelection(second.effect, undefined, pick))).toEqual([
+      second.effect,
+      second.cardIds[0],
+    ]);
+    const underCard = {
+      under: { effect: second.effect, card: second.cardIds[1] },
+      effect: third.effect,
+      cardId: third.cardIds[0],
+    };
+    expect(shown(liveSelection(second.effect, second.cardIds[2], underCard))).toEqual([
+      second.effect,
+      second.cardIds[2],
+    ]);
   });
 });
 

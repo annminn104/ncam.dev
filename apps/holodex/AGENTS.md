@@ -40,6 +40,14 @@ return a `MountHandle`: a disposer that also carries an optional
 - **`onNavigate`** is how the remote asks to go somewhere; the host owns the
   URL and answers by calling `handle.update(route)` back, or standalone dev
   answers itself (`standalone.tsx` pushes history state directly).
+- **In the host, every navigation resets the window's scroll.**
+  `ProjectStage`'s `onNavigate` calls `router.navigate` with no `resetScroll`,
+  which TanStack Router defaults to true (`resetScroll ?? true` in
+  router-core), so state inside a view that goes through `onNavigate` jumps
+  the page to its top: the effects page's card picks did, until they stopped
+  navigating (2026-09-25). Standalone dev never shows it, as
+  `standalone.tsx` only pushes history, so check scroll behaviour through the
+  host.
 - **`update()` is what avoids a remount.** `route-controller.ts` holds the
   current route outside React (`App` reads it with `useSyncExternalStore`), so
   a click inside Holodex that changes the URL — set → card → back — calls
@@ -54,8 +62,10 @@ return a `MountHandle`: a disposer that also carries an optional
 ## Structure
 
 - `src/routes.ts` — the remote's whole URL space: `parseRoute` / `formatRoute`
-  for `home | set | search | card | collection | effects | not-found`, plus
-  filter (`q`, `type`, `rarity`, `page`) parsing.
+  for `sets | set | search | card | collection | effects | not-found`, plus
+  filter (`q`, `type`, `rarity`, `page`) parsing. The root is the effects
+  page, the default (the logo goes there, `Shell`'s `HOME`), and the sets
+  list is `/sets`.
 - `src/route-controller.ts` — route store outside React (see above).
 - `src/App.tsx` — one `switch` over `Route` into a view; wraps everything in
   `QueryClientProvider` + an error boundary keyed by route so a bad view can't
@@ -70,13 +80,18 @@ return a `MountHandle`: a disposer that also carries an optional
   `ErrorPanel`, `Skeleton`.
 - `src/views/` — `SetsView`, `SetView`, `SearchView`, `CardView`,
   `CollectionView`, `EffectsView`, `NotFoundView` — one per `Route` case.
-  `EffectsView` (`/effects`, `/effects/<effectId>`,
-  `/effects/<effectId>?card=<cardId>`) gives every `EffectId` a section of its
-  own, with the rarities that select it and three real cards — 30 sections,
-  90 cards; exactly one card on the whole page renders a live `HoloCard` at a
-  time, the other 89 are plain art. A rarity whose effect depends on the
+  `EffectsView` (the default page, at `/` or `/effects`, and
+  `/effects/<effectId>`, `/effects/<effectId>?card=<cardId>`) gives every
+  `EffectId` a section of its own, with the rarities that select it and three
+  real cards — 30 sections, 90 cards; exactly one card on the whole page
+  renders a live `HoloCard` at a time, the other 89 are plain art. The route
+  names the live card on arrival; hovering a card (after a 150 ms rest, so a
+  sweep across the grid builds no scene per tile), focusing it or tapping it
+  makes it live without changing the URL (`effect-gallery.ts#liveSelection`,
+  and see the scroll note above). A rarity whose effect depends on the
   card's era appears in both its sections, each chip qualified by era
   ("Rare · Scarlet & Violet, Mega", "Rare · before Scarlet & Violet").
+  `basic`'s section says in a note beside its rarities that it draws no foil.
 - `src/holo/` — eager (statically imported by `HoloCard.tsx`, so part of the
   main chunk): `select.ts` (rarity/layout/printing → `HoloSelection`),
   `regions.ts` (`ClipShape` → inset rect + `coversPoint`), `capability.ts`
@@ -647,10 +662,10 @@ instead of reaching for a global:
 restore) — jsdom has no WebGL2 and this repo has no jsdom regardless. They sit behind
 `capability.ts` (which is tested) so a visitor who can't run them never loads
 them, and they're checked by hand (`pnpm --filter @ncam/holodex dev`, open a
-card, confirm the holo reacts to the pointer). `/effects` puts every effect's
-three example cards on one page for that: click through the tiles. A selected
-tile whose card TCGdex serves without an image says so, since there is no art
-for the foil to render on.
+card, confirm the holo reacts to the pointer). The effects page (the default,
+`/`) puts every effect's three example cards on one page for that: hover
+through the tiles. A live tile whose card TCGdex serves without an image says
+so, since there is no art for the foil to render on.
 
 **Comparing an effect with the reference** is done headless, not by eye in a
 pane: Playwright 1.63 from the pnpm store, launched on the cached Chromium
@@ -755,9 +770,10 @@ Computed layout and scrolling need a browser too, so these are smoke-pass
 checks, not unit tests: every effects tile the same height across all 30
 sections (a fixed caption — the name clamped to two lines and always two lines
 tall — under the fixed 63/88 art); a section the URL names scrolling into view
-on navigation, instantly on the landing and under reduced motion, and never for
-a card clicked on the page; and every page at least one viewport tall, footer
-at the bottom (Shell's `min-h-screen`).
+on navigation, instantly on the landing and under reduced motion, and the page
+never moving for a card picked on it, hovered, focused or tapped, in the host
+as well as standalone; and every page at least one viewport tall, footer at
+the bottom (Shell's `min-h-screen`).
 
 ## Run standalone
 

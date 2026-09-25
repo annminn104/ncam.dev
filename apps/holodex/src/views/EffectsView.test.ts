@@ -226,6 +226,27 @@ describe('EffectsView — every tile has the art of its card', () => {
   });
 });
 
+describe('EffectsView — basic’s note', () => {
+  const BASIC_NOTE = 'basic draws no foil: HoloCard shows the plain art.';
+
+  it('says why basic draws no foil in its section’s left column, whichever card is live', () => {
+    // Loading or loaded, and with a basic card live or another section's.
+    for (const html of [
+      renderPage(),
+      renderPage({}, ALL_CARDS),
+      renderPage({ effect: 'basic' }, ALL_CARDS),
+    ]) {
+      const basic = /<section\b[^>]*data-section="basic"[^>]*>([\s\S]*?)<\/section>/.exec(
+        html,
+      )?.[1];
+      const [left] = (basic ?? '').split('<ul');
+      expect(textNodes(left)).toContain(BASIC_NOTE);
+      // Once on the page: never under a tile as well.
+      expect(html.split(BASIC_NOTE)).toHaveLength(2);
+    }
+  });
+});
+
 describe('EffectsView — loading, one tile at a time', () => {
   it('lets a card still loading cost its own tile, never its section or the live card', () => {
     const [first, second] = EFFECT_GALLERY;
