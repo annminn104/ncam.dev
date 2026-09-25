@@ -100,6 +100,12 @@ export interface Layer {
   size?: [number, number];
   /** background-position, as a fraction; may follow the pointer */
   offset?: { x: PointerDriven; y: PointerDriven };
+  /**
+   * The layer's own opacity, as its pseudo-element's `opacity`: how much of the
+   * blend onto the layers beneath it shows, clamped to 0..1. Left out, 1. The
+   * first layer has nothing beneath it, so its opacity is the element's.
+   */
+  opacity?: PointerDriven;
 }
 
 /** CSS filter: brightness()/contrast()/saturate(), each pointer-driven. */

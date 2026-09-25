@@ -771,3 +771,74 @@ describe('an element’s own clip in GLSL agrees with coversPoint() in JS', () =
     expect(src.match(/float clip_/g)).toHaveLength(1);
   });
 });
+
+/**
+ * A layer's own opacity (types.ts), as the compiler emits it: the statement
+ * that blends layer 1 onto the stack, read back out of the GLSL, its weight
+ * expression run as JS at chosen pointers. Two solid layers, so the stack and
+ * the source are known exactly.
+ */
+function layerOneStatement(opacity: import('./types').PointerDriven | undefined) {
+  const src = compileEffect({
+    id: 'test-layer-opacity',
+    shine: [
+      {
+        layers: [
+          { source: { kind: 'solid', color: [0.2, 0.4, 0.6] }, blend: 'normal' },
+          { source: { kind: 'solid', color: [1, 0.5, 0] }, blend: 'normal', opacity },
+        ],
+        mixBlend: 'normal',
+      },
+    ],
+    glare: [],
+  });
+  const line = /^ {2}stack_shine0 = (.*);$/m.exec(src)?.[1];
+  if (!line) throw new Error('layer 1 no longer writes stack_shine0 on one line');
+  return line;
+}
+
+describe('a layer’s own opacity', () => {
+  const weightOf = (line: string) => {
+    const m =
+      /^mix\(stack_shine0, blendWith\(\d+, stack_shine0, src_shine0_1\), clamp\((.*), 0\.0, 1\.0\)\)$/.exec(
+        line,
+      );
+    if (!m) throw new Error(`not a weighted blend: ${line}`);
+    const run = new Function('uPointerUV', 'uPointerFromCenter', `return ${m[1]};`) as (
+      uv: { x: number; y: number },
+      fromCenter: number,
+    ) => number;
+    return (x: number, y: number, fromCenter = 0) =>
+      Math.min(1, Math.max(0, run({ x, y }, fromCenter)));
+  };
+
+  it('mixes the blended layer in at its opacity: a quarter of it over three quarters of the stack', () => {
+    const weight = weightOf(layerOneStatement({ base: 0.25 }));
+    const [stack, source] = [
+      [0.2, 0.4, 0.6],
+      [1, 0.5, 0],
+    ];
+    const w = weight(0.5, 0.5);
+    expect(w).toBeCloseTo(0.25, 12);
+    // normal blend: blendWith gives the source, so the result is the plain mix
+    const mixed = stack.map((s, i) => s + (source[i] - s) * w);
+    [0.4, 0.425, 0.45].forEach((want, i) => expect(mixed[i]).toBeCloseTo(want, 12));
+  });
+
+  it('follows the pointer: cosmos-holo’s :after, opaque at the top and a quarter at the bottom', () => {
+    const weight = weightOf(layerOneStatement({ base: 1, fromTop: -0.75 }));
+    expect(weight(0.5, 0)).toBeCloseTo(1, 12);
+    expect(weight(0.5, 1)).toBeCloseTo(0.25, 12);
+    expect(weight(0.5, 0.5)).toBeCloseTo(0.625, 12);
+  });
+
+  it('clamps an opacity past 1, as CSS does', () => {
+    const line = layerOneStatement({ base: 1.5 });
+    expect(line).toMatch(/clamp\(.*, 0\.0, 1\.0\)\)$/);
+    expect(weightOf(line)(0.5, 0.5)).toBe(1);
+  });
+
+  it('leaves a layer without one blending straight onto the stack', () => {
+    expect(layerOneStatement(undefined)).toMatch(/^blendWith\(\d+, stack_shine0, src_shine0_1\)$/);
+  });
+});

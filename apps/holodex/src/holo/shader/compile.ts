@@ -86,6 +86,7 @@ function layerCode(layer: Layer, index: number, prefix: string): string {
   const oy = driven(layer.offset?.y, 0);
   const uv = `uv_${id}`;
   const expr = sourceExpr(layer.source, uv, decls, id);
+  const blended = `blendWith(${BLEND_ID[layer.blend]}, stack_${prefix}, src_${id})`;
 
   return [
     ...decls,
@@ -93,7 +94,10 @@ function layerCode(layer: Layer, index: number, prefix: string): string {
     `  vec3 src_${id} = ${expr};`,
     index === 0
       ? `  vec3 stack_${prefix} = src_${id};`
-      : `  stack_${prefix} = blendWith(${BLEND_ID[layer.blend]}, stack_${prefix}, src_${id});`,
+      : layer.opacity
+        ? // a layer's own opacity (types.ts): only so much of its blend shows
+          `  stack_${prefix} = mix(stack_${prefix}, ${blended}, clamp(${driven(layer.opacity, 1)}, 0.0, 1.0));`
+        : `  stack_${prefix} = ${blended};`,
   ].join('\n');
 }
 
