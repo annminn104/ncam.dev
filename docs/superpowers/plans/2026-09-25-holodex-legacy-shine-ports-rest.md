@@ -158,3 +158,78 @@ Clip: the card's own, as today. Shine `(1, 1, 0.8)`, `color-dodge`: 1. `css-radi
 - [ ] `palette.ts` goes (`git rm`), its last users ported; the `glitter`/`grain` expectation in `scene.test.ts` follows what the effects now sample.
 - [ ] Docs: `apps/holodex/AGENTS.md` — "Two families" (all 22 shines ported, the freeze gone), the DSL paragraph (children, RGBA path, exact gradients, CSS filters, glow and foil brightness, the textures), "Tests are DOM-free" (the textures), "Comparing an effect with the reference" (shared textures; the probe's `.card__front` inline variables; the type class; `computed.json`); `css.ts`'s header (the exact converters; its sunpillar note). The owner-facing finding: the RGB path's `applyFilter` is not CSS's, for the Scarlet & Violet sub-project.
 - [ ] Final: all twenty-two measured in both modes against their floors, a table in the ledger and the plan's "How it landed"; the full verification (tests, lint, typecheck, Prettier, fresh build, split, budget); GPU smoke of all 21 scene-drawing legacy effects on card pages and `/effects`, and a lose/restore; side-by-sides to the owner. Nothing pushed.
+
+## How it landed (2026-09-25)
+
+Executed inline, task by task, each test-first and committed locally: 85bc7cb (B2, foil
+brightness), 300887f (B5), b0a33eb (B3 and illusion), 78ebb37 (B6), a00ec60 (grain, ancient,
+vmaxbg), d9fea99 (B7), 66d9e69 (B8), 17383a1 (the cosmos layers), af93302 (B9), cca42f2
+(`palette.ts`), 3cf9d04 (docs). B1's harness stays in the scratchpad. What the plan did not
+foresee:
+
+- **The probe card's foil variables are inline on `.card__front`** (Card.svelte sets `--foil`,
+  `--mask`, `--cosmosbg` and the seeds there), so pinning them on `.card` lost to the inline
+  values, and amazing-rare's reference drew the probe card's own foil. The pins moved to
+  `.card__front`. The pilot's two were unaffected: their unmasked rules set `--foil` on the shine.
+- **regular-holo's `--scanlines-space: .5px` sits in a media query**; the probe computes 1px, and
+  1px is what was ported, as the Global Constraints' "the computed style is right about the
+  cascade" says.
+- **Clips followed the CSS**: trainer-gallery-v-regular, trainer-gallery-v-max,
+  trainer-gallery-secret-rare and v-regular are full art; shiny-rare takes the card's own region;
+  amazing-rare the art window whatever its stage (`ART_WINDOW`).
+- **The illusion field was not periodic** outside its tile until the point was wrapped into the
+  tile first; the tiling test caught it.
+- In B5 the ports were written before their tests. The tests were then added and watched failing
+  against the older code, stashed.
+
+**Final measurement**, all 21 that draw a scene (`basic` draws none), at (0.3, 0.3) · (0.7, 0.7):
+luminance / chroma gap to the reference in 0..255, whole card unless marked. "Before" has only the
+pilot's two ported; "shared" feeds the reference our textures, "own" leaves it its images; "shine
+only" hides the glare on both sides, shared. The bound at each point is
+max(1.5 × floor, floor + 2).
+
+| Effect                      | Floor (0.3 / 0.7) | Before                | Now, shared textures | Now, own images     | Shine only        | Verdict                  |
+| --------------------------- | ----------------- | --------------------- | -------------------- | ------------------- | ----------------- | ------------------------ |
+| regular-holo                | 3.1/2.0 · 1.6/0.3 | 8.8/12.7 · 11.1/21.2  | 3.9/1.8 · 2.8/2.1    | 3.9/1.8 · 2.8/2.1   | —                 | within                   |
+| reverse-holo                | 4.0/5.6 · 6.6/5.0 | 24.0/19.1 · 22.1/8.0  | 6.3/10.8 · 11.3/9.6  | 6.3/10.8 · 11.3/9.6 | 5.9/4.0 · 4.4/4.9 | shine within, glare over |
+| cosmos-holo                 | 1.2/1.4 · 0.8/1.7 | 20.2/19.8 · 20.6/13.3 | 7.3/7.3 · 3.9/3.0    | 7.8/7.2 · 3.6/3.0   | 0.6/1.6 · 0.9/1.8 | shine within, glare over |
+| amazing-rare                | 2.0/4.3 · 2.0/2.9 | 15.0/11.3 · 12.4/10.3 | 1.9/3.1 · 2.0/2.9    | 1.7/3.4 · 1.6/3.0   | —                 | within                   |
+| radiant-holo                | 2.1/3.3 · 4.0/2.3 | 1.7/1.9 · 2.4/1.6     | 1.7/1.7 · 2.6/1.6    | 1.7/1.9 · 2.4/1.6   | —                 | within                   |
+| rainbow-holo                | 1.0/2.7 · 1.4/8.2 | 4.4/11.6 · 1.8/13.6   | 1.2/3.3 · 2.6/9.6    | 1.3/4.2 · 2.6/9.6   | —                 | within                   |
+| rainbow-alt                 | 3.1/1.7 · 2.0/2.0 | 31.6/26.7 · 27.3/31.9 | 2.9/2.4 · 3.4/3.4    | 3.1/2.1 · 4.0/3.4   | —                 | within                   |
+| secret-rare                 | 3.7/2.9 · 3.4/4.8 | 3.0/2.3 · 3.3/4.1     | 3.0/2.3 · 3.4/4.1    | 3.0/2.3 · 3.3/4.1   | —                 | within                   |
+| shiny-rare                  | 3.2/2.2 · 3.1/1.1 | 24.0/40.6 · 26.7/39.7 | 3.1/1.7 · 3.1/0.9    | 3.1/1.7 · 3.3/0.9   | —                 | within                   |
+| shiny-v                     | 1.2/1.1 · 2.1/0.9 | 1.2/1.0 · 2.7/0.9     | 1.2/1.4 · 2.4/1.0    | 1.2/1.7 · 2.4/1.1   | —                 | within                   |
+| shiny-vmax                  | 2.1/0.6 · 2.2/1.2 | 16.7/10.0 · 14.8/20.1 | 1.6/3.2 · 1.9/1.4    | 1.2/3.1 · 1.8/1.3   | 3.2/2.7 · 3.0/1.9 | marginal (chroma)        |
+| v-regular                   | 3.2/3.7 · 2.3/3.0 | 11.2/10.1 · 9.3/5.1   | 2.9/4.6 · 3.2/1.9    | 2.8/4.6 · 3.1/1.8   | —                 | within                   |
+| v-full-art                  | 2.6/0.8 · 3.3/1.6 | 24.3/10.2 · 20.3/16.9 | 3.0/1.3 · 3.4/1.6    | 3.0/1.1 · 3.3/1.7   | —                 | within                   |
+| v-max                       | 2.9/0.6 · 3.8/1.3 | 26.2/15.2 · 27.2/13.7 | 3.9/0.9 · 2.3/1.4    | 3.7/0.9 · 2.3/1.3   | —                 | within                   |
+| v-star                      | 2.4/0.4 · 3.0/2.1 | 11.3/5.1 · 9.1/3.7    | 2.0/0.7 · 1.8/1.2    | 2.1/0.7 · 1.8/1.3   | —                 | within                   |
+| trainer-gallery-holo        | 1.9/2.1 · 2.3/1.7 | 20.4/28.7 · 25.2/36.4 | 6.6/4.4 · 8.4/4.4    | 6.6/4.4 · 8.4/4.4   | 1.8/2.2 · 3.0/2.7 | shine within, glare over |
+| swsh-pikachu                | 3.2/1.8 · 3.4/2.7 | 19.9/13.1 · 20.2/16.4 | 3.7/6.0 · 3.4/3.0    | 4.6/6.4 · 3.7/4.0   | 3.3/4.0 · 3.1/3.1 | marginal (chroma)        |
+| trainer-gallery-v-regular   | 3.0/2.4 · 5.1/2.1 | 29.7/69.0 · 22.6/67.1 | 5.1/8.2 · 8.9/8.1    | 5.2/8.3 · 8.9/8.4   | 3.0/2.2 · 5.1/1.9 | shine within, glare over |
+| trainer-gallery-v-max       | 4.4/1.6 · 2.6/1.1 | 31.2/82.0 · 32.8/80.1 | 8.6/9.6 · 5.3/7.0    | 8.6/9.1 · 5.3/7.0   | 4.4/1.7 · 3.0/1.3 | shine within, glare over |
+| trainer-gallery-secret-rare | 2.7/2.9 · 2.8/1.6 | 24.6/24.3 · 25.6/27.4 | 1.9/2.7 · 2.2/1.7    | 1.9/2.7 · 2.2/1.7   | —                 | within                   |
+| trainer-full-art            | 2.6/2.8 · 1.7/3.6 | 18.2/13.2 · 19.2/13.0 | 10.8/4.6 · 4.0/3.3   | 10.7/4.1 · 4.0/3.3  | 1.7/0.9 · 1.7/2.9 | shine within, glare over |
+
+Means over the 21: before 17.25 / 20.77, now 3.93 / 3.70 (own images 3.94 / 3.74), floor
+2.74 / 2.34. Thirteen are within the floor whole; with the glare hidden, 19 are, and shiny-vmax
+(2.7 against 2.6) and swsh-pikachu (4.0 against 3.8) miss on chroma at (0.3, 0.3), on floors of
+0.6 and 1.8, alike by eye.
+
+**Glare findings**, outside this plan and left as they were, for the owner:
+
+- Glare only, reverse-holo's luminance gap is 5.8 · 12.8, trainer-gallery-holo's 6.6 · 7.6 and
+  trainer-full-art's 11.8 · 4.7; cosmos-holo's glare was already known to sit 3 to 6 over.
+- trainer-gallery-v-regular's glare computes to v-regular.css's radial (white 0%,
+  rgba(134, 138, 141, .33) 45%, rgba(51, 51, 51, .9) 130%), hard-light through brightness(.9)
+  contrast(1.75), at opacity .4; the glare port draws base.css's radial, overlaid.
+- trainer-gallery-v-max's glare is hard-lit in the reference; the glare port overlays it.
+
+**Verification:** 904 tests in 40 files, lint, typecheck and Prettier clean; a fresh build splits
+2 / 1 and its lazy chunk is 570.64 kB, 148.72 KB gz (budget 170); GPU smoke: every legacy section
+of `/effects`, and all 21 card pages, draw their effect, and a lost context comes back on a fresh
+canvas (swsh9tg-TG29's first load got no card data from TCGdex, and passed on the next). Nothing
+pushed. Next, as the owner chose: the Scarlet & Violet ports onto groups, a sub-project of its own
+with its own spec and plan, re-checked against poke-151, which also settles the RGB path's
+`applyFilter`.
