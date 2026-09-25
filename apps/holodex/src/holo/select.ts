@@ -188,7 +188,8 @@ const MEGA_SET = /^me(\d|p$)/i;
  * reads `normal: true, holo: false, reverse: false`, its Double, Illustration
  * and Special illustration rares included — foil by definition, and `holo:
  * true` in `me02` and `sv08` (checked 2026-09-24). Selection follows the
- * rarity system, and reads variant data nowhere.
+ * rarity system; the one variant datum it reads is a listed Poké Ball
+ * printing (listsPokeBallReverse), whose absence is safe.
  *
  * Left out on purpose, since none holds a rarity that changes with the era:
  * `sve` and `mee`, the SV and Mega basic energies (all `Common`), and `mfb`
@@ -221,7 +222,12 @@ export function eraOf(card: Pick<Card, 'id' | 'localId'>): Era {
     : 'older';
 }
 
-/** 151, the one set whose reverse holos are Poké Ball and Master Ball patterned. */
+/**
+ * 151, whose reverse holos the reference draws Poké Ball and Master Ball
+ * patterned. TCGdex lists no ball printing for the English 151 (its reverses
+ * are plain, four with a cosmos one besides; checked 2026-09-25), so this is
+ * the reference's look, kept by set.
+ */
 const BALL_REVERSE_SET = 'sv03.5';
 
 /**
@@ -234,10 +240,33 @@ const BALL_REVERSE_SET = 'sv03.5';
  */
 export const MASTER_BALL_NUMBERS: ReadonlySet<number> = new Set([1, 4, 7, 25, 133, 144, 146, 161]);
 
+/**
+ * Whether TCGdex lists a Poké Ball-patterned reverse printing of this card: a
+ * `variants_detailed` entry of type `reverse` with `foil: 'pokeball'`.
+ * Prismatic Evolutions, Black Bolt and White Flare list one for every Common,
+ * Uncommon and Rare, and Ascended Heroes for its cards whose ball is the Poké
+ * Ball; its others name a Friend, Love, Quick or Dusk Ball or Team Rocket's
+ * R, which have no pattern here, or no ball at all, and so stay plain
+ * (checked 2026-09-25). A Master Ball printing listed beside it is not shown:
+ * reverse draws the Poké Ball. This is the one variant datum selection reads,
+ * and a safe one: it is there only where TCGdex curated it, and its absence,
+ * a placeholder set's included, means a plain reverse, never a wrong pattern.
+ */
+function listsPokeBallReverse(card: Card): boolean {
+  return (
+    card.variants_detailed?.some(({ type, foil }) => type === 'reverse' && foil === 'pokeball') ??
+    false
+  );
+}
+
 /** The reverse foil a card gets once the caller asks for its reverse printing. */
 function reverseEffect(card: Card): EffectId {
-  if (setIdOf(card) !== BALL_REVERSE_SET) return 'reverse-holo';
-  return MASTER_BALL_NUMBERS.has(parseInt(card.localId, 10)) ? 'masterball-holo' : 'poke-ball-holo';
+  if (setIdOf(card) === BALL_REVERSE_SET) {
+    return MASTER_BALL_NUMBERS.has(parseInt(card.localId, 10))
+      ? 'masterball-holo'
+      : 'poke-ball-holo';
+  }
+  return listsPokeBallReverse(card) ? 'poke-ball-holo' : 'reverse-holo';
 }
 
 /**
@@ -333,8 +362,9 @@ function clipShape(effect: EffectId, card: Card): ClipShape {
  * Which foil a card gets, where it is confined, and whether that is inverted.
  *
  * `options.reverse` is the only thing that selects a reverse foil —
- * `reverse-holo`, or on 151 `poke-ball-holo` / `masterball-holo` — see
- * `SelectOptions`. It is never read off `card.variants` directly here.
+ * `reverse-holo`, or `poke-ball-holo` / `masterball-holo` on 151 and
+ * `poke-ball-holo` where TCGdex lists a Poké Ball printing (`reverseEffect`)
+ * — see `SelectOptions`. Whether to reverse is never read off the card.
  */
 export function selectHolo(card: Card, options: SelectOptions = {}): HoloSelection {
   const modern = eraOf(card) === 'modern';

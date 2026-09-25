@@ -525,9 +525,11 @@ describe('selectHolo — 151 reverse holos', () => {
     expect(selectHolo(CAPTURED_CARDS['sv03.5-003'], { reverse: true }).effect).toBe('ex-regular');
   });
 
-  it('leaves every other set on reverse-holo, other Scarlet & Violet and Mega sets included', () => {
-    // Prismatic Evolutions (sv08.5) printed Poké Ball reverses too, but the
-    // reference has none for it, so neither do we.
+  it('leaves any other set on reverse-holo unless TCGdex lists a Poké Ball printing', () => {
+    // Outside 151 the set decides nothing: these list no ball printing (no
+    // variants_detailed at all), so even a Prismatic Evolutions id, a set
+    // TCGdex marks as Poké Ball patterned, stays reverse-holo. The next block
+    // holds the cards that do list one.
     for (const id of ['sv08.5-001', 'sv01-001', 'me01-001', 'swsh3-3']) {
       const localId = id.slice(id.lastIndexOf('-') + 1);
       expect(selectHolo(card({ id, localId, rarity: 'Common' }), { reverse: true }), id).toEqual({
@@ -536,5 +538,112 @@ describe('selectHolo — 151 reverse holos', () => {
         invert: true,
       });
     }
+  });
+});
+
+describe('selectHolo — the Poké Ball reverses TCGdex lists', () => {
+  /*
+   * Real cards, captured verbatim from `GET /v2/en/cards/{id}` on 2026-09-25
+   * and trimmed as effect-gallery.fixture.ts trims its own, variants_detailed
+   * down to each printing's type and foil. Exeggcute and Amarys are from
+   * Prismatic Evolutions, whose every Common, Uncommon and Rare lists a
+   * Poké Ball reverse, and whose Pokémon list a Master Ball one besides.
+   */
+  const PRISMATIC_POKEMON: Card = {
+    id: 'sv08.5-001',
+    localId: '001',
+    name: 'Exeggcute',
+    image: 'https://assets.tcgdex.net/en/sv/sv08.5/001',
+    category: 'Pokemon',
+    set: { id: 'sv08.5', name: 'Prismatic Evolutions', cardCount: { total: 180, official: 131 } },
+    rarity: 'Common',
+    stage: 'Basic',
+    variants: { firstEdition: false, holo: false, normal: true, reverse: true, wPromo: false },
+    variants_detailed: [
+      { type: 'normal' },
+      { type: 'reverse' },
+      { type: 'reverse', foil: 'pokeball' },
+      { type: 'reverse', foil: 'masterball' },
+    ],
+  };
+  const PRISMATIC_TRAINER: Card = {
+    id: 'sv08.5-093',
+    localId: '093',
+    name: 'Amarys',
+    image: 'https://assets.tcgdex.net/en/sv/sv08.5/093',
+    category: 'Trainer',
+    set: { id: 'sv08.5', name: 'Prismatic Evolutions', cardCount: { total: 180, official: 131 } },
+    rarity: 'Common',
+    variants: { firstEdition: false, holo: false, normal: true, reverse: true, wPromo: false },
+    variants_detailed: [
+      { type: 'normal' },
+      { type: 'reverse' },
+      { type: 'reverse', foil: 'pokeball' },
+    ],
+  };
+  /** A plain reverse printing, and nothing else. */
+  const PLAIN_REVERSE: Card = {
+    id: 'sv01-001',
+    localId: '001',
+    name: 'Pineco',
+    image: 'https://assets.tcgdex.net/en/sv/sv01/001',
+    category: 'Pokemon',
+    set: { id: 'sv01', name: 'Scarlet & Violet', cardCount: { total: 258, official: 198 } },
+    rarity: 'Common',
+    stage: 'Basic',
+    variants: { firstEdition: false, holo: false, normal: true, reverse: true, wPromo: false },
+    variants_detailed: [{ type: 'normal' }, { type: 'reverse' }],
+  };
+  /** A reverse printing with a foil of its own that is no ball: a league stamp. */
+  const LEAGUE_REVERSE: Card = {
+    id: 'me01-001',
+    localId: '001',
+    name: 'Bulbasaur',
+    image: 'https://assets.tcgdex.net/en/me/me01/001',
+    category: 'Pokemon',
+    set: { id: 'me01', name: 'Mega Evolution', cardCount: { total: 188, official: 132 } },
+    rarity: 'Common',
+    stage: 'Basic',
+    variants: { firstEdition: false, holo: false, normal: true, reverse: true, wPromo: false },
+    variants_detailed: [
+      { type: 'normal' },
+      { type: 'reverse' },
+      { type: 'reverse', foil: 'league' },
+    ],
+  };
+
+  it('draws a reverse Poké Ball patterned when TCGdex lists a Poké Ball printing of it', () => {
+    // Exeggcute lists a Master Ball printing too; reverse shows the Poké Ball.
+    expect(selectHolo(PRISMATIC_POKEMON, { reverse: true })).toEqual({
+      effect: 'poke-ball-holo',
+      shape: 'regular',
+      invert: true,
+    });
+  });
+
+  it('does so for a trainer, which lists no Master Ball printing, in its own region', () => {
+    expect(selectHolo(PRISMATIC_TRAINER, { reverse: true })).toEqual({
+      effect: 'poke-ball-holo',
+      shape: 'trainer',
+      invert: true,
+    });
+  });
+
+  it('keeps reverse-holo for a plain reverse, and for one whose foil is not a ball', () => {
+    for (const printed of [PLAIN_REVERSE, LEAGUE_REVERSE]) {
+      expect(selectHolo(printed, { reverse: true }), printed.id).toEqual({
+        effect: 'reverse-holo',
+        shape: 'regular',
+        invert: true,
+      });
+    }
+  });
+
+  it('shows no pattern unless the reverse printing is asked for', () => {
+    expect(selectHolo(PRISMATIC_POKEMON)).toEqual({
+      effect: 'basic',
+      shape: 'regular',
+      invert: false,
+    });
   });
 });

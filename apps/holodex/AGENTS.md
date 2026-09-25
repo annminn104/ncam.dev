@@ -141,9 +141,22 @@ Base `https://api.tcgdex.net/v2/en`, no key, CORS-open. Verified live 2026-09-21
   (30th Celebration, released 2026-09-16) reads
   `normal: true, holo: false, reverse: false`, Double rares and Special
   illustration rares included, where the curated `me02` and `sv08` read
-  `holo: true` for all of those. Selection reads variant data nowhere for
-  that reason (select.ts says so where the era rule lives), and a card page
-  offers no reverse toggle on such a set until TCGdex curates it.
+  `holo: true` for all of those. Selection reads no variant flag for that
+  reason (select.ts says so where the era rule lives), and a card page
+  offers no reverse toggle on such a set until TCGdex curates it. The one
+  variant datum it reads is a listed Poké Ball printing (below), which is
+  safe: absent, it means a plain reverse, never a wrong pattern.
+- **`variants_detailed` names each printing's `foil`**, and `/cards` cannot
+  filter on it (`?variants_detailed.foil=pokeball` returns `[]`), so finding
+  the sets that list one took a scan of card details (2026-09-25). Prismatic
+  Evolutions (`sv08.5`), Black Bolt and White Flare (`sv10.5b`/`sv10.5w`)
+  list a `pokeball` reverse for every Common, Uncommon and Rare, and a
+  `masterball` one for most. Ascended Heroes (`me02.5`) lists an `energy`
+  reverse plus one ball for most of its Commons, Uncommons and Rares:
+  `pokeball`, `friendball`, `loveball`, `quickball`, `duskball` or
+  `team-rocket` (38 list only a plain reverse). The English 151 lists none (plain,
+  four with a `cosmos` one besides): its ball patterns are the reference
+  demo's, kept by set.
 - **~20% of card briefs have no `image`.** `lib/images.ts` returns `null` for a
   missing base and `CardImage` renders a placeholder at the same `63/88`
   aspect ratio so the grid never reflows.
@@ -198,7 +211,12 @@ with `invert: true`: `reverse-holo`, except on 151 (`sv03.5`), whose reverse
 holos are Poké Ball patterned (`poke-ball-holo`), or Master Ball for the
 reference's fixed card numbers 1, 4, 7, 25, 133, 144, 146 and 161
 (`masterball-holo`) — never its random 20% promotion, so a card renders the
-same every time.
+same every time — and except where TCGdex lists a Poké Ball printing of the
+card (a `reverse` in `variants_detailed` with `foil: 'pokeball'`), which is
+`poke-ball-holo` too. A Master Ball printing listed beside it is not shown,
+and an Ascended Heroes card whose ball is another kind (Friend, Love, Quick,
+Dusk, Team Rocket) stays `reverse-holo`, since only the Poké Ball has a
+pattern here.
 `options.reverse` has exactly two sources: the card page's normal/reverse
 toggle (`views/CardView.tsx`) set to reverse, and the effects page's three
 reverse sections (`views/EffectsView.tsx`, via each gallery entry's

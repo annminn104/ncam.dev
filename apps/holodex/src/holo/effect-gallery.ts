@@ -80,8 +80,8 @@ export const ERA_QUALIFIER: Readonly<Record<Era, string>> = {
 };
 
 /** select.ts's two overrides, which reach the seven effects no rarity maps to. */
-const FROM_REVERSE_PRINTING = 'reverse printing, any set but 151';
-const FROM_POKE_BALL_REVERSE = 'reverse printing, 151';
+const FROM_REVERSE_PRINTING = 'reverse printing, not 151, no Poké Ball one listed';
+const FROM_POKE_BALL_REVERSE = 'reverse printing, 151 or a listed Poké Ball one';
 const FROM_MASTER_BALL_REVERSE = `reverse printing, 151 nos. ${[...MASTER_BALL_NUMBERS].join(', ')}`;
 const FROM_CARD_NUMBER = 'TG/GG card number';
 
@@ -352,14 +352,16 @@ const EXAMPLES: Omit<EffectExample, 'rarities'>[] = [
   },
   // 151's reverse holos, Poké Ball patterned, and Master Ball for the card
   // numbers select.ts lists; the Master Ball list holds the three starters'
-  // first stages, so the two sections split each line between them. Both
-  // need `reverse: true`, as reverse-holo does.
+  // first stages, so the two sections split two lines between them. The
+  // third Poké Ball card comes the other way in: a Prismatic Evolutions card,
+  // whose Poké Ball printing TCGdex lists. Both sections need `reverse: true`,
+  // as reverse-holo does.
   {
     effect: 'poke-ball-holo',
     cardIds: [
       'sv03.5-002', // Ivysaur
       'sv03.5-005', // Charmeleon
-      'sv03.5-008', // Wartortle
+      'sv08.5-074', // Eevee
     ],
     reverse: true,
     override: FROM_POKE_BALL_REVERSE,

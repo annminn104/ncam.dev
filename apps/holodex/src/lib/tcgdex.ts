@@ -136,6 +136,11 @@ export interface TcgplayerPricing {
 export interface VariantDetail {
   type: string;
   size?: string;
+  /**
+   * The printing's own foil pattern, where it has one: `pokeball`,
+   * `masterball`, `cosmos`, `energy`… Absent on a plain printing.
+   */
+  foil?: string;
   variantId?: string;
   pricing?: { cardmarket?: PriceBlock | null; tcgplayer?: TcgplayerPricing | null };
 }

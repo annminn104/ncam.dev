@@ -7,14 +7,18 @@ import type { Card } from '../lib/tcgdex';
  *
  * Captured from `GET https://api.tcgdex.net/v2/en/cards/{id}` and trimmed to
  * what `selectHolo` reads (`rarity`, `suffix`, `localId`, `category`,
- * `stage`, and the set id it takes off `id` for the card's era), the
- * reverse-printing flag (`variants`), the `image` the page draws, and what
- * the `Card` type requires. The first 87 were fetched on 2026-09-24, when the
- * page grew to 29 sections: the 33 new to it were captured then, and the 54
- * it kept from the 66-card page (captured 2026-09-23 and 2026-09-24) matched
- * that fetch in every field. The last three, dp7-96, hgss3-83 and me01-034,
- * came on 2026-09-25 with the page's 30th section, sv-rare-holo, whose two
- * other cards moved over from regular-holo. The subset-set cards
+ * `stage`, the set id it takes off `id` for the card's era, and each
+ * printing's `type` and `foil` in `variants_detailed`, for a Poké Ball
+ * reverse), the reverse-printing flag (`variants`), the `image` the page
+ * draws, and what the `Card` type requires. The first 87 were fetched on
+ * 2026-09-24, when the page grew to 29 sections: the 33 new to it were
+ * captured then, and the 54 it kept from the 66-card page (captured
+ * 2026-09-23 and 2026-09-24) matched that fetch in every field. Three more,
+ * dp7-96, hgss3-83 and me01-034, came on 2026-09-25 with the page's 30th
+ * section, sv-rare-holo, whose two other cards moved over from regular-holo.
+ * All 90 were fetched again later that day, when selection began reading
+ * `variants_detailed`: every field already here matched, and Prismatic
+ * Evolutions' Eevee (sv08.5-074) replaced 151's Wartortle. The subset-set cards
  * (`swsh4.5sv-…` and the `swsh9tg`–`swsh12tg` Trainer Gallery ones) have no
  * `image` because the API links none: `lib/images.ts#cardImageBase` finds
  * their art. Every value is copied verbatim: never edit one by hand to make a
@@ -32,6 +36,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     rarity: 'Common',
     stage: 'Basic',
     variants: { firstEdition: false, holo: false, normal: true, reverse: false, wPromo: false },
+    variants_detailed: [{ type: 'normal' }],
   },
   'det1-1': {
     id: 'det1-1',
@@ -43,6 +48,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     rarity: 'Common',
     stage: 'Basic',
     variants: { firstEdition: false, holo: false, normal: true, reverse: false, wPromo: false },
+    variants_detailed: [{ type: 'normal' }],
   },
   'sm7-1': {
     id: 'sm7-1',
@@ -54,6 +60,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     rarity: 'Common',
     stage: 'Basic',
     variants: { firstEdition: false, holo: false, normal: true, reverse: false, wPromo: false },
+    variants_detailed: [{ type: 'normal' }],
   },
   'hgss4-1': {
     id: 'hgss4-1',
@@ -65,6 +72,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     rarity: 'Holo Rare',
     stage: 'Stage2',
     variants: { firstEdition: false, holo: true, normal: false, reverse: true, wPromo: false },
+    variants_detailed: [{ type: 'holo' }, { type: 'reverse' }],
   },
   'sv03.5-026': {
     id: 'sv03.5-026',
@@ -76,6 +84,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     rarity: 'Rare',
     stage: 'Stage1',
     variants: { firstEdition: false, holo: true, normal: false, reverse: true, wPromo: false },
+    variants_detailed: [{ type: 'holo' }, { type: 'reverse' }, { type: 'holo', foil: 'cosmos' }],
   },
   'A1-003': {
     id: 'A1-003',
@@ -87,6 +96,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     rarity: 'Three Diamond',
     stage: 'Stage2',
     variants: { firstEdition: false, holo: false, normal: true, reverse: false, wPromo: false },
+    variants_detailed: [{ type: 'normal' }],
   },
   'sv10.5b-171': {
     id: 'sv10.5b-171',
@@ -98,6 +108,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     rarity: 'Black White Rare',
     stage: 'Basic',
     variants: { firstEdition: false, holo: true, normal: false, reverse: false, wPromo: false },
+    variants_detailed: [{ type: 'holo' }],
   },
   'sv10.5w-173': {
     id: 'sv10.5w-173',
@@ -110,6 +121,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     stage: 'Basic',
     suffix: 'ex',
     variants: { firstEdition: false, holo: true, normal: false, reverse: false, wPromo: false },
+    variants_detailed: [{ type: 'holo' }],
   },
   'sv10.5b-172': {
     id: 'sv10.5b-172',
@@ -122,6 +134,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     stage: 'Basic',
     suffix: 'ex',
     variants: { firstEdition: false, holo: true, normal: false, reverse: false, wPromo: false },
+    variants_detailed: [{ type: 'holo' }],
   },
   'swsh4-9': {
     id: 'swsh4-9',
@@ -133,6 +146,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     rarity: 'Amazing Rare',
     stage: 'Basic',
     variants: { firstEdition: false, holo: true, normal: false, reverse: false, wPromo: false },
+    variants_detailed: [{ type: 'holo' }],
   },
   'swsh4.5-17': {
     id: 'swsh4.5-17',
@@ -144,6 +158,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     rarity: 'Amazing Rare',
     stage: 'Basic',
     variants: { firstEdition: false, holo: true, normal: false, reverse: false, wPromo: false },
+    variants_detailed: [{ type: 'holo' }],
   },
   'swsh4.5-21': {
     id: 'swsh4.5-21',
@@ -155,6 +170,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     rarity: 'Amazing Rare',
     stage: 'Basic',
     variants: { firstEdition: false, holo: true, normal: false, reverse: false, wPromo: false },
+    variants_detailed: [{ type: 'holo' }],
   },
   'swsh10.5-004': {
     id: 'swsh10.5-004',
@@ -166,6 +182,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     rarity: 'Radiant Rare',
     stage: 'Basic',
     variants: { firstEdition: false, holo: true, normal: false, reverse: false, wPromo: false },
+    variants_detailed: [{ type: 'holo' }],
   },
   'swsh12-016': {
     id: 'swsh12-016',
@@ -177,6 +194,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     rarity: 'Radiant Rare',
     stage: 'Basic',
     variants: { firstEdition: false, holo: true, normal: false, reverse: false, wPromo: false },
+    variants_detailed: [{ type: 'holo' }],
   },
   'swsh12.5-020': {
     id: 'swsh12.5-020',
@@ -188,6 +206,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     rarity: 'Radiant Rare',
     stage: 'Basic',
     variants: { firstEdition: false, holo: true, normal: false, reverse: false, wPromo: false },
+    variants_detailed: [{ type: 'holo' }],
   },
   'sv06.5-058': {
     id: 'sv06.5-058',
@@ -198,6 +217,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     set: { id: 'sv06.5', name: 'Shrouded Fable', cardCount: { total: 99, official: 64 } },
     rarity: 'ACE SPEC Rare',
     variants: { firstEdition: false, holo: true, normal: false, reverse: false, wPromo: false },
+    variants_detailed: [{ type: 'holo' }],
   },
   'sv08.5-116': {
     id: 'sv08.5-116',
@@ -208,6 +228,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     set: { id: 'sv08.5', name: 'Prismatic Evolutions', cardCount: { total: 180, official: 131 } },
     rarity: 'ACE SPEC Rare',
     variants: { firstEdition: false, holo: true, normal: false, reverse: false, wPromo: false },
+    variants_detailed: [{ type: 'holo' }],
   },
   'sv07-134': {
     id: 'sv07-134',
@@ -218,6 +239,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     set: { id: 'sv07', name: 'Stellar Crown', cardCount: { total: 175, official: 142 } },
     rarity: 'ACE SPEC Rare',
     variants: { firstEdition: false, holo: true, normal: false, reverse: false, wPromo: false },
+    variants_detailed: [{ type: 'holo' }],
   },
   '30th-157': {
     id: '30th-157',
@@ -230,6 +252,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     stage: 'Basic',
     suffix: 'EX',
     variants: { firstEdition: false, holo: false, normal: true, reverse: false, wPromo: false },
+    variants_detailed: [{ type: 'normal' }],
   },
   'A1a-085': {
     id: 'A1a-085',
@@ -242,6 +265,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     stage: 'Basic',
     suffix: 'EX',
     variants: { firstEdition: false, holo: false, normal: true, reverse: false, wPromo: false },
+    variants_detailed: [{ type: 'normal' }],
   },
   'B1a-087': {
     id: 'B1a-087',
@@ -254,6 +278,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     stage: 'Stage2',
     suffix: 'EX',
     variants: { firstEdition: false, holo: false, normal: true, reverse: false, wPromo: false },
+    variants_detailed: [{ type: 'normal' }],
   },
   'sm115-69': {
     id: 'sm115-69',
@@ -265,6 +290,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     rarity: 'Secret Rare',
     suffix: 'TAG TEAM-GX',
     variants: { firstEdition: false, holo: false, normal: true, reverse: false, wPromo: false },
+    variants_detailed: [{ type: 'normal' }],
   },
   'swsh4.5-73': {
     id: 'swsh4.5-73',
@@ -276,6 +302,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     rarity: 'Secret Rare',
     stage: 'VMAX',
     variants: { firstEdition: false, holo: true, normal: false, reverse: false, wPromo: false },
+    variants_detailed: [{ type: 'holo', foil: 'rainbow' }],
   },
   'swsh3.5-74': {
     id: 'swsh3.5-74',
@@ -287,6 +314,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     rarity: 'Secret Rare',
     stage: 'VMAX',
     variants: { firstEdition: false, holo: true, normal: false, reverse: false, wPromo: false },
+    variants_detailed: [{ type: 'holo' }],
   },
   'sv04.5-092': {
     id: 'sv04.5-092',
@@ -298,6 +326,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     rarity: 'Shiny rare',
     stage: 'Basic',
     variants: { firstEdition: false, holo: true, normal: false, reverse: false, wPromo: false },
+    variants_detailed: [{ type: 'holo' }],
   },
   'sma-SV71': {
     id: 'sma-SV71',
@@ -309,6 +338,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     rarity: 'Shiny rare',
     suffix: 'GX',
     variants: { firstEdition: false, holo: false, normal: true, reverse: false, wPromo: false },
+    variants_detailed: [{ type: 'normal' }],
   },
   'B1a-089': {
     id: 'B1a-089',
@@ -320,6 +350,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     rarity: 'One Shiny',
     stage: 'Stage1',
     variants: { firstEdition: false, holo: false, normal: true, reverse: false, wPromo: false },
+    variants_detailed: [{ type: 'normal' }],
   },
   'swsh4.5sv-SV105': {
     id: 'swsh4.5sv-SV105',
@@ -335,6 +366,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     stage: 'Basic',
     suffix: 'V',
     variants: { firstEdition: false, holo: true, normal: false, reverse: false, wPromo: false },
+    variants_detailed: [{ type: 'holo' }],
   },
   'sv04.5-212': {
     id: 'sv04.5-212',
@@ -347,6 +379,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     stage: 'Stage1',
     suffix: 'ex',
     variants: { firstEdition: false, holo: true, normal: false, reverse: false, wPromo: false },
+    variants_detailed: [{ type: 'holo' }],
   },
   'B1a-098': {
     id: 'B1a-098',
@@ -359,6 +392,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     stage: 'Basic',
     suffix: 'EX',
     variants: { firstEdition: false, holo: false, normal: true, reverse: false, wPromo: false },
+    variants_detailed: [{ type: 'normal' }],
   },
   'swsh4.5sv-SV106': {
     id: 'swsh4.5sv-SV106',
@@ -373,6 +407,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     rarity: 'Shiny rare VMAX',
     stage: 'VMAX',
     variants: { firstEdition: false, holo: true, normal: false, reverse: false, wPromo: false },
+    variants_detailed: [{ type: 'holo' }],
   },
   'swsh4.5sv-SV107': {
     id: 'swsh4.5sv-SV107',
@@ -387,6 +422,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     rarity: 'Shiny rare VMAX',
     stage: 'VMAX',
     variants: { firstEdition: false, holo: true, normal: false, reverse: false, wPromo: false },
+    variants_detailed: [{ type: 'holo' }],
   },
   'swsh4.5sv-SV109': {
     id: 'swsh4.5sv-SV109',
@@ -401,6 +437,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     rarity: 'Shiny rare VMAX',
     stage: 'VMAX',
     variants: { firstEdition: false, holo: true, normal: false, reverse: false, wPromo: false },
+    variants_detailed: [{ type: 'holo' }],
   },
   'xyp-XY84': {
     id: 'xyp-XY84',
@@ -412,6 +449,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     rarity: 'Promo',
     suffix: 'EX',
     variants: { firstEdition: false, holo: false, normal: true, reverse: false, wPromo: false },
+    variants_detailed: [{ type: 'normal' }],
   },
   'swsh3.5-1': {
     id: 'swsh3.5-1',
@@ -424,6 +462,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     stage: 'Basic',
     suffix: 'V',
     variants: { firstEdition: false, holo: true, normal: false, reverse: false, wPromo: false },
+    variants_detailed: [{ type: 'holo' }],
   },
   'swsh1-1': {
     id: 'swsh1-1',
@@ -436,6 +475,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     stage: 'Basic',
     suffix: 'V',
     variants: { firstEdition: false, holo: true, normal: false, reverse: false, wPromo: false },
+    variants_detailed: [{ type: 'holo' }],
   },
   'sm9-1': {
     id: 'sm9-1',
@@ -447,6 +487,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     rarity: 'Ultra Rare',
     suffix: 'TAG TEAM-GX',
     variants: { firstEdition: false, holo: false, normal: true, reverse: false, wPromo: false },
+    variants_detailed: [{ type: 'normal' }],
   },
   'sm10-1': {
     id: 'sm10-1',
@@ -458,6 +499,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     rarity: 'Ultra Rare',
     suffix: 'TAG TEAM-GX',
     variants: { firstEdition: false, holo: false, normal: true, reverse: false, wPromo: false },
+    variants_detailed: [{ type: 'normal' }],
   },
   'sm12-1': {
     id: 'sm12-1',
@@ -469,6 +511,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     rarity: 'Ultra Rare',
     suffix: 'TAG TEAM-GX',
     variants: { firstEdition: false, holo: false, normal: true, reverse: false, wPromo: false },
+    variants_detailed: [{ type: 'normal' }],
   },
   'swsh3-2': {
     id: 'swsh3-2',
@@ -480,6 +523,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     rarity: 'Holo Rare VMAX',
     stage: 'VMAX',
     variants: { firstEdition: false, holo: true, normal: false, reverse: false, wPromo: false },
+    variants_detailed: [{ type: 'holo' }],
   },
   'cel25-7': {
     id: 'cel25-7',
@@ -491,6 +535,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     rarity: 'Holo Rare VMAX',
     stage: 'VMAX',
     variants: { firstEdition: false, holo: true, normal: false, reverse: false, wPromo: false },
+    variants_detailed: [{ type: 'holo' }],
   },
   'swsh6-8': {
     id: 'swsh6-8',
@@ -502,6 +547,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     rarity: 'Holo Rare VMAX',
     stage: 'VMAX',
     variants: { firstEdition: false, holo: true, normal: false, reverse: false, wPromo: false },
+    variants_detailed: [{ type: 'holo' }],
   },
   'swsh12-008': {
     id: 'swsh12-008',
@@ -514,6 +560,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     stage: 'VSTAR',
     suffix: 'V',
     variants: { firstEdition: false, holo: true, normal: false, reverse: false, wPromo: false },
+    variants_detailed: [{ type: 'holo' }],
   },
   'swsh12.5-014': {
     id: 'swsh12.5-014',
@@ -526,6 +573,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     stage: 'VSTAR',
     suffix: 'V',
     variants: { firstEdition: false, holo: true, normal: false, reverse: false, wPromo: false },
+    variants_detailed: [{ type: 'holo' }],
   },
   'swsh9-014': {
     id: 'swsh9-014',
@@ -538,6 +586,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     stage: 'VSTAR',
     suffix: 'V',
     variants: { firstEdition: false, holo: true, normal: false, reverse: false, wPromo: false },
+    variants_detailed: [{ type: 'holo' }, { type: 'holo' }],
   },
   'swsh10tg-TG28': {
     id: 'swsh10tg-TG28',
@@ -551,6 +600,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     },
     rarity: 'Ultra Rare',
     variants: { firstEdition: false, holo: true, normal: false, reverse: false, wPromo: false },
+    variants_detailed: [{ type: 'holo' }],
   },
   'swsh11tg-TG28': {
     id: 'swsh11tg-TG28',
@@ -564,6 +614,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     },
     rarity: 'Ultra Rare',
     variants: { firstEdition: false, holo: true, normal: false, reverse: false, wPromo: false },
+    variants_detailed: [{ type: 'holo' }],
   },
   'swsh12tg-TG05': {
     id: 'swsh12tg-TG05',
@@ -578,6 +629,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     rarity: 'Holo Rare',
     stage: 'Stage2',
     variants: { firstEdition: false, holo: true, normal: false, reverse: false, wPromo: false },
+    variants_detailed: [{ type: 'holo' }],
   },
   '30th-023': {
     id: '30th-023',
@@ -589,6 +641,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     rarity: 'Pikachu Rare',
     stage: 'Basic',
     variants: { firstEdition: false, holo: false, normal: true, reverse: false, wPromo: false },
+    variants_detailed: [{ type: 'normal' }],
   },
   '30th-024': {
     id: '30th-024',
@@ -600,6 +653,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     rarity: 'Pikachu Rare',
     stage: 'Basic',
     variants: { firstEdition: false, holo: false, normal: true, reverse: false, wPromo: false },
+    variants_detailed: [{ type: 'normal' }],
   },
   '30th-025': {
     id: '30th-025',
@@ -611,6 +665,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     rarity: 'Pikachu Rare',
     stage: 'Basic',
     variants: { firstEdition: false, holo: false, normal: true, reverse: false, wPromo: false },
+    variants_detailed: [{ type: 'normal' }],
   },
   'swsh3-3': {
     id: 'swsh3-3',
@@ -622,6 +677,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     rarity: 'Common',
     stage: 'Basic',
     variants: { firstEdition: false, holo: false, normal: true, reverse: true, wPromo: false },
+    variants_detailed: [{ type: 'normal' }, { type: 'reverse' }],
   },
   'swsh3-4': {
     id: 'swsh3-4',
@@ -633,6 +689,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     rarity: 'Uncommon',
     stage: 'Stage1',
     variants: { firstEdition: false, holo: false, normal: true, reverse: true, wPromo: false },
+    variants_detailed: [{ type: 'normal' }, { type: 'reverse' }],
   },
   'swsh3-5': {
     id: 'swsh3-5',
@@ -644,6 +701,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     rarity: 'Uncommon',
     stage: 'Basic',
     variants: { firstEdition: false, holo: false, normal: true, reverse: true, wPromo: false },
+    variants_detailed: [{ type: 'normal' }, { type: 'reverse' }],
   },
   'swsh12tg-TG12': {
     id: 'swsh12tg-TG12',
@@ -659,6 +717,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     stage: 'Basic',
     suffix: 'V',
     variants: { firstEdition: false, holo: true, normal: false, reverse: false, wPromo: false },
+    variants_detailed: [{ type: 'holo' }],
   },
   'swsh12tg-TG13': {
     id: 'swsh12tg-TG13',
@@ -674,6 +733,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     stage: 'Basic',
     suffix: 'V',
     variants: { firstEdition: false, holo: true, normal: false, reverse: false, wPromo: false },
+    variants_detailed: [{ type: 'holo' }],
   },
   'swsh12tg-TG14': {
     id: 'swsh12tg-TG14',
@@ -689,6 +749,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     stage: 'Basic',
     suffix: 'V',
     variants: { firstEdition: false, holo: true, normal: false, reverse: false, wPromo: false },
+    variants_detailed: [{ type: 'holo' }],
   },
   'swsh12tg-TG15': {
     id: 'swsh12tg-TG15',
@@ -703,6 +764,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     rarity: 'Holo Rare VMAX',
     stage: 'VMAX',
     variants: { firstEdition: false, holo: true, normal: false, reverse: false, wPromo: false },
+    variants_detailed: [{ type: 'holo' }],
   },
   'swsh12tg-TG19': {
     id: 'swsh12tg-TG19',
@@ -717,6 +779,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     rarity: 'Holo Rare VMAX',
     stage: 'VMAX',
     variants: { firstEdition: false, holo: true, normal: false, reverse: false, wPromo: false },
+    variants_detailed: [{ type: 'holo' }],
   },
   'swsh12tg-TG20': {
     id: 'swsh12tg-TG20',
@@ -731,6 +794,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     rarity: 'Holo Rare VMAX',
     stage: 'VMAX',
     variants: { firstEdition: false, holo: true, normal: false, reverse: false, wPromo: false },
+    variants_detailed: [{ type: 'holo' }],
   },
   'swsh9tg-TG29': {
     id: 'swsh9tg-TG29',
@@ -745,6 +809,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     rarity: 'Secret Rare',
     stage: 'VMAX',
     variants: { firstEdition: false, holo: true, normal: false, reverse: false, wPromo: false },
+    variants_detailed: [{ type: 'holo' }],
   },
   'swsh10tg-TG29': {
     id: 'swsh10tg-TG29',
@@ -759,6 +824,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     rarity: 'Secret Rare',
     stage: 'VMAX',
     variants: { firstEdition: false, holo: true, normal: false, reverse: false, wPromo: false },
+    variants_detailed: [{ type: 'holo' }, { type: 'holo', foil: 'gold' }],
   },
   'swsh12tg-TG29': {
     id: 'swsh12tg-TG29',
@@ -773,6 +839,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     rarity: 'Secret Rare',
     stage: 'VMAX',
     variants: { firstEdition: false, holo: true, normal: false, reverse: false, wPromo: false },
+    variants_detailed: [{ type: 'holo', foil: 'gold' }],
   },
   'swsh12tg-TG23': {
     id: 'swsh12tg-TG23',
@@ -786,6 +853,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     },
     rarity: 'Full Art Trainer',
     variants: { firstEdition: false, holo: true, normal: false, reverse: false, wPromo: false },
+    variants_detailed: [{ type: 'holo' }],
   },
   'swsh12tg-TG24': {
     id: 'swsh12tg-TG24',
@@ -799,6 +867,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     },
     rarity: 'Full Art Trainer',
     variants: { firstEdition: false, holo: true, normal: false, reverse: false, wPromo: false },
+    variants_detailed: [{ type: 'holo' }],
   },
   'swsh12tg-TG25': {
     id: 'swsh12tg-TG25',
@@ -812,6 +881,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     },
     rarity: 'Full Art Trainer',
     variants: { firstEdition: false, holo: true, normal: false, reverse: false, wPromo: false },
+    variants_detailed: [{ type: 'holo' }],
   },
   'sv03.5-003': {
     id: 'sv03.5-003',
@@ -824,6 +894,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     stage: 'Stage2',
     suffix: 'ex',
     variants: { firstEdition: false, holo: true, normal: false, reverse: false, wPromo: false },
+    variants_detailed: [{ type: 'holo' }],
   },
   'sv03.5-006': {
     id: 'sv03.5-006',
@@ -836,6 +907,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     stage: 'Stage2',
     suffix: 'ex',
     variants: { firstEdition: false, holo: true, normal: false, reverse: false, wPromo: false },
+    variants_detailed: [{ type: 'holo' }],
   },
   'sv03.5-009': {
     id: 'sv03.5-009',
@@ -848,6 +920,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     stage: 'Stage2',
     suffix: 'ex',
     variants: { firstEdition: false, holo: true, normal: false, reverse: false, wPromo: false },
+    variants_detailed: [{ type: 'holo' }, { type: 'holo' }],
   },
   'sv03.5-182': {
     id: 'sv03.5-182',
@@ -860,6 +933,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     stage: 'Stage2',
     suffix: 'ex',
     variants: { firstEdition: false, holo: true, normal: false, reverse: false, wPromo: false },
+    variants_detailed: [{ type: 'holo' }],
   },
   'sv03.5-183': {
     id: 'sv03.5-183',
@@ -872,6 +946,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     stage: 'Stage2',
     suffix: 'ex',
     variants: { firstEdition: false, holo: true, normal: false, reverse: false, wPromo: false },
+    variants_detailed: [{ type: 'holo' }],
   },
   'sv03.5-184': {
     id: 'sv03.5-184',
@@ -884,6 +959,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     stage: 'Stage2',
     suffix: 'ex',
     variants: { firstEdition: false, holo: true, normal: false, reverse: false, wPromo: false },
+    variants_detailed: [{ type: 'holo' }],
   },
   'sv03.5-166': {
     id: 'sv03.5-166',
@@ -895,6 +971,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     rarity: 'Illustration rare',
     stage: 'Basic',
     variants: { firstEdition: false, holo: true, normal: false, reverse: false, wPromo: false },
+    variants_detailed: [{ type: 'holo' }],
   },
   'sv03.5-168': {
     id: 'sv03.5-168',
@@ -906,6 +983,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     rarity: 'Illustration rare',
     stage: 'Basic',
     variants: { firstEdition: false, holo: true, normal: false, reverse: false, wPromo: false },
+    variants_detailed: [{ type: 'holo' }],
   },
   'sv03.5-170': {
     id: 'sv03.5-170',
@@ -917,6 +995,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     rarity: 'Illustration rare',
     stage: 'Basic',
     variants: { firstEdition: false, holo: true, normal: false, reverse: false, wPromo: false },
+    variants_detailed: [{ type: 'holo' }],
   },
   'sv03.5-198': {
     id: 'sv03.5-198',
@@ -929,6 +1008,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     stage: 'Stage2',
     suffix: 'ex',
     variants: { firstEdition: false, holo: true, normal: false, reverse: false, wPromo: false },
+    variants_detailed: [{ type: 'holo' }],
   },
   'sv03.5-199': {
     id: 'sv03.5-199',
@@ -941,6 +1021,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     stage: 'Stage2',
     suffix: 'ex',
     variants: { firstEdition: false, holo: true, normal: false, reverse: false, wPromo: false },
+    variants_detailed: [{ type: 'holo' }],
   },
   'sv03.5-200': {
     id: 'sv03.5-200',
@@ -953,6 +1034,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     stage: 'Stage2',
     suffix: 'ex',
     variants: { firstEdition: false, holo: true, normal: false, reverse: false, wPromo: false },
+    variants_detailed: [{ type: 'holo' }],
   },
   'sv03.5-205': {
     id: 'sv03.5-205',
@@ -965,6 +1047,12 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     stage: 'Basic',
     suffix: 'ex',
     variants: { firstEdition: false, holo: true, normal: false, reverse: false, wPromo: false },
+    variants_detailed: [
+      { type: 'holo' },
+      { type: 'holo', foil: 'gold' },
+      { type: 'holo', foil: 'gold' },
+      { type: 'metal', foil: 'gold' },
+    ],
   },
   'sv03.5-206': {
     id: 'sv03.5-206',
@@ -975,6 +1063,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     set: { id: 'sv03.5', name: '151', cardCount: { total: 207, official: 165 } },
     rarity: 'Hyper rare',
     variants: { firstEdition: false, holo: true, normal: false, reverse: false, wPromo: false },
+    variants_detailed: [{ type: 'holo' }, { type: 'holo', foil: 'gold' }],
   },
   'sv03.5-207': {
     id: 'sv03.5-207',
@@ -985,6 +1074,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     set: { id: 'sv03.5', name: '151', cardCount: { total: 207, official: 165 } },
     rarity: 'Hyper rare',
     variants: { firstEdition: false, holo: true, normal: false, reverse: false, wPromo: false },
+    variants_detailed: [{ type: 'holo' }, { type: 'holo', foil: 'gold' }],
   },
   'sv03.5-002': {
     id: 'sv03.5-002',
@@ -996,6 +1086,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     rarity: 'Uncommon',
     stage: 'Stage1',
     variants: { firstEdition: false, holo: false, normal: true, reverse: true, wPromo: false },
+    variants_detailed: [{ type: 'normal' }, { type: 'reverse' }],
   },
   'sv03.5-005': {
     id: 'sv03.5-005',
@@ -1007,17 +1098,25 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     rarity: 'Uncommon',
     stage: 'Stage1',
     variants: { firstEdition: false, holo: true, normal: true, reverse: true, wPromo: false },
+    variants_detailed: [{ type: 'normal' }, { type: 'reverse' }, { type: 'holo', foil: 'cosmos' }],
   },
-  'sv03.5-008': {
-    id: 'sv03.5-008',
-    localId: '008',
-    name: 'Wartortle',
-    image: 'https://assets.tcgdex.net/en/sv/sv03.5/008',
+  'sv08.5-074': {
+    id: 'sv08.5-074',
+    localId: '074',
+    name: 'Eevee',
+    image: 'https://assets.tcgdex.net/en/sv/sv08.5/074',
     category: 'Pokemon',
-    set: { id: 'sv03.5', name: '151', cardCount: { total: 207, official: 165 } },
-    rarity: 'Uncommon',
-    stage: 'Stage1',
+    set: { id: 'sv08.5', name: 'Prismatic Evolutions', cardCount: { total: 180, official: 131 } },
+    rarity: 'Common',
+    stage: 'Basic',
     variants: { firstEdition: false, holo: false, normal: true, reverse: true, wPromo: false },
+    variants_detailed: [
+      { type: 'normal' },
+      { type: 'reverse' },
+      { type: 'reverse', foil: 'pokeball' },
+      { type: 'reverse', foil: 'masterball' },
+      { type: 'reverse', foil: 'cosmos' },
+    ],
   },
   'sv03.5-001': {
     id: 'sv03.5-001',
@@ -1029,6 +1128,12 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     rarity: 'Common',
     stage: 'Basic',
     variants: { firstEdition: false, holo: false, normal: true, reverse: true, wPromo: false },
+    variants_detailed: [
+      { type: 'normal' },
+      { type: 'reverse' },
+      { type: 'normal' },
+      { type: 'reverse', foil: 'cosmos' },
+    ],
   },
   'sv03.5-004': {
     id: 'sv03.5-004',
@@ -1040,6 +1145,14 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     rarity: 'Common',
     stage: 'Basic',
     variants: { firstEdition: false, holo: true, normal: true, reverse: true, wPromo: false },
+    variants_detailed: [
+      { type: 'normal' },
+      { type: 'reverse' },
+      { type: 'normal' },
+      { type: 'holo', foil: 'cosmos' },
+      { type: 'reverse' },
+      { type: 'reverse', foil: 'cosmos' },
+    ],
   },
   'sv03.5-007': {
     id: 'sv03.5-007',
@@ -1051,6 +1164,12 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     rarity: 'Common',
     stage: 'Basic',
     variants: { firstEdition: false, holo: false, normal: true, reverse: true, wPromo: false },
+    variants_detailed: [
+      { type: 'normal' },
+      { type: 'reverse' },
+      { type: 'normal' },
+      { type: 'reverse', foil: 'cosmos' },
+    ],
   },
   'dp7-96': {
     id: 'dp7-96',
@@ -1062,6 +1181,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     rarity: 'Rare Holo LV.X',
     stage: 'LEVEL-UP',
     variants: { firstEdition: false, holo: true, normal: false, reverse: false, wPromo: false },
+    variants_detailed: [{ type: 'holo' }],
   },
   'hgss3-83': {
     id: 'hgss3-83',
@@ -1074,6 +1194,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     stage: 'Stage1',
     suffix: 'Prime',
     variants: { firstEdition: false, holo: true, normal: false, reverse: false, wPromo: false },
+    variants_detailed: [{ type: 'holo' }],
   },
   'me01-034': {
     id: 'me01-034',
@@ -1085,5 +1206,6 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     rarity: 'Rare',
     stage: 'Basic',
     variants: { firstEdition: false, holo: true, normal: false, reverse: true, wPromo: false },
+    variants_detailed: [{ type: 'holo' }, { type: 'reverse' }, { type: 'holo', foil: 'cosmos' }],
   },
 };
