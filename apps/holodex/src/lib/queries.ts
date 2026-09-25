@@ -1,4 +1,4 @@
-import { QueryClient, type UseQueryOptions } from '@tanstack/react-query';
+import { QueryClient, skipToken, type UseQueryOptions } from '@tanstack/react-query';
 import type { Filters } from '../routes';
 import {
   DEFAULT_PER_PAGE,
@@ -77,27 +77,34 @@ export function setQuery(setId: string): UseQueryOptions<SetDetail> {
   };
 }
 
+/**
+ * One page of a set's cards, paged out of `set`, the set document `setQuery`
+ * holds: downloaded once, and every page click paginates that copy (reaching
+ * for getSet() here re-fetched a 216–331 card payload per page). Until the set
+ * has loaded the query waits (`skipToken`), a dependent query, rather than
+ * fetching the set itself: that nested the two queries' retries, three tries
+ * of the set for each of the page's three, and every new try put the failed
+ * set back to pending, so the set page flipped between its error and
+ * "Loading…" for 13 s while asking TCGdex ten times.
+ */
 export function setCardsQuery(
   setId: string,
   filters: Filters,
   perPage: number = DEFAULT_PER_PAGE,
+  set?: SetDetail,
 ): UseQueryOptions<Page<CardBrief>> {
   return {
     queryKey: queryKeys.setCards(setId, filters, perPage),
-    queryFn: async ({ signal, client }) => {
-      // The set document comes through the cache, under the very key SetView
-      // and the SSR prefetch already hold (`setQuery`), so it is downloaded
-      // once and every page click paginates the cached copy. Reaching for
-      // getSet() here instead re-fetched a 216–331 card payload per page.
-      const set = await client.ensureQueryData(setQuery(setId));
-      return selectSetCards(
-        set,
-        { name: filters.q, types: filters.type, rarity: filters.rarity },
-        filters.page,
-        perPage,
-        { signal },
-      );
-    },
+    queryFn: set
+      ? ({ signal }) =>
+          selectSetCards(
+            set,
+            { name: filters.q, types: filters.type, rarity: filters.rarity },
+            filters.page,
+            perPage,
+            { signal },
+          )
+      : skipToken,
     staleTime: MINUTE,
   };
 }

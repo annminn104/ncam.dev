@@ -32,7 +32,8 @@ export function SetView({ setId, filters }: { setId: string; filters: Filters })
   const owned = collectionStore.countWithPrefix('owned', `${setId}-`);
 
   const set = useQuery(setQuery(setId));
-  const cards = useQuery(setCardsQuery(setId, filters, DEFAULT_PER_PAGE));
+  // Waits for the set: the page is cut from its card list.
+  const cards = useQuery(setCardsQuery(setId, filters, DEFAULT_PER_PAGE, set.data));
 
   if (set.error) {
     return (

@@ -42,8 +42,14 @@ async function prefetch(client: QueryClient, route: ReturnType<typeof parseRoute
   const jobs: Promise<void>[] = [];
   if (route.view === 'sets') jobs.push(client.prefetchQuery(setsQuery()));
   if (route.view === 'set') {
-    jobs.push(client.prefetchQuery(setQuery(route.setId)));
-    jobs.push(client.prefetchQuery(setCardsQuery(route.setId, route.filters, DEFAULT_PER_PAGE)));
+    // The page is cut from the set's card list, so it follows the set.
+    jobs.push(
+      client
+        .fetchQuery(setQuery(route.setId))
+        .then((set) =>
+          client.prefetchQuery(setCardsQuery(route.setId, route.filters, DEFAULT_PER_PAGE, set)),
+        ),
+    );
   }
   if (route.view === 'search' && (route.filters.q || route.filters.type || route.filters.rarity)) {
     // client.prefetchQuery takes FetchQueryOptions, which has no `enabled`
