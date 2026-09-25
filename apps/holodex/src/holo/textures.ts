@@ -4,15 +4,14 @@
  * Nothing is fetched, and none is a copy of the reference's own foil images,
  * which are their author's assets.
  *
- * grain alone still draws with Math.random, and so differs a little on every
- * load. Every other texture is fixed, so a card looks the same on every visit:
- * glitter, iri and birthday draw from a seeded PRNG, geometric's maze from a
- * seeded choice per cell, and trainerbg and the ball patterns are pure
- * geometry. glitter, geometric and trainerbg stand in for the pokemon-cards-css
- * images the legacy shine ports name (glitter.png, geometric.png,
- * trainerbg.png): drawn to the motif, scale and tones measured off those
- * images headless, at their natural sizes, so a CSS background-size means the
- * same thing here (TEXTURE_SIZE).
+ * Every texture is fixed, so a card looks the same on every visit: glitter,
+ * grain, iri and birthday draw from a seeded PRNG, geometric's maze, ancient's
+ * lanes and vmaxbg's disc order from seeded choices, and trainerbg, illusion
+ * and the ball patterns are pure geometry. glitter, grain, geometric,
+ * trainerbg, illusion, illusion-mask, ancient and vmaxbg stand in for the
+ * pokemon-cards-css images the legacy shine ports name: drawn to the motif,
+ * scale and tones measured off those images headless, at their natural sizes,
+ * so a CSS background-size means the same thing here (TEXTURE_SIZE).
  *
  * Tests run under node with no DOM, so the canvas painters at the bottom of
  * this file cannot run there. What they paint is decided by the pure functions
@@ -35,7 +34,9 @@ export type TextureName =
   | 'geometric'
   | 'trainerbg'
   | 'illusion'
-  | 'illusion-mask';
+  | 'illusion-mask'
+  | 'ancient'
+  | 'vmaxbg';
 
 type Point = [number, number];
 
@@ -634,13 +635,172 @@ export function illusionMaskPixels(size: number): Uint8ClampedArray {
   return pixels;
 }
 
+// grain: the reference's grain.webp, measured headless, is a 500 px tile of
+// dark monochrome noise, mean grey 12, 92% of it below 32. Ours: an
+// exponential spread of greys about that mean, seeded.
+
+export const GRAIN_SIZE = 500;
+/** Any fixed value. Changing it redraws the grain. */
+export const GRAIN_SEED = 500;
+const GRAIN = { mean: 12 };
+
+/** The whole grain tile as opaque RGBA bytes. */
+export function grainPixels(size: number, seed: number): Uint8ClampedArray {
+  const random = mulberry32(seed);
+  const pixels = new Uint8ClampedArray(size * size * 4);
+  for (let i = 0; i < size * size; i += 1) {
+    const g = Math.min(255, -GRAIN.mean * Math.log(1 - random()));
+    pixels.set([g, g, g, 255], i * 4);
+  }
+  return pixels;
+}
+
+// ancient: the reference's ancient.png, measured headless, is white lines
+// about 3 px wide and 11 px apart on black, running down the diagonal in
+// zig-zags, turning together in groups of three or four, each group on a phase
+// of its own, so the lines break where the groups meet. Ours: 20 lines a tile
+// on its diagonals, in five lanes of four, each lane zig-zagging on a seeded
+// phase and depth.
+
+export const ANCIENT_SIZE = 300;
+/** Any fixed value. Changing it redraws the zig-zags. */
+export const ANCIENT_SEED = 300;
+const ANCIENT = { lines: 20, lanes: 5, white: 0.32, turns: 3, depth: [4, 9], samples: 4 };
+
+/**
+ * Each lane's zig-zag, as a phase and a depth, in the tile's diagonal units:
+ * lane i draws its lines at q = F_i(p) + k · period, where p = x + y runs down
+ * the diagonal, q = y - x across it, and F_i is a triangle wave of p.
+ */
+export function ancientLanes(seed: number): Array<{ phase: number; depth: number }> {
+  const random = mulberry32(seed);
+  return Array.from({ length: ANCIENT.lanes }, () => ({
+    phase: random(),
+    depth: ANCIENT.depth[0] + random() * (ANCIENT.depth[1] - ANCIENT.depth[0]),
+  }));
+}
+
+/** The whole zig-zag tile as opaque RGBA bytes, supersampled. */
+export function ancientPixels(size: number, seed: number): Uint8ClampedArray {
+  const lanes = ancientLanes(seed);
+  const period = size / ANCIENT.lines;
+  const laneWidth = size / ANCIENT.lanes;
+  const turn = size / ANCIENT.turns;
+  const triangle = (t: number) => 1 - 4 * Math.abs(mod(t, 1) - 0.5);
+  const n = ANCIENT.samples;
+  const pixels = new Uint8ClampedArray(size * size * 4);
+  for (let y = 0; y < size; y += 1) {
+    for (let x = 0; x < size; x += 1) {
+      let white = 0;
+      for (let sy = 0; sy < n; sy += 1) {
+        for (let sx = 0; sx < n; sx += 1) {
+          const px = x + (sx + 0.5) / n;
+          const py = y + (sy + 0.5) / n;
+          const p = px + py;
+          const q = mod(py - px, size);
+          const lane = lanes[Math.floor(q / laneWidth) % ANCIENT.lanes];
+          const shifted = q - lane.depth * triangle(p / turn + lane.phase);
+          if (mod(shifted / period, 1) < ANCIENT.white) white += 1;
+        }
+      }
+      const v = Math.round((white / (n * n)) * 255);
+      pixels.set([v, v, v, 255], (y * size + x) * 4);
+    }
+  }
+  return pixels;
+}
+
+// vmaxbg: the reference's vmaxbg.jpg, measured headless, is a 600 × 400 tile
+// of overlapping discs in staggered rows, each of concentric rings about 6 px
+// apart, shaded as embossed metal from near-black rgb(0, 5, 17) to a pale blue
+// rgb(187, 223, 241), mean rgb(57, 73, 87), darker at each disc's rim. Ours: nine
+// discs a tile in three staggered rows, each above the ones behind it by a
+// seeded order, rings lit from the upper left.
+
+export const VMAXBG_WIDTH = 600;
+export const VMAXBG_HEIGHT = 400;
+/** Any fixed value. Changing it reorders the discs. */
+export const VMAXBG_SEED = 600;
+const VMAXBG = {
+  radius: 104,
+  ring: 6,
+  rim: 10,
+  dark: [0, 5, 17] as const,
+  bright: [187, 223, 241] as const,
+  samples: 2,
+};
+
+/**
+ * The discs, centre and draw order, in one tile: three rows of three, each
+ * row a third of a disc spacing over from the last, so the tile repeats.
+ */
+export function vmaxbgDiscs(seed: number): Array<{ x: number; y: number; order: number }> {
+  const random = mulberry32(seed);
+  const discs: Array<{ x: number; y: number; order: number }> = [];
+  for (let row = 0; row < 3; row += 1) {
+    for (let col = 0; col < 3; col += 1) {
+      discs.push({
+        x: (col * VMAXBG_WIDTH) / 3 + (row * VMAXBG_WIDTH) / 9,
+        y: (row * VMAXBG_HEIGHT) / 3,
+        order: random(),
+      });
+    }
+  }
+  return discs;
+}
+
+/** The whole disc tile as opaque RGBA bytes, supersampled. */
+export function vmaxbgPixels(width: number, height: number, seed: number): Uint8ClampedArray {
+  const discs = vmaxbgDiscs(seed);
+  const { radius, ring, rim, dark, bright } = VMAXBG;
+  const n = VMAXBG.samples;
+  const pixels = new Uint8ClampedArray(width * height * 4);
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      let sum = 0;
+      for (let sy = 0; sy < n; sy += 1) {
+        for (let sx = 0; sx < n; sx += 1) {
+          const px = x + (sx + 0.5) / n;
+          const py = y + (sy + 0.5) / n;
+          // the frontmost disc here, of every copy one tile over
+          let top: { d: number; angle: number; order: number } | null = null;
+          for (const disc of discs) {
+            for (const dx of [-width, 0, width]) {
+              for (const dy of [-height, 0, height]) {
+                const ex = px - (disc.x + dx);
+                const ey = py - (disc.y + dy);
+                const d = Math.hypot(ex, ey);
+                if (d < radius && (!top || disc.order > top.order)) {
+                  top = { d, angle: Math.atan2(ey, ex), order: disc.order };
+                }
+              }
+            }
+          }
+          if (!top) continue;
+          // a ring's crest, lit from the upper left, dimmed toward the rim
+          const crest = 0.5 + 0.5 * Math.cos((2 * Math.PI * top.d) / ring);
+          const light = 0.45 + 0.55 * Math.cos(top.angle + (3 * Math.PI) / 4);
+          const edge = Math.min(1, (radius - top.d) / rim);
+          sum += Math.min(1, 1.12 * crest ** 1.5 * (0.35 + 0.65 * light) * edge);
+        }
+      }
+      const f = sum / (n * n);
+      pixels.set(
+        [0, 1, 2].map((c) => dark[c] + (bright[c] - dark[c]) * f).concat(255),
+        (y * width + x) * 4,
+      );
+    }
+  }
+  return pixels;
+}
+
 /**
  * Each texture's natural size in px, as its painter draws it: what a CSS
  * `background-size` with an `auto` side measures against (css.ts#autoHeight).
  */
 export const TEXTURE_SIZE: Record<TextureName, readonly [number, number]> = {
   glitter: [GLITTER_WIDTH, GLITTER_HEIGHT],
-  grain: [1024, 1024],
+  grain: [GRAIN_SIZE, GRAIN_SIZE],
   iri: [IRI_SIZE, IRI_SIZE],
   birthday: [BIRTHDAY_WIDTH, BIRTHDAY_HEIGHT],
   pokeball: [BALL_TILE, BALL_TILE],
@@ -651,6 +811,8 @@ export const TEXTURE_SIZE: Record<TextureName, readonly [number, number]> = {
   trainerbg: [TRAINERBG_SIZE, TRAINERBG_SIZE],
   illusion: [ILLUSION_SIZE, ILLUSION_SIZE],
   'illusion-mask': [ILLUSION_SIZE, ILLUSION_SIZE],
+  ancient: [ANCIENT_SIZE, ANCIENT_SIZE],
+  vmaxbg: [VMAXBG_WIDTH, VMAXBG_HEIGHT],
 };
 
 // ------------------------------------------------ canvas, browser-only below
@@ -675,32 +837,6 @@ function fromPixels(width: number, height: number, pixels: Uint8ClampedArray): H
   const image = ctx.createImageData(width, height);
   image.data.set(pixels);
   ctx.putImageData(image, 0, 0);
-  return canvas;
-}
-
-function grain(): HTMLCanvasElement {
-  const { canvas, ctx } = canvasOf(1024, 1024);
-  const base = ctx.createLinearGradient(0, 0, 1024, 1024);
-  base.addColorStop(0, '#120a2e');
-  base.addColorStop(0.5, '#3b1a6b');
-  base.addColorStop(1, '#0a1e4a');
-  ctx.fillStyle = base;
-  ctx.fillRect(0, 0, 1024, 1024);
-  for (let i = 0; i < 260; i += 1) {
-    const x = Math.random() * 1024;
-    const y = Math.random() * 1024;
-    const r = Math.random() * 90 + 30;
-    const nebula = ctx.createRadialGradient(x, y, 0, x, y, r);
-    nebula.addColorStop(0, `rgba(160,120,255,${(Math.random() * 0.14).toFixed(3)})`);
-    nebula.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = nebula;
-    ctx.fillRect(x - r, y - r, r * 2, r * 2);
-  }
-  for (let i = 0; i < 2400; i += 1) {
-    const alpha = Math.random() ** 2;
-    ctx.fillStyle = `rgba(255,255,255,${alpha.toFixed(3)})`;
-    ctx.fillRect(Math.random() * 1024, Math.random() * 1024, 1.6, 1.6);
-  }
   return canvas;
 }
 
@@ -892,7 +1028,7 @@ const GENERATORS: Record<TextureName, () => HTMLCanvasElement> = {
       GLITTER_HEIGHT,
       glitterPixels(GLITTER_WIDTH, GLITTER_HEIGHT, GLITTER_SEED),
     ),
-  grain,
+  grain: () => fromPixels(GRAIN_SIZE, GRAIN_SIZE, grainPixels(GRAIN_SIZE, GRAIN_SEED)),
   iri,
   birthday,
   pokeball: () => ballPattern(drawBallOutline),
@@ -905,6 +1041,9 @@ const GENERATORS: Record<TextureName, () => HTMLCanvasElement> = {
   illusion: () => fromPixels(ILLUSION_SIZE, ILLUSION_SIZE, illusionPixels(ILLUSION_SIZE)),
   'illusion-mask': () =>
     fromPixels(ILLUSION_SIZE, ILLUSION_SIZE, illusionMaskPixels(ILLUSION_SIZE)),
+  ancient: () => fromPixels(ANCIENT_SIZE, ANCIENT_SIZE, ancientPixels(ANCIENT_SIZE, ANCIENT_SEED)),
+  vmaxbg: () =>
+    fromPixels(VMAXBG_WIDTH, VMAXBG_HEIGHT, vmaxbgPixels(VMAXBG_WIDTH, VMAXBG_HEIGHT, VMAXBG_SEED)),
 };
 
 /** Generated once at runtime, shared by every effect that names them. */

@@ -80,6 +80,10 @@ function sourceExpr(source: Source, uv: string, decls: string[], id: string): st
       return `srcIllusion(${uv}, ${f(source.scale)})`;
     case 'illusion-mask':
       return `srcIllusionMask(${uv}, ${f(source.scale)})`;
+    case 'ancient':
+      return `srcAncient(${uv}, ${f(source.scale)})`;
+    case 'vmaxbg':
+      return `srcVmaxbg(${uv}, ${f(source.scale)})`;
     case 'card':
       return `srcCard(${uv})`;
     case 'scanlines':

@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  ANCIENT_SEED,
+  ANCIENT_SIZE,
   BALL_TILE,
   BIRTHDAY_HEIGHT,
   BIRTHDAY_SEED,
@@ -9,12 +11,19 @@ import {
   GLITTER_HEIGHT,
   GLITTER_SEED,
   GLITTER_WIDTH,
+  GRAIN_SEED,
+  GRAIN_SIZE,
   ILLUSION_SIZE,
   IRI_BACKGROUND,
   IRI_SEED,
   IRI_SIZE,
   TEXTURE_SIZE,
   TRAINERBG_SIZE,
+  VMAXBG_HEIGHT,
+  VMAXBG_SEED,
+  VMAXBG_WIDTH,
+  ancientLanes,
+  ancientPixels,
   ballLattice,
   ballPlacements,
   birthdayHue,
@@ -22,6 +31,7 @@ import {
   geometricFigure,
   geometricPixels,
   glitterPixels,
+  grainPixels,
   illusionField,
   illusionMaskPixels,
   illusionPixels,
@@ -30,6 +40,8 @@ import {
   plotSpeck,
   starDiamonds,
   trainerbgPixels,
+  vmaxbgDiscs,
+  vmaxbgPixels,
 } from './textures';
 
 // textures.ts's canvas painters need a DOM this suite does not have. What they
@@ -510,5 +522,95 @@ describe('illusion-mask, the same bands with alpha', () => {
       const grey = mask[i] / 255;
       expect(mask[i + 3]).toBeCloseTo(Math.min(1, 1.4 * (1 - grey)) * 255, -0.5);
     }
+  });
+});
+
+/** A seam check: across the tile's edges, neighbours differ no more than inside it. */
+function tiles(px: Uint8ClampedArray, width: number, height: number): boolean {
+  const at = (x: number, y: number) => px[(y * width + x) * 4];
+  let seam = 0;
+  let inner = 0;
+  for (let y = 0; y < height; y += 1) {
+    seam += Math.abs(at(0, y) - at(width - 1, y));
+    inner += Math.abs(at(width >> 1, y) - at((width >> 1) - 1, y));
+  }
+  for (let x = 0; x < width; x += 1) {
+    seam += Math.abs(at(x, 0) - at(x, height - 1));
+    inner += Math.abs(at(x, height >> 1) - at(x, (height >> 1) - 1));
+  }
+  return seam < inner * 1.5;
+}
+
+describe('grain, dark monochrome noise', () => {
+  const px = grainPixels(GRAIN_SIZE, GRAIN_SEED);
+
+  it('is the reference’s size, grey, and the same on every load', () => {
+    expect(TEXTURE_SIZE.grain).toEqual([500, 500]);
+    expect(grainPixels(GRAIN_SIZE, GRAIN_SEED)).toEqual(px);
+    for (let i = 0; i < px.length; i += 4 * 1009)
+      expect([px[i + 1], px[i + 2]]).toEqual([px[i], px[i]]);
+  });
+
+  it('keeps the reference’s tones: mean 12, nearly all of it below 32', () => {
+    // measured off grain.webp: mean 12, 92% below 32
+    expect(mean(px, 0)).toBeGreaterThan(10);
+    expect(mean(px, 0)).toBeLessThan(14);
+    expect(share(px, 0, 32)).toBeGreaterThan(0.88);
+    expect(share(px, 0, 32)).toBeLessThan(0.96);
+  });
+});
+
+describe('ancient, stepped zig-zag stripes', () => {
+  const px = ancientPixels(ANCIENT_SIZE, ANCIENT_SEED);
+
+  it('is the reference’s size, the same on every load, about a third white', () => {
+    expect(TEXTURE_SIZE.ancient).toEqual([300, 300]);
+    expect(ancientPixels(ANCIENT_SIZE, ANCIENT_SEED)).toEqual(px);
+    // measured off ancient.png: mean grey 84 of 255
+    expect(mean(px, 0) / 255).toBeGreaterThan(0.26);
+    expect(mean(px, 0) / 255).toBeLessThan(0.38);
+  });
+
+  it('turns its lanes on phases and depths of their own', () => {
+    const lanes = ancientLanes(ANCIENT_SEED);
+    expect(lanes).toHaveLength(5);
+    expect(new Set(lanes.map((l) => l.phase.toFixed(3))).size).toBe(5);
+    for (const lane of lanes) {
+      expect(lane.depth).toBeGreaterThanOrEqual(4);
+      expect(lane.depth).toBeLessThanOrEqual(9);
+    }
+  });
+
+  it('tiles', () => {
+    expect(tiles(px, ANCIENT_SIZE, ANCIENT_SIZE)).toBe(true);
+  });
+});
+
+describe('vmaxbg, overlapping ringed discs', () => {
+  const px = vmaxbgPixels(VMAXBG_WIDTH, VMAXBG_HEIGHT, VMAXBG_SEED);
+
+  it('is the reference’s size, opaque, and the same on every load', () => {
+    expect(TEXTURE_SIZE.vmaxbg).toEqual([600, 400]);
+    expect(vmaxbgPixels(VMAXBG_WIDTH, VMAXBG_HEIGHT, VMAXBG_SEED)).toEqual(px);
+    expect(mean(px, 3)).toBe(255);
+  });
+
+  it('keeps close to the reference’s colour', () => {
+    // measured off vmaxbg.jpg: mean rgb(57, 73, 87)
+    [57, 73, 87].forEach((want, c) => {
+      expect(mean(px, c)).toBeGreaterThan(want * 0.8);
+      expect(mean(px, c)).toBeLessThan(want * 1.2);
+    });
+  });
+
+  it('stacks nine discs in three staggered rows, in an order of their own', () => {
+    const discs = vmaxbgDiscs(VMAXBG_SEED);
+    expect(discs).toHaveLength(9);
+    expect(new Set(discs.map((d) => d.y))).toEqual(new Set([0, 400 / 3, 800 / 3]));
+    expect(new Set(discs.map((d) => d.order)).size).toBe(9);
+  });
+
+  it('tiles', () => {
+    expect(tiles(px, VMAXBG_WIDTH, VMAXBG_HEIGHT)).toBe(true);
   });
 });

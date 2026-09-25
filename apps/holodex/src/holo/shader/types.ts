@@ -123,6 +123,10 @@ export type Source =
    * illusion-mask.png; sampled with its alpha (compile.ts's ALPHA_TEXTURES)
    */
   | { kind: 'illusion-mask'; scale: number }
+  /** stepped zig-zag stripes, white on black, standing in for its ancient.png; 300 px square */
+  | { kind: 'ancient'; scale: number }
+  /** overlapping ringed discs in embossed blue, standing in for its vmaxbg.jpg; 600 × 400 px */
+  | { kind: 'vmaxbg'; scale: number }
   /**
    * linear-gradient or repeating-linear-gradient drawn as CSS draws it, on
    * the RGBA path: t = a·u + b·v + c along its gradient line, 0 at the line's

@@ -23,6 +23,8 @@ export const SOURCE_ID: Record<Source['kind'], number> = {
   trainerbg: 19,
   illusion: 20,
   'illusion-mask': 21,
+  ancient: 22,
+  vmaxbg: 23,
 };
 
 /**
@@ -67,6 +69,8 @@ uniform sampler2D uGeometric;
 uniform sampler2D uTrainerbg;
 uniform sampler2D uIllusion;
 uniform sampler2D uIllusionMask;
+uniform sampler2D uAncient;
+uniform sampler2D uVmaxbg;
 uniform vec2 uPointer;        // -1..1 across the card
 uniform vec2 uPointerUV;      // 0..1, for radial gradients centred on it
 uniform float uPointerFromCenter;
@@ -223,6 +227,8 @@ vec3 srcGeometric(vec2 uv, float scale) { return texture(uGeometric, uv * scale)
 vec3 srcTrainerbg(vec2 uv, float scale) { return texture(uTrainerbg, uv * scale).rgb; }
 vec3 srcIllusion(vec2 uv, float scale) { return texture(uIllusion, uv * scale).rgb; }
 vec3 srcIllusionMask(vec2 uv, float scale) { return texture(uIllusionMask, uv * scale).rgb; }
+vec3 srcAncient(vec2 uv, float scale) { return texture(uAncient, uv * scale).rgb; }
+vec3 srcVmaxbg(vec2 uv, float scale) { return texture(uVmaxbg, uv * scale).rgb; }
 // a texture sampled with its alpha, on the RGBA path
 vec4 srcIllusionMask4(vec2 uv, float scale) { return texture(uIllusionMask, uv * scale); }
 vec3 srcCard(vec2 uv) { return texture(uCard, uv).rgb; }

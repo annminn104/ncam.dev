@@ -53,6 +53,8 @@ describe('SOURCE_ID', () => {
       'trainerbg',
       'illusion',
       'illusion-mask',
+      'ancient',
+      'vmaxbg',
     ]) {
       expect(SOURCE_ID).toHaveProperty(kind);
     }

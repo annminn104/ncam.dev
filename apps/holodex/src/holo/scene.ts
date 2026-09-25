@@ -55,6 +55,8 @@ export const SHARED_TEXTURE_UNIFORM: Record<TextureName, string> = {
   trainerbg: 'uTrainerbg',
   illusion: 'uIllusion',
   'illusion-mask': 'uIllusionMask',
+  ancient: 'uAncient',
+  vmaxbg: 'uVmaxbg',
 };
 
 /**
