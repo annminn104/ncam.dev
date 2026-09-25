@@ -25,6 +25,8 @@ out vec4 fragColor;
 uniform vec4 uClipRect;   // top, right, bottom, left, as fractions
 uniform vec4 uCutA;       // boxes cut out of it (regions.ts's cutsFor):
 uniform vec4 uCutB;       // x0, y0, x1, y1, all zeros for none
+uniform vec4 uBorder;     // the border's inner edge, as uClipRect, when the
+                          // foil covers the border too; all zeros for none
 uniform float uInvert;    // 1.0 for reverse holo
 uniform float uCardOpacity;
 
@@ -48,6 +50,13 @@ float coverage(vec2 uv) {
                * step(uClipRect.x, uv.y)
                * step(uv.y, 1.0 - uClipRect.z);
   inside *= (1.0 - inBox(uv, uCutA)) * (1.0 - inBox(uv, uCutB));
+  // The card's border, everything outside uBorder's rect: none when it is
+  // all zeros, a rect that holds the whole card.
+  float border = 1.0 - step(uBorder.w, uv.x)
+                     * step(uv.x, 1.0 - uBorder.y)
+                     * step(uBorder.x, uv.y)
+                     * step(uv.y, 1.0 - uBorder.z);
+  inside = max(inside, border);
 
   return mix(inside, 1.0 - inside, uInvert);
 }

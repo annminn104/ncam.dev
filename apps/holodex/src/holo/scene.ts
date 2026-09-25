@@ -145,6 +145,18 @@ export function cutUniform(box: CutBox | undefined): [number, number, number, nu
   return box ? [box.x0, box.y0, box.x1, box.y1] : [0, 0, 0, 0];
 }
 
+/**
+ * uBorder for a selection (HoloSelection.border): the `borders` rect, top,
+ * right, bottom, left, whose outside coverage() adds to the region, or all
+ * zeros, a rect holding the whole card, which adds nothing. Pure for the same
+ * reason as pointerToUV.
+ */
+export function borderUniform(border: boolean): [number, number, number, number] {
+  if (!border) return [0, 0, 0, 0];
+  const r = regionFor('borders');
+  return [r.top, r.right, r.bottom, r.left];
+}
+
 export function createHoloScene(canvas: HTMLCanvasElement): HoloScene {
   const renderer = new WebGLRenderer({ canvas, alpha: true, antialias: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -262,6 +274,7 @@ export function createHoloScene(canvas: HTMLCanvasElement): HoloScene {
       const [cutA, cutB] = cutsFor(selection.shape, selection.layout);
       material.uniforms.uCutA.value.set(...cutUniform(cutA));
       material.uniforms.uCutB.value.set(...cutUniform(cutB));
+      material.uniforms.uBorder.value.set(...borderUniform(selection.border));
       material.uniforms.uInvert.value = selection.invert ? 1 : 0;
       material.uniforms.uCardGlow.value.set(...selection.glow);
       material.uniforms.uFoilBrightness.value = selection.foilBrightness;

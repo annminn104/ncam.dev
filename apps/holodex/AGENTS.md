@@ -418,7 +418,15 @@ alone, which it took until then, matched a fifth (`modern-ex`: the
 illustration border to border down to the silver bar over the text).
 Measured against the masks the poke-151 demo loads
 (`poke-holo.b-cdn.net/foils/151/foils/<set>_en_<number>_std.foil.webp`),
-analysis only: none is kept or copied.
+analysis only: none is kept or copied. The same masks foil a Scarlet &
+Violet Rare holo's silver border besides its art (Beedrill's and Raichu's
+`std`), so `sv-rare-holo` takes the border too, whatever its layout
+(`select.ts#BORDERED`, the owner's call, 2026-09-25): `HoloSelection.border`
+adds everything outside the `borders` rect to the region, `uBorder` in
+`coverage()` (all zeros, a rect holding the whole card, for none), and
+`coversPoint`'s `border` its twin. Toggling `uBorder` on a live card
+changes the border alone (frame, art and text box by exactly 0), and the
+reference's own Raichu darkens its border under the shine the same way.
 
 An element can also carry a **clip of its own** (`Element.clip`, a region's
 rect, never inverted, never `stage`), which gates that element alone inside

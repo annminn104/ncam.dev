@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { EFFECTS } from './effects';
 import { cutsFor } from './regions';
 import {
+  borderUniform,
   cutUniform,
   orientTexture,
   pointerFromCenter,
@@ -96,6 +97,16 @@ describe('orientTexture', () => {
 
 // setSelection hands each cut box to the shader through cutUniform, which is
 // pure: compile.test.ts runs coverage() on exactly these vectors.
+describe('borderUniform', () => {
+  it('hands coverage() the border rect, top, right, bottom, left, when the foil takes the border', () => {
+    expect(borderUniform(true)).toEqual([0.028, 0.04, 0.028, 0.04]);
+  });
+
+  it('sends all zeros, a rect holding the whole card, which adds no border', () => {
+    expect(borderUniform(false)).toEqual([0, 0, 0, 0]);
+  });
+});
+
 describe('cutUniform', () => {
   it('lays a box out as inBox() reads it: x0, y0, x1, y1', () => {
     const [banner, disc] = cutsFor('stage', 'dp');

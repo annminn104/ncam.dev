@@ -233,11 +233,16 @@ export function cutsFor(shape: ClipShape, layout: CardLayout = 'other'): readonl
   return isArtWindow(shape) ? LAYOUTS[layout][shape] : [];
 }
 
+const insideRect = (r: RegionRect, x: number, y: number): boolean =>
+  x >= r.left && x <= 1 - r.right && y >= r.top && y <= 1 - r.bottom;
+
 /**
  * Whether the foil covers this point. `x` and `y` are fractions of the card
- * from its top-left. The GLSL coverage() in shader/base.ts computes the same
- * thing from the same numbers, which the scene hands it as uniforms — this is
- * its testable twin.
+ * from its top-left; `border` adds the card's border, all of it outside the
+ * `borders` rect, for an effect whose foil covers that too
+ * (HoloSelection.border). The GLSL coverage() in shader/base.ts computes the
+ * same thing from the same numbers, which the scene hands it as uniforms —
+ * this is its testable twin.
  */
 export function coversPoint(
   shape: ClipShape,
@@ -245,10 +250,11 @@ export function coversPoint(
   y: number,
   invert: boolean,
   layout: CardLayout = 'other',
+  border = false,
 ): boolean {
-  const r = regionFor(shape, layout);
-  let inside = x >= r.left && x <= 1 - r.right && y >= r.top && y <= 1 - r.bottom;
+  let inside = insideRect(regionFor(shape, layout), x, y);
   if (inside && cutsFor(shape, layout).some((c) => x >= c.x0 && x < c.x1 && y >= c.y0 && y < c.y1))
     inside = false;
+  if (border && !insideRect(REGIONS.borders, x, y)) inside = true;
   return invert ? !inside : inside;
 }

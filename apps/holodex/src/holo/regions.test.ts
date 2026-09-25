@@ -195,6 +195,28 @@ describe('coversPoint', () => {
     expect(coversPoint('regular', 0.5, 0.47, false, 'dp-sp')).toBe(true);
   });
 
+  it('adds the card’s border, outside the borders rect, when the foil takes it', () => {
+    const covers = (x: number, y: number, border: boolean) =>
+      coversPoint('stage', x, y, false, 'sv', border);
+    // The border: every edge, and the corner a stage cut would take.
+    for (const [x, y] of [
+      [0.5, 0.01],
+      [0.5, 0.99],
+      [0.02, 0.5],
+      [0.98, 0.5],
+      [0.01, 0.01],
+    ]) {
+      expect(covers(x, y, true), `${x}, ${y}`).toBe(true);
+      expect(covers(x, y, false), `${x}, ${y}`).toBe(false);
+    }
+    // The frame inside it and the text box stay bare; the art stays foiled.
+    expect(covers(0.06, 0.3, true)).toBe(false);
+    expect(covers(0.5, 0.7, true)).toBe(false);
+    expect(covers(0.5, 0.3, true)).toBe(true);
+    // Inverted, it is all the other way round.
+    expect(coversPoint('stage', 0.5, 0.01, true, 'sv', true)).toBe(false);
+  });
+
   it('cuts a Scarlet & Violet evolution’s band and picture, and no more of its art', () => {
     // Under the band, right of the picture: art the old 57% by 16% step took.
     expect(coversPoint('stage', 0.3, 0.14, false, 'sv')).toBe(true);

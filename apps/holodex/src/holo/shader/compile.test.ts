@@ -496,6 +496,10 @@ function transpileCoverage(glsl: string) {
       .replace(/\bbox\.w\b/g, 'box.y1')
       .replace(/\buCutA\b/g, 'cutA')
       .replace(/\buCutB\b/g, 'cutB')
+      .replace(/uBorder\.x/g, 'ring.top')
+      .replace(/uBorder\.y/g, 'ring.right')
+      .replace(/uBorder\.z/g, 'ring.bottom')
+      .replace(/uBorder\.w/g, 'ring.left')
       .replace(/uInvert/g, 'invert');
   const js = `const inBox = (uv, box) => {\n${toJS(inBox)}\n};\n${toJS(body)}`;
 
@@ -506,21 +510,54 @@ function transpileCoverage(glsl: string) {
 
   const step = (edge: number, v: number) => (v >= edge ? 1 : 0);
   const mix = (a: number, b: number, t: number) => a * (1 - t) + b * t;
-  const compiled = new Function('uv', 'rect', 'cutA', 'cutB', 'invert', 'step', 'mix', js) as (
+  const compiled = new Function(
+    'uv',
+    'rect',
+    'cutA',
+    'cutB',
+    'ring',
+    'invert',
+    'step',
+    'mix',
+    'max',
+    js,
+  ) as (
     uv: { x: number; y: number },
     rect: RegionRect,
     cutA: CutBox,
     cutB: CutBox,
+    ring: RegionRect,
     invert: number,
     step: (edge: number, v: number) => number,
     mix: (a: number, b: number, t: number) => number,
+    max: (a: number, b: number) => number,
   ) => number;
 
-  // A box the region lacks reaches the shader as all zeros (scene.ts's cutUniform).
+  // A box the region lacks reaches the shader as all zeros (scene.ts's
+  // cutUniform), and so does the border it does not foil (borderUniform).
   const none: CutBox = { x0: 0, y0: 0, x1: 0, y1: 0 };
-  return (shape: ClipShape, x: number, y: number, invert: boolean, layout?: CardLayout) => {
+  const noBorder: RegionRect = { top: 0, right: 0, bottom: 0, left: 0 };
+  return (
+    shape: ClipShape,
+    x: number,
+    y: number,
+    invert: boolean,
+    layout?: CardLayout,
+    border = false,
+  ) => {
     const [cutA = none, cutB = none] = cutsFor(shape, layout);
-    return compiled({ x, y }, regionFor(shape, layout), cutA, cutB, invert ? 1 : 0, step, mix);
+    const ring = border ? regionFor('borders') : noBorder;
+    return compiled(
+      { x, y },
+      regionFor(shape, layout),
+      cutA,
+      cutB,
+      ring,
+      invert ? 1 : 0,
+      step,
+      mix,
+      Math.max,
+    );
   };
 }
 
@@ -550,18 +587,20 @@ describe('coverage() in GLSL agrees with coversPoint() in JS', () => {
   const axis = Array.from({ length: 81 }, (_, i) => (i / 80) * 0.98 + 0.0107);
 
   for (const layout of layouts) {
-    it(`agrees across the card for every shape on ${layout}, inverted or not`, () => {
+    it(`agrees across the card for every shape on ${layout}, inverted or not, border or not`, () => {
       const disagreements: string[] = [];
       for (const shape of shapes) {
         for (const invert of [false, true]) {
-          for (const x of axis) {
-            for (const y of axis) {
-              const gpu = coverage(shape, x, y, invert, layout) > 0.5;
-              const cpu = coversPoint(shape, x, y, invert, layout);
-              if (gpu !== cpu) {
-                disagreements.push(
-                  `${shape}${invert ? '/inv' : ''} (${x.toFixed(3)}, ${y.toFixed(3)}) gpu=${gpu} cpu=${cpu}`,
-                );
+          for (const border of [false, true]) {
+            for (const x of axis) {
+              for (const y of axis) {
+                const gpu = coverage(shape, x, y, invert, layout, border) > 0.5;
+                const cpu = coversPoint(shape, x, y, invert, layout, border);
+                if (gpu !== cpu) {
+                  disagreements.push(
+                    `${shape}${invert ? '/inv' : ''}${border ? '/border' : ''} (${x.toFixed(3)}, ${y.toFixed(3)}) gpu=${gpu} cpu=${cpu}`,
+                  );
+                }
               }
             }
           }
@@ -570,6 +609,21 @@ describe('coverage() in GLSL agrees with coversPoint() in JS', () => {
       expect(disagreements).toEqual([]);
     });
   }
+
+  it('adds the border to the region only when asked, and all of it', () => {
+    // The corner and the bottom edge: outside the `borders` rect.
+    for (const [x, y] of [
+      [0.02, 0.02],
+      [0.5, 0.985],
+      [0.98, 0.5],
+    ]) {
+      expect(coverage('regular', x, y, false, 'sv', true)).toBe(1);
+      expect(coverage('regular', x, y, false, 'sv', false)).toBe(0);
+    }
+    // The frame between the border and the art stays bare.
+    expect(coverage('regular', 0.06, 0.3, false, 'sv', true)).toBe(0);
+    expect(coverage('regular', 0.5, 0.7, false, 'sv', true)).toBe(0);
+  });
 
   it('actually exercises both verdicts, so agreement is not vacuous', () => {
     // A coverage() stuck at a constant would "agree" with nothing to compare.

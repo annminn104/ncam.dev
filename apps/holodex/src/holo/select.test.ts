@@ -358,6 +358,28 @@ describe('selectHolo — Double rare is the standard-layout ex, not a full art',
     expect(selection.shape).toBe('regular');
   });
 
+  it('foils a Scarlet & Violet, Mega or Pocket holo rare’s border too, and nothing else’s', () => {
+    // The reference's masks of 151's Rares let the foil through the border.
+    for (const patch of [
+      { id: 'sv03.5-015', localId: '015', rarity: 'Rare', stage: 'Stage2' },
+      { id: 'me01-002', localId: '002', rarity: 'Rare', stage: 'Stage1' },
+      { id: 'A1-003', localId: '003', rarity: 'Three Diamond', stage: 'Stage2' },
+    ]) {
+      const selection = selectHolo(card(patch));
+      expect([selection.effect, selection.border], patch.id).toEqual(['sv-rare-holo', true]);
+    }
+    // Its reverse printing is a reverse foil, bordered as reverse foils are.
+    const reverse = selectHolo(card({ id: 'sv01-004', localId: '004', rarity: 'Rare' }), {
+      variant: 'reverse',
+    });
+    expect([reverse.effect, reverse.border]).toEqual(['reverse-holo', false]);
+    // The older regular holo, and an ex, keep their regions as they were.
+    expect(selectHolo(card({ rarity: 'Holo Rare' })).border).toBe(false);
+    expect(selectHolo(card({ id: 'sv01-019', localId: '019', rarity: 'Double rare' })).border).toBe(
+      false,
+    );
+  });
+
   it('foils an ex but its art, as its reference’s mask does, on its own frame', () => {
     const spidops = selectHolo(
       card({

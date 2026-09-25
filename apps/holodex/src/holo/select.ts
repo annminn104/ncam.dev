@@ -57,6 +57,12 @@ export interface HoloSelection {
    */
   invert: boolean;
   /**
+   * The foil covers the card's border too, everything outside the `borders`
+   * rect, besides its region (regions.ts's coversPoint): sv-rare-holo's
+   * (BORDERED).
+   */
+  border: boolean;
+  /**
    * The card's --card-glow (glowOf), for an effect whose stops are part glow
    * (types.ts's GradientStop.glow, the shader's uCardGlow): radiant-holo's.
    */
@@ -469,6 +475,16 @@ const ART_WINDOW: ReadonlySet<EffectId> = new Set<EffectId>(['amazing-rare']);
 const INVERTED: ReadonlySet<EffectId> = new Set<EffectId>(['ex-regular']);
 
 /**
+ * Effects whose foil takes the card's border besides their region:
+ * sv-rare-holo. Its reference clips it to the art window alone, but the
+ * per-card masks the reference draws its 151 Rares with, their own foil
+ * layers, let it through the silver border as well (checked on Beedrill and
+ * Raichu, 2026-09-25): a Scarlet & Violet holo rare is foiled edge to edge
+ * of its border. The owner's call.
+ */
+const BORDERED: ReadonlySet<EffectId> = new Set<EffectId>(['sv-rare-holo']);
+
+/**
  * Effects a reverse printing is allowed to replace. A Scarlet & Violet or
  * Mega `Rare` counts: MODERN_EFFECT_BY_RARITY makes it sv-rare-holo first.
  */
@@ -583,6 +599,7 @@ export function selectHolo(card: Card, options: SelectOptions = {}): HoloSelecti
     shape: clipShape(effect, card),
     layout: layoutOf(card),
     invert,
+    border: BORDERED.has(effect),
     glow: glowOf(card),
     foilBrightness: foilBrightnessOf(card),
   };
