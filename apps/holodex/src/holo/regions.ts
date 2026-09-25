@@ -23,9 +23,10 @@ export interface CutBox {
  * The frame a card is printed in, as far as its foil's clip cares: where the
  * art window sits, and what the frame lays over it. select.ts's `layoutOf`
  * reads it off the card's set, or its rarity for the three frames a rarity
- * brings (LV.X, Prime, LEGEND). `other` is every card no measured layout
- * claims — Scarlet & Violet, Mega, Pocket — and keeps the clip every card had
- * before the layouts: the reference's.
+ * brings (LV.X, Prime, LEGEND), or its name for the ex frame of Scarlet &
+ * Violet, Mega and Pocket. `other` is every card no measured layout claims
+ * (Pokémon Rumble, the energies, the sets without card art) and keeps the
+ * clip every card had before the layouts: the reference's.
  */
 export type CardLayout =
   | 'wotc'
@@ -40,12 +41,19 @@ export type CardLayout =
   | 'bw-xy'
   | 'sm'
   | 'swsh'
+  | 'sv'
+  | 'pocket'
+  | 'modern-ex'
   | 'other';
 
 /** How many boxes one region can cut: the shader's uCutA and uCutB. */
 export const MAX_CUTS = 2;
 
-/** The regions no layout changes: the trainer's, the border's, the whole card. */
+/**
+ * The regions of the shapes that are not the art window: the trainer's,
+ * which a layout may measure for itself (LayoutClip's `trainer`), and the
+ * border's and the whole card's, the same on every card.
+ */
 const REGIONS: Record<Exclude<ClipShape, 'regular' | 'stage'>, RegionRect> = {
   // --clip-trainer: inset(14.5% 8.5% 48.2% 8.5%)
   trainer: { top: 0.145, right: 0.085, bottom: 0.482, left: 0.085 },
@@ -64,6 +72,8 @@ interface LayoutClip {
   regular: readonly CutBox[];
   /** What it lays over the art on a Stage 1 or 2: the "evolves from" box. */
   stage: readonly CutBox[];
+  /** A trainer's art window, where measured; the reference's --clip-trainer otherwise. */
+  trainer?: RegionRect;
 }
 
 const box = (x0: number, y0: number, x1: number, y1: number): CutBox => ({ x0, y0, x1, y1 });
@@ -166,6 +176,34 @@ const LAYOUTS: Readonly<Record<CardLayout, LayoutClip>> = {
     regular: [],
     stage: [box(0, 0, 0.555, 0.12), box(0, 0, 0.16, 0.16)],
   },
+  // Scarlet & Violet and Mega, one frame (30th Celebration's too). The art
+  // sits within half a percent of the reference's --clip, which pokemon-
+  // cards-151 kept for these cards; an evolution's round picture and its
+  // "evolves from" band sit over the art's top-left, both much smaller than
+  // the reference's --clip-stage cut. A trainer's window is measured too, the
+  // reverse foils reaching the Items and Supporters of these sets.
+  sv: {
+    art: { top: 0.097, right: 0.075, bottom: 0.528, left: 0.078 },
+    regular: [],
+    stage: [box(0, 0, 0.66, 0.123), box(0, 0, 0.18, 0.185)],
+    trainer: { top: 0.138, right: 0.077, bottom: 0.48, left: 0.08 },
+  },
+  // Pokémon TCG Pocket: the same window, and an evolution's octagon.
+  pocket: {
+    art: { top: 0.097, right: 0.075, bottom: 0.528, left: 0.078 },
+    regular: [],
+    stage: [box(0, 0, 0.57, 0.118), box(0, 0, 0.16, 0.175)],
+  },
+  // The ex of Scarlet & Violet, Mega and Pocket, Tera and Mega ex included:
+  // the illustration runs border to border down to the silver bar over the
+  // text. ex-regular inverts it (select.ts): its reference foils the card but
+  // its Pokémon with a per-card mask, and the card less its art matched two
+  // thirds of those masks, where the art alone matched a fifth.
+  'modern-ex': {
+    art: { top: 0.028, right: 0.04, bottom: 0.505, left: 0.038 },
+    regular: [],
+    stage: [],
+  },
   other: {
     art: REFERENCE_ART,
     regular: [],
@@ -180,10 +218,14 @@ function isArtWindow(shape: ClipShape): shape is 'regular' | 'stage' {
 
 /**
  * The inset rect a shape confines the foil to. `regular` and `stage` are the
- * art window of the card's layout; the others are the same on every card.
+ * art window of the card's layout, and `trainer` its trainer's window where
+ * the layout measured one; the border and the whole card are the same on
+ * every card.
  */
 export function regionFor(shape: ClipShape, layout: CardLayout = 'other'): RegionRect {
-  return isArtWindow(shape) ? LAYOUTS[layout].art : REGIONS[shape];
+  if (isArtWindow(shape)) return LAYOUTS[layout].art;
+  if (shape === 'trainer') return LAYOUTS[layout].trainer ?? REGIONS.trainer;
+  return REGIONS[shape];
 }
 
 /** The boxes cut out of that rect: what the layout's frame prints over the art. */

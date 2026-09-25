@@ -51,7 +51,10 @@ export interface HoloSelection {
    * (regions.ts). The other shapes are the same on every card.
    */
   layout: CardLayout;
-  /** reverse-holo inverts its clip: foil everywhere EXCEPT the region. */
+  /**
+   * Foil everywhere EXCEPT the region: the reverse foils, and ex-regular,
+   * whose reference foils an ex but its Pokémon (INVERTED).
+   */
   invert: boolean;
   /**
    * The card's --card-glow (glowOf), for an effect whose stops are part glow
@@ -206,7 +209,8 @@ export const EFFECT_BY_RARITY: Record<string, EffectId> = {
   // treatment and, unlike ex-full-art, is not in FULL_ART, so clipShape()
   // falls through to regular/stage/trainer by category instead of covering
   // the whole card. The reference confines its foil with a per-card mask and
-  // no clip-path; we have no masks, so the geometric clip stands in.
+  // no clip-path; we have no masks, so the geometric clip stands in,
+  // inverted (INVERTED): the card less the ex frame's art (layoutOf).
   'Double rare': 'ex-regular',
   'Four Diamond': 'ex-regular',
   'Two Star': 'ex-full-art',
@@ -294,9 +298,13 @@ export function eraOf(card: Pick<Card, 'id' | 'localId'>): Era {
  * /series/{id}, 2026-09-25; select.test.ts holds the whole list): each series'
  * sets land in its frame — the promos, trainer kits (`tk-ex-…`, `tk-hs-…`),
  * POP Series (1–5 the EX frame, 6–9 Diamond & Pearl's) and McDonald's
- * collections (by year) in their era's. Left to `other`: Scarlet & Violet,
- * Mega and Pocket, unmeasured; `ru1`, Pokémon Rumble's own frame; and the
- * sets with no card art (`sp`, `bog`, `jumbo`, `miscp`).
+ * collections (by year) in their era's; Scarlet & Violet and Mega share one,
+ * 30th Celebration included, and Pocket's sets (`A1` … `B2a`, `P-A`) have
+ * theirs. Left to `other`: `ru1`, Pokémon Rumble's own frame; the SV and
+ * Mega energies (`sve`, `mee`) and `mfb`, none of which draws a foil;
+ * `30th-c`, whose reprints keep their old frames and draw none either; and the
+ * sets with no card art (`sp`, `bog`, `jumbo`, `miscp`). A new Pocket series
+ * (`C1`, say) needs adding.
  */
 const LAYOUT_BY_SET: ReadonlyArray<readonly [RegExp, CardLayout]> = [
   [/^(?:base\d|basep|wp|gym\d|neo\d|si1|lc)$/, 'wotc'],
@@ -307,7 +315,18 @@ const LAYOUT_BY_SET: ReadonlyArray<readonly [RegExp, CardLayout]> = [
   [/^(?:bw\d+|bwp|dv1|rc|xy\d+|xy[pa]|dc1|g1|201[12]bw|201[456]xy|tk-(?:bw|xy)-\w+)$/, 'bw-xy'],
   [/^(?:sm\d+|sm[37]\.5|smp|sma|det1|201[789]sm|tk-sm-\w+)$/, 'sm'],
   [/^(?:swsh.*|fut2020|cel25(?:cc)?|202[12]swsh)$/, 'swsh'],
+  [/^(?:sv(?:\d|p$).*|me(?:\d|p$).*|30th|202[34]sv)$/, 'sv'],
+  [/^(?:[AB]\d+[ab]?|P-A)$/, 'pocket'],
 ];
+
+/**
+ * A Pokémon ex of Scarlet & Violet, Mega or Pocket, by its name: TCGdex's
+ * `suffix` says `ex` or `EX` on most of them but not on all (Mega Charizard
+ * X ex and Oricorio ex, of me02, have none; checked 2026-09-25), and every
+ * one of their names ends so. Their frame is the illustration border to
+ * border (regions.ts's `modern-ex`).
+ */
+const MODERN_EX_NAME = / ex$/;
 
 /**
  * The rarities that bring a frame of their own, whatever the set: a LV.X's,
@@ -337,7 +356,9 @@ export function layoutOf(card: Pick<Card, 'id' | 'localId' | 'name' | 'rarity'>)
   if (byRarity) return byRarity;
   const setId = setIdOf(card);
   if (SP_SET.test(setId) && SP_NAME.test(card.name)) return 'dp-sp';
-  return LAYOUT_BY_SET.find(([pattern]) => pattern.test(setId))?.[1] ?? 'other';
+  const bySet = LAYOUT_BY_SET.find(([pattern]) => pattern.test(setId))?.[1] ?? 'other';
+  if ((bySet === 'sv' || bySet === 'pocket') && MODERN_EX_NAME.test(card.name)) return 'modern-ex';
+  return bySet;
 }
 
 /**
@@ -435,6 +456,17 @@ const BORDERS: ReadonlySet<EffectId> = new Set<EffectId>([
  * amazing-rare.css's unmasked rule sets `--clip` with no stage variant.
  */
 const ART_WINDOW: ReadonlySet<EffectId> = new Set<EffectId>(['amazing-rare']);
+
+/**
+ * Effects that foil the card less their region, whatever the printing:
+ * ex-regular. Its reference confines the foil with a per-card mask, the
+ * card's own foil layer, which lets it through everywhere but the Pokémon;
+ * against six of 151's (2026-09-25), the card less its art window matched
+ * two thirds of every mask, where the art window alone, this clip until then,
+ * matched a fifth. The owner's call. Nothing else takes it: a reverse foil
+ * inverts because its printing is asked for (SelectOptions).
+ */
+const INVERTED: ReadonlySet<EffectId> = new Set<EffectId>(['ex-regular']);
 
 /**
  * Effects a reverse printing is allowed to replace. A Scarlet & Violet or
@@ -541,6 +573,8 @@ export function selectHolo(card: Card, options: SelectOptions = {}): HoloSelecti
     effect = galleryEffect(base);
   } else if (REVERSIBLE.has(base) && options.variant) {
     effect = options.variant === 'masterball' ? 'masterball-holo' : reverseEffect(card);
+    invert = true;
+  } else if (INVERTED.has(effect)) {
     invert = true;
   }
 

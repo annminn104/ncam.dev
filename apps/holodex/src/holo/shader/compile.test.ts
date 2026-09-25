@@ -28,6 +28,7 @@ import {
   valueAt,
   type CssBox,
 } from '../effects/css';
+import { EFFECTS } from '../effects';
 import { sourcesGLSL } from './sources';
 import type { Effect, Element, GradientStop, Layer, PointerDriven } from './types';
 
@@ -539,6 +540,9 @@ describe('coverage() in GLSL agrees with coversPoint() in JS', () => {
     'bw-xy',
     'sm',
     'swsh',
+    'sv',
+    'pocket',
+    'modern-ex',
     'other',
   ];
   // Deliberately offset off the round numbers so no sample lands exactly on an
@@ -891,6 +895,45 @@ describe('an element’s own clip in GLSL agrees with coversPoint() in JS', () =
     expect(mixOf('shine1')).not.toMatch(/clip_/);
     expect(mixOf('glare0')).not.toMatch(/clip_/);
     expect(src.match(/float clip_/g)).toHaveLength(1);
+  });
+
+  it('confines a glare that asks to the effect’s own region, on either path, and no other', () => {
+    const plain = {
+      layers: [{ source: { kind: 'card' as const }, blend: 'normal' as const }],
+      mixBlend: 'normal' as const,
+    };
+    const rgba = {
+      layers: [{ source: { kind: 'illusion-mask' as const, scale: 1 }, blend: 'normal' as const }],
+      mixBlend: 'normal' as const,
+    };
+    const src = compileEffect({
+      id: 'test-within-region',
+      shine: [plain],
+      glare: [
+        { ...plain, clip: 'borders', withinRegion: true },
+        { ...rgba, withinRegion: true },
+        plain,
+      ],
+    });
+    const mixOf = (prefix: string) =>
+      src
+        .split('\n')
+        .find(
+          (line) =>
+            line.startsWith('  acc = mix(acc, blendWith(') && line.includes(`stack_${prefix}`),
+        );
+    expect(mixOf('glare0')).toMatch(/\* clip_glare0 \* cov\);$/);
+    expect(mixOf('glare1')).toMatch(/\* cov\);$/);
+    expect(mixOf('glare2')).not.toMatch(/cov/);
+    // cov is main()'s coverage(vUv), computed before any element reads it.
+    expect(src.indexOf('float cov = coverage(vUv);')).toBeLessThan(src.indexOf('// --- glare0'));
+  });
+
+  it('keeps the ball holos’ glare inside the border and off the art, as --viewport-edge-clip', () => {
+    for (const id of ['poke-ball-holo', 'masterball-holo'] as const) {
+      const glare = EFFECTS[id].glare;
+      expect(glare.map((e) => [e.clip, e.withinRegion])).toEqual([['borders', true]]);
+    }
   });
 });
 

@@ -55,9 +55,12 @@ import {
  *   --glare and --glare-contrast (darkness, fire, psychic, …) are not ported:
  *   an effect knows nothing of the card's type, so the defaults are used.
  * - --noise is `grain`, --iri1 is `iri`.
- * - The glare's clip-path, --viewport-edge-clip (the card less its art
- *   window), is not applied: the DSL's glare is unclipped by design
- *   (compile.ts).
+ * - The glare's clip-path, --viewport-edge-clip, is the card inside its
+ *   border less its art window, both of poke-ball-holo.css's own numbers
+ *   (4% 3% for the border, 7% 10% to 92% 48% for the art). Here it is the
+ *   `borders` element clip and the effect's own region (`withinRegion`), so
+ *   the art window it spares is the card's layout's, the one the shine
+ *   spares too.
  * - The reference clips its layers apart, both regions from cards.css: the
  *   shine to --clip-invert (the card less its art window, border and all),
  *   the :before and :after also to --clip-borders-invert (the card inside its
@@ -248,6 +251,9 @@ export function ballHolo(id: string, patterns: BallPatterns): Effect {
         filter: { brightness: { base: 0.75 * SHINE }, contrast: { base: GLARE_CONTRAST } },
         mixBlend: 'overlay',
         opacity: { base: GLARE },
+        // clip-path: var(--viewport-edge-clip)
+        clip: 'borders',
+        withinRegion: true,
       },
     ],
   };

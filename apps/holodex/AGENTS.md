@@ -304,7 +304,7 @@ choice (2026-09-25), though its CSS keeps the shine to the card's own region:
 a Black White Rare is foiled over the whole card. `ex-regular` (a
 `Double rare`, the standard-layout ex) must never be `full`: its reference
 confines its foil with a per-card mask we do not have, and the geometric art
-window stands in for it.
+window stands in for it, inverted (below).
 
 **Two families of effects, both ported.** The 22 older effects come from
 [simeydotme/pokemon-cards-css](https://github.com/simeydotme/pokemon-cards-css)
@@ -372,23 +372,30 @@ and `legacy-glares.test.ts` the 22.
 **Clip regions, and why reverse holo inverts.** `holo/regions.ts` maps each
 `ClipShape` (`regular`, `stage`, `trainer`, `borders`, `full`) to an inset
 `RegionRect` — fractions of the card — plus up to two boxes cut out of it
-(`cutsFor`). `trainer`, `borders` and `full` are the reference's CSS
-`inset()` percentages on every card. `regular` and `stage` are the art
+(`cutsFor`). `borders` and `full` are the reference's CSS `inset()`
+percentages on every card, and `trainer` too but where a layout measured its
+own (Scarlet & Violet's). `regular` and `stage` are the art
 window of the card's **layout** (`CardLayout`), the frame it is printed in,
 which `select.ts#layoutOf` reads off its set (a table checked against all
 220 TCGdex sets: each series' in its own frame, the trainer kits, POP Series
 and McDonald's collections in their era's) or, for the three frames a rarity
 brings, its rarity (LV.X, Prime, LEGEND), and Platinum's SP Pokémon by the
-title their names end in. The boxes are what that frame prints over the
-art: the evolution badge, disc or banner of a `stage` card, a Diamond &
-Pearl or HGSS Basic's BASIC banner, an SP's owner portrait. Every window and
-box was measured off TCGdex's scans (2026-09-25; regions.ts says how) — the
-reference's `--clip` is a Sword & Shield card's, and on an HGSS card, say,
-left the art's outer 3% and bottom 4.6% bare. Sword & Shield keeps it, with
-its `--clip-stage` polygon as two boxes, banner and picture; Scarlet &
-Violet, Mega and Pocket (`other`, unmeasured) keep it too, with the one
-step-cut every evolution had before. A LEGEND half, all art, keeps its foil
-to the border. `coversPoint(shape, x, y, invert, layout)` is the tested twin
+title their names end in, and a Scarlet & Violet, Mega or Pocket ex by the
+` ex` its name ends in (`modern-ex`; TCGdex's `suffix` misses some). The
+boxes are what that frame prints over the art: the evolution badge, disc or
+banner of a `stage` card, a Diamond & Pearl or HGSS Basic's BASIC banner, an
+SP's owner portrait. Every window and box was measured off TCGdex's scans
+(2026-09-25; regions.ts says how) — the reference's `--clip` is a Sword &
+Shield card's, and on an HGSS card, say, left the art's outer 3% and bottom
+4.6% bare. Sword & Shield keeps it, with its `--clip-stage` polygon as two
+boxes, banner and picture. Scarlet & Violet and Mega share one frame
+(`sv`), whose art sits within half a percent of that `--clip` (pokemon-
+cards-151 kept it for them) but whose evolution picture and band are much
+smaller than the `--clip-stage` cut, which had taken the art's top-left;
+Pocket's (`pocket`) is the same window with an octagon. `other` (Pokémon
+Rumble, the energies, the sets without art) keeps the reference's clip and
+the one step-cut every evolution had before. A LEGEND half, all art, keeps
+its foil to the border. `coversPoint(shape, x, y, invert, layout)` is the tested twin
 of the GLSL `coverage()` in `shader/base.ts`, which reads the same numbers
 as uniforms (`uClipRect`, `uCutA`, `uCutB`, set by `scene.ts`, all zeros for
 a box the region lacks): `compile.test.ts` runs the emitted GLSL itself
@@ -402,7 +409,16 @@ foil _inside_ the region — a window over the art. `reverse-holo` is the one
 case that flips `invert` to `true`, painting the foil _outside_ the region
 instead (the card's border and text box), because that is what a real
 reverse-holo print actually looks like: foil everywhere except the art. The
-151 ball foils invert the same way.
+151 ball foils invert the same way, and so does `ex-regular`, whatever the
+printing (`select.ts#INVERTED`, the owner's call, 2026-09-25): its
+reference's per-card masks, a Double rare's own foil layer, let the foil
+through everywhere but the Pokémon, and against six of 151's the card less
+its ex frame's art matched two thirds of each mask, where the art window
+alone, which it took until then, matched a fifth (`modern-ex`: the
+illustration border to border down to the silver bar over the text).
+Measured against the masks the poke-151 demo loads
+(`poke-holo.b-cdn.net/foils/151/foils/<set>_en_<number>_std.foil.webp`),
+analysis only: none is kept or copied.
 
 An element can also carry a **clip of its own** (`Element.clip`, a region's
 rect, never inverted, never `stage`), which gates that element alone inside
@@ -414,7 +430,12 @@ the silver border (`borders`) while the shine's own dodge reaches it, and
 against `coversPoint` as it does `coverage()`. An element's clip is
 compiled in, so it knows no layout: its `regular` is the reference's
 window, which fits the one element that takes it, radiant-holo's `:after`,
-as every Radiant Rare is a Sword & Shield card.
+as every Radiant Rare is a Sword & Shield card. An element may also keep to
+the effect's own region (`Element.withinRegion`: main()'s `cov`, layout and
+inversion included), which a glare needs where its reference clips it: the
+ball holos' glare (`--viewport-edge-clip`, the card inside its border less
+its art) is `clip: 'borders'` and `withinRegion`, so it spares the art
+window the shine spares, and no longer tints the art.
 
 **The effect DSL and the generator.** Each of the 30 effect files under
 `holo/effects/` (e.g. `cosmos-holo.ts`) is a declarative `Effect`

@@ -140,6 +140,14 @@ function filterCall(
   return `  ${target} = ${fn}(${target}, ${b}, ${c}, ${s});`;
 }
 
+/**
+ * An element's `withinRegion` (types.ts) as a factor of its weight: main()'s
+ * `cov`, the effect's region, which it computes before any element.
+ */
+function withinRegion(element: Element): string {
+  return element.withinRegion ? ' * cov' : '';
+}
+
 /** An element on the RGB path: every element that uses no group, exact gradient or alpha texture. */
 function rgbElementCode(element: Element, prefix: string): string {
   const layers = element.layers.map((l, i) => layerCode(l, i, prefix)).join('\n');
@@ -147,7 +155,7 @@ function rgbElementCode(element: Element, prefix: string): string {
   // An element's own clip (types.ts) gates its mix alone; the effect's clip
   // still applies to the whole shine after every element (compileEffect).
   const clip = element.clip ? regionFor(element.clip) : undefined;
-  const weight = `clamp(${opacity} * uCardOpacity, 0.0, 1.0)${clip ? ` * clip_${prefix}` : ''}`;
+  const weight = `clamp(${opacity} * uCardOpacity, 0.0, 1.0)${clip ? ` * clip_${prefix}` : ''}${withinRegion(element)}`;
   return [
     `  // --- ${prefix}`,
     layers,
@@ -309,7 +317,7 @@ function childCode(child: Element, index: number, parent: string): string {
 function rgbaElementCode(element: Element, prefix: string): string {
   const opacity = driven(element.opacity, 1);
   const clip = element.clip ? insideRectOf(element.clip) : undefined;
-  const weight = `stack_${prefix}.a * clamp(${opacity} * uCardOpacity, 0.0, 1.0)${clip ? ` * clip_${prefix}` : ''}`;
+  const weight = `stack_${prefix}.a * clamp(${opacity} * uCardOpacity, 0.0, 1.0)${clip ? ` * clip_${prefix}` : ''}${withinRegion(element)}`;
   return [
     `  // --- ${prefix} (rgba)`,
     `  vec4 stack_${prefix} = vec4(0.0);`,
@@ -335,6 +343,8 @@ export function compileEffect(effect: Effect): string {
   // that glare left it, not as the bare art.
   const under = beneath ? `${beneath}\n\n  vec3 base = acc;\n` : '';
   const backdrop = beneath ? 'base' : 'art';
+  // The glare below the clip mix is unclipped unless an element asks: a glare
+  // the reference clips carries its own clip and withinRegion (types.ts).
 
   // NO `#version` directive here. three.js prepends `#version 300 es` itself
   // whenever `glslVersion` is set on the material (WebGLProgram.js builds

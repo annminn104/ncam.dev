@@ -15,10 +15,15 @@ const LAYOUTS: CardLayout[] = [
   'bw-xy',
   'sm',
   'swsh',
+  'sv',
+  'pocket',
+  'modern-ex',
   'other',
 ];
 const SHAPES: ClipShape[] = ['full', 'regular', 'stage', 'trainer', 'borders'];
 const FIXED: ClipShape[] = ['full', 'trainer', 'borders'];
+/** The layouts that measured a trainer's window of their own. */
+const MEASURED_TRAINER: CardLayout[] = ['sv'];
 
 describe('regionFor', () => {
   it('returns the reference inset for a card no measured layout claims', () => {
@@ -45,10 +50,27 @@ describe('regionFor', () => {
     expect(regionFor('full')).toEqual({ top: 0, right: 0, bottom: 0, left: 0 });
   });
 
-  it('gives the trainer, border and whole-card shapes one region on every layout', () => {
+  it('gives the border and whole-card shapes one region on every layout', () => {
     for (const layout of LAYOUTS) {
-      for (const shape of FIXED) expect(regionFor(shape, layout)).toEqual(regionFor(shape));
+      for (const shape of ['full', 'borders'] as const) {
+        expect(regionFor(shape, layout)).toEqual(regionFor(shape));
+      }
     }
+  });
+
+  it('gives a trainer the reference’s window but where a layout measured its own', () => {
+    for (const layout of LAYOUTS) {
+      if (MEASURED_TRAINER.includes(layout)) continue;
+      expect(regionFor('trainer', layout), layout).toEqual(regionFor('trainer'));
+    }
+    // A Scarlet & Violet or Mega trainer's art starts 0.7% higher and ends
+    // 0.2% higher than the reference's window, and reaches 0.5% further out.
+    expect(regionFor('trainer', 'sv')).toEqual({
+      top: 0.138,
+      right: 0.077,
+      bottom: 0.48,
+      left: 0.08,
+    });
   });
 
   it('gives the stage shape its layout’s art window, as regular', () => {
@@ -171,5 +193,27 @@ describe('coversPoint', () => {
   it('cuts an SP Pokémon’s portrait out of the art’s bottom right', () => {
     expect(coversPoint('regular', 0.85, 0.47, false, 'dp-sp')).toBe(false);
     expect(coversPoint('regular', 0.5, 0.47, false, 'dp-sp')).toBe(true);
+  });
+
+  it('cuts a Scarlet & Violet evolution’s band and picture, and no more of its art', () => {
+    // Under the band, right of the picture: art the old 57% by 16% step took.
+    expect(coversPoint('stage', 0.3, 0.14, false, 'sv')).toBe(true);
+    expect(coversPoint('stage', 0.3, 0.14, false)).toBe(false);
+    // The band and the picture themselves.
+    expect(coversPoint('stage', 0.4, 0.11, false, 'sv')).toBe(false);
+    expect(coversPoint('stage', 0.12, 0.16, false, 'sv')).toBe(false);
+    // A reverse foil, inverted, lays its foil over both and not over the art.
+    expect(coversPoint('stage', 0.12, 0.16, true, 'sv')).toBe(true);
+    expect(coversPoint('stage', 0.3, 0.14, true, 'sv')).toBe(false);
+  });
+
+  it('foils an ex of the modern frames but its art, inverted, to the card’s very edge', () => {
+    // ex-regular inverts it (select.ts): the text box and the border take the
+    // foil, the illustration none, the evolution's picture being part of it.
+    expect(coversPoint('stage', 0.5, 0.7, true, 'modern-ex')).toBe(true);
+    expect(coversPoint('stage', 0.01, 0.3, true, 'modern-ex')).toBe(true);
+    expect(coversPoint('stage', 0.5, 0.3, true, 'modern-ex')).toBe(false);
+    expect(coversPoint('stage', 0.1, 0.1, true, 'modern-ex')).toBe(false);
+    expect(cutsFor('stage', 'modern-ex')).toEqual([]);
   });
 });

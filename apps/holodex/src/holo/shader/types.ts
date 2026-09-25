@@ -216,6 +216,14 @@ export interface Element {
    */
   clip?: Exclude<ClipShape, 'stage'>;
   /**
+   * Confines this element to the effect's own region as well (coverage(),
+   * the card's shape, layout and inversion): for glare, which the effect's
+   * region does not otherwise reach, when the reference clips it with the
+   * shine's. The ball holos' glare keeps to the card inside its border less
+   * its art window (--viewport-edge-clip): `clip: 'borders'` and this.
+   */
+  withinRegion?: boolean;
+  /**
    * The pseudo-elements that paint inside this element's isolated group, in
    * paint order: resolve the reference's z-index into this order (its
    * pseudo-elements are grid items, so a positive z-index paints after

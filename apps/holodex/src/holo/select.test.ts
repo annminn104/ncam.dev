@@ -358,6 +358,41 @@ describe('selectHolo — Double rare is the standard-layout ex, not a full art',
     expect(selection.shape).toBe('regular');
   });
 
+  it('foils an ex but its art, as its reference’s mask does, on its own frame', () => {
+    const spidops = selectHolo(
+      card({
+        id: 'sv01-019',
+        localId: '019',
+        name: 'Spidops ex',
+        rarity: 'Double rare',
+        stage: 'Stage1',
+      }),
+    );
+    expect([spidops.effect, spidops.shape, spidops.layout, spidops.invert]).toEqual([
+      'ex-regular',
+      'stage',
+      'modern-ex',
+      true,
+    ]);
+    // Pocket's ex is Four Diamond, the same effect and frame.
+    const venusaur = selectHolo(
+      card({
+        id: 'A1-004',
+        localId: '004',
+        name: 'Venusaur ex',
+        rarity: 'Four Diamond',
+        stage: 'Stage2',
+      }),
+    );
+    expect([venusaur.effect, venusaur.layout, venusaur.invert]).toEqual([
+      'ex-regular',
+      'modern-ex',
+      true,
+    ]);
+    // The inversion is ex-regular's alone: a Rare of the same set is not inverted.
+    expect(selectHolo(card({ id: 'sv01-004', localId: '004', rarity: 'Rare' })).invert).toBe(false);
+  });
+
   it('gives a Double rare Stage1/Stage2 card the stepped stage region', () => {
     expect(selectHolo(card({ rarity: 'Double rare', stage: 'Stage1' })).shape).toBe('stage');
     expect(selectHolo(card({ rarity: 'Double rare', stage: 'Stage2' })).shape).toBe('stage');
@@ -482,15 +517,21 @@ const SETS_BY_LAYOUT: Partial<Record<CardLayout, string[]>> = {
     ...['swsh9tg', 'swsh10tg', 'swsh10', 'swsh10.5', 'swsh11tg', 'swsh11', 'swsh12tg', 'swsh12'],
     ...['swsh12.5gg', 'swsh12.5'],
   ],
-  // Unmeasured: Scarlet & Violet, Pocket and Mega; Pokémon Rumble's own
-  // frame; and the four sets with no card art at all.
-  other: [
-    ...['miscp', 'jumbo', 'sp', 'bog', 'ru1', '2023sv', '2024sv', 'svp', 'sve', 'sv01', 'sv02'],
-    ...['sv03', 'sv03.5', 'mfb', 'sv04', 'sv04.5', 'sv05', 'sv06', 'sv06.5', 'sv07', 'sv08'],
-    ...['sv08.5', 'sv09', 'sv10', 'sv10.5w', 'sv10.5b', 'A1', 'P-A', 'A1a', 'A2', 'A2a', 'A2b'],
-    ...['A3', 'A3a', 'A3b', 'A4', 'A4a', 'B1', 'B1a', 'B2', 'B2a', 'mee', 'mep', 'me01', 'me02'],
-    ...['me02.5', 'me03', 'me04', 'me05', '30th-c', '30th'],
+  // Scarlet & Violet and Mega, one frame, with 30th Celebration and the SV
+  // McDonald's collections.
+  sv: [
+    ...['2023sv', '2024sv', 'svp', 'sv01', 'sv02', 'sv03', 'sv03.5', 'sv04', 'sv04.5', 'sv05'],
+    ...['sv06', 'sv06.5', 'sv07', 'sv08', 'sv08.5', 'sv09', 'sv10', 'sv10.5w', 'sv10.5b', 'mep'],
+    ...['me01', 'me02', 'me02.5', 'me03', 'me04', 'me05', '30th'],
   ],
+  pocket: [
+    ...['A1', 'P-A', 'A1a', 'A2', 'A2a', 'A2b', 'A3', 'A3a', 'A3b', 'A4', 'A4a', 'B1', 'B1a'],
+    ...['B2', 'B2a'],
+  ],
+  // Pokémon Rumble's own frame; the energies and mfb, which draw no foil;
+  // 30th-c's reprints in their old frames, which draw none either; and the
+  // four sets with no card art at all.
+  other: ['miscp', 'jumbo', 'sp', 'bog', 'ru1', 'sve', 'mfb', 'mee', '30th-c'],
 };
 
 describe('layoutOf — the frame a card is printed in', () => {
@@ -534,6 +575,24 @@ describe('layoutOf — the frame a card is printed in', () => {
 
   it('leaves a card whose id does not end in its number to other', () => {
     expect(layoutOf({ id: 'dp1', localId: '2', name: 'Test', rarity: 'Holo Rare' })).toBe('other');
+  });
+
+  it('frames a Scarlet & Violet, Mega or Pocket ex by its name, suffix or none', () => {
+    // TCGdex gives me02's Mega Charizard X ex and Oricorio ex no suffix.
+    for (const [set, name] of [
+      ['sv01', 'Spidops ex'],
+      ['sv06', 'Teal Mask Ogerpon ex'],
+      ['me02', 'Mega Charizard X ex'],
+      ['me02', 'Oricorio ex'],
+      ['A1', 'Venusaur ex'],
+      ['svp', 'Paldean Wooper ex'],
+    ]) {
+      expect(layout(set, { name, rarity: 'Double rare' }), name).toBe('modern-ex');
+    }
+    expect(layout('sv01', { name: 'Pineco' })).toBe('sv');
+    // An EX of the older frames keeps its set's: the name rule is modern only.
+    expect(layout('xy1', { name: 'Venusaur EX' })).toBe('bw-xy');
+    expect(layout('ex1', { name: 'Blaziken ex' })).toBe('ex');
   });
 });
 
