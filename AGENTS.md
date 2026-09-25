@@ -61,6 +61,12 @@ pnpm assets     # downloads project image assets where apps define it
   `apps/toonhub/src/mount.ts`), never assume the host origin.
 - `shared: {}` — there is no shared framework to dedupe. Keep it that way unless a
   genuine shared runtime is introduced.
+- `dts: false` on every remote (`packages/mf-remote`) as on the host: the host
+  types each remote by hand in `apps/portfolio/src/types/remote/`. Don't turn
+  the plugin's generated types back on: in dev it runs a full `tsc` for every
+  file event a dev server sees, all at once and never debounced, and a build
+  writing into `dist-ssr` (which Vite's watcher did not ignore; the remote
+  config now does) once spawned ~400 and took the machine down.
 
 ## Adding a new project
 
