@@ -4,8 +4,7 @@ import { EFFECTS } from './index';
 
 /**
  * The 22 older effects' shines, ported from pokemon-cards-css on its unmasked
- * path (docs/superpowers/specs/2026-09-25-holodex-legacy-shine-ports-
- * design.md). Every value here is copied by hand from the rarity's CSS, never
+ * path. Every value here is copied by hand from the rarity's CSS, never
  * computed with css.ts, so a conversion that drifts shows up against the CSS
  * it came from. Layers are listed bottom first, CSS's order reversed.
  */

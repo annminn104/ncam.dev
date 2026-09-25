@@ -9,10 +9,7 @@ packaged as a **self-contained** React Module Federation remote (same model as
 
 **Current state: implemented.** Mounted by the portfolio host at
 `/projects/holodex/...` via the host-owned, route-aware remote contract (see
-"What it exposes" below); also runs fully standalone on `:9007`. Full design:
-[`docs/superpowers/specs/2026-09-21-holodex-design.md`](../../docs/superpowers/specs/2026-09-21-holodex-design.md);
-task-by-task plan:
-[`docs/superpowers/plans/2026-09-21-holodex.md`](../../docs/superpowers/plans/2026-09-21-holodex.md).
+"What it exposes" below); also runs fully standalone on `:9007`.
 
 ## What it exposes
 
@@ -497,8 +494,8 @@ functions: CSS's sixteen, including the four non-separable HSL ones, and
 compositing of a colour with alpha onto another) and `sources.ts` (one GLSL
 expression per `Source` kind) around per-effect layer/filter code generated
 from the `Effect` data. This is a declarative-description-compiled-to-GLSL
-design, not the hand-written GLSL chunks the original plan sketched — the
-one deviation from the plan, also recorded in the spec's Status line.
+design, not the hand-written GLSL chunks the original plan sketched: the
+one deviation from that plan.
 
 **Two compile paths.** An element compiles on the **RGB path** — its layers
 blended as opaque colour, each stop's alpha folded toward the colour its
@@ -642,7 +639,7 @@ If either count changes, something started importing `holo/scene`,
 `holo/shader/*` or `holo/effects/*` at module scope (outside a dynamic
 `import()`) — trace it from there.
 
-## Bundle budget (§10) — measured 2026-09-22 at `372ddba`, fresh `pnpm --filter @ncam/holodex build`
+## Bundle budget — measured 2026-09-22 at `372ddba`, fresh `pnpm --filter @ncam/holodex build`
 
 **Lazy chunk re-measured 2026-09-25 at `433e8fe`**, after the eight Scarlet &
 Violet effects and their shaders landed: `scene-*.js` is 545.22 kB raw,
@@ -684,7 +681,7 @@ only through the `./ssr` expose or the standalone `index.html` bootstrap
 (Gzipping each chunk separately and summing is a conservative overestimate —
 served together they'd compress a little better than this.) The remote's own
 React copy (`react-dom/client` + its small facade chunk) is **66.36 KB gz**,
-not itself budgeted by §10 and effectively flat against the ≈66.4 KB gz
+not itself budgeted and effectively flat against the ≈66.4 KB gz
 figure recorded before this branch.
 
 **Bundle history on this branch, so nobody chases a ghost.** The lazy-chunk
@@ -726,9 +723,9 @@ it in. This note uses Vite's own report throughout, because that is what
 running the command above actually prints, with no extra tooling required to
 reproduce it.
 
-If a budget is ever missed here, the fix is a spec-level decision (three.js
-vs. OGL vs. raw WebGL2 behind the same `HoloScene` interface, design §2) —
-report it, don't just swap the library.
+If a budget is ever missed here, the fix is a design decision (three.js vs.
+OGL vs. raw WebGL2 behind the same `HoloScene` interface) — report it, don't
+just swap the library.
 
 ## Tests are DOM-free
 

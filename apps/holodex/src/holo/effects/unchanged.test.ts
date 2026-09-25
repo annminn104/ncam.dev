@@ -5,8 +5,7 @@ import { EFFECTS } from './index';
 import type { EffectId } from '../select';
 
 /**
- * The shine ports (docs/superpowers/specs/2026-09-25-holodex-legacy-shine-
- * ports-design.md) extend the compiler with an RGBA path, but promise that
+ * The shine ports extend the compiler with an RGBA path, but promise that
  * every element using none of it compiles exactly as before. This holds them
  * to it: a digest of each block that must not move, recorded before the
  * compiler changed. A change here means an untouched effect's shader changed.
