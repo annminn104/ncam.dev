@@ -475,11 +475,27 @@ leave out the silver rule box (17% and 3% of it foiled), so a Scarlet &
 Violet `Hyper rare` is the whole card less its rule box: an ex's
 (`sv-hyper-ex`, by the ` ex` its name ends in, as every one of the 41
 does) or a trainer's (`sv-hyper`, whose trainer region carries the cut:
-`LayoutClip.trainerCuts`, the one frame so far that cuts a trainer); an
-energy has none. Cut, the two agree with their masks on 66.2% and 79.9% of
-the card, from 63.6% and 75.0%. A `Mega Hyper Rare`, whose rule box is gold
-like the rest of it, and a Pocket `Crown`, neither with a mask to measure
-against, take the whole card (`full-card`).
+`LayoutClip.trainerCuts`); an energy has none. Cut, the two agree with their
+masks on 66.2% and 79.9% of the card, from 63.6% and 75.0%. A `Mega Hyper
+Rare`, whose rule box is gold like the rest of it, and a Pocket `Crown`,
+neither with a mask to measure against, take the whole card (`full-card`).
+
+`ex-full-art`, the last of them, left `FULL_ART` too. All sixteen of 151's
+Ultra Rare masks (#182 to #197: twelve ex, four Supporters) foil the border,
+the tab and the band, but leave out the rule box (27% of an ex's foiled, 4%
+of a Supporter's) and an evolution's pre-evolution picture (25%). A
+Scarlet & Violet or Mega `Ultra Rare` (363: 207 Pokémon, all ex, 155
+trainers, one energy) is therefore the whole card less those: an ex's rule
+box and picture (`sv-ultra-ex`) or a trainer's rule box (`sv-ultra`), the
+boxes the hyper rare and special illustration rare frames measured, which
+fit it too; the energy has none. It is the one rarity whose frame is split
+by era (`MODERN_LAYOUT_BY_RARITY`): an older `Ultra Rare`, a V or GX full
+art on `v-full-art`, keeps its set's frame and its whole-card foil. A Mega
+Ultra Rare's rule box is gold, where Scarlet & Violet's is silver, and is
+cut as the same frame's box, which no mask shows either way. Over the frame
+parts the masks now agree with the region on 89.9% of the card, from 77.4%
+(each Supporter 70% to 94.5%). A Pocket `Two Star`, with no mask, takes
+the whole card (`full-card`), as before.
 
 **The effect DSL and the generator.** Each of the 30 effect files under
 `holo/effects/` (e.g. `cosmos-holo.ts`) is a declarative `Effect`

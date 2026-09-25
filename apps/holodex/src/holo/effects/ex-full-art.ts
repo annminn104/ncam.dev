@@ -27,7 +27,9 @@ import {
  * pokemon-cards-151's ex-full-art.css (css.ts has the conversions and the
  * approximations every port shares). The reference draws a per-card mask as
  * the top layer of its stack and confines the foil with it; the mask layer is
- * dropped, and select.ts's clip region stands in.
+ * dropped, and select.ts's clip region stands in: the whole card, less the
+ * rule box and an evolution's pre-evolution picture, which those masks leave
+ * out (regions.ts's `sv-ultra` and `sv-ultra-ex`).
  *
  * Approximations:
  * - --foil, the card's own foil texture, is the `iri` speckle.

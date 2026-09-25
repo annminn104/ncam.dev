@@ -585,6 +585,8 @@ describe('coverage() in GLSL agrees with coversPoint() in JS', () => {
     'sv-special-illustration',
     'sv-hyper',
     'sv-hyper-ex',
+    'sv-ultra',
+    'sv-ultra-ex',
     'full-card',
     'other',
   ];

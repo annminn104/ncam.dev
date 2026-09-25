@@ -23,12 +23,22 @@ const LAYOUTS: CardLayout[] = [
   'sv-special-illustration',
   'sv-hyper',
   'sv-hyper-ex',
+  'sv-ultra',
+  'sv-ultra-ex',
   'full-card',
   'other',
 ];
 const SHAPES: ClipShape[] = ['full', 'regular', 'stage', 'trainer', 'borders'];
 /** The layouts that measured a trainer's window of their own. */
-const MEASURED_TRAINER: CardLayout[] = ['sv', 'sv-special-illustration', 'sv-hyper', 'full-card'];
+const MEASURED_TRAINER: CardLayout[] = [
+  'sv',
+  'sv-special-illustration',
+  'sv-hyper',
+  'sv-ultra',
+  'full-card',
+];
+/** The layouts that cut a trainer's window. */
+const CUT_TRAINER: CardLayout[] = ['sv-hyper', 'sv-ultra'];
 
 describe('regionFor', () => {
   it('returns the reference inset for a card no measured layout claims', () => {
@@ -117,7 +127,7 @@ describe('cutsFor', () => {
   it('cuts nothing out of the border or the whole card, nor a trainer’s window unmeasured', () => {
     for (const layout of LAYOUTS) {
       for (const shape of ['full', 'borders'] as const) expect(cutsFor(shape, layout)).toEqual([]);
-      if (layout !== 'sv-hyper') expect(cutsFor('trainer', layout), layout).toEqual([]);
+      if (!CUT_TRAINER.includes(layout)) expect(cutsFor('trainer', layout), layout).toEqual([]);
     }
   });
 
@@ -145,6 +155,33 @@ describe('cutsFor', () => {
     // A Mega Hyper Rare or a Crown keeps the whole card, rule box and all.
     for (const shape of ['regular', 'stage', 'trainer'] as const) {
       expect(covers(shape, 0.6, 0.925, 'full-card'), shape).toBe(true);
+    }
+  });
+
+  it('foils an Ultra Rare’s whole card but its rule box and an evolution’s picture', () => {
+    const covers = (shape: ClipShape, x: number, y: number, layout: CardLayout) =>
+      coversPoint(shape, x, y, false, layout);
+    // An ex: its rule box, and on an evolution the picture in its ring.
+    expect(covers('regular', 0.6, 0.925, 'sv-ultra-ex')).toBe(false);
+    expect(covers('stage', 0.6, 0.925, 'sv-ultra-ex')).toBe(false);
+    expect(covers('stage', 0.1, 0.12, 'sv-ultra-ex')).toBe(false);
+    expect(covers('regular', 0.1, 0.12, 'sv-ultra-ex')).toBe(true);
+    // A trainer: its rule box. An energy, on the same frame: nothing.
+    expect(covers('trainer', 0.6, 0.93, 'sv-ultra')).toBe(false);
+    expect(covers('regular', 0.6, 0.93, 'sv-ultra')).toBe(true);
+    // Everything else, the border, the tab, the band and the ring included.
+    for (const [x, y] of [
+      [0.01, 0.5],
+      [0.5, 0.01],
+      [0.5, 0.99],
+      [0.08, 0.035],
+      [0.4, 0.105],
+      [0.02, 0.12],
+      [0.2, 0.925],
+      [0.5, 0.5],
+    ]) {
+      expect(covers('stage', x, y, 'sv-ultra-ex'), `ex ${x}, ${y}`).toBe(true);
+      expect(covers('trainer', x, y, 'sv-ultra'), `trainer ${x}, ${y}`).toBe(true);
     }
   });
 

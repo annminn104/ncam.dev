@@ -344,6 +344,7 @@ const EX_FRAME: Partial<Record<CardLayout, CardLayout>> = {
   sv: 'modern-ex',
   pocket: 'modern-ex',
   'sv-hyper': 'sv-hyper-ex',
+  'sv-ultra': 'sv-ultra-ex',
 };
 
 /**
@@ -354,7 +355,7 @@ const EX_FRAME: Partial<Record<CardLayout, CardLayout>> = {
  * (232: 167 Pokémon ex and 65 Supporters), and the gold tier's: a Scarlet &
  * Violet `Hyper rare` (74: 41 Pokémon, all ex, 21 trainers, 12 energies) and
  * a `Mega Hyper Rare` (8, Mega ex) or Pocket `Crown` (24), which take the
- * whole card (checked 2026-09-25).
+ * whole card, as a Pocket `Two Star` (263) does (checked 2026-09-25).
  */
 const LAYOUT_BY_RARITY: Readonly<Record<string, CardLayout>> = {
   'Rare Holo LV.X': 'lv-x',
@@ -366,6 +367,19 @@ const LAYOUT_BY_RARITY: Readonly<Record<string, CardLayout>> = {
   'Hyper rare': 'sv-hyper',
   'Mega Hyper Rare': 'full-card',
   Crown: 'full-card',
+  'Two Star': 'full-card',
+};
+
+/**
+ * The rarities whose frame changed with the Scarlet & Violet era, as
+ * MODERN_EFFECT_BY_RARITY's effects did, and the frame a Scarlet & Violet or
+ * Mega card of each takes: an `Ultra Rare` (363: 207 Pokémon, all ex, 155
+ * trainers, one energy) is the full-art ex or trainer. Before them it is a V
+ * or GX full art, which keeps its set's frame and foils the whole card
+ * whatever that frame is (FULL_ART).
+ */
+const MODERN_LAYOUT_BY_RARITY: Readonly<Record<string, CardLayout>> = {
+  'Ultra Rare': 'sv-ultra',
 };
 
 /**
@@ -384,6 +398,7 @@ const SP_SET = /^(?:pl\d|dpp)$/;
 export function layoutOf(card: Pick<Card, 'id' | 'localId' | 'name' | 'rarity'>): CardLayout {
   const setId = setIdOf(card);
   const layout =
+    (card.rarity && eraOf(card) === 'modern' && MODERN_LAYOUT_BY_RARITY[card.rarity]) ||
     (card.rarity && LAYOUT_BY_RARITY[card.rarity]) ||
     (SP_SET.test(setId) && SP_NAME.test(card.name) ? 'dp-sp' : undefined) ||
     (LAYOUT_BY_SET.find(([pattern]) => pattern.test(setId))?.[1] ?? 'other');
@@ -437,14 +452,14 @@ function reverseEffect(card: Card): EffectId {
 }
 
 /**
- * Effects whose foil covers the entire card rather than an art window. For
- * ex-full-art the reference has no clip-path, only a per-card mask we cannot
- * have (or `--mask: none`), so with the mask gone the foil covers the card.
- * ex-special-illustration-rare and hyper-rare are the same, but for the parts
- * of their masks a box can follow, which they leave out: an evolution's
- * pre-evolution picture, and a gold card's rule box. They take the whole card
- * as their rarity's frame (regions.ts's `sv-special-illustration`, `sv-hyper`
- * and the rest) less those, by the rules below, instead of `full`. For the older effects, the
+ * Effects whose foil covers the entire card rather than an art window. The
+ * Scarlet & Violet full arts are not among them: for ex-full-art,
+ * ex-special-illustration-rare and hyper-rare the reference has no clip-path,
+ * only a per-card mask we cannot have, and those masks foil the whole card
+ * but for the parts a box can follow, which they leave out: an evolution's
+ * pre-evolution picture, and a rule box. They take the whole card as their
+ * rarity's frame (regions.ts's `sv-ultra`, `sv-special-illustration`,
+ * `sv-hyper` and the rest) less those, by the rules below. For the older effects, the
  * shine ports (legacy-shines.test.ts) take the clip-path pokemon-cards-css's
  * unmasked path computes, which for these is none. A gallery V is styled by
  * v-full-art.css's rules and a gallery VMAX by rainbow-alt.css's, so they are
@@ -468,7 +483,6 @@ const FULL_ART: ReadonlySet<EffectId> = new Set<EffectId>([
   'v-max',
   'v-star',
   'swsh-pikachu',
-  'ex-full-art',
 ]);
 
 /**

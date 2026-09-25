@@ -52,17 +52,22 @@ describe('EFFECT_GALLERY — one section per effect, three cards each', () => {
   });
 
   it('opens ex-regular and ex-full-art, side by side, on one Pokémon at two rarities', () => {
-    // Both Venusaur ex: Double rare keeps the art-window clip, Ultra Rare foils
-    // the whole card, and /effects/ex-regular and /effects/ex-full-art open on
-    // them. (The two ex tiers were v-regular and v-full-art before Scarlet &
-    // Violet had effects of its own.)
+    // Both Venusaur ex: Double rare foils the card but its illustration,
+    // Ultra Rare the whole card but its rule box and pre-evolution picture,
+    // and /effects/ex-regular and /effects/ex-full-art open on them. (The two
+    // ex tiers were v-regular and v-full-art before Scarlet & Violet had
+    // effects of its own.)
     const at = (effect: EffectId) => effects.indexOf(effect);
     expect(at('ex-regular')).toBeGreaterThanOrEqual(0);
     expect(at('ex-full-art') - at('ex-regular')).toBe(1);
     expect(section('ex-regular')?.cardIds[0]).toBe('sv03.5-003');
     expect(section('ex-full-art')?.cardIds[0]).toBe('sv03.5-182');
-    expect(selectHolo(CAPTURED_CARDS['sv03.5-003']).shape).toBe('stage');
-    expect(selectHolo(CAPTURED_CARDS['sv03.5-182']).shape).toBe('full');
+    const layoutOfCard = (id: string) => {
+      const { shape, layout, invert } = selectHolo(CAPTURED_CARDS[id]);
+      return [shape, layout, invert];
+    };
+    expect(layoutOfCard('sv03.5-003')).toEqual(['stage', 'modern-ex', true]);
+    expect(layoutOfCard('sv03.5-182')).toEqual(['stage', 'sv-ultra-ex', false]);
   });
 });
 

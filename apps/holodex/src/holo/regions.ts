@@ -49,6 +49,8 @@ export type CardLayout =
   | 'sv-special-illustration'
   | 'sv-hyper'
   | 'sv-hyper-ex'
+  | 'sv-ultra'
+  | 'sv-ultra-ex'
   | 'full-card'
   | 'other';
 
@@ -262,9 +264,31 @@ const LAYOUTS: Readonly<Record<CardLayout, LayoutClip>> = {
     regular: [box(0.36, 0.892, 0.975, 0.958)],
     stage: [box(0.36, 0.892, 0.975, 0.958)],
   },
+  // A Scarlet & Violet or Mega Ultra Rare, the full-art ex or trainer: the
+  // whole card, but a trainer's rule box, and on an evolution the
+  // pre-evolution's picture, where the special illustration rare's frame has
+  // it. The reference has no clip-path, only its per-card masks, and all
+  // sixteen of 151's (#182 to #197, 2026-09-25) foil the border, the tab and
+  // the band, but leave out the picture (25% of it foiled) and the rule box
+  // (4% of a Supporter's). A Mega's rule box is gold, where an SV one's is
+  // silver, and is cut the same, as the same frame's box: no mask shows it.
+  'sv-ultra': {
+    art: { top: 0, right: 0, bottom: 0, left: 0 },
+    regular: [],
+    stage: [box(0.035, 0.07, 0.163, 0.18)],
+    trainer: { top: 0, right: 0, bottom: 0, left: 0 },
+    trainerCuts: [box(0.335, 0.875, 0.975, 0.968)],
+  },
+  // An Ultra Rare Pokémon, always an ex: the same, but its "Pokémon ex rule"
+  // box (27% of it foiled on the masks), where a Hyper rare ex has its own.
+  'sv-ultra-ex': {
+    art: { top: 0, right: 0, bottom: 0, left: 0 },
+    regular: [box(0.36, 0.892, 0.975, 0.958)],
+    stage: [box(0.36, 0.892, 0.975, 0.958), box(0.035, 0.07, 0.163, 0.18)],
+  },
   // The whole card, whatever it is: a Mega Hyper Rare, whose rule box is
-  // gold like the rest of it, and a Pocket Crown, neither with a mask to
-  // measure against.
+  // gold like the rest of it, and Pocket's Crown and Two Star, none with a
+  // mask to measure against.
   'full-card': {
     art: { top: 0, right: 0, bottom: 0, left: 0 },
     regular: [],

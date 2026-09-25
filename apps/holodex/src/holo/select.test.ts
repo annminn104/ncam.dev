@@ -17,7 +17,7 @@ import {
   type HoloSelection,
 } from './select';
 import { hsl } from './effects/css';
-import type { CardLayout } from './regions';
+import { coversPoint, type CardLayout } from './regions';
 
 /** What a selection shows: its effect, where it is confined, and whether that is inverted. */
 const shown = ({ effect, shape, invert }: HoloSelection) => ({ effect, shape, invert });
@@ -422,12 +422,19 @@ describe('selectHolo — Double rare is the standard-layout ex, not a full art',
 
   it('still gives Ultra Rare the full-art treatment — the other ex tier', () => {
     // Regression guard: Double rare and Ultra Rare are both "ex" cards but
-    // must stay on opposite sides of FULL_ART. If a future edit collapses
-    // them back together, this goes red. The ex Ultra Rare is a Scarlet &
-    // Violet (or Mega) card: before them, Ultra Rare was the V/GX full art.
-    const selection = selectHolo(card({ id: 'sv03.5-182', localId: '182', rarity: 'Ultra Rare' }));
-    expect(selection.effect).toBe('ex-full-art');
-    expect(selection.shape).toBe('full');
+    // must stay on opposite sides of the art: a Double rare foils the card
+    // but its illustration, an Ultra Rare the whole card, illustration first.
+    // If a future edit collapses them back together, this goes red. The ex
+    // Ultra Rare is a Scarlet & Violet (or Mega) card: before them, Ultra
+    // Rare was the V/GX full art.
+    const covers = (rarity: string) => {
+      const s = selectHolo(
+        card({ id: 'sv03.5-182', localId: '182', name: 'Venusaur ex', rarity, stage: 'Stage2' }),
+      );
+      return [s.effect, coversPoint(s.shape, 0.5, 0.3, s.invert, s.layout, s.border)];
+    };
+    expect(covers('Ultra Rare')).toEqual(['ex-full-art', true]);
+    expect(covers('Double rare')).toEqual(['ex-regular', false]);
   });
 });
 
@@ -638,8 +645,13 @@ describe('selectHolo — the era splits, both arms of each', () => {
   it('gives a Scarlet & Violet Ultra Rare the full-art ex, and an older one the full-art V or GX', () => {
     const modern = selectHolo(CAPTURED_CARDS['sv03.5-182']);
     const older = selectHolo(CAPTURED_CARDS['sm9-1']);
-    expect([modern.effect, modern.shape]).toEqual(['ex-full-art', 'full']);
-    expect([older.effect, older.shape]).toEqual(['v-full-art', 'full']);
+    expect([modern.effect, modern.shape, modern.layout]).toEqual([
+      'ex-full-art',
+      'stage',
+      'sv-ultra-ex',
+    ]);
+    // The older one keeps its set's frame: its foil covers the card whatever.
+    expect([older.effect, older.shape, older.layout]).toEqual(['v-full-art', 'full', 'sm']);
   });
 });
 
@@ -670,10 +682,63 @@ describe('selectHolo — the Scarlet & Violet and Pocket rows, in every era', ()
 });
 
 describe('selectHolo — clip shape of the Scarlet & Violet effects', () => {
-  it('foils the whole card for the full-art ex', () => {
-    // Its reference CSS confines it with a per-card mask and no clip-path;
-    // with no mask to drop in, the foil covers the card.
-    expect(selectHolo(CAPTURED_CARDS['sv03.5-182']).shape).toBe('full');
+  it('foils an Ultra Rare’s whole card but its rule box and pre-evolution picture', () => {
+    // 151's sixteen masks leave both out; a box can follow each.
+    const venusaur = selectHolo(CAPTURED_CARDS['sv03.5-182']);
+    expect([venusaur.effect, venusaur.shape, venusaur.layout]).toEqual([
+      'ex-full-art',
+      'stage',
+      'sv-ultra-ex',
+    ]);
+    const megaVenusaur = selectHolo(
+      card({
+        id: 'me01-155',
+        localId: '155',
+        name: 'Mega Venusaur ex',
+        rarity: 'Ultra Rare',
+        stage: 'Stage2',
+      }),
+    );
+    expect([megaVenusaur.shape, megaVenusaur.layout]).toEqual(['stage', 'sv-ultra-ex']);
+    const bill = selectHolo(
+      card({
+        id: 'sv03.5-194',
+        localId: '194',
+        name: 'Bill’s Transfer',
+        category: 'Trainer',
+        trainerType: 'Supporter',
+        rarity: 'Ultra Rare',
+      }),
+    );
+    expect([bill.effect, bill.shape, bill.layout]).toEqual(['ex-full-art', 'trainer', 'sv-ultra']);
+    // An energy has no rule box: its region is the whole card.
+    const ignition = selectHolo(
+      card({
+        id: 'me02-124',
+        localId: '124',
+        name: 'Ignition Energy',
+        category: 'Energy',
+        rarity: 'Ultra Rare',
+      }),
+    );
+    expect([ignition.shape, ignition.layout]).toEqual(['regular', 'sv-ultra']);
+  });
+
+  it('foils a Pocket Two Star’s whole card, with no mask to cut it by', () => {
+    const charizard = selectHolo(
+      card({
+        id: 'A1-253',
+        localId: '253',
+        name: 'Charizard ex',
+        rarity: 'Two Star',
+        stage: 'Stage2',
+      }),
+    );
+    expect([charizard.effect, charizard.shape, charizard.layout]).toEqual([
+      'ex-full-art',
+      'stage',
+      'full-card',
+    ]);
   });
 
   it('foils a Hyper rare’s whole gold card but its silver rule box', () => {
