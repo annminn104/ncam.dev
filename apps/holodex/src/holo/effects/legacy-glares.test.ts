@@ -73,6 +73,70 @@ const SHAPE: Record<string, GlareShape> = {
     layerBlends: ['normal', 'overlay'],
     box: [1, 1],
   },
+  // radiant-holo.css: brightness(1) contrast(1.5), hard-light
+  'radiant-holo': {
+    blend: 'hard-light',
+    filter: { brightness: 1, contrast: 1.5 },
+    layerBlends: ['normal'],
+    box: [1, 1],
+  },
+  // rainbow-holo.css: brightness(.9) contrast(1.75), hard-light, calc(pointer-from-center * .9)
+  'rainbow-holo': {
+    blend: 'hard-light',
+    opacity: { base: 0, fromCenter: 0.9 },
+    filter: { brightness: 0.9, contrast: 1.75 },
+    layerBlends: ['normal'],
+    box: [1, 1],
+  },
+  // rainbow-alt.css: brightness(.9) contrast(2), overlay from base.css, opacity .75
+  'rainbow-alt': {
+    blend: 'overlay',
+    opacity: { base: 0.75 },
+    filter: { brightness: 0.9, contrast: 2 },
+    layerBlends: ['normal'],
+    box: [1, 1],
+  },
+  // secret-rare.css: brightness(1.3) contrast(1.5), hard-light
+  'secret-rare': {
+    blend: 'hard-light',
+    filter: { brightness: 1.3, contrast: 1.5 },
+    layerBlends: ['normal'],
+    box: [1, 1],
+  },
+  // swsh-pikachu.css: brightness(.9) contrast(2), hard-light, calc(pointer-from-center * .9)
+  'swsh-pikachu': {
+    blend: 'hard-light',
+    opacity: { base: 0, fromCenter: 0.9 },
+    filter: { brightness: 0.9, contrast: 2 },
+    layerBlends: ['normal'],
+    box: [1, 1],
+  },
+  // v-max.css: brightness(1) contrast(1), hard-light, calc(0.2 + pointer-from-center * 0.8)
+  'v-max': {
+    blend: 'hard-light',
+    opacity: { base: 0.2, fromCenter: 0.8 },
+    filter: { brightness: 1, contrast: 1 },
+    layerBlends: ['normal'],
+    box: [1, 1],
+  },
+  // v-regular.css: brightness(.9) contrast(1.75), hard-light, opacity .5
+  'v-regular': {
+    blend: 'hard-light',
+    opacity: { base: 0.5 },
+    filter: { brightness: 0.9, contrast: 1.75 },
+    layerBlends: ['normal'],
+    box: [1, 1],
+  },
+  // v-star.css: :not(.masked)'s brightness(.55) contrast(2), hard-light, calc(pointer-from-center * .75)
+  'v-star': {
+    blend: 'hard-light',
+    opacity: { base: 0, fromCenter: 0.75 },
+    filter: { brightness: 0.55, contrast: 2 },
+    layerBlends: ['normal'],
+    box: [1, 1],
+  },
+  // amazing-rare.css: :not(.masked)'s multiply, no filter
+  'amazing-rare': { blend: 'multiply', layerBlends: ['normal'], box: [1, 1] },
 };
 
 const glareOf = (id: string): Element => {
@@ -197,5 +261,31 @@ describe('the three with an :after', () => {
     // contrast(1.25), folded toward 0.5: 0.25·0.5 = 0.125
     const [, after] = glareOf('shiny-vmax').layers;
     expectGrey(colourAt(after, 1), 0.125, 'at the far corner');
+  });
+});
+
+describe('the single radials', () => {
+  it('radiant-holo: folds its white .33 toward the grey hard-light leaves alone', () => {
+    // brightness(1) contrast(1.5) turns 0.5 into 0.5: 0.33 + 0.67·0.5
+    const [layer] = glareOf('radiant-holo').layers;
+    expectGrey(colourAt(layer, 0), 0.665, 'at the pointer');
+  });
+
+  it('v-max: folds its white .75 the same way', () => {
+    const [layer] = glareOf('v-max').layers;
+    expectGrey(colourAt(layer, 0), 0.875, 'at the pointer'); // 0.75 + 0.25·0.5
+  });
+
+  it('rainbow-holo: starts from its unpositioned first stop, which CSS puts at 0%', () => {
+    // hsl(0, 0%, 80%), opaque, at 0%; its next stop is at 30%
+    const [layer] = glareOf('rainbow-holo').layers;
+    expectGrey(colourAt(layer, 0), 0.8, 'at the pointer');
+  });
+
+  it('amazing-rare: folds its black .35 toward the white multiply leaves alone', () => {
+    // no filter: 0.35·0 + 0.65·1
+    const [layer] = glareOf('amazing-rare').layers;
+    expectGrey(colourAt(layer, 0), 1, 'at the pointer');
+    expectGrey(colourAt(layer, 1), 0.65, 'at the far corner');
   });
 });

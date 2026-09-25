@@ -1,6 +1,15 @@
 import type { Effect } from '../shader/types';
-import { GLARE_STOPS, SUNPILLAR } from './palette';
+import { BLACK, COVER, WHITE, radial, stop } from './css';
+import { glareNeutral } from './legacy-glare';
+import { SUNPILLAR } from './palette';
 
+/**
+ * An amazing rare. The shine is derived by eye from pokemon-cards-css; the
+ * glare is ported from amazing-rare.css's rule for a card with no mask, a
+ * multiplied radial with no filter, beneath the shine (legacy-glare.ts). Its
+ * masked rules, a second radial through the card's own mask, have nothing to
+ * mask here and are left out.
+ */
 export const amazingRare: Effect = {
   id: 'amazing-rare',
   shine: [
@@ -23,11 +32,20 @@ export const amazingRare: Effect = {
       opacity: { base: 0.45, fromCenter: 0.4 },
     },
   ],
-  glare: [
+  beneath: [
     {
-      layers: [{ source: { kind: 'radial-pointer', stops: GLARE_STOPS }, blend: 'normal' }],
-      mixBlend: 'overlay',
-      opacity: { base: 0.2, fromCenter: 0.6 },
+      layers: [
+        {
+          ...radial(
+            [stop(WHITE, 10), stop(WHITE, 20, 0.85), stop(BLACK, 90, 0.35)],
+            COVER,
+            glareNeutral('multiply'),
+          ),
+          blend: 'normal',
+        },
+      ],
+      mixBlend: 'multiply',
     },
   ],
+  glare: [],
 };

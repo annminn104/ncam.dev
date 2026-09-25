@@ -1,6 +1,16 @@
 import type { Effect } from '../shader/types';
+import { COVER, fixedFilter, hsl, radial, stop } from './css';
+import { glareNeutral } from './legacy-glare';
 import { SUNPILLAR } from './palette';
 
+/** secret-rare.css's .card__glare filter. */
+const GLARE_FILTER = { brightness: 1.3, contrast: 1.5 };
+
+/**
+ * A secret rare. The shine is derived by eye from pokemon-cards-css; the glare
+ * is ported from secret-rare.css, hard-lit, beneath the shine
+ * (legacy-glare.ts).
+ */
 export const secretRare: Effect = {
   id: 'secret-rare',
   shine: [
@@ -45,23 +55,21 @@ export const secretRare: Effect = {
       opacity: { base: 0.35, fromCenter: 0.25 },
     },
   ],
-  glare: [
+  beneath: [
     {
       layers: [
         {
-          source: {
-            kind: 'radial-pointer',
-            stops: [
-              { at: 0, color: [0.82, 0.8, 0.76] },
-              { at: 1, color: [0.13, 0.11, 0.09] },
-            ],
-          },
+          ...radial(
+            [stop(hsl(45, 8, 80), 0, 0.3), stop(hsl(22, 15, 12), 180)],
+            COVER,
+            glareNeutral('hard-light', GLARE_FILTER),
+          ),
           blend: 'normal',
         },
       ],
-      filter: { brightness: { base: 1.3 }, contrast: { base: 1.5 } },
+      filter: fixedFilter(GLARE_FILTER),
       mixBlend: 'hard-light',
-      opacity: { base: 0.2, fromCenter: 0.6 },
     },
   ],
+  glare: [],
 };

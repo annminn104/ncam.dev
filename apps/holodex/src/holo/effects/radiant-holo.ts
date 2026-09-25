@@ -1,6 +1,16 @@
 import type { Effect } from '../shader/types';
-import { GLARE_STOPS, SUNPILLAR } from './palette';
+import { COVER, WHITE, fixedFilter, grey, radial, stop } from './css';
+import { glareNeutral } from './legacy-glare';
+import { SUNPILLAR } from './palette';
 
+/** radiant-holo.css's .card__glare filter. */
+const GLARE_FILTER = { brightness: 1, contrast: 1.5 };
+
+/**
+ * A radiant rare. The shine is derived by eye from pokemon-cards-css; the
+ * glare is ported from radiant-holo.css, hard-lit, beneath the shine
+ * (legacy-glare.ts).
+ */
 export const radiantHolo: Effect = {
   id: 'radiant-holo',
   shine: [
@@ -28,12 +38,21 @@ export const radiantHolo: Effect = {
       opacity: { base: 0.5, fromCenter: 0.4 },
     },
   ],
-  glare: [
+  beneath: [
     {
-      layers: [{ source: { kind: 'radial-pointer', stops: GLARE_STOPS }, blend: 'normal' }],
-      filter: { brightness: { base: 1 }, contrast: { base: 1.6 } },
-      mixBlend: 'overlay',
-      opacity: { base: 0.22, fromCenter: 0.6 },
+      layers: [
+        {
+          ...radial(
+            [stop(WHITE, 0, 0.33), stop(grey(0.25), 110)],
+            COVER,
+            glareNeutral('hard-light', GLARE_FILTER),
+          ),
+          blend: 'normal',
+        },
+      ],
+      filter: fixedFilter(GLARE_FILTER),
+      mixBlend: 'hard-light',
     },
   ],
+  glare: [],
 };

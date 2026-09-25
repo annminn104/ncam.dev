@@ -1,5 +1,16 @@
 import type { Effect } from '../shader/types';
+import { COVER, fixedFilter, grey, radial, stop } from './css';
+import { glareNeutral } from './legacy-glare';
 
+/** swsh-pikachu.css's .card__glare filter. */
+const GLARE_FILTER = { brightness: 0.9, contrast: 2 };
+
+/**
+ * Crown Zenith's gold Pikachu. The shine is derived by eye from
+ * pokemon-cards-css; the glare is ported from swsh-pikachu.css, hard-lit,
+ * beneath the shine (legacy-glare.ts), and only as strong as the pointer is
+ * far from the middle. Its first stop has no position, which CSS reads as 0%.
+ */
 export const swshPikachu: Effect = {
   id: 'swsh-pikachu',
   shine: [
@@ -31,22 +42,23 @@ export const swshPikachu: Effect = {
       opacity: { base: 0.45, fromCenter: 0.4 },
     },
   ],
-  glare: [
+  beneath: [
     {
       layers: [
         {
-          source: {
-            kind: 'radial-pointer',
-            stops: [
-              { at: 0, color: [1, 0.98, 0.85] },
-              { at: 1, color: [0.1, 0.08, 0.02] },
-            ],
-          },
+          ...radial(
+            [stop(grey(0.8), 0), stop(grey(0.749), 30, 0.25), stop(grey(0.216), 130)],
+            COVER,
+            glareNeutral('hard-light', GLARE_FILTER),
+          ),
           blend: 'normal',
         },
       ],
+      filter: fixedFilter(GLARE_FILTER),
+      // calc(var(--pointer-from-center) * .9)
+      opacity: { base: 0, fromCenter: 0.9 },
       mixBlend: 'hard-light',
-      opacity: { base: 0.2, fromCenter: 0.7 },
     },
   ],
+  glare: [],
 };

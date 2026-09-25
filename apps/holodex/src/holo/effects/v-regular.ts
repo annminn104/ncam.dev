@@ -1,6 +1,16 @@
 import type { Effect } from '../shader/types';
-import { GLARE_STOPS, SUNPILLAR } from './palette';
+import { COVER, WHITE, fixedFilter, grey, hsl, radial, stop } from './css';
+import { glareNeutral } from './legacy-glare';
+import { SUNPILLAR } from './palette';
 
+/** v-regular.css's .card__glare filter. */
+const GLARE_FILTER = { brightness: 0.9, contrast: 1.75 };
+
+/**
+ * A V. The shine is derived by eye from pokemon-cards-css; the glare is ported
+ * from v-regular.css, hard-lit at half strength, beneath the shine
+ * (legacy-glare.ts).
+ */
 export const vRegular: Effect = {
   id: 'v-regular',
   shine: [
@@ -22,11 +32,22 @@ export const vRegular: Effect = {
       opacity: { base: 0.5, fromCenter: 0.35 },
     },
   ],
-  glare: [
+  beneath: [
     {
-      layers: [{ source: { kind: 'radial-pointer', stops: GLARE_STOPS }, blend: 'normal' }],
+      layers: [
+        {
+          ...radial(
+            [stop(WHITE, 0), stop(hsl(210, 3, 54), 45, 0.33), stop(grey(0.2), 130, 0.9)],
+            COVER,
+            glareNeutral('hard-light', GLARE_FILTER),
+          ),
+          blend: 'normal',
+        },
+      ],
+      filter: fixedFilter(GLARE_FILTER),
+      opacity: { base: 0.5 },
       mixBlend: 'hard-light',
-      opacity: { base: 0.18, fromCenter: 0.6 },
     },
   ],
+  glare: [],
 };

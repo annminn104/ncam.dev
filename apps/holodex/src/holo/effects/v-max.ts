@@ -1,6 +1,16 @@
 import type { Effect } from '../shader/types';
+import { BLACK, COVER, WHITE, fixedFilter, radial, stop } from './css';
+import { glareNeutral } from './legacy-glare';
 import { SUNPILLAR } from './palette';
 
+/** v-max.css's .card__glare filter. */
+const GLARE_FILTER = { brightness: 1, contrast: 1 };
+
+/**
+ * A VMAX. The shine is derived by eye from pokemon-cards-css; the glare is
+ * ported from v-max.css, hard-lit, beneath the shine (legacy-glare.ts), a
+ * fifth strong at the middle and rising as the pointer leaves it.
+ */
 export const vMax: Effect = {
   id: 'v-max',
   shine: [
@@ -47,22 +57,23 @@ export const vMax: Effect = {
       opacity: { base: 0.3, fromCenter: 0.5 },
     },
   ],
-  glare: [
+  beneath: [
     {
       layers: [
         {
-          source: {
-            kind: 'radial-pointer',
-            stops: [
-              { at: 0, color: [1, 1, 1] },
-              { at: 1, color: [0, 0, 0] },
-            ],
-          },
+          ...radial(
+            [stop(WHITE, 0, 0.75), stop(BLACK, 120)],
+            COVER,
+            glareNeutral('hard-light', GLARE_FILTER),
+          ),
           blend: 'normal',
         },
       ],
-      mixBlend: 'hard-light',
+      filter: fixedFilter(GLARE_FILTER),
+      // calc((0.2 * var(--card-opacity)) + var(--card-opacity) * var(--pointer-from-center) * 0.8)
       opacity: { base: 0.2, fromCenter: 0.8 },
+      mixBlend: 'hard-light',
     },
   ],
+  glare: [],
 };

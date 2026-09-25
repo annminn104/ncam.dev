@@ -1,6 +1,17 @@
 import type { Effect } from '../shader/types';
-import { GLARE_STOPS, RAINBOW_MUTED } from './palette';
+import { COVER, fixedFilter, grey, hsl, radial, stop } from './css';
+import { glareNeutral } from './legacy-glare';
+import { RAINBOW_MUTED } from './palette';
 
+/** rainbow-holo.css's .card__glare filter. */
+const GLARE_FILTER = { brightness: 0.9, contrast: 1.75 };
+
+/**
+ * A rainbow rare. The shine is derived by eye from pokemon-cards-css; the
+ * glare is ported from rainbow-holo.css, hard-lit, beneath the shine
+ * (legacy-glare.ts), and only as strong as the pointer is far from the
+ * middle. Its first stop has no position, which CSS reads as 0%.
+ */
 export const rainbowHolo: Effect = {
   id: 'rainbow-holo',
   shine: [
@@ -29,12 +40,23 @@ export const rainbowHolo: Effect = {
       opacity: { base: 0.5, fromCenter: 0.4 },
     },
   ],
-  glare: [
+  beneath: [
     {
-      layers: [{ source: { kind: 'radial-pointer', stops: GLARE_STOPS }, blend: 'normal' }],
-      filter: { brightness: { base: 0.9 }, contrast: { base: 1.75 } },
+      layers: [
+        {
+          ...radial(
+            [stop(grey(0.8), 0), stop(hsl(187, 10, 85), 30, 0.25), stop(hsl(197, 6, 25), 120)],
+            COVER,
+            glareNeutral('hard-light', GLARE_FILTER),
+          ),
+          blend: 'normal',
+        },
+      ],
+      filter: fixedFilter(GLARE_FILTER),
+      // calc(var(--pointer-from-center) * 0.9)
+      opacity: { base: 0, fromCenter: 0.9 },
       mixBlend: 'hard-light',
-      opacity: { base: 0.1, fromCenter: 0.9 },
     },
   ],
+  glare: [],
 };
