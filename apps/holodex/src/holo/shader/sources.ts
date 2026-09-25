@@ -16,6 +16,9 @@ export const SOURCE_ID: Record<Source['kind'], number> = {
   'pokeball-inner': 12,
   masterball: 13,
   'masterball-inner': 14,
+  'css-linear': 15,
+  'css-radial': 16,
+  'css-conic': 17,
 };
 
 /**

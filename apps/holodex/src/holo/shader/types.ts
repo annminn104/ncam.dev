@@ -19,6 +19,23 @@ export interface PointerDriven {
   fromTop?: number;
 }
 
+/**
+ * A stop where CSS puts it, for the exact gradients (the css-* sources): its
+ * place along the gradient, its straight colour, and its alpha.
+ */
+export interface GradientStop {
+  /**
+   * along the gradient: gradient lengths for css-linear (one period, 0..1, for
+   * a repeating one), radii for css-radial, turns for css-conic
+   */
+  at: number;
+  color: [number, number, number];
+  /** 0..1; left out, 1 */
+  alpha?: number;
+  /** how much of the colour is the card's glow instead (uCardGlow), 0..1; left out, 0 */
+  glow?: number;
+}
+
 /** One entry in a layer stack — the GLSL equivalent of one background-image. */
 export type Source =
   | { kind: 'solid'; color: [number, number, number] }
@@ -87,6 +104,40 @@ export type Source =
   | { kind: 'pokeball-inner'; scale: number }
   | { kind: 'masterball'; scale: number }
   | { kind: 'masterball-inner'; scale: number }
+  /**
+   * linear-gradient or repeating-linear-gradient drawn as CSS draws it, on
+   * the RGBA path: t = a·u + b·v + c along its gradient line, 0 at the line's
+   * start and 1 at its end (css.ts works the line out), its stops where CSS
+   * puts them. A repeating one's stops are one period, normalised to 0..1,
+   * and t wraps into it. Give the layer no size or offset.
+   */
+  | {
+      kind: 'css-linear';
+      repeating: boolean;
+      line: { a: number; b: number; c: PointerDriven };
+      stops: GradientStop[];
+    }
+  /**
+   * radial-gradient drawn as CSS draws it, on the RGBA path: CSS's
+   * farthest-corner geometry (sources.ts#radialReach), from a centre on the
+   * card that sits at `at` of an image of `size`, circle or ellipse, its
+   * stops in radii and carried past the ending shape. Give the layer no size
+   * or offset.
+   */
+  | {
+      kind: 'css-radial';
+      centre: [PointerDriven, PointerDriven];
+      size: [number, number];
+      at: [PointerDriven, PointerDriven];
+      ellipse: boolean;
+      stops: GradientStop[];
+    }
+  /**
+   * conic-gradient drawn as CSS draws it, on the RGBA path: about `centre`,
+   * clockwise from `from` turns off the top, in the card's true proportions,
+   * its stops in turns. Give the layer no size or offset.
+   */
+  | { kind: 'css-conic'; centre: [number, number]; from: number; stops: GradientStop[] }
   /** the card art itself */
   | { kind: 'card' }
   /** horizontal scanlines, as in regular-holo */
@@ -132,6 +183,18 @@ export interface Element {
    * offered.
    */
   clip?: Exclude<ClipShape, 'stage'>;
+  /**
+   * The pseudo-elements that paint inside this element's isolated group, in
+   * paint order: resolve the reference's z-index into this order (its
+   * pseudo-elements are grid items, so a positive z-index paints after
+   * `auto`, which paints in DOM order). Each is drawn whole — its layers, its
+   * filter, then its opacity and clip on its alpha — and composited onto the
+   * group with its mixBlend; the element's filter then applies to the whole
+   * group, and its mixBlend composites the group onto the card, as CSS draws
+   * `.card__shine`. A child has no children of its own. An element with
+   * children compiles to the RGBA path (compile.ts#needsRGBA).
+   */
+  children?: Element[];
 }
 
 export interface Effect {

@@ -46,6 +46,9 @@ describe('SOURCE_ID', () => {
       'pokeball-inner',
       'masterball',
       'masterball-inner',
+      'css-linear',
+      'css-radial',
+      'css-conic',
     ]) {
       expect(SOURCE_ID).toHaveProperty(kind);
     }

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { compileEffect, VERTEX_SHADER } from './compile';
+import { BLEND_ID } from './blend';
+import { compileEffect, needsRGBA, VERTEX_SHADER } from './compile';
 import { baseGLSL } from './base';
 import { coversPoint, regionFor, SHAPE_ID, STAGE_STEP, type RegionRect } from '../regions';
 import type { ClipShape } from '../select';
@@ -20,7 +21,7 @@ import {
   type CssBox,
 } from '../effects/css';
 import { sourcesGLSL } from './sources';
-import type { Effect } from './types';
+import type { Effect, Element, GradientStop, Layer, PointerDriven } from './types';
 
 const minimal: Effect = {
   id: 'test-minimal',
@@ -908,5 +909,223 @@ describe('a layer’s own opacity', () => {
 
   it('leaves a layer without one blending straight onto the stack', () => {
     expect(layerOneStatement(undefined)).toMatch(/^blendWith\(\d+, stack_shine0, src_shine0_1\)$/);
+  });
+});
+
+describe('the RGBA path', () => {
+  const pointer: [PointerDriven, PointerDriven] = [
+    { base: 0, fromLeft: 1 },
+    { base: 0, fromTop: 1 },
+  ];
+  const stops2: GradientStop[] = [
+    { at: 0.1, color: [0, 0, 0], alpha: 0.98 },
+    { at: 0.9, color: [0.95, 0.95, 0.95], alpha: 0.15 },
+  ];
+  const exactRadialLayer: Layer = {
+    source: {
+      kind: 'css-radial',
+      centre: pointer,
+      size: [1, 1],
+      at: pointer,
+      ellipse: false,
+      stops: stops2,
+    },
+    blend: 'normal',
+  };
+  const solid = (c: number): Layer => ({
+    source: { kind: 'solid', color: [c, c, c] },
+    blend: 'normal',
+  });
+
+  it('is taken by an element with children or an exact gradient, and by nothing else', () => {
+    expect(needsRGBA({ layers: [solid(0.5)], mixBlend: 'screen' })).toBe(false);
+    expect(needsRGBA({ layers: [exactRadialLayer], mixBlend: 'screen' })).toBe(true);
+    expect(
+      needsRGBA({
+        layers: [solid(0.5)],
+        mixBlend: 'screen',
+        children: [{ layers: [solid(1)], mixBlend: 'overlay' }],
+      }),
+    ).toBe(true);
+  });
+
+  const group: Element = {
+    layers: [exactRadialLayer, { ...solid(0.3), blend: 'overlay' }],
+    children: [
+      {
+        layers: [solid(0.6)],
+        filter: { brightness: { base: 1.25 } },
+        mixBlend: 'lighten',
+        opacity: { base: 0.8 },
+      },
+      { layers: [solid(0.2)], mixBlend: 'overlay', clip: 'regular' },
+    ],
+    filter: { brightness: { base: 0.2, fromCenter: 0.3 }, contrast: { base: 2 } },
+    mixBlend: 'color-dodge',
+  };
+  const src = compileEffect({ id: 'group', shine: [group], glare: [] });
+  const at = (needle: string) => {
+    const i = src.indexOf(needle);
+    expect(i, needle).toBeGreaterThan(-1);
+    return i;
+  };
+
+  it('starts the group transparent and composites every layer onto it, the first too', () => {
+    at('  vec4 stack_shine0 = vec4(0.0);');
+    at(`  stack_shine0 = compositeOver(stack_shine0, src_shine0_0, ${BLEND_ID.normal});`);
+    at(`  stack_shine0 = compositeOver(stack_shine0, src_shine0_1, ${BLEND_ID.overlay});`);
+  });
+
+  it('draws each child whole, then composites it onto the group, then filters the group', () => {
+    const order = [
+      at('  vec4 stack_shine0_c0 = vec4(0.0);'),
+      at(
+        '  stack_shine0_c0.rgb = applyFilter(stack_shine0_c0.rgb, (1.250000), 1.000000, 1.000000);',
+      ),
+      at('  stack_shine0_c0.a *= clamp((0.800000), 0.0, 1.0);'),
+      at(`  stack_shine0 = compositeOver(stack_shine0, stack_shine0_c0, ${BLEND_ID.lighten});`),
+      at('  vec4 stack_shine0_c1 = vec4(0.0);'),
+      at(
+        '  stack_shine0_c1.a *= clamp(1.000000, 0.0, 1.0) * insideRect(vUv, vec4(0.098500, 0.080000, 0.528500, 0.080000));',
+      ),
+      at(`  stack_shine0 = compositeOver(stack_shine0, stack_shine0_c1, ${BLEND_ID.overlay});`),
+      at(
+        '  stack_shine0.rgb = applyFilter(stack_shine0.rgb, (0.200000 + 0.300000 * uPointerFromCenter), (2.000000), 1.000000);',
+      ),
+      at(
+        `  acc = mix(acc, blendWith(${BLEND_ID['color-dodge']}, acc, stack_shine0.rgb), stack_shine0.a * clamp(1.000000 * uCardOpacity, 0.0, 1.0));`,
+      ),
+    ];
+    expect([...order].sort((a, b) => a - b)).toEqual(order);
+  });
+
+  it('writes an exact gradient’s stops premultiplied, padded to 32, and looks them up where CSS puts them', () => {
+    at(
+      '  vec4 stops_shine0_0[MAX_CSS_STOPS] = vec4[MAX_CSS_STOPS](vec4(0.000000, 0.000000, 0.000000, 0.980000), vec4(0.142500, 0.142500, 0.142500, 0.150000), vec4(0.0)',
+    );
+    at('  float pos_shine0_0[MAX_CSS_STOPS] = float[MAX_CSS_STOPS](0.100000, 0.900000, 0.900000');
+    at(
+      '  vec4 src_shine0_0 = cssStops(stops_shine0_0, pos_shine0_0, 2, radialReach(vUv, vec2((0.000000 + 1.000000 * (uPointerUV.x)), (0.000000 + 1.000000 * (uPointerUV.y))), vec2(1.000000, 1.000000), vec2((0.000000 + 1.000000 * (uPointerUV.x)), (0.000000 + 1.000000 * (uPointerUV.y))), 0.0));',
+    );
+    const arrays = src.match(/vec4\[MAX_CSS_STOPS\]\(([^;]*)\);/)?.[1] ?? '';
+    expect(arrays.split('vec4(').length - 1).toBe(32);
+  });
+
+  it('draws an older kind inside a group as opaque', () => {
+    at('  vec4 src_shine0_1 = vec4(srcSolid(vec3(0.300000, 0.300000, 0.300000)), 1.0);');
+  });
+
+  it('mixes a stop that is part glow toward uCardGlow before premultiplying', () => {
+    const glow = compileEffect({
+      id: 'glow',
+      shine: [
+        {
+          layers: [
+            {
+              source: {
+                kind: 'css-radial',
+                centre: pointer,
+                size: [1, 1],
+                at: pointer,
+                ellipse: true,
+                stops: [
+                  { at: 0.2, color: [0.95, 0.95, 0.95] },
+                  { at: 1.3, color: [0, 0, 0], glow: 1 },
+                ],
+              },
+              blend: 'normal',
+            },
+          ],
+          mixBlend: 'color-dodge',
+        },
+      ],
+      glare: [],
+    });
+    expect(glow).toContain(
+      'vec4(mix(vec3(0.000000, 0.000000, 0.000000), uCardGlow, 1.000000) * 1.000000, 1.000000)',
+    );
+    expect(glow).toMatch(/radialReach\(vUv, .*, 1\.0\)\);/);
+  });
+
+  it('draws css-linear along its line, wrapping a repeating one, and css-conic by turns', () => {
+    const lin = compileEffect({
+      id: 'lin',
+      shine: [
+        {
+          layers: [
+            {
+              source: {
+                kind: 'css-linear',
+                repeating: true,
+                line: { a: 2, b: -1, c: { base: 0.5, fromLeft: 0.3 } },
+                stops: [
+                  { at: 0, color: [1, 0, 0] },
+                  { at: 1, color: [0, 0, 1] },
+                ],
+              },
+              blend: 'normal',
+            },
+            {
+              source: {
+                kind: 'css-conic',
+                centre: [0.5, 0.5],
+                from: 0,
+                stops: [
+                  { at: 0, color: [1, 1, 1] },
+                  { at: 1, color: [0, 0, 0] },
+                ],
+              },
+              blend: 'overlay',
+            },
+          ],
+          mixBlend: 'screen',
+        },
+      ],
+      glare: [],
+    });
+    expect(lin).toContain(
+      'cssStops(stops_shine0_0, pos_shine0_0, 2, fract((2.000000 * vUv.x + -1.000000 * vUv.y + (0.500000 + 0.300000 * (uPointerUV.x)))))',
+    );
+    expect(lin).toContain(
+      'cssStops(stops_shine0_1, pos_shine0_1, 2, conicTurn(vUv, vec2(0.500000, 0.500000), 0.000000))',
+    );
+  });
+
+  it('refuses a child with children of its own, and more stops than it holds', () => {
+    const deep: Element = {
+      layers: [solid(1)],
+      mixBlend: 'normal',
+      children: [
+        {
+          layers: [solid(1)],
+          mixBlend: 'normal',
+          children: [{ layers: [solid(1)], mixBlend: 'normal' }],
+        },
+      ],
+    };
+    expect(() => compileEffect({ id: 'deep', shine: [deep], glare: [] })).toThrow(
+      /no children of its own/,
+    );
+    const many: GradientStop[] = Array.from({ length: 33 }, (_, i) => ({
+      at: i / 32,
+      color: [0, 0, 0],
+    }));
+    expect(() =>
+      compileEffect({
+        id: 'many',
+        shine: [
+          {
+            layers: [
+              {
+                ...exactRadialLayer,
+                source: { ...exactRadialLayer.source, stops: many } as Layer['source'],
+              },
+            ],
+            mixBlend: 'normal',
+          },
+        ],
+        glare: [],
+      }),
+    ).toThrow(/32/);
   });
 });
