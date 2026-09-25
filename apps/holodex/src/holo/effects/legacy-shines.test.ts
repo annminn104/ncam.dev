@@ -636,3 +636,45 @@ describe('the glitter family, as the reference resolves it unmasked', () => {
     expect(stopsOf(after.layers[0])).toHaveLength(7);
   });
 });
+
+describe('cosmos-holo’s shine, as cosmos-holo.css draws it', () => {
+  const [shine] = EFFECTS['cosmos-holo'].shine;
+
+  it('colour-burns the starfield onto a rainbow multiplied onto a pastel radial', () => {
+    expect(kinds(shine)).toEqual([
+      'css-radial normal',
+      'css-linear multiply',
+      'cosmos-bottom color-burn',
+    ]);
+    // brightness(1) contrast(1) saturate(.8)
+    expect(filterOf(shine)).toEqual([
+      [1, 0],
+      [1, 0],
+      [0.8, 0],
+    ]);
+    // twelve colours, there and back, at --space 4%: one period from 4% to 48%
+    expect(stopsOf(shine.layers[1])).toHaveLength(12);
+    // hsla(180, 100%, 89%, 0.5) 5%, hsla(180, 14%, 57%, 0.3) 40%, hsl(0, 0%, 0%) 130%
+    expect(stopsOf(shine.layers[0]).map((s) => [s.at, s.alpha ?? 1])).toEqual([
+      [0.05, 0.5],
+      [0.4, 0.3],
+      [1.3, 1],
+    ]);
+  });
+
+  it('paints :before (z-index 2) then :after (z-index 3), each its own starfield layer', () => {
+    const [before, after] = shine.children ?? [];
+    expect(kinds(before)).toEqual(['css-linear normal', 'cosmos-middle lighten']);
+    expect(before.mixBlend).toBe('overlay');
+    expect(kinds(after)).toEqual(['css-linear normal', 'cosmos-top multiply']);
+    expect(after.mixBlend).toBe('multiply');
+    // brightness(1.25) contrast(1.75) saturate(.8), both
+    for (const el of [before, after]) {
+      expect(filterOf(el)).toEqual([
+        [1.25, 0],
+        [1.75, 0],
+        [0.8, 0],
+      ]);
+    }
+  });
+});

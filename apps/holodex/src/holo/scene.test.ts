@@ -163,10 +163,16 @@ describe('texturesUsedBy', () => {
     expect(texturesUsedBy(effect)).toEqual(['geometric']);
   });
 
-  it('still hands the older effects the glitter and grain they sample, and basic nothing', () => {
-    // Binding used to be unconditional for these two; it is now on use, so
-    // this is the regression check for every effect already shipped.
-    expect(texturesUsedBy(EFFECTS['cosmos-holo']).sort()).toEqual(['glitter', 'grain']);
+  it('hands the ported older effects the textures their CSS names, children’s included, and basic nothing', () => {
+    // Binding is on use, so every texture a port samples must be named here,
+    // including those only its :before or :after samples.
+    expect(texturesUsedBy(EFFECTS['cosmos-holo']).sort()).toEqual([
+      'cosmos-bottom',
+      'cosmos-middle',
+      'cosmos-top',
+    ]);
+    expect(texturesUsedBy(EFFECTS['secret-rare']).sort()).toEqual(['geometric', 'glitter']);
+    expect(texturesUsedBy(EFFECTS['v-regular'])).toEqual(['grain']);
     expect(texturesUsedBy(EFFECTS.basic)).toEqual([]);
   });
 });

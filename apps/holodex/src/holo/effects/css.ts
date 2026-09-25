@@ -591,6 +591,12 @@ export function nudged(
   return plus(CENTER, times(plus(fixed(sign * shift), times(pointer, -2 * shift)), 1 / (1 - size)));
 }
 
+/** background-size `cover` for a texture of this natural size: the card filled, the image's shape kept. */
+export function coverSize(natural: readonly [number, number]): [number, number] {
+  const image = natural[0] / natural[1];
+  return image > CARD_ASPECT ? [image / CARD_ASPECT, 1] : [1, CARD_ASPECT / image];
+}
+
 /** background-size `<width> auto` for a texture of this natural size, as fractions of the card. */
 export function autoHeight(width: number, natural: readonly [number, number]): [number, number] {
   return [width, width * (natural[1] / natural[0]) * CARD_ASPECT];
