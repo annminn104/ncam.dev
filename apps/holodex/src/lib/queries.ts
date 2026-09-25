@@ -7,6 +7,7 @@ import {
   getSets,
   searchCards,
   selectSetCards,
+  TcgdexError,
   type Card,
   type CardBrief,
   type Page,
@@ -21,11 +22,23 @@ const MINUTE = 60_000;
  * never a module-level singleton, or a second visit inherits stale state and
  * two concurrent SSR requests share a cache.
  */
+/**
+ * Retry, at most twice, only what may pass: no response at all (a network
+ * failure or the timeout: no status), a 5xx, a 408 or a 429. A 404 or any other
+ * client error fails the same way every time, so asking again only delays
+ * the error and spends the free API's requests.
+ */
+export function retryTransient(failureCount: number, error: unknown): boolean {
+  if (failureCount >= 2) return false;
+  const status = error instanceof TcgdexError ? error.status : undefined;
+  return status === undefined || status >= 500 || status === 408 || status === 429;
+}
+
 export function createQueryClient(): QueryClient {
   return new QueryClient({
     defaultOptions: {
       queries: {
-        retry: 2,
+        retry: retryTransient,
         // A portfolio demo should not hammer a free public API.
         refetchOnWindowFocus: false,
         gcTime: 30 * MINUTE,
