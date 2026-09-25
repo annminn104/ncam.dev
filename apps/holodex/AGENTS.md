@@ -521,17 +521,17 @@ If either count changes, something started importing `holo/scene`,
 `holo/shader/*` or `holo/effects/*` at module scope (outside a dynamic
 `import()`) — trace it from there.
 
-## Bundle budget (§10) — measured 2026-09-22 at `d12c296`, fresh `pnpm --filter @ncam/holodex build`
+## Bundle budget (§10) — measured 2026-09-22 at `372ddba`, fresh `pnpm --filter @ncam/holodex build`
 
-**Lazy chunk re-measured 2026-09-25 at `618d32c`**, after the eight Scarlet &
+**Lazy chunk re-measured 2026-09-25 at `433e8fe`**, after the eight Scarlet &
 Violet effects and their shaders landed: `scene-*.js` is 545.22 kB raw,
 **139.60 KB gz** against the 170 KB budget — a pass with 30.4 KB of headroom,
 up 8.20 KB from the 131.40 below. The main chunk was not re-traced; the
 change that made the new effects selectable reported it 0.61 KB gz larger.
-**Again at `cca42f2`**, after the 22 older effects' shines were ported (the
+**Again at `faae39e`**, after the 22 older effects' shines were ported (the
 RGBA path, 21 group shaders and the textures drawn for them): 570.64 kB raw,
 **148.72 KB gz**, a pass with 21.3 KB of headroom, up 9.12 KB from 139.60.
-The rest of this section is the full measurement as of `d12c296`.
+The rest of this section is the full measurement as of `372ddba`.
 
 (`dist/` and `dist-ssr/` deleted before the build below, so this is not a
 stale-cache figure — see the bundle-history note further down for exactly
@@ -569,19 +569,19 @@ figure recorded before this branch.
 **Bundle history on this branch, so nobody chases a ghost.** The lazy-chunk
 number moved twice, and both moves are fully explained — neither is drift:
 
-1. At `62e91f5` (Task 11) it appeared to _drop_ to 82 KB gz — a large
+1. At `20a028c` (Task 11) it appeared to _drop_ to 82 KB gz — a large
    improvement in a branch that had just added 22 shader strings. It had not
    shrunk; it had **split**. That commit reached `disposeMaterials` through
    `void import('./holo/program-cache')`, which gave `program-cache.ts` its
    own chunk, and Rollup made that chunk the shared three.js core instead of
    folding it into `scene.ts`.
-2. At `d12c296` (this task's starting commit) the split is gone: the
+2. At `372ddba` (this task's starting commit) the split is gone: the
    teardown fix routes disposal through the three-free `teardown.ts`
    instead, so `program-cache.ts` is once again reachable only from
    `scene.ts`, and Rollup merged them back into one chunk. If a future
    measurement here shows roughly 82 KB, or two three.js-shaped chunks in
    the client build, that is this split recurring — or a stale `dist/` from
-   before `d12c296`. Delete `dist/` and `dist-ssr/` and rebuild before
+   before `372ddba`. Delete `dist/` and `dist-ssr/` and rebuild before
    trusting any number that looks like either.
 
 Neither shim is left: since 2026-09-25 each scene owns its material ("A

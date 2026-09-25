@@ -10,7 +10,7 @@
 
 **Spec:** `docs/superpowers/specs/2026-09-25-holodex-per-scene-materials-design.md`
 
-**Executed 2026-09-25** as `92a6edd` (Task 1) and `c31b38d` (Task 2). Two of the
+**Executed 2026-09-25** as `e064f79` (Task 1) and `0ef44c7` (Task 2). Two of the
 commands below needed correcting on the way, and a re-run should use the fixes:
 
 - Task 1, Step 10: `git add` of `program-cache.ts` / `program-cache.test.ts`
@@ -436,7 +436,7 @@ grep -l -F 'THREE.WebGLRenderer' dist/assets/*.js
 comm -23 <(grep -l -F 'THREE.WebGLRenderer' dist/assets/*.js | xargs -n1 basename | sort) <(ls dist-ssr/assets | sort)
 ```
 
-Expected: the first grep lists exactly two files; the `comm` lists exactly one, the client's own `scene-*.js`. Note its gzip size from the build report (it was 139.60 KB at `618d32c`; it should barely move).
+Expected: the first grep lists exactly two files; the `comm` lists exactly one, the client's own `scene-*.js`. Note its gzip size from the build report (it was 139.60 KB at `433e8fe`; it should barely move).
 
 - [ ] **Step 6: GPU smoke pass on the dev server (9107)**
 

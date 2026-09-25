@@ -10,8 +10,8 @@
 
 **Spec:** `docs/superpowers/specs/2026-09-25-holodex-legacy-glare-ports-design.md`
 
-**Executed 2026-09-25**: `e091908` (layer opacity), `2aafa5a`, `c419ed3`, `605217a`,
-`f93a51f` (the 22 glares), and the docs after them. What running it showed:
+**Executed 2026-09-25**: `e023648` (layer opacity), `980a132`, `0886143`, `706b71e`,
+`cf9fe10` (the 22 glares), and the docs after them. What running it showed:
 
 - **The glares match.** Compared glare only (the shine hidden on both sides) against a floor with
   the glare hidden too, across the six samples: floor 2.40, glare-only 3.09. Five sit within the

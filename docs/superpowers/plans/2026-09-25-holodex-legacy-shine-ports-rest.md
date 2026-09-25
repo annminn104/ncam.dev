@@ -161,10 +161,10 @@ Clip: the card's own, as today. Shine `(1, 1, 0.8)`, `color-dodge`: 1. `css-radi
 
 ## How it landed (2026-09-25)
 
-Executed inline, task by task, each test-first and committed locally: 85bc7cb (B2, foil
-brightness), 300887f (B5), b0a33eb (B3 and illusion), 78ebb37 (B6), a00ec60 (grain, ancient,
-vmaxbg), d9fea99 (B7), 66d9e69 (B8), 17383a1 (the cosmos layers), af93302 (B9), cca42f2
-(`palette.ts`), 3cf9d04 (docs). B1's harness stays in the scratchpad. What the plan did not
+Executed inline, task by task, each test-first and committed locally: 6f44be0 (B2, foil
+brightness), d0a6b50 (B5), 300a27a (B3 and illusion), 7d84349 (B6), a8adb1e (grain, ancient,
+vmaxbg), a8e4c64 (B7), 7e86d99 (B8), ba05153 (the cosmos layers), 157b0a6 (B9), faae39e
+(`palette.ts`), 2f1760a (docs). B1's harness stays in the scratchpad. What the plan did not
 foresee:
 
 - **The probe card's foil variables are inline on `.card__front`** (Card.svelte sets `--foil`,

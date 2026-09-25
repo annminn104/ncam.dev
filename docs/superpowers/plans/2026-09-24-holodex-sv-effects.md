@@ -9,7 +9,7 @@ textures — **without** per-card masks. See "The ceiling" below.
 
 Branch `feat/holodex-holo-v2`. Local commits only; **never push**.
 
-**Status (2026-09-25): landed**, `7c28553` … `618d32c`, local only. What changed on the way is
+**Status (2026-09-25): landed**, `5b50ed9` … `433e8fe`, local only. What changed on the way is
 under "What landed" at the end; where the plan below turned out wrong, it says so in place.
 
 ## Why
@@ -90,7 +90,7 @@ deliberate approximation from a porting mistake.
   glyph strokes, applied with `mask-mode: alpha`, so the foil shows **on** the glyphs — as on real 151
   reverse holos. (An earlier version of this plan said "dark glyphs on light grey"; that light grey was
   only the image viewer's rendering of transparency. Task 1 measured the pixels and caught it.) Ours are
-  drawn **white glyphs on black** (`7c28553`), so `multiply` over the gradient shows it only through the
+  drawn **white glyphs on black** (`5b50ed9`), so `multiply` over the gradient shows it only through the
   glyphs. The reference's inner caps are about 53% opaque; ours are full strength because our element
   filter runs after the layer stack, so put the 0.53 in the element's opacity instead.
 - **`birthday` texture**: multicoloured **four-pointed star** sparkles of varied size on black — the
@@ -167,7 +167,7 @@ our geometric clip must stand in for the mask, per effect:
 | `poke-ball-holo`, `masterball-holo` | pattern mask + `--clip-borders-invert` | as `reverse-holo`: its region with `invert: true`            |
 
 **`ex-regular` is the one that would silently regress.** It is `Double rare` — the standard-layout ex
-whose whole-card foil was fixed in `bc3740c`. Put it in `FULL_ART` and that bug returns. Keep the
+whose whole-card foil was fixed in `db8edd8`. Put it in `FULL_ART` and that bug returns. Keep the
 existing test asserting a `Double rare` card is not `full`, and confirm it still passes against the
 new effect.
 
@@ -203,7 +203,7 @@ rarities that never reach an era-split row. Say so in a comment rather than wide
 _Missed here, caught in Task 3:_ this check matched set ids, never series. TCGdex's Mega series also
 holds `30th` (30th Celebration) and `30th-c` (30th Classic Collection), which the pattern cannot
 reach, and 30th's 18 `Rare` cards would have gone unfoiled. They are Mega by exact id
-(`UNPREFIXED_MEGA_SETS`, `2e1ba25`). A new set with an odd id needs the same check against its
+(`UNPREFIXED_MEGA_SETS`, `4db44bb`). A new set with an odd id needs the same check against its
 series.
 
 Tests: every row above, both sides of each era split, the SV regex's controls (`swsh4.5sv`,
@@ -213,7 +213,7 @@ Tests: every row above, both sides of each era split, the SV regex's controls (`
 
 ### Task 4 — The showcase
 
-29 sections × 3 cards = 87 (`2e1ba25`; `sv-rare-holo` later made it 30 and 90). **The controller builds and verifies the matrix** — through the real
+29 sections × 3 cards = 87 (`4db44bb`; `sv-rare-holo` later made it 30 and 90). **The controller builds and verifies the matrix** — through the real
 selection logic, on each card's _real_ rarity from a detail fetch (TCGdex's `?rarity=` is a substring
 match), with art confirmed to load — and hands it over, exactly as for the 66. Seven new sections;
 several existing sections change membership because their rarities moved. The fixture gains the new
@@ -224,7 +224,7 @@ page, equal tile heights, constant `viewKey`.
 
 - `pnpm vitest run && pnpm lint && pnpm --filter @ncam/holodex typecheck && pnpm --filter @ncam/holodex build`
 - The lazy three.js chunk will grow by seven compiled shader strings. Report the new size against
-  the 170 KB gz budget. (_Measured at `618d32c`:_ 545.22 kB, 139.60 KB gz — 30.4 KB under.)
+  the 170 KB gz budget. (_Measured at `433e8fe`:_ 545.22 kB, 139.60 KB gz — 30.4 KB under.)
 - **The real check is visual**, and none of it is testable under node: a GPU smoke pass through
   `/effects`, comparing each new effect side by side with the same card in the 151 demo. (_As
   landed:_ done headless and by the numbers, with the demo's art swapped for TCGdex's — the method
@@ -232,26 +232,26 @@ page, equal tile heights, constant `viewKey`.
 
 ## What landed
 
-`7c28553` (the blends and textures), `7e40960` (the seven ports, through `effects/css.ts`),
-`fafe9ca` (`uPointerFromCenter` reaches 1 at the middle of an edge, as in both references),
-`2e1ba25` (registration, the era rule, the 87-card page), `a39e2f9`. Then a side-by-side pass
+`5b50ed9` (the blends and textures), `e79e4be` (the seven ports, through `effects/css.ts`),
+`06d9c2a` (`uPointerFromCenter` reaches 1 at the middle of an edge, as in both references),
+`4db44bb` (registration, the era rule, the 87-card page), `7f12381`. Then a side-by-side pass
 against poke-151, on the same art, found the ports' largest gaps and closed them:
 
 - **The reference stacks a card's layers by z-index**, not by markup: glitter 2, shine 3, and a
   glare with **no** z-index paints _beneath_ the shine. Proven by lifting its `.card__glare2` to
   z-index 4, which reproduced our wrong colour exactly. `Effect.beneath` holds such glares (still
   ≤ 2 with `glare[]`); `ex-regular`'s glares (z-index 4) and the balls' `.card__glare` (5) stay
-  above. (`ab6c860`)
+  above. (`7d00753`)
 - **A radial with no size is `farthest-corner`**, so its radius grows as the pointer leaves the
   centre. `radial()` now emits a `radial-pointer` source with a `cssBox` that computes it per
   fragment, in the card's own 63 × 88, held to a TypeScript twin and to brute-forced corners.
-  (`ab6c860`)
+  (`7d00753`)
 - **An element can carry its own `clip`**, for a layer the reference clips unlike the card:
-  `illustration-rare`'s glare and the ball glyphs, to `borders`. (`3eb4c61`)
+  `illustration-rare`'s glare and the ball glyphs, to `borders`. (`9ad9a54`)
 - **The ball glyphs dodge onto the card** (`color-dodge`, with the group's `brightness(.75)` in
-  each element's filter), inside its border (`8ab6425`), drawn to measurements taken off the
-  reference's pattern images (`d9e9561`).
-- **`sv-rare-holo`** (`618d32c`). pokemon-cards-css's `regular-holo`, the scanlines, is not the
+  each element's filter), inside its border (`137622f`), drawn to measurements taken off the
+  reference's pattern images (`2e5eadd`).
+- **`sv-rare-holo`** (`433e8fe`). pokemon-cards-css's `regular-holo`, the scanlines, is not the
   151 sequel's `regular-holo.css`, which multiplies bars onto a sunpillar holo. Modern `Rare` and
   Pocket `Three Diamond` take a port of 151's; `regular-holo` keeps the older cards. The page is
   30 sections, 90 cards.
@@ -262,7 +262,7 @@ against poke-151, on the same art, found the ports' largest gaps and closed them
   luminosity `:after` with alpha, which Chrome keeps near the group's own luminance where our
   alpha-less stops darken; its bars' tilt, fixed at rest.
 
-Verified at `618d32c`: the root `pnpm vitest run` at 688 tests in 37 files, lint, typecheck and
+Verified at `433e8fe`: the root `pnpm vitest run` at 688 tests in 37 files, lint, typecheck and
 Prettier clean.
 
 ## Out of scope

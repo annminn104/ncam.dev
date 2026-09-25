@@ -12,9 +12,9 @@
 
 ## How it landed (2026-09-25)
 
-Executed inline, task by task, each test-first and committed locally: 4527f42 (pins), 86ef386
-(compositing, `color`), 4b81149 (geometry), d467aa6 (RGBA path, groups), 2620dbf (converters),
-f76d972 (glow), 28aff11 (textures), 0959726 (secret-rare), e48997f (filter), 0e85fe6 (radiant).
+Executed inline, task by task, each test-first and committed locally: aa3ad47 (pins), a2953af
+(compositing, `color`), 34d5f62 (geometry), b8a56b1 (RGBA path, groups), 853a86b (converters),
+00e0c04 (glow), f28ae76 (textures), 37891ff (secret-rare), eab6671 (filter), 89b6f91 (radiant).
 What the plan did not foresee:
 
 - **CSS filters are not what `applyFilter` does.** radiant-holo's first measurement missed the
@@ -22,7 +22,7 @@ What the plan did not foresee:
   Chrome clamping after each of brightness, contrast and saturate, and saturating about CSS's own
   luma (0.213, 0.715, 0.072): that model matches Chrome to 0.33 in 0..255, where `applyFilter`
   (Rec. 601, clamped once) is 8 off on average and 55 at worst. The RGBA path now filters with
-  `applyCssFilter` (e48997f); the RGB path keeps `applyFilter`, so the Scarlet & Violet ports and
+  `applyCssFilter` (eab6671); the RGB path keeps `applyFilter`, so the Scarlet & Violet ports and
   the ported glares, which were verified with it, are unchanged until their own sub-project.
 - **The harness's probe card is `.card.water`**, so the reference drew radiant's --card-glow blue
   while ours drew the card's Grass green. `cmp/shine/ref.mjs` now sets the probe's type class to the
