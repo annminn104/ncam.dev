@@ -510,3 +510,129 @@ describe('v-max’s shine, as v-max.css draws it unmasked', () => {
     expect(stopsOf(after.layers[1])).toHaveLength(7);
   });
 });
+
+describe('the glitter family, as the reference resolves it unmasked', () => {
+  const shineOf = (id: string) => EFFECTS[id as keyof typeof EFFECTS].shine[0];
+
+  it('amazing-rare burns and soft-lights two glitters over its radial, with two children', () => {
+    const shine = shineOf('amazing-rare');
+    expect(kinds(shine)).toEqual(['css-radial normal', 'glitter color-burn', 'glitter soft-light']);
+    // brightness(1) contrast(1) saturate(.9)
+    expect(filterOf(shine)).toEqual([
+      [1, 0],
+      [1, 0],
+      [0.9, 0],
+    ]);
+    const [before, after] = shine.children ?? [];
+    expect([before.mixBlend, before.opacity]).toEqual(['lighten', { base: 0.5 }]);
+    expect(kinds(after)).toEqual(['css-linear normal']);
+    expect(after.mixBlend).toBe('saturation');
+    // brightness(calc(0.75 - (var(--pointer-from-center) * 0.5)))
+    expect(filterOf(after)[0]).toEqual([0.75, -0.5]);
+  });
+
+  it('rainbow-holo darkens illusion-mask in :before and colour-dodges its :after', () => {
+    const shine = shineOf('rainbow-holo');
+    expect(kinds(shine)).toEqual([
+      'css-linear normal',
+      'glitter soft-light',
+      'css-linear luminosity',
+    ]);
+    // brightness(calc((var(--pointer-from-center)*0.25) + 0.6)) contrast(2.2) saturate(0.75)
+    expect(filterOf(shine)).toEqual([
+      [0.6, 0.25],
+      [2.2, 0],
+      [0.75, 0],
+    ]);
+    // the rainbow: --r-clr-1..7 three times over, then --r-clr-1
+    expect(stopsOf(shine.layers[0])).toHaveLength(22);
+    const [before, after] = shine.children ?? [];
+    expect(kinds(before)).toEqual(['illusion-mask normal']);
+    expect(before.mixBlend).toBe('darken');
+    // calc((var(--pointer-from-center) + 0.4) * 0.6)
+    expect(before.opacity).toEqual({ base: 0.24, fromCenter: 0.6 });
+    expect(kinds(after)).toEqual(['css-linear normal', 'glitter soft-light']);
+    expect(after.mixBlend).toBe('color-dodge');
+  });
+
+  it('swsh-pikachu multiplies its :before and excludes its :after', () => {
+    const shine = shineOf('swsh-pikachu');
+    expect(kinds(shine)).toEqual(kinds(shineOf('rainbow-holo')));
+    expect(filterOf(shine)).toEqual([
+      [0.75, 0.5],
+      [2, 0],
+      [1, 0],
+    ]);
+    const [before, after] = shine.children ?? [];
+    expect(before.mixBlend).toBe('multiply');
+    expect(after.mixBlend).toBe('exclusion');
+    expect(filterOf(after)[0]).toEqual([0.35, 0.35]);
+  });
+
+  it('rainbow-alt and the gallery VMAX draw one rule, at --space 5% and 6%', () => {
+    const alt = shineOf('rainbow-alt');
+    const vmax = shineOf('trainer-gallery-v-max');
+    expect(kinds(alt)).toEqual(['css-linear normal', 'glitter overlay', 'css-linear luminosity']);
+    expect(kinds(vmax)).toEqual(kinds(alt));
+    // brightness(calc((var(--pointer-from-center)*0.3) + 0.3)) contrast(3) saturate(1.8)
+    expect(filterOf(alt)).toEqual([
+      [0.3, 0.3],
+      [3, 0],
+      [1.8, 0],
+    ]);
+    expect(stopsOf(alt.layers[2]).every((s) => s.alpha === 0.75)).toBe(true);
+    const [after] = alt.children ?? [];
+    expect(alt.children).toHaveLength(1);
+    // calc(1.2 + (var(--pointer-from-center)/2) * -1)
+    expect(after.opacity).toEqual({ base: 1.2, fromCenter: -0.5 });
+    // the repeating bands' period: 5..35% against 6..42%, the same shape normalised
+    const altAt = stopsOf(alt.layers[2]).map((s) => s.at);
+    stopsOf(vmax.layers[2]).forEach((s, i) => expect(s.at).toBeCloseTo(altAt[i], 12));
+  });
+
+  it('shiny-vmax differences its sunpillars in :after, under shiny-rare.css’s rule', () => {
+    const shine = shineOf('shiny-vmax');
+    expect(kinds(shine)).toEqual([
+      'css-radial normal',
+      'css-linear color-burn',
+      'glitter overlay',
+      'glitter soft-light',
+    ]);
+    const [before, after] = shine.children ?? [];
+    expect([before.mixBlend, before.opacity]).toEqual(['lighten', { base: 0.35 }]);
+    expect(after.mixBlend).toBe('difference');
+    expect(filterOf(after)).toEqual([
+      [0.5, 0.4],
+      [1.4, 0],
+      [1.2, 0],
+    ]);
+  });
+
+  it('the gallery secret rare blends its radial in `color`, and conics its :after', () => {
+    const shine = shineOf('trainer-gallery-secret-rare');
+    expect(kinds(shine)).toEqual([
+      'css-linear normal',
+      'css-radial color',
+      'glitter darken',
+      'glitter soft-light',
+    ]);
+    // brightness(calc((var(--pointer-from-center) * 0.3) + 0.2)) contrast(2) saturate(0.75)
+    expect(filterOf(shine)).toEqual([
+      [0.2, 0.3],
+      [2, 0],
+      [0.75, 0],
+    ]);
+    const [before, after] = shine.children ?? [];
+    expect(kinds(before)).toEqual(['css-radial normal', 'geometric color-burn']);
+    expect(before.mixBlend).toBe('exclusion');
+    expect(kinds(after)).toEqual(['css-conic normal', 'glitter luminosity']);
+    expect(after.mixBlend).toBe('soft-light');
+    // brightness(calc((var(--pointer-from-center)*0.5) + 0.6)) contrast(2) saturate(3)
+    expect(filterOf(after)).toEqual([
+      [0.6, 0.5],
+      [2, 0],
+      [3, 0],
+    ]);
+    expect(stopsOf(after.layers[0])).toHaveLength(7);
+  });
+});

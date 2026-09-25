@@ -1,4 +1,4 @@
-import type { Effect, PointerDriven } from '../shader/types';
+import type { Effect } from '../shader/types';
 import { TEXTURE_SIZE } from '../textures';
 import {
   BLACK,
@@ -14,14 +14,13 @@ import {
   fixedFilter,
   grey,
   hsl,
-  plus,
+  nudged,
   pxTall,
   pxWide,
   radial,
   stop,
   sunpillarClr,
   texture,
-  times,
 } from './css';
 import { glareNeutral } from './legacy-glare';
 
@@ -33,15 +32,6 @@ const GLITTER: [number, number] = [0.25, 0.25];
 
 /** .card__shine's own sunpillars: base.css starts --sunpillar-clr-1 at --sunpillar-1. */
 const [S1, , , S4, S5, S6] = sunpillarClr(1);
-
-/**
- * background-position `calc(50% - ((var(--shift) * 2) * <pointer>) + var(--shift))`
- * for an image `size` of the card: centred, then nudged `shift` against the
- * pointer, as a position fraction (a px offset adds straight to the image's
- * edge, which the fraction then carries over the card less the image).
- */
-const nudged = (pointer: PointerDriven, shift: number, size: number): PointerDriven =>
-  plus(CENTER, times(plus(fixed(shift), times(pointer, -2 * shift)), 1 / (1 - size)));
 
 /**
  * A secret rare, ported from pokemon-cards-css's secret-rare.css on its

@@ -1,26 +1,23 @@
 import type { Effect } from '../shader/types';
 import { BLACK, COVER, fixedFilter, hsl, radial, stop } from './css';
 import { glareNeutral } from './legacy-glare';
-import { trainerGalleryHolo } from './trainer-gallery-holo';
+import { rainbowAltShine } from './rainbow-alt';
 
 /** trainer-gallery-v-max.css's .card__glare filter. */
 const GLARE_FILTER = { brightness: 1, contrast: 1 };
 
 /**
- * A trainer gallery VMAX: the gallery holo's shine, stronger (derived by eye).
- * Its glare is ported from trainer-gallery-v-max.css, overlaid (from
- * base.css), beneath the shine (legacy-glare.ts), and only as strong as the
- * pointer is far from the middle; it replaces trainer-gallery-holo's rather
- * than inheriting it. Its middle stop has no position, which CSS puts midway
- * between its neighbours, at 60%.
+ * A trainer gallery VMAX. Its shine is rainbow-alt's: pokemon-cards-css styles
+ * a gallery VMAX (`[data-rarity="rare holo vmax"][data-trainer-gallery="true"]`)
+ * by rainbow-alt.css's rules, at the 6% --space v-max.css sets on every VMAX,
+ * over the whole card. Its glare is ported from trainer-gallery-v-max.css,
+ * overlaid (from base.css), beneath the shine (legacy-glare.ts), and only as
+ * strong as the pointer is far from the middle. Its middle stop has no
+ * position, which CSS puts midway between its neighbours, at 60%.
  */
 export const trainerGalleryVMax: Effect = {
-  ...trainerGalleryHolo,
   id: 'trainer-gallery-v-max',
-  shine: trainerGalleryHolo.shine.map((el) => ({
-    ...el,
-    opacity: { base: 0.45, fromCenter: 0.45 },
-  })),
+  shine: rainbowAltShine(6),
   beneath: [
     {
       layers: [

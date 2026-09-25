@@ -1,43 +1,99 @@
-import type { Effect } from '../shader/types';
-import { COVER, fixedFilter, grey, hsl, radial, stop } from './css';
+import type { Effect, PointerDriven } from '../shader/types';
+import { TEXTURE_SIZE } from '../textures';
+import {
+  CENTER,
+  COVER,
+  POINTER_X,
+  POINTER_Y,
+  autoHeight,
+  exactLinear,
+  fixed,
+  fixedFilter,
+  grey,
+  hsl,
+  plus,
+  radial,
+  stop,
+  texture,
+  times,
+} from './css';
 import { glareNeutral } from './legacy-glare';
-import { RAINBOW_MUTED } from './palette';
+import { RCLR, RCLR_STOPS, glitter } from './rainbow-family';
 
 /** rainbow-holo.css's .card__glare filter. */
 const GLARE_FILTER = { brightness: 0.9, contrast: 1.75 };
 
+/** `calc(25% + (var(--pointer-x) / 2))` and the like: half as far as the pointer. */
+const HALFWAY: [PointerDriven, PointerDriven] = [
+  plus(fixed(0.25), times(POINTER_X, 0.5)),
+  plus(fixed(0.25), times(POINTER_Y, 0.5)),
+];
+
+/** The unmasked --foil, illusion-mask, at --imgsize 33%. */
+const ILLUSION_MASK = texture('illusion-mask', {
+  size: autoHeight(0.33, TEXTURE_SIZE['illusion-mask']),
+  position: [CENTER, CENTER],
+});
+
 /**
- * A rainbow rare. The shine is derived by eye from pokemon-cards-css; the
- * glare is ported from rainbow-holo.css, hard-lit, beneath the shine
- * (legacy-glare.ts), and only as strong as the pointer is far from the
- * middle. Its first stop has no position, which CSS reads as 0%.
+ * A rainbow rare, ported from pokemon-cards-css's rainbow-holo.css on its
+ * unmasked path: a muted linear rainbow at −45° in luminosity over glitter
+ * soft-lit onto the rainbow at −30°, both following the pointer half as far;
+ * a `:before` of illusion-mask, the unmasked --foil, darkening, strongest as
+ * the pointer leaves the middle; and an `:after` of glitter soft-lit onto the
+ * rainbow at −60°, colour-dodged. The glare is ported too, beneath the shine
+ * (legacy-glare.ts).
+ *
+ * Approximation: glitter and illusion-mask are drawn here (textures.ts), not
+ * the reference's images.
  */
 export const rainbowHolo: Effect = {
   id: 'rainbow-holo',
   shine: [
     {
       layers: [
+        { ...exactLinear(-30, RCLR_STOPS, { size: [4, 4], position: HALFWAY }), blend: 'normal' },
+        { ...glitter([CENTER, CENTER]), blend: 'soft-light' },
         {
-          source: { kind: 'linear', angleDeg: -45, stops: RAINBOW_MUTED },
-          blend: 'normal',
-          size: [2, 2],
-          offset: { x: { base: 0.25, fromLeft: 0.5 }, y: { base: 0.25, fromTop: 0.5 } },
-        },
-        { source: { kind: 'glitter', scale: 4 }, blend: 'soft-light' },
-        {
-          source: { kind: 'linear', angleDeg: -30, stops: RAINBOW_MUTED },
+          ...exactLinear(-45, [stop(RCLR[0], 0), stop(RCLR[4], 100)], {
+            size: [2, 2],
+            position: HALFWAY,
+          }),
           blend: 'luminosity',
-          size: [4, 4],
-          offset: { x: { base: 0.25, fromLeft: 0.5 }, y: { base: 0.25, fromTop: 0.5 } },
+        },
+      ],
+      children: [
+        {
+          // :before
+          layers: [{ ...ILLUSION_MASK, blend: 'normal' }],
+          filter: fixedFilter({ brightness: 2.5, contrast: 1 }),
+          mixBlend: 'darken',
+          // calc((var(--pointer-from-center) + 0.4) * 0.6)
+          opacity: { base: 0.24, fromCenter: 0.6 },
+        },
+        {
+          // :after
+          layers: [
+            {
+              ...exactLinear(-60, RCLR_STOPS, { size: [4, 4], position: [POINTER_X, POINTER_Y] }),
+              blend: 'normal',
+            },
+            { ...glitter([CENTER, CENTER]), blend: 'soft-light' },
+          ],
+          filter: {
+            brightness: { base: 0.55, fromCenter: 0.3 },
+            contrast: fixed(2),
+            saturate: fixed(1),
+          },
+          mixBlend: 'color-dodge',
         },
       ],
       filter: {
         brightness: { base: 0.6, fromCenter: 0.25 },
-        contrast: { base: 2.2 },
-        saturate: { base: 0.75 },
+        contrast: fixed(2.2),
+        saturate: fixed(0.75),
       },
       mixBlend: 'color-dodge',
-      opacity: { base: 0.5, fromCenter: 0.4 },
     },
   ],
   beneath: [

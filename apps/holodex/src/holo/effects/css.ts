@@ -575,6 +575,22 @@ export function gradientLengthPx(angleDeg: number, box: CssBox): number {
   return Math.abs(width * Math.sin(rad)) + Math.abs(height * Math.cos(rad));
 }
 
+/**
+ * background-position `calc(50% - ((var(--shift) * 2) * <pointer>) ± var(--shift))`
+ * for an image `size` of the card, as a position fraction: centred, then
+ * nudged `shift` (a fraction of the card) against the pointer, `sign` the
+ * sign of the final term. A px offset adds straight to the image's edge, and
+ * the fraction carries it over the card less the image.
+ */
+export function nudged(
+  pointer: PointerDriven,
+  shift: number,
+  size: number,
+  sign: 1 | -1 = 1,
+): PointerDriven {
+  return plus(CENTER, times(plus(fixed(sign * shift), times(pointer, -2 * shift)), 1 / (1 - size)));
+}
+
 /** background-size `<width> auto` for a texture of this natural size, as fractions of the card. */
 export function autoHeight(width: number, natural: readonly [number, number]): [number, number] {
   return [width, width * (natural[1] / natural[0]) * CARD_ASPECT];

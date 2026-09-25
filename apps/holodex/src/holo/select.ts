@@ -334,11 +334,14 @@ function reverseEffect(card: Card): EffectId {
  * with the mask gone the foil covers the card; for the older effects, the
  * shine ports (legacy-shines.test.ts) take the clip-path pokemon-cards-css's
  * unmasked path computes, which for these is none. A gallery V is styled by
- * v-full-art.css's rules, so it is unclipped too.
+ * v-full-art.css's rules and a gallery VMAX by rainbow-alt.css's, so they are
+ * unclipped too, as is a gallery secret rare.
  */
 const FULL_ART: ReadonlySet<EffectId> = new Set<EffectId>([
   'v-full-art',
   'trainer-gallery-v-regular',
+  'trainer-gallery-v-max',
+  'trainer-gallery-secret-rare',
   'secret-rare',
   'rainbow-holo',
   'rainbow-alt',
@@ -362,9 +365,13 @@ const BORDERS: ReadonlySet<EffectId> = new Set<EffectId>([
   'radiant-holo',
   'illustration-rare',
   'trainer-gallery-holo',
-  'trainer-gallery-v-max',
-  'trainer-gallery-secret-rare',
 ]);
+
+/**
+ * Effects the reference clips to the art window whatever the card:
+ * amazing-rare.css's unmasked rule sets `--clip` with no stage variant.
+ */
+const ART_WINDOW: ReadonlySet<EffectId> = new Set<EffectId>(['amazing-rare']);
 
 /**
  * Effects a reverse printing is allowed to replace. A Scarlet & Violet or
@@ -420,6 +427,7 @@ function clipShape(effect: EffectId, card: Card): ClipShape {
   // rules below. Every reverse foil falls through to the card's own region,
   // which selectHolo inverts.
   if (BORDERS.has(effect)) return 'borders';
+  if (ART_WINDOW.has(effect)) return 'regular';
   if (card.rarity === 'Full Art Trainer') return 'full';
   if (FULL_ART.has(effect)) return 'full';
   if (card.category === 'Trainer') return 'trainer';

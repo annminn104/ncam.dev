@@ -290,6 +290,17 @@ describe('selectHolo — clip shape', () => {
     // v-regular.css clips a V nowhere, on the unmasked path
     const v = selectHolo(card({ rarity: 'Holo Rare V', stage: 'Basic' }));
     expect([v.effect, v.shape]).toEqual(['v-regular', 'full']);
+    // amazing-rare.css's unmasked rule: --clip, even on an evolution
+    const amazing = selectHolo(card({ rarity: 'Amazing Rare', stage: 'Stage1' }));
+    expect([amazing.effect, amazing.shape]).toEqual(['amazing-rare', 'regular']);
+    // a gallery VMAX takes rainbow-alt.css's rules, and a gallery secret rare its own: neither clips
+    const galleryVmax = selectHolo(card({ localId: 'TG15', rarity: 'Holo Rare VMAX' }));
+    expect([galleryVmax.effect, galleryVmax.shape]).toEqual(['trainer-gallery-v-max', 'full']);
+    const gallerySecret = selectHolo(card({ localId: 'TG29', rarity: 'Secret Rare' }));
+    expect([gallerySecret.effect, gallerySecret.shape]).toEqual([
+      'trainer-gallery-secret-rare',
+      'full',
+    ]);
   });
 
   it('gives an ordinary trainer the trainer region', () => {
