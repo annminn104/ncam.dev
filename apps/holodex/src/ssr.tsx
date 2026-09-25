@@ -78,7 +78,8 @@ export async function renderHeroSSR(
 ): Promise<RenderHeroSSRResult> {
   const { renderToString } = await import('react-dom/server');
   const routeString = options.config?.route ?? '/';
-  const queryClient = createQueryClient();
+  // No retries here: a failed prefetch is the browser's to fetch again.
+  const queryClient = createQueryClient({ server: true });
   const controller = createRouteController({ route: routeString });
 
   try {

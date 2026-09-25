@@ -34,11 +34,16 @@ export function retryTransient(failureCount: number, error: unknown): boolean {
   return status === undefined || status >= 500 || status === 408 || status === 429;
 }
 
-export function createQueryClient(): QueryClient {
+/**
+ * `server`: the SSR prefetch's client, which never retries. A failed query is
+ * not dehydrated, so the browser fetches it again with its own retries; a
+ * retry on the server only held the page back, 3 s per failing endpoint.
+ */
+export function createQueryClient({ server = false }: { server?: boolean } = {}): QueryClient {
   return new QueryClient({
     defaultOptions: {
       queries: {
-        retry: retryTransient,
+        retry: server ? false : retryTransient,
         // A portfolio demo should not hammer a free public API.
         refetchOnWindowFocus: false,
         gcTime: 30 * MINUTE,

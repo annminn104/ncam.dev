@@ -32,8 +32,8 @@ describe('retryTransient', () => {
 });
 
 describe('createQueryClient', () => {
-  async function attempts(error: TcgdexError): Promise<number> {
-    const client = createQueryClient();
+  async function attempts(error: TcgdexError, options?: { server?: boolean }): Promise<number> {
+    const client = createQueryClient(options);
     const queries = client.getDefaultOptions().queries;
     client.setDefaultOptions({ queries: { ...queries, retryDelay: 0 } });
     let calls = 0;
@@ -53,6 +53,12 @@ describe('createQueryClient', () => {
   it('asks once for a card TCGdex does not have, and three times for one it could not reach', async () => {
     expect(await attempts(new TcgdexError('TCGdex responded 404', URL, 404))).toBe(1);
     expect(await attempts(new TcgdexError('Could not reach TCGdex: Failed to fetch', URL))).toBe(3);
+  });
+
+  it('never retries on the server, where a failed prefetch is the client’s to fetch again', async () => {
+    // A retry there only held the page back: about 3 s per failing endpoint.
+    const unreachable = new TcgdexError('Could not reach TCGdex: Failed to fetch', URL);
+    expect(await attempts(unreachable, { server: true })).toBe(1);
   });
 });
 
