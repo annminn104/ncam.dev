@@ -331,14 +331,17 @@ function reverseEffect(card: Card): EffectId {
  * Effects whose foil covers the entire card rather than an art window. For
  * ex-full-art, ex-special-illustration-rare and hyper-rare the reference has
  * no clip-path, only a per-card mask we cannot have (or `--mask: none`), so
- * with the mask gone the foil covers the card.
+ * with the mask gone the foil covers the card; for the older effects, the
+ * shine ports (legacy-shines.test.ts) take the clip-path pokemon-cards-css's
+ * unmasked path computes, which for these is none. A gallery V is styled by
+ * v-full-art.css's rules, so it is unclipped too.
  */
 const FULL_ART: ReadonlySet<EffectId> = new Set<EffectId>([
   'v-full-art',
+  'trainer-gallery-v-regular',
   'secret-rare',
   'rainbow-holo',
   'rainbow-alt',
-  'shiny-rare',
   'shiny-v',
   'shiny-vmax',
   'v-max',
@@ -349,12 +352,15 @@ const FULL_ART: ReadonlySet<EffectId> = new Set<EffectId>([
   'hyper-rare',
 ]);
 
-/** Effects the reference clips to the card's rounded border, not its art. */
+/**
+ * Effects the reference clips to the card's rounded border, not its art. A
+ * shiny rare is neither: shiny-rare.css clips it to the card's own region
+ * (--clip, or --clip-stage on an evolution), which the rules below give it.
+ */
 const BORDERS: ReadonlySet<EffectId> = new Set<EffectId>([
   'radiant-holo',
   'illustration-rare',
   'trainer-gallery-holo',
-  'trainer-gallery-v-regular',
   'trainer-gallery-v-max',
   'trainer-gallery-secret-rare',
 ]);

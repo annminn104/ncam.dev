@@ -280,6 +280,15 @@ describe('selectHolo — clip shape', () => {
     expect(selectHolo(card({ rarity: 'Holo Rare VMAX' })).shape).toBe('full');
   });
 
+  it('clips each ported legacy shine where its CSS clips it', () => {
+    // shiny-rare.css: --clip, and --clip-stage on an evolution
+    expect(selectHolo(card({ rarity: 'Shiny rare', stage: 'Basic' })).shape).toBe('regular');
+    expect(selectHolo(card({ rarity: 'Shiny rare', stage: 'Stage1' })).shape).toBe('stage');
+    // a gallery V takes v-full-art.css's rules, which clip nothing
+    const galleryV = selectHolo(card({ localId: 'TG12', rarity: 'Holo Rare V' }));
+    expect([galleryV.effect, galleryV.shape]).toEqual(['trainer-gallery-v-regular', 'full']);
+  });
+
   it('gives an ordinary trainer the trainer region', () => {
     expect(selectHolo(card({ category: 'Trainer', rarity: 'Uncommon' })).shape).toBe('trainer');
   });

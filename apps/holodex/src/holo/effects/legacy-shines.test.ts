@@ -329,3 +329,93 @@ describe('trainer-full-art’s shine, the supporter’s, as the reference resolv
     ]);
   });
 });
+
+/** The V family's four layers, bottom first, with the foil's kind and the three blends. */
+const vKinds = (foil: string, [foilBlend, sun, bands]: [string, string, string]) => [
+  'css-radial normal',
+  `css-linear ${bands}`,
+  `css-linear ${sun}`,
+  `${foil} ${foilBlend}`,
+];
+
+describe('the illusion trio and the gallery V, as the reference resolves them unmasked', () => {
+  const cases: Array<[string, [number, number][], string, boolean]> = [
+    // effect, :after filter (b, c, s with pfc terms), :after blend, whether a :before is drawn
+    [
+      'v-full-art',
+      [
+        [0.8, 0.5],
+        [1.6, 0],
+        [1.4, 0],
+      ],
+      'exclusion',
+      false,
+    ],
+    [
+      'trainer-gallery-v-regular',
+      [
+        [0.8, 0.5],
+        [1.6, 0],
+        [1.4, 0],
+      ],
+      'exclusion',
+      false,
+    ],
+    [
+      'shiny-v',
+      [
+        [0.5, 0.4],
+        [1.4, 0],
+        [1.2, 0],
+      ],
+      'difference',
+      false,
+    ],
+    [
+      'shiny-rare',
+      [
+        [0.5, 0.4],
+        [1.4, 0],
+        [1.2, 0],
+      ],
+      'difference',
+      true,
+    ],
+  ];
+
+  it.each(cases)(
+    '%s excludes illusion onto the V family’s bands',
+    (id, afterFilter, afterBlend, before) => {
+      const [shine] = EFFECTS[id as keyof typeof EFFECTS].shine;
+      expect(kinds(shine)).toEqual(vKinds('illusion', ['exclusion', 'hue', 'hard-light']));
+      // brightness(calc((var(--pointer-from-center)*.3) + .35)) contrast(2) saturate(1.5)
+      expect(filterOf(shine)).toEqual([
+        [0.35, 0.3],
+        [2, 0],
+        [1.5, 0],
+      ]);
+      const [after, top] = shine.children ?? [];
+      expect(kinds(after)).toEqual(kinds(shine));
+      expect(after.mixBlend).toBe(afterBlend);
+      expect(filterOf(after)).toEqual(afterFilter);
+      expect(shine.children).toHaveLength(before ? 2 : 1);
+      if (before) {
+        // z-index 1: hsl(0, 0%, 100%) 0%, hsla(0, 0%, 0%, 0) 40%, overlaid at .75
+        expect(top.mixBlend).toBe('overlay');
+        expect(top.opacity).toEqual({ base: 0.75 });
+        expect(stopsOf(top.layers[0]).map((s) => [s.at, s.alpha ?? 1])).toEqual([
+          [0, 1],
+          [0.4, 0],
+        ]);
+      }
+    },
+  );
+
+  it('keeps the sunpillars in each element’s own rotation: the shine from 1, :after from 6', () => {
+    const [shine] = EFFECTS['v-full-art'].shine;
+    const [after] = shine.children ?? [];
+    // --sunpillar-1 is hsl(2, 100%, 73%), --sunpillar-6 hsl(283, 100%, 73%)
+    expect(stopsOf(shine.layers[2])[0].color.map((c) => +c.toFixed(3))).toEqual([1, 0.478, 0.46]);
+    expect(stopsOf(after.layers[2])[0].color.map((c) => +c.toFixed(3))).toEqual([0.847, 0.46, 1]);
+  });
+});

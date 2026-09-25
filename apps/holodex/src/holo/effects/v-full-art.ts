@@ -1,38 +1,49 @@
 import type { Effect } from '../shader/types';
-import { CENTER, fixedFilter, grey, hsl, radial, stop } from './css';
+import { TEXTURE_SIZE } from '../textures';
+import { CENTER, autoHeight, fixed, fixedFilter, grey, hsl, radial, stop, texture } from './css';
 import { glareNeutral } from './legacy-glare';
-import { SUNPILLAR } from './palette';
+import { vShine } from './v-family';
 
 /** v-full-art.css's .card__glare filter. */
 const GLARE_FILTER = { brightness: 1, contrast: 1.2, saturate: 1 };
 
 /**
- * A full art V. The shine is derived by eye from pokemon-cards-css; the glare
- * is ported from v-full-art.css (one rule for Pokémon and supporters alike),
- * hard-lit, beneath the shine (legacy-glare.ts): a radial in an image 120% ×
- * 150% of the card, centred on it.
+ * A full art V, ported from pokemon-cards-css's v-full-art.css on its
+ * unmasked path: the V family's shine (v-family.ts) with illusion, the
+ * unmasked --foil, excluded onto the sunpillars, which are hue-blended onto
+ * the bands, hard-lit onto a faint dark radial; its `:after` the same again,
+ * excluded; its `:before` switched off. The glare is ported from v-full-art.css
+ * (one rule for Pokémon and supporters alike), hard-lit, beneath the shine
+ * (legacy-glare.ts): a radial in an image 120% × 150% of the card, centred on
+ * it. trainer-gallery-v-regular draws this shine too, by the same rule.
+ *
+ * Approximation: illusion is drawn here (textures.ts), not the reference's
+ * image.
  */
 export const vFullArt: Effect = {
   id: 'v-full-art',
   shine: [
-    {
-      layers: [
-        {
-          source: { kind: 'repeating-linear', angleDeg: 133, space: 0.05, stops: SUNPILLAR },
-          blend: 'normal',
-          size: [3, 3],
-          offset: { x: { base: 0, fromLeft: 1 }, y: { base: 0, fromTop: 1 } },
-        },
-        { source: { kind: 'glitter', scale: 6 }, blend: 'overlay' },
-      ],
+    vShine({
+      foil: texture('illusion', {
+        size: autoHeight(0.33, TEXTURE_SIZE.illusion),
+        position: [CENTER, CENTER],
+      }),
+      blends: ['exclusion', 'hue', 'hard-light'],
       filter: {
-        brightness: { base: 0.55, fromCenter: 0.3 },
-        contrast: { base: 2 },
-        saturate: { base: 1.2 },
+        brightness: { base: 0.35, fromCenter: 0.3 },
+        contrast: fixed(2),
+        saturate: fixed(1.5),
       },
-      mixBlend: 'exclusion',
-      opacity: { base: 0.45, fromCenter: 0.4 },
-    },
+      after: {
+        filter: {
+          brightness: { base: 0.8, fromCenter: 0.5 },
+          contrast: fixed(1.6),
+          saturate: fixed(1.4),
+        },
+        mixBlend: 'exclusion',
+      },
+      slant: 0.2,
+    }),
   ],
   beneath: [
     {
