@@ -1,37 +1,63 @@
-import type { Effect } from '../shader/types';
-import { fixed, fixedFilter, radial } from './css';
+import type { Effect, Filter } from '../shader/types';
+import { TEXTURE_SIZE } from '../textures';
+import {
+  BLACK,
+  CENTER,
+  WHITE,
+  autoHeight,
+  exactRadial,
+  fixed,
+  fixedFilter,
+  radial,
+  stop,
+  texture,
+} from './css';
 import { BASE_GLARE, glareNeutral } from './legacy-glare';
-import { SUNPILLAR } from './palette';
+import { vShine } from './v-family';
 
 /** trainer-full-art.css's .card__glare filter, for a supporter. */
 const GLARE_FILTER = { brightness: 1.5, contrast: 1.4, saturate: 1 };
 
+/** Its unmasked shine and :after filter: brightness(calc((pfc * 0.05) + .6)) contrast(1.5) saturate(1.2). */
+const FILTER: Filter = {
+  brightness: { base: 0.6, fromCenter: 0.05 },
+  contrast: fixed(1.5),
+  saturate: fixed(1.2),
+};
+
 /**
- * A full art trainer. The shine is derived by eye from pokemon-cards-css; the
- * glare is ported from trainer-full-art.css, which styles a supporter's:
+ * A full art trainer, ported from pokemon-cards-css's supporter full art:
+ * v-full-art.css's V family shine (v-family.ts) under trainer-full-art.css's
+ * unmasked rules, whose --foil is trainerbg at 20% of the card, colour-burnt
+ * onto the sunpillars, which are hue-blended onto the bands, hard-lit onto a
+ * faint dark radial; the `:after` the same, excluded; and, above them by
+ * z-index, a `:before` of white about the pointer, screened at half strength.
+ * The glare is ported from trainer-full-art.css, which styles a supporter's:
  * base.css's radial drawn 170% of the card from its top left corner (it sets a
  * size and no position), multiplied, beneath the shine (legacy-glare.ts).
+ *
+ * Approximation: trainerbg is drawn here (textures.ts), not the reference's
+ * image.
  */
 export const trainerFullArt: Effect = {
   id: 'trainer-full-art',
   shine: [
-    {
-      layers: [
-        {
-          source: { kind: 'repeating-linear', angleDeg: 133, space: 0.07, stops: SUNPILLAR },
-          blend: 'normal',
-          size: [2.5, 2.5],
-          offset: { x: { base: 0, fromLeft: 0.7 }, y: { base: 0, fromTop: 0.7 } },
-        },
-      ],
-      filter: {
-        brightness: { base: 0.6, fromCenter: 0.25 },
-        contrast: { base: 1.5 },
-        saturate: { base: 0.9 },
+    vShine({
+      foil: texture('trainerbg', {
+        size: autoHeight(0.2, TEXTURE_SIZE.trainerbg),
+        position: [CENTER, CENTER],
+      }),
+      blends: ['color-burn', 'hue', 'hard-light'],
+      filter: FILTER,
+      after: { filter: FILTER, mixBlend: 'exclusion' },
+      slant: 0.2,
+      before: {
+        // :before, z-index 1
+        layers: [{ ...exactRadial([stop(WHITE, 0), stop(BLACK, 80, 0)]), blend: 'normal' }],
+        mixBlend: 'screen',
+        opacity: fixed(0.5),
       },
-      mixBlend: 'screen',
-      opacity: { base: 0.3, fromCenter: 0.35 },
-    },
+    }),
   ],
   beneath: [
     {

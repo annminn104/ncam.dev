@@ -176,3 +176,156 @@ describe('radiant-holo’s shine, as radiant-holo.css draws it unmasked', () => 
     expect(effect.glare).toEqual([]);
   });
 });
+
+/** An element's filter as CSS writes it: (brightness, contrast, saturate), each a base and a pfc term. */
+function filterOf(el: Element): Array<[number, number]> {
+  const f = el.filter ?? {};
+  return [f.brightness, f.contrast, f.saturate].map((p) => [p?.base ?? 1, p?.fromCenter ?? 0]);
+}
+
+describe('regular-holo’s shine, as regular-holo.css draws it', () => {
+  const [shine] = EFFECTS['regular-holo'].shine;
+
+  it('overlays the spectrum onto scanlines, colour-dodged through its filter', () => {
+    expect(EFFECTS['regular-holo'].shine).toHaveLength(1);
+    expect(shine.mixBlend).toBe('color-dodge');
+    // brightness(1.1) contrast(1.1) saturate(1.2)
+    expect(filterOf(shine)).toEqual([
+      [1.1, 0],
+      [1.1, 0],
+      [1.2, 0],
+    ]);
+    expect(kinds(shine)).toEqual(['css-linear normal', 'css-linear overlay']);
+    // black 0, black 2px, #666 2px, #666 4px
+    expect(stopsOf(shine.layers[0]).map((s) => +s.color[0].toFixed(1))).toEqual([0, 0, 0.4, 0.4]);
+    // --violet … --red, three times over
+    expect(stopsOf(shine.layers[1])).toHaveLength(15);
+  });
+
+  it('screens two sets of bars in :before, then lays a radial in luminosity in :after', () => {
+    const [before, after] = shine.children ?? [];
+    expect(kinds(before)).toEqual(['css-linear normal', 'css-linear screen']);
+    expect(before.mixBlend).toBe('hard-light');
+    // brightness(1.15) contrast(1.1)
+    expect(filterOf(before)).toEqual([
+      [1.15, 0],
+      [1.1, 0],
+      [1, 0],
+    ]);
+    // bars at 6, 9, 10.5, 12, 15 and 30%: one period from 6% to 30%
+    stopsOf(before.layers[0])
+      .map((s) => s.at)
+      .forEach((at, i) => expect(at).toBeCloseTo([0, 0.125, 0.1875, 0.25, 0.375, 1][i], 12));
+    expect(kinds(after)).toEqual(['css-radial normal']);
+    expect(after.mixBlend).toBe('luminosity');
+    // brightness(0.6) contrast(4)
+    expect(filterOf(after)).toEqual([
+      [0.6, 0],
+      [4, 0],
+      [1, 0],
+    ]);
+    // hsla(0, 0%, 90%, 0.8) 0%, hsla(0, 0%, 78%, 0.1) 25%, hsl(0, 0%, 0%) 90%
+    expect(stopsOf(after.layers[0]).map((s) => [s.at, s.alpha ?? 1])).toEqual([
+      [0, 0.8],
+      [0.25, 0.1],
+      [0.9, 1],
+    ]);
+  });
+});
+
+describe('reverse-holo’s shine, as reverse-holo.css draws it unmasked', () => {
+  const [shine] = EFFECTS['reverse-holo'].shine;
+
+  it('soft-lights a radial onto a linear, through the card’s own foil brightness', () => {
+    expect(kinds(shine)).toEqual(['css-linear normal', 'css-radial soft-light']);
+    expect(shine.children ?? []).toEqual([]);
+    expect(shine.mixBlend).toBe('color-dodge');
+    // brightness(var(--foil-brightness)) contrast(1.5) saturate(1)
+    expect(shine.filter?.brightness).toEqual({ base: 0, fromFoilBrightness: 1 });
+    expect(filterOf(shine).slice(1)).toEqual([
+      [1.5, 0],
+      [1, 0],
+    ]);
+    // calc((1.5 * var(--card-opacity)) - var(--pointer-from-center))
+    expect(shine.opacity).toEqual({ base: 1.5, fromCenter: -1 });
+    // #000 15%, #fff, #000 85%
+    expect(stopsOf(shine.layers[0]).map((s) => s.at)).toEqual([0.15, 0.5, 0.85]);
+    // #fff 5%, #000 50%, #fff 80%
+    expect(stopsOf(shine.layers[1]).map((s) => [s.at, s.color[0]])).toEqual([
+      [0.05, 1],
+      [0.5, 0],
+      [0.8, 1],
+    ]);
+  });
+});
+
+describe('trainer-gallery-holo’s shine, as trainer-gallery-holo.css draws it', () => {
+  const [shine] = EFFECTS['trainer-gallery-holo'].shine;
+
+  it('lays pastel bands three-quarters opaque, and hard-lights an ellipse onto them', () => {
+    expect(kinds(shine)).toEqual(['css-linear normal']);
+    // brightness(calc((var(--pointer-from-center)*0.3) + 0.5)) contrast(2.3) saturate(1)
+    expect(filterOf(shine)).toEqual([
+      [0.5, 0.3],
+      [2.3, 0],
+      [1, 0],
+    ]);
+    const bands = stopsOf(shine.layers[0]);
+    expect(bands).toHaveLength(7);
+    expect(bands.every((s) => s.alpha === 0.75)).toBe(true);
+    const [after] = shine.children ?? [];
+    expect(shine.children).toHaveLength(1);
+    expect(kinds(after)).toEqual(['css-radial normal']);
+    expect(after.layers[0].source.kind === 'css-radial' && after.layers[0].source.ellipse).toBe(
+      true,
+    );
+    expect(after.mixBlend).toBe('hard-light');
+    // brightness(calc((var(--pointer-from-center)*0.2) + 0.4)) contrast(.85) saturate(1.1)
+    expect(filterOf(after)).toEqual([
+      [0.4, 0.2],
+      [0.85, 0],
+      [1.1, 0],
+    ]);
+    // hsl(0, 0%, 100%) 5%, hsla(300, 100%, 11%, 0.6) 40%, hsl(0, 0%, 22%) 120%
+    expect(stopsOf(after.layers[0]).map((s) => [s.at, s.alpha ?? 1])).toEqual([
+      [0.05, 1],
+      [0.4, 0.6],
+      [1.2, 1],
+    ]);
+  });
+});
+
+describe('trainer-full-art’s shine, the supporter’s, as the reference resolves it unmasked', () => {
+  const [shine] = EFFECTS['trainer-full-art'].shine;
+
+  it('colour-burns trainerbg onto the V family’s bands', () => {
+    expect(kinds(shine)).toEqual([
+      'css-radial normal',
+      'css-linear hard-light',
+      'css-linear hue',
+      'trainerbg color-burn',
+    ]);
+    // brightness(calc((var(--pointer-from-center)*0.05) + .6)) contrast(1.5) saturate(1.2)
+    expect(filterOf(shine)).toEqual([
+      [0.6, 0.05],
+      [1.5, 0],
+      [1.2, 0],
+    ]);
+    expect(shine.mixBlend).toBe('color-dodge');
+  });
+
+  it('paints :after (z-index auto), then :before (z-index 1)', () => {
+    const [after, before] = shine.children ?? [];
+    expect(kinds(after)).toEqual(kinds(shine));
+    expect(after.mixBlend).toBe('exclusion');
+    expect(filterOf(after)).toEqual(filterOf(shine));
+    expect(kinds(before)).toEqual(['css-radial normal']);
+    expect(before.mixBlend).toBe('screen');
+    expect(before.opacity).toEqual({ base: 0.5 });
+    // hsl(0, 0%, 100%) 0%, hsla(0, 0%, 0%, 0) 80%
+    expect(stopsOf(before.layers[0]).map((s) => [s.at, s.alpha ?? 1])).toEqual([
+      [0, 1],
+      [0.8, 0],
+    ]);
+  });
+});

@@ -1,5 +1,20 @@
 import type { Effect } from '../shader/types';
-import { BLACK, COVER, WHITE, filterRGB, fixedFilter, radial, stop, type CssStop } from './css';
+import {
+  BLACK,
+  CENTER,
+  COVER,
+  POINTER_X,
+  POINTER_Y,
+  WHITE,
+  exactLinear,
+  exactRadial,
+  filterRGB,
+  fixed,
+  fixedFilter,
+  radial,
+  stop,
+  type CssStop,
+} from './css';
 import { glareNeutral, overStops } from './legacy-glare';
 
 /** reverse-holo.css's .card__glare filter, and its :after's own. */
@@ -18,47 +33,50 @@ const AFTER: CssStop[] = [stop(WHITE, 10), stop(WHITE, 20, 0.5), stop(BLACK, 120
 const SAMPLED = Array.from({ length: 49 }, (_, i) => i * 2.5);
 
 /**
- * Reverse holo: glitter over the card body, art window left clean.
+ * Reverse holo, ported from pokemon-cards-css's reverse-holo.css on its
+ * unmasked path (css.ts has the conversions), where --foil is `none`: a black
+ * and white radial about the pointer soft-lit onto a diagonal linear that
+ * slides with it, colour-dodged over the card outside its art (the inverted
+ * region, select.ts), through a brightness the card's type sets
+ * (--foil-brightness, the shader's uFoilBrightness), fading as the pointer
+ * leaves the middle. The glare is ported too, beneath the shine
+ * (legacy-glare.ts): its :after is painted with no blend over the glare's own
+ * radial, and both are radials about the pointer in one box, so the pair is
+ * one gradient: CSS's source-over of the one onto the other, sampled.
  *
- * The shine is derived by eye from pokemon-cards-css; the glare is ported from
- * reverse-holo.css, beneath the shine (legacy-glare.ts). Its :after is painted
- * with no blend over the glare's own radial, and both are radials about the
- * pointer in one box, so the pair is one gradient: CSS's source-over of the
- * one onto the other, sampled. Approximation: the reference clips the :after
- * to the card's text and border on stage and trainer cards
- * (--clip-stage-invert, --clip-trainer-invert); here it covers the card.
+ * Approximation: the reference clips the glare's :after to the card's text and
+ * border on stage and trainer cards (--clip-stage-invert,
+ * --clip-trainer-invert); here it covers the card.
  */
 export const reverseHolo: Effect = {
   id: 'reverse-holo',
   shine: [
     {
       layers: [
-        { source: { kind: 'glitter', scale: 6 }, blend: 'normal' },
+        // below it lies --foil, `none` here: the linear's difference meets nothing
         {
-          source: {
-            kind: 'repeating-linear',
-            angleDeg: 110,
-            space: 0.05,
-            stops: [
-              [0.78, 0.18, 0.21],
-              [0.93, 0.87, 0.06],
-              [0.13, 0.91, 0.52],
-              [0.05, 0.74, 0.91],
-              [0.79, 0.16, 0.95],
-            ],
-          },
+          ...exactLinear(-45, [stop(BLACK, 15), stop(WHITE, 50), stop(BLACK, 85)], {
+            size: [2, 2],
+            position: [POINTER_X, POINTER_Y],
+          }),
+          blend: 'normal',
+        },
+        {
+          ...exactRadial([stop(WHITE, 5), stop(BLACK, 50), stop(WHITE, 80)], {
+            size: [1.2, 1.2],
+            position: [CENTER, CENTER],
+          }),
           blend: 'soft-light',
-          size: [3, 3],
-          offset: { x: { base: 0, fromLeft: 0.6 }, y: { base: 0, fromTop: 0.6 } },
         },
       ],
       filter: {
-        brightness: { base: 0.55, fromCenter: 0.3 },
-        contrast: { base: 1.6 },
-        saturate: { base: 1.2 },
+        brightness: { base: 0, fromFoilBrightness: 1 },
+        contrast: fixed(1.5),
+        saturate: fixed(1),
       },
       mixBlend: 'color-dodge',
-      opacity: { base: 0.4, fromCenter: 0.4 },
+      // calc((1.5 * var(--card-opacity)) - var(--pointer-from-center))
+      opacity: { base: 1.5, fromCenter: -1 },
     },
   ],
   beneath: [
