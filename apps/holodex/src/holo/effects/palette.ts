@@ -16,9 +16,3 @@ export const RAINBOW_MUTED: Array<[number, number, number]> = [
   [0.25, 0.4, 0.61],
   [0.44, 0.22, 0.6],
 ];
-
-/** A neutral pointer glare used by most chase effects. */
-export const GLARE_STOPS = [
-  { at: 0, color: [1, 1, 1] as [number, number, number] },
-  { at: 1, color: [0.06, 0.06, 0.08] as [number, number, number] },
-];

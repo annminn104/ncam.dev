@@ -1,6 +1,15 @@
 import type { Effect } from '../shader/types';
-import { GLARE_STOPS, SUNPILLAR } from './palette';
+import { COVER, WHITE, hsl, radial, stop } from './css';
+import { glareNeutral } from './legacy-glare';
+import { SUNPILLAR } from './palette';
 
+/**
+ * A trainer gallery holo. The shine is derived by eye from pokemon-cards-css;
+ * the glare is ported from trainer-gallery-holo.css, soft-lit, with no filter
+ * and its :before and :after switched off, beneath the shine
+ * (legacy-glare.ts). trainer-gallery-v-regular and trainer-gallery-v-max
+ * spread this effect but paint glares of their own.
+ */
 export const trainerGalleryHolo: Effect = {
   id: 'trainer-gallery-holo',
   shine: [
@@ -22,11 +31,20 @@ export const trainerGalleryHolo: Effect = {
       opacity: { base: 0.3, fromCenter: 0.35 },
     },
   ],
-  glare: [
+  beneath: [
     {
-      layers: [{ source: { kind: 'radial-pointer', stops: GLARE_STOPS }, blend: 'normal' }],
+      layers: [
+        {
+          ...radial(
+            [stop(WHITE, 10), stop(WHITE, 35, 0.6), stop(hsl(180, 11, 35), 60)],
+            COVER,
+            glareNeutral('soft-light'),
+          ),
+          blend: 'normal',
+        },
+      ],
       mixBlend: 'soft-light',
-      opacity: { base: 0.2, fromCenter: 0.5 },
     },
   ],
+  glare: [],
 };

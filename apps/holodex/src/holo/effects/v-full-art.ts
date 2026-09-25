@@ -1,6 +1,17 @@
 import type { Effect } from '../shader/types';
-import { GLARE_STOPS, SUNPILLAR } from './palette';
+import { CENTER, fixedFilter, grey, hsl, radial, stop } from './css';
+import { glareNeutral } from './legacy-glare';
+import { SUNPILLAR } from './palette';
 
+/** v-full-art.css's .card__glare filter. */
+const GLARE_FILTER = { brightness: 1, contrast: 1.2, saturate: 1 };
+
+/**
+ * A full art V. The shine is derived by eye from pokemon-cards-css; the glare
+ * is ported from v-full-art.css (one rule for Pokémon and supporters alike),
+ * hard-lit, beneath the shine (legacy-glare.ts): a radial in an image 120% ×
+ * 150% of the card, centred on it.
+ */
 export const vFullArt: Effect = {
   id: 'v-full-art',
   shine: [
@@ -23,12 +34,22 @@ export const vFullArt: Effect = {
       opacity: { base: 0.45, fromCenter: 0.4 },
     },
   ],
-  glare: [
+  beneath: [
     {
-      layers: [{ source: { kind: 'radial-pointer', stops: GLARE_STOPS }, blend: 'normal' }],
-      filter: { brightness: { base: 1 }, contrast: { base: 1.4 } },
+      layers: [
+        {
+          ...radial(
+            [stop(grey(0.75), 5), stop(hsl(200, 5, 35), 60), stop(hsl(320, 40, 10), 150)],
+            { size: [1.2, 1.5], position: [CENTER, CENTER] },
+            glareNeutral('hard-light', GLARE_FILTER),
+          ),
+          blend: 'normal',
+        },
+      ],
+      filter: fixedFilter(GLARE_FILTER),
+      opacity: { base: 0.75 },
       mixBlend: 'hard-light',
-      opacity: { base: 0.2, fromCenter: 0.7 },
     },
   ],
+  glare: [],
 };

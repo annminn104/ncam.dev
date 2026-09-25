@@ -137,7 +137,66 @@ const SHAPE: Record<string, GlareShape> = {
   },
   // amazing-rare.css: :not(.masked)'s multiply, no filter
   'amazing-rare': { blend: 'multiply', layerBlends: ['normal'], box: [1, 1] },
+  // shiny-rare.css: multiply, brightness(1.2) contrast(1) saturate(.7), calc(pointer-from-center), cover
+  'shiny-rare': {
+    blend: 'multiply',
+    opacity: { base: 0, fromCenter: 1 },
+    filter: { brightness: 1.2, contrast: 1, saturate: 0.7 },
+    layerBlends: ['normal'],
+    box: [1, 1],
+  },
+  // shiny-v.css: darken, brightness(.88) contrast(2.25) saturate(.7), calc(pointer-from-center * .75), 120% 140%
+  'shiny-v': {
+    blend: 'darken',
+    opacity: { base: 0, fromCenter: 0.75 },
+    filter: { brightness: 0.88, contrast: 2.25, saturate: 0.7 },
+    layerBlends: ['normal'],
+    box: [1.2, 1.4],
+  },
+  // v-full-art.css: hard-light, brightness(1) contrast(1.2) saturate(1), opacity .75, 120% 150%
+  'v-full-art': {
+    blend: 'hard-light',
+    opacity: { base: 0.75 },
+    filter: { brightness: 1, contrast: 1.2, saturate: 1 },
+    layerBlends: ['normal'],
+    box: [1.2, 1.5],
+  },
+  // trainer-gallery-holo.css: soft-light, no filter
+  'trainer-gallery-holo': { blend: 'soft-light', layerBlends: ['normal'], box: [1, 1] },
+  // trainer-gallery-secret-rare.css: :not(.masked)'s brightness(.5) contrast(1), hard-light
+  'trainer-gallery-secret-rare': {
+    blend: 'hard-light',
+    filter: { brightness: 0.5, contrast: 1 },
+    layerBlends: ['normal'],
+    box: [1, 1],
+  },
+  // trainer-gallery-v-max.css: brightness(1) contrast(1), overlay from base.css, calc(pointer-from-center * 0.85)
+  'trainer-gallery-v-max': {
+    blend: 'overlay',
+    opacity: { base: 0, fromCenter: 0.85 },
+    filter: { brightness: 1, contrast: 1 },
+    layerBlends: ['normal'],
+    box: [1, 1],
+  },
 };
+
+/** The eight Scarlet & Violet ports, whose glares came from pokemon-cards-151 instead. */
+const SV_PORTS = [
+  'ex-regular',
+  'ex-full-art',
+  'illustration-rare',
+  'ex-special-illustration-rare',
+  'hyper-rare',
+  'poke-ball-holo',
+  'masterball-holo',
+  'sv-rare-holo',
+];
+
+it('holds every effect derived from pokemon-cards-css to a row, and no SV port', () => {
+  const legacy = Object.keys(EFFECTS).filter((id) => !SV_PORTS.includes(id));
+  expect(legacy).toHaveLength(22);
+  expect(Object.keys(SHAPE).sort()).toEqual(legacy.sort());
+});
 
 const glareOf = (id: string): Element => {
   const effect = EFFECTS[id as keyof typeof EFFECTS];
@@ -287,5 +346,50 @@ describe('the single radials', () => {
     const [layer] = glareOf('amazing-rare').layers;
     expectGrey(colourAt(layer, 0), 1, 'at the pointer');
     expectGrey(colourAt(layer, 1), 0.65, 'at the far corner');
+  });
+});
+
+describe('the sized boxes, and the trainer galleries', () => {
+  const centre = (id: string) => {
+    const [layer] = glareOf(id).layers;
+    if (layer.source.kind !== 'radial-pointer' || !layer.source.cssBox) throw new Error('no box');
+    return layer.source.cssBox.centre.map(terms);
+  };
+
+  const expectTerms = (got: ReturnType<typeof terms>, want: PointerDriven) => {
+    const w = terms(want);
+    for (const k of ['base', 'fromCenter', 'fromLeft', 'fromTop'] as const) {
+      expect(got[k], k).toBeCloseTo(w[k], 12);
+    }
+  };
+
+  it('shiny-v: centres its 120% × 140% image on the card, the radial at the pointer in it', () => {
+    // background-position: center: the image's left edge at 0.5·(1 − 1.2),
+    // its top at 0.5·(1 − 1.4); the pointer's fraction of the image from there
+    const [x, y] = centre('shiny-v');
+    expectTerms(x, { base: -0.1, fromLeft: 1.2 });
+    expectTerms(y, { base: -0.2, fromTop: 1.4 });
+  });
+
+  it('v-full-art: likewise for its 120% × 150%', () => {
+    const [x, y] = centre('v-full-art');
+    expectTerms(x, { base: -0.1, fromLeft: 1.2 });
+    expectTerms(y, { base: -0.25, fromTop: 1.5 });
+  });
+
+  it('shiny-rare: reaches two thirds of the way to its 150% stop at the far corner', () => {
+    // hsl(320, 5%, 15%): C = (1 − |2·0.15 − 1|)·0.05 = 0.015, m = 0.1425,
+    // rgb(0.1575, 0.1425, 0.1525); from white at 0%, both opaque, at t = 1:
+    // 1 − (1 − c)·2/3
+    const [layer] = glareOf('shiny-rare').layers;
+    const got = colourAt(layer, 1);
+    [0.438333, 0.428333, 0.435].forEach((want, k) => expect(got[k]).toBeCloseTo(want, 4));
+  });
+
+  it('trainer-gallery-holo: holds its last stop past 60%', () => {
+    // hsl(180, 11%, 35%) = rgb(0.3115, 0.3885, 0.3885), opaque
+    const [layer] = glareOf('trainer-gallery-holo').layers;
+    const got = colourAt(layer, 1);
+    [0.3115, 0.3885, 0.3885].forEach((want, k) => expect(got[k]).toBeCloseTo(want, 4));
   });
 });

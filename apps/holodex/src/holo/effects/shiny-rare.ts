@@ -1,6 +1,15 @@
 import type { Effect } from '../shader/types';
-import { GLARE_STOPS } from './palette';
+import { COVER, WHITE, fixedFilter, hsl, radial, stop } from './css';
+import { glareNeutral } from './legacy-glare';
 
+/** shiny-rare.css's .card__glare filter. */
+const GLARE_FILTER = { brightness: 1.2, contrast: 1, saturate: 0.7 };
+
+/**
+ * A shiny rare. The shine is derived by eye from pokemon-cards-css; the glare
+ * is ported from shiny-rare.css, multiplied, beneath the shine
+ * (legacy-glare.ts), and only as strong as the pointer is far from the middle.
+ */
 export const shinyRare: Effect = {
   id: 'shiny-rare',
   shine: [
@@ -32,11 +41,23 @@ export const shinyRare: Effect = {
       opacity: { base: 0.45, fromCenter: 0.4 },
     },
   ],
-  glare: [
+  beneath: [
     {
-      layers: [{ source: { kind: 'radial-pointer', stops: GLARE_STOPS }, blend: 'normal' }],
-      mixBlend: 'overlay',
-      opacity: { base: 0.2, fromCenter: 0.6 },
+      layers: [
+        {
+          ...radial(
+            [stop(WHITE, 0), stop(hsl(320, 5, 15), 150)],
+            COVER,
+            glareNeutral('multiply', GLARE_FILTER),
+          ),
+          blend: 'normal',
+        },
+      ],
+      filter: fixedFilter(GLARE_FILTER),
+      // calc(var(--card-opacity) * var(--pointer-from-center))
+      opacity: { base: 0, fromCenter: 1 },
+      mixBlend: 'multiply',
     },
   ],
+  glare: [],
 };
