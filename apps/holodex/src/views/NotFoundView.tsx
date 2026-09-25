@@ -1,4 +1,5 @@
 import { useNavigate } from '../app-context';
+import { HOME } from '../components/Shell';
 
 export function NotFoundView({ path }: { path: string }) {
   const navigate = useNavigate();
@@ -10,10 +11,10 @@ export function NotFoundView({ path }: { path: string }) {
       </p>
       <button
         type="button"
-        onClick={() => navigate({ view: 'home' })}
+        onClick={() => navigate(HOME)}
         className="mt-4 rounded-lg border border-holo-line px-4 py-2 text-sm hover:border-holo-accent"
       >
-        Back to sets
+        Back to Holodex
       </button>
     </div>
   );

@@ -48,7 +48,7 @@ export function SetView({ setId, filters }: { setId: string; filters: Filters })
     <section>
       <button
         type="button"
-        onClick={() => navigate({ view: 'home' })}
+        onClick={() => navigate({ view: 'sets' })}
         className="text-sm text-holo-muted hover:text-holo-text"
       >
         ← All sets

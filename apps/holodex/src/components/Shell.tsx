@@ -4,8 +4,16 @@ import { useNavigate, useRoute } from '../app-context';
 import { EMPTY_FILTERS, type Route } from '../routes';
 import { cn } from '../lib/utils';
 
-const NAV: Array<{ label: string; icon: typeof Layers; route: Route; match: Route['view'][] }> = [
-  { label: 'Sets', icon: Layers, route: { view: 'home' }, match: ['home', 'set'] },
+/** The default page, at the root: where the logo goes. */
+export const HOME: Route = { view: 'effects' };
+
+export const NAV: Array<{
+  label: string;
+  icon: typeof Layers;
+  route: Route;
+  match: Route['view'][];
+}> = [
+  { label: 'Sets', icon: Layers, route: { view: 'sets' }, match: ['sets', 'set'] },
   {
     label: 'Search',
     icon: Search,
@@ -13,7 +21,7 @@ const NAV: Array<{ label: string; icon: typeof Layers; route: Route; match: Rout
     match: ['search'],
   },
   { label: 'Collection', icon: Star, route: { view: 'collection' }, match: ['collection'] },
-  { label: 'Effects', icon: Sparkles, route: { view: 'effects' }, match: ['effects'] },
+  { label: 'Effects', icon: Sparkles, route: HOME, match: ['effects'] },
 ];
 
 export function Shell({ children }: { children: ReactNode }) {
@@ -28,7 +36,13 @@ export function Shell({ children }: { children: ReactNode }) {
     <div className="holodex flex min-h-screen flex-col">
       <header className="sticky top-0 z-10 border-b border-holo-line bg-holo-bg/85 backdrop-blur">
         <nav className="mx-auto flex max-w-6xl items-center gap-1 px-4 py-3" aria-label="Holodex">
-          <span className="mr-4 text-sm font-semibold tracking-[0.2em] uppercase">Holodex</span>
+          <button
+            type="button"
+            onClick={() => navigate(HOME)}
+            className="mr-4 rounded-lg text-sm font-semibold tracking-[0.2em] uppercase hover:text-holo-accent"
+          >
+            Holodex
+          </button>
           {NAV.map(({ label, icon: Icon, route: target, match }) => (
             <button
               key={label}

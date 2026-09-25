@@ -92,7 +92,7 @@ export function CardView({ cardId, variant }: { cardId: string; variant?: Printi
       <div>
         <button
           type="button"
-          onClick={() => navigate({ view: 'home' })}
+          onClick={() => navigate({ view: 'sets' })}
           className="mb-3 text-sm text-holo-muted hover:text-holo-text"
         >
           ← Sets

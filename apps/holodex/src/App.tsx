@@ -25,7 +25,7 @@ export interface AppProps {
  */
 function renderView(route: Route): ReactNode {
   switch (route.view) {
-    case 'home':
+    case 'sets':
       return <SetsView />;
     case 'set':
       return <SetView setId={route.setId} filters={route.filters} />;

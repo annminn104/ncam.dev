@@ -3,9 +3,14 @@ import { EFFECT_GALLERY } from './holo/effect-gallery';
 import { EMPTY_FILTERS, formatRoute, parseRoute, viewKey } from './routes';
 
 describe('parseRoute', () => {
-  it('maps the root onto home', () => {
-    expect(parseRoute('/')).toEqual({ view: 'home' });
-    expect(parseRoute('')).toEqual({ view: 'home' });
+  it('maps the root onto the effects page, the default', () => {
+    expect(parseRoute('/')).toStrictEqual({ view: 'effects' });
+    expect(parseRoute('')).toStrictEqual({ view: 'effects' });
+  });
+
+  it('parses the sets list', () => {
+    expect(parseRoute('/sets')).toEqual({ view: 'sets' });
+    expect(parseRoute('/sets/')).toEqual({ view: 'sets' });
   });
 
   it('parses a set route with default filters', () => {
@@ -114,7 +119,6 @@ describe('parseRoute', () => {
 
   it('returns not-found for anything else', () => {
     expect(parseRoute('/nope')).toEqual({ view: 'not-found', path: '/nope' });
-    expect(parseRoute('/sets')).toEqual({ view: 'not-found', path: '/sets' });
     expect(parseRoute('/sets/swsh3/extra')).toEqual({
       view: 'not-found',
       path: '/sets/swsh3/extra',
@@ -124,7 +128,8 @@ describe('parseRoute', () => {
 
 describe('formatRoute', () => {
   it('formats every view', () => {
-    expect(formatRoute({ view: 'home' })).toBe('/');
+    expect(formatRoute({ view: 'effects' })).toBe('/');
+    expect(formatRoute({ view: 'sets' })).toBe('/sets');
     expect(formatRoute({ view: 'collection' })).toBe('/collection');
     expect(formatRoute({ view: 'card', cardId: 'swsh3-136' })).toBe('/card/swsh3-136');
     expect(formatRoute({ view: 'set', setId: 'swsh3', filters: EMPTY_FILTERS })).toBe(
@@ -153,8 +158,14 @@ describe('formatRoute', () => {
     expect(formatRoute(parseRoute(input))).toBe(input);
   });
 
+  it('round-trips the sets list', () => {
+    expect(formatRoute(parseRoute('/sets'))).toBe('/sets');
+  });
+
   it('round-trips the effects page, every section on it, and every card in each', () => {
-    expect(formatRoute(parseRoute('/effects'))).toBe('/effects');
+    // The page lives at the root; /effects is the same page, and formats as it.
+    expect(formatRoute(parseRoute('/'))).toBe('/');
+    expect(formatRoute(parseRoute('/effects'))).toBe('/');
     for (const { effect, cardIds } of EFFECT_GALLERY) {
       expect(parseRoute(`/effects/${effect}`)).toStrictEqual({ view: 'effects', effect });
       expect(formatRoute(parseRoute(`/effects/${effect}`))).toBe(`/effects/${effect}`);
@@ -200,8 +211,10 @@ describe('viewKey', () => {
   });
 
   it('changes when the view genuinely changes', () => {
+    // The root is the effects page itself: one view, one key.
+    expect(viewKey(parseRoute('/'))).toBe(viewKey(parseRoute('/effects')));
     const keys = [
-      viewKey(parseRoute('/')),
+      viewKey(parseRoute('/sets')),
       viewKey(parseRoute('/search')),
       viewKey(parseRoute('/collection')),
       viewKey(parseRoute('/effects')),

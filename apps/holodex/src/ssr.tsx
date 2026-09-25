@@ -40,7 +40,7 @@ export interface RenderHeroSSROptions {
  */
 async function prefetch(client: QueryClient, route: ReturnType<typeof parseRoute>): Promise<void> {
   const jobs: Promise<void>[] = [];
-  if (route.view === 'home') jobs.push(client.prefetchQuery(setsQuery()));
+  if (route.view === 'sets') jobs.push(client.prefetchQuery(setsQuery()));
   if (route.view === 'set') {
     jobs.push(client.prefetchQuery(setQuery(route.setId)));
     jobs.push(client.prefetchQuery(setCardsQuery(route.setId, route.filters, DEFAULT_PER_PAGE)));

@@ -19,15 +19,17 @@ export interface Filters {
 export const EMPTY_FILTERS: Filters = { q: '', type: '', rarity: '', page: 1 };
 
 export type Route =
-  | { view: 'home' }
+  /** `/sets`: every series and its sets. */
+  | { view: 'sets' }
   | { view: 'set'; setId: string; filters: Filters }
   | { view: 'search'; filters: Filters }
   | { view: 'card'; cardId: string; variant?: Printing }
   | { view: 'collection' }
   /**
-   * `/effects`, `/effects/<effect>` or `/effects/<effect>?card=<cardId>`: the
-   * section, and which of its three cards is live. `card` is only ever set
-   * alongside `effect`, and only to one of that section's own cards.
+   * The default page, at the root (or `/effects`, the same page), and
+   * `/effects/<effect>` or `/effects/<effect>?card=<cardId>`: the section, and
+   * which of its three cards is live. `card` is only ever set alongside
+   * `effect`, and only to one of that section's own cards.
    */
   | { view: 'effects'; effect?: EffectId; card?: string }
   | { view: 'not-found'; path: string };
@@ -55,7 +57,8 @@ export function parseRoute(input: string): Route {
   const filters = parseFilters(query);
   const [head, second] = segments;
 
-  if (segments.length === 0) return { view: 'home' };
+  if (segments.length === 0) return { view: 'effects' };
+  if (segments.length === 1 && head === 'sets') return { view: 'sets' };
   if (segments.length === 1 && head === 'search') return { view: 'search', filters };
   if (segments.length === 1 && head === 'collection') return { view: 'collection' };
   if (segments.length === 1 && head === 'effects') return { view: 'effects' };
@@ -92,7 +95,7 @@ export function parseRoute(input: string): Route {
  */
 export function viewKey(route: Route): string {
   switch (route.view) {
-    case 'home':
+    case 'sets':
     case 'search':
     case 'collection':
     case 'effects':
@@ -122,12 +125,12 @@ function formatFilters(filters: Filters): string {
 
 export function formatRoute(route: Route): string {
   switch (route.view) {
-    case 'home':
-      return '/';
+    case 'sets':
+      return '/sets';
     case 'collection':
       return '/collection';
     case 'effects':
-      if (!route.effect) return '/effects';
+      if (!route.effect) return '/';
       return `/effects/${encodeURIComponent(route.effect)}${route.card ? `?card=${encodeURIComponent(route.card)}` : ''}`;
     case 'card':
       return `/card/${encodeURIComponent(route.cardId)}${route.variant ? `?variant=${route.variant}` : ''}`;
