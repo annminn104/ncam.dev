@@ -36,7 +36,7 @@ describe('getMaterial', () => {
     disposeMaterials();
     // Derived from each effect's own compiled source rather than restated as
     // a fixed list — a fixed list still passes if a new uniform is added to
-    // the GLSL and forgotten in program-cache.ts's `build()`, which is
+    // the GLSL and forgotten in program-cache.ts's `buildMaterial()`, which is
     // exactly the failure this test is named for. Looped over more than one
     // effect to guard against a future uniform that only some effect emits —
     // today every effect's declared uniforms come from the same shared
