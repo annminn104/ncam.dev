@@ -112,13 +112,15 @@ export function proxiedAssetUrl(url: string, origin: string | URL): string | nul
 }
 
 /**
- * Where a card's texture is asked for, in order: through the route, then
- * straight from TCGdex, which draws again should TCGdex fix its headers or
- * the route be missing (a static host without the Function).
+ * Where a card's texture is asked for, in order: each of its files (`urls`,
+ * the WebP then the PNG: lib/images.ts#imageUrls) through the route, then
+ * each straight from TCGdex, which draws again should TCGdex fix its headers
+ * or the route be missing (a static host without the Function). The route
+ * takes every format before TCGdex takes any, as a card whose WebP is missing
+ * is the failure that happens, and TCGdex itself is refused for now.
  */
-export function textureUrls(url: string, origin: string | URL): string[] {
-  const proxied = proxiedAssetUrl(url, origin);
-  return proxied ? [proxied, url] : [url];
+export function textureUrls(urls: readonly string[], origin: string | URL): string[] {
+  return [...urls.flatMap((url) => proxiedAssetUrl(url, origin) ?? []), ...urls];
 }
 
 /** What the first of `urls` that loads gives, or the last failure if none loads. */

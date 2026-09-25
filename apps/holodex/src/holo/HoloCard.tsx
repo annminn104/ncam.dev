@@ -7,7 +7,7 @@ import {
 } from 'react';
 import { createLogger } from '@ncam/logger';
 import { CardImage } from '../components/CardImage';
-import { cardImageBase, imageUrl, type ImageQuality } from '../lib/images';
+import { cardImageBase, imageUrls, type ImageQuality } from '../lib/images';
 import type { Card } from '../lib/tcgdex';
 import { holoCanvasKey } from './canvas-key';
 import { browserProbe, supportsHolo } from './capability';
@@ -66,7 +66,12 @@ export function HoloCard({
   // can never disagree — including on a subset-set card, whose art only
   // cardImageBase can find.
   const base = cardImageBase(card);
-  const src = imageUrl(base, 'high');
+  // The files the scene textures from, WebP then PNG, as CardImage falls back:
+  // some cards' art exists only as PNG. Memoised on the base, as the scene
+  // effect reads the list; it keys on the first file (holoCanvasKey's `src`),
+  // which the base decides, as it decides the rest.
+  const textures = useMemo(() => imageUrls(base, 'high'), [base]);
+  const src = textures[0] ?? null;
   const freshSelection = selectHolo(card, { variant });
   // selectHolo returns a fresh object every render. Rebuilt here from its own
   // primitive fields so the result is referentially stable unless the
@@ -171,7 +176,7 @@ export function HoloCard({
         sceneRef.current = built;
         built.setSelection(selection);
         built.resize(host.clientWidth, host.clientHeight);
-        await built.setCard(src);
+        await built.setCard(textures);
         // Torn down meanwhile, or the context died while the card loaded:
         // going live now would show an empty canvas instead of the art. A
         // restore, if one comes, rebuilds on a fresh canvas.
@@ -224,7 +229,7 @@ export function HoloCard({
     // canvasKey is built from every other value here (holoCanvasKey), so this
     // effect re-runs exactly when the <canvas> below is replaced, never on a
     // canvas it has already used.
-  }, [canvasKey, card.id, selection, src]);
+  }, [canvasKey, card.id, selection, src, textures]);
 
   // Pause when off-screen or the tab is hidden — an idle RAF loop on a
   // portfolio page is pure battery drain.

@@ -216,7 +216,12 @@ Base `https://api.tcgdex.net/v2/en`, no key, CORS-open. Verified live 2026-09-21
   `GET /api/tcgdex-asset?path=<path under assets.tcgdex.net>` at the root of
   Holodex's own origin first (`BASE_URL` against the scene chunk's own URL,
   so a hosted page, the portfolio's, still asks Holodex), and TCGdex
-  directly only if that fails (`lib/asset-proxy.ts#textureUrls`). The route
+  directly only if that fails. Each way it asks for the WebP, then the PNG,
+  as CardImage does (`HoloCard` hands the scene `imageUrls(base, 'high')`),
+  and the route takes both formats before TCGdex takes either
+  (`lib/asset-proxy.ts#textureUrls`): a card whose WebP is missing loads its
+  PNG on the second request, and only a card with no art at all asks four
+  times before `holo.unavailable`. The route
   (`handleAssetProxy`, one handler in both places) fetches the file with
   nothing of the visitor's request and answers with headers of its own:
   one Allow-Origin, the type the path's extension names (never TCGdex's),

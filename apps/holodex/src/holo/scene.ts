@@ -20,7 +20,8 @@ import type { Effect } from './shader/types';
 import { makeTexture, type TextureName } from './textures';
 
 export interface HoloScene {
-  setCard: (url: string) => Promise<void>;
+  /** Textures the card from the first of its art files that loads, in order. */
+  setCard: (urls: readonly string[]) => Promise<void>;
   setSelection: (selection: HoloSelection) => void;
   /** Pointer in -1..1 card space; also drives the mesh tilt. */
   setPointer: (x: number, y: number) => void;
@@ -212,13 +213,13 @@ export function createHoloScene(canvas: HTMLCanvasElement): HoloScene {
   };
 
   return {
-    async setCard(url) {
+    async setCard(urls) {
       // Through Holodex's own asset proxy first (lib/asset-proxy.ts), which
       // lives at the root of Holodex's origin, whatever page it is mounted
       // on: BASE_URL is absolute in a deployed build (HOLODEX_BASE), and `/`
       // in dev, where this module's own URL is on the dev server.
       const origin = new URL(import.meta.env.BASE_URL, import.meta.url);
-      const texture = await firstLoaded(textureUrls(url, origin), (src) =>
+      const texture = await firstLoaded(textureUrls(urls, origin), (src) =>
         new TextureLoader().loadAsync(src),
       );
       if (disposed) {

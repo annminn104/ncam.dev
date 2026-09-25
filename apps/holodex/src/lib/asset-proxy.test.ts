@@ -8,6 +8,7 @@ import {
   proxiedAssetUrl,
   textureUrls,
 } from './asset-proxy';
+import { imageUrls } from './images';
 
 const HOLODEX = 'https://holodex.example/';
 const ART = 'en/swsh/swsh1/14/high.webp';
@@ -190,17 +191,27 @@ describe('proxiedAssetUrl', () => {
 });
 
 describe('textureUrls', () => {
-  it('tries the route first, then TCGdex itself', () => {
-    expect(textureUrls(TCGDEX_ASSETS + ART, HOLODEX)).toEqual([
-      proxiedAssetUrl(TCGDEX_ASSETS + ART, HOLODEX),
-      TCGDEX_ASSETS + ART,
+  // A card's files as HoloCard hands them over: imageUrls(base, 'high').
+  const files = imageUrls(`${TCGDEX_ASSETS}en/swsh/swsh1/14`, 'high');
+  const [webp, png] = files;
+
+  it('asks the route for the WebP, then the PNG, before TCGdex itself for either', () => {
+    // The route before TCGdex for every format: a missing WebP is the failure
+    // that happens, and TCGdex's own answers are refused for now.
+    expect(textureUrls(files, HOLODEX)).toEqual([
+      proxiedAssetUrl(webp, HOLODEX),
+      proxiedAssetUrl(png, HOLODEX),
+      webp,
+      png,
     ]);
+    expect(webp.endsWith('/high.webp') && png.endsWith('/high.png')).toBe(true);
   });
 
-  it('asks for any other URL as it is', () => {
-    expect(textureUrls('https://example.com/card.webp', HOLODEX)).toEqual([
+  it('asks for any other URL as it is, and for nothing without a file', () => {
+    expect(textureUrls(['https://example.com/card.webp'], HOLODEX)).toEqual([
       'https://example.com/card.webp',
     ]);
+    expect(textureUrls([], HOLODEX)).toEqual([]);
   });
 });
 
