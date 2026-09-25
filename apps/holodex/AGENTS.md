@@ -252,14 +252,18 @@ through `effects/css.ts`, which converts CSS instead of copying numbers (a CSS
 approximations every port shares; each port lists its own. The reference's
 per-rarity CSS is not the whole of it: `public/css/cards.css` holds
 `--angle`, `--space`, every texture variable and 151's clip regions, and
-`src/lib/components/Card.svelte` the pointer maths. Three things apply to the
-ports only, by the owner's choice, so the older effects look exactly as they
-did (their compiled `main()` is byte-identical): a converted radial draws
-with CSS's own `farthest-corner` geometry (the Source's `cssBox`, which grows
-as the pointer leaves the middle, where a hand-drawn radial keeps the DSL's
-fixed radius); glare stacks by the reference's z-index (below); and
-`effects/css.ts`'s filter and colour helpers. Per-card masks, the reference's
-realism ceiling, are out of reach for both families.
+`src/lib/components/Card.svelte` the pointer maths. **The 22 older effects'
+glares are ported too** (2026-09-25, the owner's call; their shines stay
+derived by eye): each is its rarity's `.card__glare` (and `:after`) from
+pokemon-cards-css, through `css.ts` and `effects/legacy-glare.ts` (base.css's
+radial, the neutral a transparent glare folds toward, source-over for
+reverse-holo's unblended `:after`), drawn with CSS's own `farthest-corner`
+geometry (the Source's `cssBox`, which grows as the pointer leaves the
+middle) and stacked beneath the shine (below). `legacy-glares.test.ts` holds
+each to a table copied by hand from its CSS. `basic`'s port shows only as the
+fallback material: `HoloCard` draws no scene for a `basic` card, so Commons
+and Uncommons stay plain art. Per-card masks, the reference's realism
+ceiling, are out of reach for both families.
 
 **Glare stacks by z-index, as the reference's does.** poke-151 paints a
 card's layers in z-index order — `.card__glitter` 2, `.card__shine` 3
@@ -270,10 +274,16 @@ darkened: a different picture from the same glare laid over the top. An
 `Effect` carries such glare in `beneath` (counted in glare's budget of two),
 and `glare` holds only what paints above; the shine's clip keeps whatever lies
 beneath it. Only `ex-regular` (both glares `z-index: 4`) and the balls' glare
-(`z-index: 5`) paint above. Checked in a headless browser: lifting the Poké
-Ball's glare2 to `z-index: 4` in the shipped reference reproduced exactly the
-olive text box this port showed while it painted every glare above.
-`sv-effects.test.ts`'s stacking table holds every port to its CSS.
+(`z-index: 5`) paint above; every one of the 22 older effects' glares lies
+beneath, as pokemon-cards-css gives `.card__shine` the same `z-index: 3` and
+`.card__glare` none. Checked in a headless browser: lifting the Poké Ball's
+glare2 to `z-index: 4` in the shipped reference reproduced exactly the olive
+text box this port showed while it painted every glare above; and on
+poke-holo.simey.me, with a card's pointer variables pinned (two captures of
+one state differ by 0.00), lifting `.card__glare` to `z-index: 4` changed
+every one of 11 rarities, from 0.4% of the card's pixels (cosmos) to 17.8%
+(radiant). `sv-effects.test.ts`'s stacking table holds every port to its CSS,
+and `legacy-glares.test.ts` the 22.
 
 **Clip regions, and why reverse holo inverts.** `holo/regions.ts` maps each
 `ClipShape` (`regular`, `stage`, `trainer`, `borders`, `full`) to an inset
@@ -305,7 +315,9 @@ painted above the shine (`glare`) or beneath it (`beneath`), each
 a stack of `Layer`s (a `Source` — solid, linear/repeating-linear/conic/radial
 gradient, `card`, `scanlines`, or one of the generated textures: `glitter`,
 `grain`, `iri`, `birthday`, and the 151 set's `pokeball` / `pokeball-inner` /
-`masterball` / `masterball-inner` patterns — plus a `BlendMode`), an
+`masterball` / `masterball-inner` patterns — plus a `BlendMode`, and
+optionally an `opacity` of its own, as a pseudo-element fades inside its
+element: cosmos-holo's `:after`), an
 optional pointer-driven `Filter`, its own `mixBlend`, and optionally its own
 `clip`. A radial converted from CSS also carries its `cssBox` (its centre
 and image size), and draws with CSS's `farthest-corner` geometry
@@ -591,6 +603,35 @@ numbers trustworthy on this branch:
   Uncommon on half its loads, and makes one reverse in five a Master Ball,
   so reload until `.card`'s `data-rarity` ends in `pokeball holo`. Only 1,
   4, 7, 25, 133, 144, 146 and 161 are Master Ball every time.
+
+**For the 22 older effects, the reference is poke-holo.simey.me**
+(pokemon-cards-css), and every foil card there is `.masked`: it draws the
+card's own foil mask, which ours never has. So take any one of its cards,
+remove `masked`, pin `--mask`/`--foil` to `none`, set its `data-rarity`,
+`data-subtypes` and `data-supertype` to the effect and card being compared,
+and put our card's art in its `<img>`: it then draws exactly the unmasked CSS
+the ports come from. Pin its pointer variables with `!important` rather than
+hovering (two captures then differ by 0.00, where hovering ones differ by
+~11), at its own tilt for that pointer (Card.svelte:
+`rotateY(-(x - 50) / 3.5)`, `rotateX((y - 50) / 3.5)`). And address it by a
+mark of your own: a Playwright locator by `data-rarity` re-queries on every
+use, and finds the next card once you change it.
+
+What the glare ports showed (2026-09-25): a whole-card gap measures the
+derived shines far more than the glares, and luminance statistics cannot see
+saturation (a washed-out card can score close). Compare **glare only**
+(`.card__shine { display: none }` on the reference, `shine: []` on ours) and
+against a **floor** with the glare hidden too. Across six samples the floor
+was 2.40 and the glare-only gap 3.09: five match within the floor, and
+cosmos-holo sits 3 to 6 over it, the cost of soft-lighting its `:after` onto
+a radial whose transparency is already folded (a DSL layer has no alpha).
+Porting made secret-rare's and radiant-holo's whole-card gaps grow (to about
+30 and 23), though their glares alone match the reference: those two
+effects' by-eye shines differ from the reference's. secret-rare's
+desaturated `lighten` erases the ported glare's darkening, whatever the
+stacking (painted above instead, it still measured 27); radiant's
+colour-dodge amplifies the glare it now lies beneath (above, 15 to 18). A
+shine re-port is what would close either.
 
 Computed layout and scrolling need a browser too, so these are smoke-pass
 checks, not unit tests: every effects tile the same height across all 30

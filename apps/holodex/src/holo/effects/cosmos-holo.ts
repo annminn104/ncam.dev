@@ -12,9 +12,13 @@ const AFTER_FILTER = { brightness: 0.75, contrast: 2.5, saturate: 2 };
  * The shine is derived by eye from pokemon-cards-css; the glare is ported from
  * cosmos-holo.css, beneath the shine (legacy-glare.ts): its radial, overlaid,
  * and an :after radial soft-lit onto it, which fades from opaque at the top of
- * the card to a quarter at the bottom. Approximation: the reference clips the
- * :after to the art window on stage and supporter cards; here it covers the
- * card.
+ * the card to a quarter at the bottom. Approximations: the reference clips
+ * the :after to the art window on stage and supporter cards; here it covers
+ * the card. And the reference soft-lights the :after onto the glare's radial
+ * only where that radial is opaque, where here it meets the radial with its
+ * transparency already folded (a DSL layer has no alpha): measured alone on
+ * the same art, this glare sits 3 to 6 luminance points further from the
+ * reference than the other ported glares do (AGENTS.md).
  */
 export const cosmosHolo: Effect = {
   id: 'cosmos-holo',

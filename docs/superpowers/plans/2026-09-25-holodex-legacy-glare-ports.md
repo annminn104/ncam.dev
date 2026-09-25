@@ -10,6 +10,32 @@
 
 **Spec:** `docs/superpowers/specs/2026-09-25-holodex-legacy-glare-ports-design.md`
 
+**Executed 2026-09-25**: `e091908` (layer opacity), `2aafa5a`, `c419ed3`, `605217a`,
+`f93a51f` (the 22 glares), and the docs after them. What running it showed:
+
+- **The glares match.** Compared glare only (the shine hidden on both sides) against a floor with
+  the glare hidden too, across the six samples: floor 2.40, glare-only 3.09. Five sit within the
+  floor; cosmos-holo 3 to 6 over it (its `:after` meets a pre-folded radial; noted in its file).
+- **The whole-card gap** fell from 18.80 to 15.90, led by regular-holo (36.6 → 8.8), v-regular
+  (27.6 → 11.2) and shiny-v (9.4 → 1.2). It grew for secret-rare (to ~30) and radiant-holo (~23),
+  whose by-eye shines work over the now-correct glare differently from the reference's; a shine
+  re-port is what would close that. The whole-card metric is luminance only, blind to saturation.
+- **Two refuted hypotheses** along the way, each measured: baking the element filter into the
+  stops (for CSS's per-pixel clamp) took the glare-only gap from ~3 to ~11, so the shader's
+  element filter, run per fragment, is the faithful place for it; and filtering cosmos's `:after`
+  per dense sample instead of per stop left its gap where it was.
+- **`basic`'s port changes nothing a visitor sees**: `HoloCard` draws no scene for a `basic` card,
+  so Commons and Uncommons stay plain art; it shows only as the fallback material. Whether they
+  should get base.css's glare, as pokemon-cards-css gives every card, is a product call (a WebGL
+  context on every plain card).
+- The harness needed two fixes: a Playwright locator by `data-rarity` re-queries after the
+  attribute changes, so the card is addressed by a mark; and every card on the reference is
+  `.masked`, so it is unmasked and re-typed (AGENTS.md).
+- The GPU smoke on `/effects` stalled on TCGdex throttling (tiles left loading), and a
+  `getContext('webgl2')` check proves nothing (it creates a context); the scene's own active state
+  (canvas shown, art `invisible`) was checked instead, on each effect's card page: all 21 that draw
+  a scene are live.
+
 ## Global Constraints
 
 - Branch `feat/holodex-holo-v2`. Commit locally only: **never `git push`**, never open a PR.
