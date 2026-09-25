@@ -51,6 +51,8 @@ describe('SOURCE_ID', () => {
       'css-conic',
       'geometric',
       'trainerbg',
+      'illusion',
+      'illusion-mask',
     ]) {
       expect(SOURCE_ID).toHaveProperty(kind);
     }

@@ -1183,3 +1183,37 @@ describe('a term on the card’s foil brightness', () => {
     );
   });
 });
+
+describe('a texture with alpha', () => {
+  const layer = (kind: 'illusion' | 'illusion-mask'): Layer => ({
+    source: { kind, scale: 1 },
+    blend: 'normal',
+    size: [3, 2],
+  });
+
+  it('takes the RGBA path on its own, and keeps its alpha there', () => {
+    expect(needsRGBA({ layers: [layer('illusion-mask')], mixBlend: 'darken' })).toBe(true);
+    const src = compileEffect({
+      id: 'mask',
+      shine: [{ layers: [layer('illusion-mask')], mixBlend: 'darken' }],
+      glare: [],
+    });
+    expect(src).toContain('vec4 src_shine0_0 = srcIllusionMask4(uv_shine0_0, 1.000000);');
+  });
+
+  it('leaves an opaque texture opaque, on either path', () => {
+    expect(needsRGBA({ layers: [layer('illusion')], mixBlend: 'darken' })).toBe(false);
+    const src = compileEffect({
+      id: 'opaque',
+      shine: [
+        {
+          layers: [layer('illusion')],
+          children: [{ layers: [layer('illusion')], mixBlend: 'overlay' }],
+          mixBlend: 'darken',
+        },
+      ],
+      glare: [],
+    });
+    expect(src).toContain('vec4 src_shine0_0 = vec4(srcIllusion(uv_shine0_0, 1.000000), 1.0);');
+  });
+});

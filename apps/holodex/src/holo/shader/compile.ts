@@ -76,6 +76,10 @@ function sourceExpr(source: Source, uv: string, decls: string[], id: string): st
       return `srcGeometric(${uv}, ${f(source.scale)})`;
     case 'trainerbg':
       return `srcTrainerbg(${uv}, ${f(source.scale)})`;
+    case 'illusion':
+      return `srcIllusion(${uv}, ${f(source.scale)})`;
+    case 'illusion-mask':
+      return `srcIllusionMask(${uv}, ${f(source.scale)})`;
     case 'card':
       return `srcCard(${uv})`;
     case 'scanlines':
@@ -150,11 +154,18 @@ function rgbElementCode(element: Element, prefix: string): string {
 // ------------------------------------------------------------- the RGBA path
 
 /**
- * Textures whose alpha channel is part of the picture, sampled with it on the
- * RGBA path; every other texture is opaque. None yet: the cosmos layers and
- * illusion-mask join when they are drawn.
+ * Textures whose alpha channel is part of the picture: a layer of one takes
+ * the RGBA path (needsRGBA) and is sampled there with its alpha; every other
+ * texture is opaque.
  */
-export const ALPHA_TEXTURES: ReadonlySet<Source['kind']> = new Set<Source['kind']>();
+export const ALPHA_TEXTURES: ReadonlySet<Source['kind']> = new Set<Source['kind']>([
+  'illusion-mask',
+]);
+
+/** Each alpha texture's sampler on the RGBA path, which keeps its alpha (sources.ts). */
+const ALPHA_SAMPLER: Partial<Record<Source['kind'], string>> = {
+  'illusion-mask': 'srcIllusionMask4',
+};
 
 /** sources.ts's MAX_CSS_STOPS. */
 const MAX_CSS_STOPS = 32;
@@ -239,8 +250,12 @@ function rgbaLayerCode(layer: Layer, index: number, prefix: string): string {
     lines.push(
       `  vec2 ${uv} = uvTransform(vUv, vec2(${f(size[0])}, ${f(size[1])}), vec2(${ox}, ${oy}));`,
     );
-    // an older kind, like every texture so far, is opaque
-    expr = `vec4(${sourceExpr(layer.source, uv, decls, id)}, 1.0)`;
+    const sampler = ALPHA_SAMPLER[layer.source.kind];
+    const scale = 'scale' in layer.source ? layer.source.scale : 1;
+    // an alpha texture keeps its alpha; every other older kind is opaque
+    expr = sampler
+      ? `${sampler}(${uv}, ${f(scale)})`
+      : `vec4(${sourceExpr(layer.source, uv, decls, id)}, 1.0)`;
   }
   return [
     ...decls,

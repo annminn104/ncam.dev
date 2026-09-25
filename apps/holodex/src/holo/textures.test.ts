@@ -9,6 +9,7 @@ import {
   GLITTER_HEIGHT,
   GLITTER_SEED,
   GLITTER_WIDTH,
+  ILLUSION_SIZE,
   IRI_BACKGROUND,
   IRI_SEED,
   IRI_SIZE,
@@ -21,6 +22,9 @@ import {
   geometricFigure,
   geometricPixels,
   glitterPixels,
+  illusionField,
+  illusionMaskPixels,
+  illusionPixels,
   iriPixels,
   mulberry32,
   plotSpeck,
@@ -446,5 +450,65 @@ describe('trainerbg, blue wavy lines on white', () => {
     expect(starts).toHaveLength(16);
     const gaps = starts.map((x, i) => (starts[(i + 1) % 16] - x + size) % size);
     expect(Math.max(...gaps) - Math.min(...gaps)).toBeGreaterThan(4);
+  });
+});
+
+describe('illusion, warped black and white bands', () => {
+  const px = illusionPixels(ILLUSION_SIZE);
+
+  it('is the reference’s size, opaque, and the same on every load', () => {
+    expect(TEXTURE_SIZE.illusion).toEqual([600, 600]);
+    expect(illusionPixels(ILLUSION_SIZE)).toEqual(px);
+    expect(mean(px, 3)).toBe(255);
+  });
+
+  it('is about as much black as the reference, a little less than half', () => {
+    // measured off illusion.png: 41% black, 48% white, the rest their edges
+    expect(share(px, 0, 64)).toBeGreaterThan(0.33);
+    expect(share(px, 0, 64)).toBeLessThan(0.48);
+    expect(share(px, 192, 256)).toBeGreaterThan(0.4);
+  });
+
+  it('tiles: across its edges, neighbours differ no more than inside it', () => {
+    const at = (x: number, y: number) => px[(y * ILLUSION_SIZE + x) * 4];
+    let seam = 0;
+    let inner = 0;
+    for (let k = 0; k < ILLUSION_SIZE; k += 1) {
+      seam +=
+        Math.abs(at(0, k) - at(ILLUSION_SIZE - 1, k)) +
+        Math.abs(at(k, 0) - at(k, ILLUSION_SIZE - 1));
+      inner += Math.abs(at(300, k) - at(299, k)) + Math.abs(at(k, 300) - at(k, 299));
+    }
+    expect(seam).toBeLessThan(inner * 1.5);
+  });
+
+  it('cuts its bands from a field that repeats with the tile', () => {
+    for (const [x, y] of [
+      [10, 20],
+      [310, 590],
+      [599, 1],
+    ]) {
+      const v = illusionField(x, y, ILLUSION_SIZE);
+      expect(illusionField(x + ILLUSION_SIZE, y, ILLUSION_SIZE)).toBeCloseTo(v, 9);
+      expect(illusionField(x, y + ILLUSION_SIZE, ILLUSION_SIZE)).toBeCloseTo(v, 9);
+    }
+  });
+});
+
+describe('illusion-mask, the same bands with alpha', () => {
+  const bands = illusionPixels(ILLUSION_SIZE);
+  const mask = illusionMaskPixels(ILLUSION_SIZE);
+
+  it('draws illusion’s bands', () => {
+    expect(TEXTURE_SIZE['illusion-mask']).toEqual([600, 600]);
+    for (let i = 0; i < bands.length; i += 4 * 997) expect(mask[i]).toBe(bands[i]);
+  });
+
+  it('is opaque where black and all but clear where white, as illusion-mask.png', () => {
+    // measured off illusion-mask.png: alpha min(1, 1.4 · (1 - grey))
+    for (let i = 0; i < mask.length; i += 4 * 499) {
+      const grey = mask[i] / 255;
+      expect(mask[i + 3]).toBeCloseTo(Math.min(1, 1.4 * (1 - grey)) * 255, -0.5);
+    }
   });
 });

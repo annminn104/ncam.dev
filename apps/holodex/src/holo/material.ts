@@ -29,6 +29,8 @@ export function buildMaterial(effect: Effect): ShaderMaterial {
       uMasterballInner: { value: null },
       uGeometric: { value: null },
       uTrainerbg: { value: null },
+      uIllusion: { value: null },
+      uIllusionMask: { value: null },
       uPointer: { value: new Vector2(0, 0) },
       uPointerUV: { value: new Vector2(0.5, 0.5) },
       uPointerFromCenter: { value: 0 },

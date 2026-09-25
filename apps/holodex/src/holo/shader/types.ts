@@ -116,6 +116,13 @@ export type Source =
   | { kind: 'geometric'; scale: number }
   /** blue wavy lines on white, standing in for its trainerbg.png; 208 px square */
   | { kind: 'trainerbg'; scale: number }
+  /** warped black and white bands, standing in for its illusion.png; 600 px square */
+  | { kind: 'illusion'; scale: number }
+  /**
+   * the same bands with alpha, black opaque and white all but clear, for its
+   * illusion-mask.png; sampled with its alpha (compile.ts's ALPHA_TEXTURES)
+   */
+  | { kind: 'illusion-mask'; scale: number }
   /**
    * linear-gradient or repeating-linear-gradient drawn as CSS draws it, on
    * the RGBA path: t = a·u + b·v + c along its gradient line, 0 at the line's

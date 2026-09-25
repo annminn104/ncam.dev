@@ -33,7 +33,9 @@ export type TextureName =
   | 'masterball'
   | 'masterball-inner'
   | 'geometric'
-  | 'trainerbg';
+  | 'trainerbg'
+  | 'illusion'
+  | 'illusion-mask';
 
 type Point = [number, number];
 
@@ -552,6 +554,86 @@ export function trainerbgPixels(size: number): Uint8ClampedArray {
   return pixels;
 }
 
+// illusion: the reference's illusion.png, measured headless, is black and
+// white bands, a little more white than black, about 14 px a pair and fairly
+// even, running round a lens that rises along the diagonal and round the
+// tile's corners, the two sets of rings meeting in S-curves; illusion-mask.png
+// is the same grey with alpha min(1, 1.4 · (1 - grey)): opaque where black,
+// all but clear where white. Ours: even bands of the distance to the nearer of
+// the tile's two centres, its middle and its corner, in a metric stretched
+// along the rising diagonal, the distance rippled by a gentle wave.
+
+export const ILLUSION_SIZE = 600;
+
+const ILLUSION = { period: 11, black: 0.42, stretch: 1.9, ripple: 9, samples: 3 };
+
+/**
+ * The field the bands are cut from, in px: the distance to the nearer of the
+ * tile's two centres, (0, 0) and (size / 2, size / 2), or a copy of one across
+ * its edges, measured with lengths along the rising diagonal shrunk by
+ * `stretch`, plus a ripple that repeats with the tile. Every term repeats
+ * every `size` px each way, so the bands tile.
+ */
+export function illusionField(x: number, y: number, size: number): number {
+  // in the tile first, so the copies one tile over are every copy near enough
+  const [tx, ty] = [mod(x, size), mod(y, size)];
+  let nearest = Infinity;
+  for (const [cx, cy] of [
+    [0, 0],
+    [size / 2, size / 2],
+  ]) {
+    for (let i = -1; i <= 1; i += 1) {
+      for (let j = -1; j <= 1; j += 1) {
+        const dx = tx - (cx + i * size);
+        const dy = ty - (cy + j * size);
+        const along = (dx - dy) / Math.SQRT2;
+        const across = (dx + dy) / Math.SQRT2;
+        nearest = Math.min(nearest, Math.hypot(along / ILLUSION.stretch, across));
+      }
+    }
+  }
+  const k = (2 * Math.PI) / size;
+  return nearest + ILLUSION.ripple * Math.sin(2 * k * x + 0.7) * Math.sin(2 * k * y + 1.9);
+}
+
+/** The bands as one grey per pixel, supersampled: 0 black, 1 white. */
+function illusionGreys(size: number): Float32Array {
+  const n = ILLUSION.samples;
+  const greys = new Float32Array(size * size);
+  for (let y = 0; y < size; y += 1) {
+    for (let x = 0; x < size; x += 1) {
+      let white = 0;
+      for (let sy = 0; sy < n; sy += 1) {
+        for (let sx = 0; sx < n; sx += 1) {
+          const band =
+            illusionField(x + (sx + 0.5) / n, y + (sy + 0.5) / n, size) / ILLUSION.period;
+          if (mod(band, 1) >= ILLUSION.black) white += 1;
+        }
+      }
+      greys[y * size + x] = white / (n * n);
+    }
+  }
+  return greys;
+}
+
+/** The illusion bands as opaque RGBA bytes. */
+export function illusionPixels(size: number): Uint8ClampedArray {
+  const greys = illusionGreys(size);
+  const pixels = new Uint8ClampedArray(size * size * 4);
+  greys.forEach((g, i) => pixels.set([g * 255, g * 255, g * 255, 255], i * 4));
+  return pixels;
+}
+
+/** The same bands with illusion-mask.png's alpha: min(1, 1.4 · (1 - grey)). */
+export function illusionMaskPixels(size: number): Uint8ClampedArray {
+  const greys = illusionGreys(size);
+  const pixels = new Uint8ClampedArray(size * size * 4);
+  greys.forEach((g, i) =>
+    pixels.set([g * 255, g * 255, g * 255, Math.min(1, 1.4 * (1 - g)) * 255], i * 4),
+  );
+  return pixels;
+}
+
 /**
  * Each texture's natural size in px, as its painter draws it: what a CSS
  * `background-size` with an `auto` side measures against (css.ts#autoHeight).
@@ -567,6 +649,8 @@ export const TEXTURE_SIZE: Record<TextureName, readonly [number, number]> = {
   'masterball-inner': [BALL_TILE, BALL_TILE],
   geometric: [GEOMETRIC_SIZE, GEOMETRIC_SIZE],
   trainerbg: [TRAINERBG_SIZE, TRAINERBG_SIZE],
+  illusion: [ILLUSION_SIZE, ILLUSION_SIZE],
+  'illusion-mask': [ILLUSION_SIZE, ILLUSION_SIZE],
 };
 
 // ------------------------------------------------ canvas, browser-only below
@@ -818,6 +902,9 @@ const GENERATORS: Record<TextureName, () => HTMLCanvasElement> = {
   geometric: () =>
     fromPixels(GEOMETRIC_SIZE, GEOMETRIC_SIZE, geometricPixels(GEOMETRIC_SIZE, GEOMETRIC_SEED)),
   trainerbg: () => fromPixels(TRAINERBG_SIZE, TRAINERBG_SIZE, trainerbgPixels(TRAINERBG_SIZE)),
+  illusion: () => fromPixels(ILLUSION_SIZE, ILLUSION_SIZE, illusionPixels(ILLUSION_SIZE)),
+  'illusion-mask': () =>
+    fromPixels(ILLUSION_SIZE, ILLUSION_SIZE, illusionMaskPixels(ILLUSION_SIZE)),
 };
 
 /** Generated once at runtime, shared by every effect that names them. */

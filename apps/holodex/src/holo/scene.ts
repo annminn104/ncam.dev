@@ -53,6 +53,8 @@ export const SHARED_TEXTURE_UNIFORM: Record<TextureName, string> = {
   'masterball-inner': 'uMasterballInner',
   geometric: 'uGeometric',
   trainerbg: 'uTrainerbg',
+  illusion: 'uIllusion',
+  'illusion-mask': 'uIllusionMask',
 };
 
 /**
