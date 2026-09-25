@@ -980,7 +980,7 @@ describe('the RGBA path', () => {
     const order = [
       at('  vec4 stack_shine0_c0 = vec4(0.0);'),
       at(
-        '  stack_shine0_c0.rgb = applyFilter(stack_shine0_c0.rgb, (1.250000), 1.000000, 1.000000);',
+        '  stack_shine0_c0.rgb = applyCssFilter(stack_shine0_c0.rgb, (1.250000), 1.000000, 1.000000);',
       ),
       at('  stack_shine0_c0.a *= clamp((0.800000), 0.0, 1.0);'),
       at(`  stack_shine0 = compositeOver(stack_shine0, stack_shine0_c0, ${BLEND_ID.lighten});`),
@@ -990,7 +990,7 @@ describe('the RGBA path', () => {
       ),
       at(`  stack_shine0 = compositeOver(stack_shine0, stack_shine0_c1, ${BLEND_ID.overlay});`),
       at(
-        '  stack_shine0.rgb = applyFilter(stack_shine0.rgb, (0.200000 + 0.300000 * uPointerFromCenter), (2.000000), 1.000000);',
+        '  stack_shine0.rgb = applyCssFilter(stack_shine0.rgb, (0.200000 + 0.300000 * uPointerFromCenter), (2.000000), 1.000000);',
       ),
       at(
         `  acc = mix(acc, blendWith(${BLEND_ID['color-dodge']}, acc, stack_shine0.rgb), stack_shine0.a * clamp(1.000000 * uCardOpacity, 0.0, 1.0));`,
@@ -1127,5 +1127,36 @@ describe('the RGBA path', () => {
         glare: [],
       }),
     ).toThrow(/32/);
+  });
+});
+
+describe('the RGBA path’s filter, CSS’s chain as Chrome applies it', () => {
+  it('clamps after each function and saturates about CSS’s own luma', () => {
+    // css.ts#cssFilterRGB is the twin, held there to Chrome's own readings
+    expect(sourcesGLSL)
+      .toContain(`vec3 applyCssFilter(vec3 c, float brightness, float contrast, float saturate) {
+  c = clamp(c * brightness, 0.0, 1.0);
+  c = clamp((c - 0.5) * contrast + 0.5, 0.0, 1.0);
+  float l = dot(c, vec3(0.213, 0.715, 0.072));
+  return clamp(mix(vec3(l), c, saturate), 0.0, 1.0);
+}`);
+  });
+
+  it('leaves the RGB path on applyFilter', () => {
+    const src = compileEffect({
+      id: 'rgb-only',
+      shine: [
+        {
+          layers: [{ source: { kind: 'card' }, blend: 'normal' }],
+          filter: { saturate: { base: 2 } },
+          mixBlend: 'overlay',
+        },
+      ],
+      glare: [],
+    });
+    expect(src).toContain(
+      'stack_shine0 = applyFilter(stack_shine0, 1.000000, 1.000000, (2.000000));',
+    );
+    expect(src.slice(src.indexOf('void main()'))).not.toContain('applyCssFilter');
   });
 });

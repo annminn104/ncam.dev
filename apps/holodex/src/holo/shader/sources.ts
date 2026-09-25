@@ -83,6 +83,21 @@ vec3 applyFilter(vec3 c, float brightness, float contrast, float saturate) {
   return clamp(c, 0.0, 1.0);
 }
 
+/**
+ * CSS's brightness(), contrast() and saturate() as Chrome applies them to an
+ * element, measured headless (effects/css.test.ts holds the twin to Chrome's
+ * own readings): each function clamped before the next, and saturate about
+ * CSS's own luma (0.213, 0.715, 0.072), where applyFilter above clamps once
+ * and saturates about Rec. 601's — off by up to 55 in 0..255 under a strong
+ * contrast. The RGBA path's filter; css.ts#cssFilterRGB is its twin.
+ */
+vec3 applyCssFilter(vec3 c, float brightness, float contrast, float saturate) {
+  c = clamp(c * brightness, 0.0, 1.0);
+  c = clamp((c - 0.5) * contrast + 0.5, 0.0, 1.0);
+  float l = dot(c, vec3(0.213, 0.715, 0.072));
+  return clamp(mix(vec3(l), c, saturate), 0.0, 1.0);
+}
+
 vec3 gradientAt(vec3 stops[MAX_STOPS], int count, float t) {
   t = fract(t);
   float scaled = t * float(count);

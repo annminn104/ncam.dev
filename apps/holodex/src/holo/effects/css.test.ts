@@ -17,6 +17,7 @@ import {
   autoHeight,
   colorAt,
   composeFilters,
+  cssFilterRGB,
   cssStopIndex,
   exactColorAt,
   exactConic,
@@ -47,6 +48,7 @@ import {
   turn,
   valueAt,
   type CssStop,
+  type FixedFilter,
   type PointerAt,
   type RGB,
 } from './css';
@@ -637,5 +639,32 @@ describe('the exact converters', () => {
         position: [CENTER, CENTER],
       }),
     ).toThrow(/tile/);
+  });
+});
+
+describe('cssFilterRGB, CSS’s filter chain as Chrome applies it', () => {
+  // Swatches under `filter: brightness() contrast() saturate()`, read back off
+  // a headless Chrome 145 screenshot (2026-09-25), in 0..255.
+  const measured: Array<[FixedFilter, RGB, [number, number, number]]> = [
+    [{ brightness: 0.6, contrast: 3, saturate: 2 }, [0.2, 0.9, 0.2], [0, 204, 0]],
+    [{ brightness: 0.6, contrast: 3, saturate: 2 }, [0.9, 0.3, 0.6], [255, 0, 5]],
+    [{ brightness: 0.5, contrast: 2, saturate: 1.75 }, [0.9, 0.3, 0.6], [162, 0, 27]],
+    [{ brightness: 1.25, contrast: 1.25, saturate: 0.35 }, [0.9, 0.3, 0.6], [175, 117, 159]],
+    [{ brightness: 1, contrast: 1, saturate: 2.7 }, [0.9, 0.3, 0.6], [255, 12, 217]],
+  ];
+
+  it.each(measured)(
+    '%o on %o is what Chrome draws, to within rounding',
+    (filter, colour, chrome) => {
+      cssFilterRGB(colour, filter).forEach((v, i) =>
+        expect(Math.abs(v * 255 - chrome[i])).toBeLessThanOrEqual(2),
+      );
+    },
+  );
+
+  it('is not the RGB path’s filterRGB, which clamps once and uses Rec. 601 luma', () => {
+    const filter = { brightness: 0.6, contrast: 3, saturate: 2 };
+    expect(cssFilterRGB([0.2, 0.9, 0.2], filter)[1] * 255).toBeCloseTo(203.2, 0);
+    expect(filterRGB([0.2, 0.9, 0.2], filter)[1] * 255).toBeGreaterThan(230);
   });
 });

@@ -109,12 +109,20 @@ function layerCode(layer: Layer, index: number, prefix: string): string {
   ].join('\n');
 }
 
-/** A filter over `target`: the RGB path's whole stack, or an RGBA stack's colour. */
-function filterCall(filter: Filter | undefined, target: string): string {
+/**
+ * A filter over `target`: the RGB path's whole stack through applyFilter, as
+ * it always has, or an RGBA stack's colour through applyCssFilter, CSS's own
+ * chain (sources.ts).
+ */
+function filterCall(
+  filter: Filter | undefined,
+  target: string,
+  fn: 'applyFilter' | 'applyCssFilter' = 'applyFilter',
+): string {
   const b = driven(filter?.brightness, 1);
   const c = driven(filter?.contrast, 1);
   const s = driven(filter?.saturate, 1);
-  return `  ${target} = applyFilter(${target}, ${b}, ${c}, ${s});`;
+  return `  ${target} = ${fn}(${target}, ${b}, ${c}, ${s});`;
 }
 
 /** An element on the RGB path: every element that uses no group, exact gradient or alpha texture. */
@@ -257,7 +265,7 @@ function childCode(child: Element, index: number, parent: string): string {
     `  // --- ${prefix}`,
     `  vec4 stack_${prefix} = vec4(0.0);`,
     ...child.layers.map((l, i) => rgbaLayerCode(l, i, prefix)),
-    filterCall(child.filter, `stack_${prefix}.rgb`),
+    filterCall(child.filter, `stack_${prefix}.rgb`, 'applyCssFilter'),
     `  stack_${prefix}.a *= clamp(${driven(child.opacity, 1)}, 0.0, 1.0)${clip};`,
     `  stack_${parent} = compositeOver(stack_${parent}, stack_${prefix}, ${BLEND_ID[child.mixBlend]});`,
   ].join('\n');
@@ -277,7 +285,7 @@ function rgbaElementCode(element: Element, prefix: string): string {
     `  vec4 stack_${prefix} = vec4(0.0);`,
     ...element.layers.map((l, i) => rgbaLayerCode(l, i, prefix)),
     ...(element.children ?? []).map((c, i) => childCode(c, i, prefix)),
-    filterCall(element.filter, `stack_${prefix}.rgb`),
+    filterCall(element.filter, `stack_${prefix}.rgb`, 'applyCssFilter'),
     ...(clip ? [`  float clip_${prefix} = ${clip};`] : []),
     `  acc = mix(acc, blendWith(${BLEND_ID[element.mixBlend]}, acc, stack_${prefix}.rgb), ${weight});`,
   ].join('\n');

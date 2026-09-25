@@ -697,6 +697,23 @@ export function filterRGB(c: RGB, f: FixedFilter): RGB {
 }
 
 /**
+ * CSS's filter chain as Chrome applies it to an element (sources.ts's
+ * applyCssFilter, the RGBA path's filter): brightness, then contrast, each
+ * clamped, then saturate about CSS's own luma (0.213, 0.715, 0.072), clamped.
+ * css.test.ts holds it to Chrome's readings. filterRGB above is the RGB path's
+ * older model, which clamps once and saturates about Rec. 601 luma.
+ */
+export function cssFilterRGB(c: RGB, f: FixedFilter): RGB {
+  const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
+  const b = f.brightness ?? 1;
+  const k = f.contrast ?? 1;
+  const bright = c.map((v) => clamp01(v * b));
+  const contrasted = bright.map((v) => clamp01((v - 0.5) * k + 0.5));
+  const l = 0.213 * contrasted[0] + 0.715 * contrasted[1] + 0.072 * contrasted[2];
+  return contrasted.map((v) => clamp01(l + (v - l) * (f.saturate ?? 1))) as RGB;
+}
+
+/**
  * A fixed filter baked into a gradient's stops. Exact wherever the filter
  * does not clamp between two stops, since brightness, contrast and saturate
  * are linear and so commute with the interpolation between them.
