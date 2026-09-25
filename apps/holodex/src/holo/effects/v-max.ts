@@ -1,60 +1,119 @@
-import type { Effect } from '../shader/types';
-import { BLACK, COVER, WHITE, fixedFilter, radial, stop } from './css';
+import type { Effect, PointerDriven } from '../shader/types';
+import {
+  BACKGROUND_X,
+  BACKGROUND_Y,
+  BLACK,
+  CENTER,
+  COVER,
+  WHITE,
+  exactRadial,
+  exactRepeatingLinear,
+  fixed,
+  fixedFilter,
+  hsl,
+  radial,
+  stop,
+  texture,
+} from './css';
 import { glareNeutral } from './legacy-glare';
-import { SUNPILLAR } from './palette';
+import { V_BANDS, sunStops } from './v-family';
 
 /** v-max.css's .card__glare filter. */
 const GLARE_FILTER = { brightness: 1, contrast: 1 };
 
+/** v-max.css's --space. */
+const SPACE = 6;
+
+/** background-position: var(--background-x) var(--background-y) */
+const AT_BACKGROUND: [PointerDriven, PointerDriven] = [BACKGROUND_X, BACKGROUND_Y];
+
+/** The rainbow at −33°, one --space a colour. */
+const RAINBOW = [
+  hsl(2, 70, 47),
+  hsl(228, 60, 64),
+  hsl(176, 55, 39),
+  hsl(123, 68, 35),
+  hsl(283, 75, 57),
+  hsl(2, 70, 47),
+].map((color, i) => stop(color, SPACE * (i + 1)));
+
+/** The dark bands at 133°, half transparent at their darkest. */
+const DARK_BANDS = [
+  stop(hsl(227, 53, 12), 0, 0.5),
+  stop(hsl(180, 10, 50), 2.5),
+  stop(hsl(83, 50, 35), 5),
+  stop(hsl(180, 10, 50), 7.5),
+  stop(hsl(227, 53, 12), 10, 0.5),
+  stop(hsl(227, 53, 12), 15, 0.5),
+];
+
+/** The pastel radial about the pointer, 60% opaque. */
+const PASTELS = [
+  stop(hsl(189, 76, 77), 0, 0.6),
+  stop(hsl(147, 59, 77), 25, 0.6),
+  stop(hsl(271, 55, 69), 50, 0.6),
+  stop(hsl(355, 56, 72), 75, 0.6),
+];
+
 /**
- * A VMAX. The shine is derived by eye from pokemon-cards-css; the glare is
- * ported from v-max.css, hard-lit, beneath the shine (legacy-glare.ts), a
- * fifth strong at the middle and rising as the pointer leaves it.
+ * A VMAX, ported from pokemon-cards-css's v-max.css on its unmasked path:
+ * vmaxbg, the unmasked --foil, 60% × 30% of the card, differenced onto a
+ * rainbow at −33° in luminosity, onto dark bands at 133° soft-lit, onto a
+ * pastel radial about the pointer, the group colour-dodged; its `:after` the V
+ * family's sunpillars hue-blended onto its bands, lightened, strongest as the
+ * pointer leaves the middle. The glare is ported from v-max.css, hard-lit,
+ * beneath the shine (legacy-glare.ts).
+ *
+ * Approximation: vmaxbg is drawn here (textures.ts), not the reference's
+ * image.
  */
 export const vMax: Effect = {
   id: 'v-max',
   shine: [
     {
       layers: [
+        { ...exactRadial(PASTELS, { size: [2, 2], position: AT_BACKGROUND }), blend: 'normal' },
         {
-          source: {
-            kind: 'repeating-linear',
-            angleDeg: -33,
-            space: 0.06,
-            stops: [
-              [0.83, 0.16, 0.13],
-              [0.42, 0.48, 0.85],
-              [0.24, 0.79, 0.62],
-              [0.93, 0.83, 0.26],
-            ],
-          },
-          blend: 'normal',
-          size: [6, 6],
-          offset: { x: { base: 0, fromLeft: 1 }, y: { base: 0, fromTop: 1 } },
+          ...exactRepeatingLinear(133, DARK_BANDS, { size: [6, 6], position: AT_BACKGROUND }),
+          blend: 'soft-light',
         },
-        { source: { kind: 'grain', scale: 3 }, blend: 'soft-light' },
+        {
+          ...exactRepeatingLinear(-33, RAINBOW, { size: [11, 11], position: AT_BACKGROUND }),
+          blend: 'luminosity',
+        },
+        {
+          ...texture('vmaxbg', { size: [0.6, 0.3], position: [CENTER, CENTER] }),
+          blend: 'difference',
+        },
+      ],
+      children: [
+        {
+          // :after
+          layers: [
+            {
+              ...exactRepeatingLinear(133, V_BANDS, { size: [3, 1], position: AT_BACKGROUND }),
+              blend: 'normal',
+            },
+            {
+              ...exactRepeatingLinear(0, sunStops(6, SPACE), {
+                size: [2, 7],
+                position: [fixed(0), BACKGROUND_Y],
+              }),
+              blend: 'hue',
+            },
+          ],
+          filter: { saturate: fixed(1.5) },
+          mixBlend: 'lighten',
+          // calc((0.3 * var(--card-opacity)) + var(--card-opacity) * var(--pointer-from-center) * 0.5)
+          opacity: { base: 0.3, fromCenter: 0.5 },
+        },
       ],
       filter: {
         brightness: { base: 0.4, fromCenter: 0.4 },
-        contrast: { base: 2 },
-        saturate: { base: 1 },
+        contrast: fixed(2),
+        saturate: fixed(1),
       },
       mixBlend: 'color-dodge',
-      opacity: { base: 0.5, fromCenter: 0.35 },
-    },
-    {
-      layers: [
-        {
-          source: { kind: 'repeating-linear', angleDeg: 0, space: 0.05, stops: SUNPILLAR },
-          // The first layer of an element has nothing beneath it, so its blend is ignored — the same reason CSS ignores it.
-          blend: 'normal',
-          size: [2, 7],
-          offset: { x: { base: 0 }, y: { base: 0, fromTop: 1 } },
-        },
-      ],
-      filter: { saturate: { base: 1.5 } },
-      mixBlend: 'lighten',
-      opacity: { base: 0.3, fromCenter: 0.5 },
     },
   ],
   beneath: [

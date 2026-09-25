@@ -1,36 +1,35 @@
 import type { Effect } from '../shader/types';
-import { COVER, WHITE, fixedFilter, grey, hsl, radial, stop } from './css';
+import { CENTER, COVER, WHITE, fixedFilter, grey, hsl, pxWide, radial, stop, texture } from './css';
 import { glareNeutral } from './legacy-glare';
-import { SUNPILLAR } from './palette';
+import { vShine } from './v-family';
 
 /** v-regular.css's .card__glare filter. */
 const GLARE_FILTER = { brightness: 0.9, contrast: 1.75 };
 
 /**
- * A V. The shine is derived by eye from pokemon-cards-css; the glare is ported
- * from v-regular.css, hard-lit at half strength, beneath the shine
- * (legacy-glare.ts).
+ * A V, ported from pokemon-cards-css's v-regular.css on its unmasked path: the
+ * V family's shine (v-family.ts) with grain, 500px wide and the card tall,
+ * screened onto the sunpillars, which are hue-blended onto the bands, hard-lit
+ * onto a faint dark radial; its `:after` the same again, soft-lit. Unclipped,
+ * as the CSS leaves it. The glare is ported from v-regular.css, hard-lit at
+ * half strength, beneath the shine (legacy-glare.ts).
+ *
+ * Approximations: grain is drawn here (textures.ts), not the reference's
+ * image; its 500px is at CARD_PX.
  */
 export const vRegular: Effect = {
   id: 'v-regular',
   shine: [
-    {
-      layers: [
-        {
-          source: { kind: 'repeating-linear', angleDeg: 133, space: 0.06, stops: SUNPILLAR },
-          blend: 'normal',
-          size: [2, 2],
-          offset: { x: { base: 0, fromLeft: 0.8 }, y: { base: 0, fromTop: 0.8 } },
-        },
-      ],
-      filter: {
-        brightness: { base: 0.5, fromCenter: 0.3 },
-        contrast: { base: 1.8 },
-        saturate: { base: 1.1 },
+    vShine({
+      foil: texture('grain', { size: [pxWide(500), 1], position: [CENTER, CENTER] }),
+      blends: ['screen', 'hue', 'hard-light'],
+      filter: fixedFilter({ brightness: 0.7, contrast: 2, saturate: 0.5 }),
+      after: {
+        filter: fixedFilter({ brightness: 1, contrast: 2.5, saturate: 1.75 }),
+        mixBlend: 'soft-light',
       },
-      mixBlend: 'soft-light',
-      opacity: { base: 0.5, fromCenter: 0.35 },
-    },
+      slant: 0,
+    }),
   ],
   beneath: [
     {

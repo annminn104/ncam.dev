@@ -344,6 +344,7 @@ const FULL_ART: ReadonlySet<EffectId> = new Set<EffectId>([
   'rainbow-alt',
   'shiny-v',
   'shiny-vmax',
+  'v-regular',
   'v-max',
   'v-star',
   'swsh-pikachu',

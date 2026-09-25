@@ -419,3 +419,94 @@ describe('the illusion trio and the gallery V, as the reference resolves them un
     expect(stopsOf(after.layers[2])[0].color.map((c) => +c.toFixed(3))).toEqual([0.847, 0.46, 1]);
   });
 });
+
+describe('v-star’s and v-regular’s shines, the V family with their own foils', () => {
+  it('v-star excludes ancient, 18% × 15%, and paints its lilac :before last (z-index 2)', () => {
+    const [shine] = EFFECTS['v-star'].shine;
+    expect(kinds(shine)).toEqual(vKinds('ancient', ['exclusion', 'hue', 'hard-light']));
+    expect(shine.layers[3].size).toEqual([1 / 0.18, 1 / 0.15]);
+    // brightness(calc((var(--pointer-from-center) * .25) + .35)) contrast(1.8) saturate(1.75)
+    expect(filterOf(shine)).toEqual([
+      [0.35, 0.25],
+      [1.8, 0],
+      [1.75, 0],
+    ]);
+    const [after, before] = shine.children ?? [];
+    expect(after.mixBlend).toBe('exclusion');
+    // brightness(calc((var(--pointer-from-center) * .75) + .5)) contrast(1.5) saturate(1.5)
+    expect(filterOf(after)).toEqual([
+      [0.5, 0.75],
+      [1.5, 0],
+      [1.5, 0],
+    ]);
+    expect(before.mixBlend).toBe('hard-light');
+    expect(before.opacity).toEqual({ base: 0.8 });
+    // hsla(190, 7%, 80%, 0.75) 0%, hsla(260, 7%, 50%, 0.25) 45%, hsl(310, 7%, 50%) 120%
+    expect(stopsOf(before.layers[0]).map((s) => [s.at, s.alpha ?? 1])).toEqual([
+      [0, 0.75],
+      [0.45, 0.25],
+      [1.2, 1],
+    ]);
+  });
+
+  it('v-regular screens grain, 500px by the card, and soft-lights its :after', () => {
+    const [shine] = EFFECTS['v-regular'].shine;
+    expect(kinds(shine)).toEqual(vKinds('grain', ['screen', 'hue', 'hard-light']));
+    // brightness(.7) contrast(2) saturate(.5), the :not(.masked) rule
+    expect(filterOf(shine)).toEqual([
+      [0.7, 0],
+      [2, 0],
+      [0.5, 0],
+    ]);
+    const [after] = shine.children ?? [];
+    expect(shine.children).toHaveLength(1);
+    expect(after.mixBlend).toBe('soft-light');
+    // brightness(1) contrast(2.5) saturate(1.75)
+    expect(filterOf(after)).toEqual([
+      [1, 0],
+      [2.5, 0],
+      [1.75, 0],
+    ]);
+  });
+});
+
+describe('v-max’s shine, as v-max.css draws it unmasked', () => {
+  const [shine] = EFFECTS['v-max'].shine;
+
+  it('differences vmaxbg onto a rainbow in luminosity, onto soft-lit bands, onto a pastel radial', () => {
+    expect(kinds(shine)).toEqual([
+      'css-radial normal',
+      'css-linear soft-light',
+      'css-linear luminosity',
+      'vmaxbg difference',
+    ]);
+    expect(shine.layers[3].size).toEqual([1 / 0.6, 1 / 0.3]);
+    // brightness(calc((var(--pointer-from-center) * .4) + .4)) contrast(2) saturate(1)
+    expect(filterOf(shine)).toEqual([
+      [0.4, 0.4],
+      [2, 0],
+      [1, 0],
+    ]);
+    // four stops, 60% opaque, at 0, 25, 50 and 75%
+    expect(stopsOf(shine.layers[0]).map((s) => [s.at, s.alpha])).toEqual([
+      [0, 0.6],
+      [0.25, 0.6],
+      [0.5, 0.6],
+      [0.75, 0.6],
+    ]);
+    // hsla(227, 53%, 12%, 0.5) at 0, 10 and 15%, opaque between
+    expect(stopsOf(shine.layers[1]).map((s) => s.alpha ?? 1)).toEqual([0.5, 1, 1, 1, 0.5, 0.5]);
+  });
+
+  it('lightens the sunpillars over its bands in :after, stronger toward the edges', () => {
+    const [after] = shine.children ?? [];
+    expect(shine.children).toHaveLength(1);
+    expect(kinds(after)).toEqual(['css-linear normal', 'css-linear hue']);
+    expect(after.mixBlend).toBe('lighten');
+    expect(after.filter).toEqual({ saturate: { base: 1.5 } });
+    // calc((0.3 * var(--card-opacity)) + var(--card-opacity) * var(--pointer-from-center) * 0.5)
+    expect(after.opacity).toEqual({ base: 0.3, fromCenter: 0.5 });
+    // --space: 6%
+    expect(stopsOf(after.layers[1])).toHaveLength(7);
+  });
+});

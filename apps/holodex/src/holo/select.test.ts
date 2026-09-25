@@ -287,6 +287,9 @@ describe('selectHolo — clip shape', () => {
     // a gallery V takes v-full-art.css's rules, which clip nothing
     const galleryV = selectHolo(card({ localId: 'TG12', rarity: 'Holo Rare V' }));
     expect([galleryV.effect, galleryV.shape]).toEqual(['trainer-gallery-v-regular', 'full']);
+    // v-regular.css clips a V nowhere, on the unmasked path
+    const v = selectHolo(card({ rarity: 'Holo Rare V', stage: 'Basic' }));
+    expect([v.effect, v.shape]).toEqual(['v-regular', 'full']);
   });
 
   it('gives an ordinary trainer the trainer region', () => {
