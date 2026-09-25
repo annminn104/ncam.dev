@@ -1,5 +1,17 @@
 import { useEffect, useEffectEvent, useRef, useState, type RefObject } from 'react';
 
+/**
+ * Every image URL this page has shown. One shown before shows again at once,
+ * with no placeholder or fade: an effects tile going live mounts a new image of
+ * the art it already showed, and used to blink through a placeholder first.
+ */
+const shown = new Set<string>();
+
+/** Record an image URL as shown (useImageFallback does, on load). */
+export function rememberShown(url: string): void {
+  shown.add(url);
+}
+
 export interface ImageFallback {
   /** The file to show now; undefined once every one has failed, or when there were none. */
   src: string | undefined;
@@ -22,17 +34,20 @@ export function useImageFallback(urls: readonly string[]): ImageFallback {
   const [state, setState] = useState({ key, failures: 0, loaded: '' });
   const failures = state.key === key ? state.failures : 0;
   const src = urls[failures];
-  const loaded = src !== undefined && state.key === key && state.loaded === src;
+  const loaded =
+    src !== undefined && (shown.has(src) || (state.key === key && state.loaded === src));
   const ref = useRef<HTMLImageElement>(null);
 
   const onError = () =>
     setState((prev) => ({ key, failures: (prev.key === key ? prev.failures : 0) + 1, loaded: '' }));
-  const onLoad = () =>
+  const onLoad = () => {
+    if (src) rememberShown(src);
     setState((prev) => ({
       key,
       failures: prev.key === key ? prev.failures : 0,
       loaded: src ?? '',
     }));
+  };
 
   const settle = useEffectEvent(() => {
     const image = ref.current;

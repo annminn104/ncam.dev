@@ -7,7 +7,7 @@ import {
 } from 'react';
 import { createLogger } from '@ncam/logger';
 import { CardImage } from '../components/CardImage';
-import { cardImageBase, imageUrl } from '../lib/images';
+import { cardImageBase, imageUrl, type ImageQuality } from '../lib/images';
 import type { Card } from '../lib/tcgdex';
 import { holoCanvasKey } from './canvas-key';
 import { browserProbe, supportsHolo } from './capability';
@@ -22,6 +22,7 @@ export function HoloCard({
   card,
   variant,
   decorative = false,
+  artQuality = 'high',
 }: {
   card: Card;
   /** The printing shown, when not the normal one: selectHolo's `variant`. */
@@ -32,6 +33,13 @@ export function HoloCard({
    * announcing the name a second time.
    */
   decorative?: boolean;
+  /**
+   * The plain art under the canvas, shown until the scene is live: the card
+   * page's high-res, or an effects tile's low-res, the very file the tile was
+   * already showing, so going live does not blink through a placeholder while
+   * the high-res loads. The scene's own texture is high-res either way.
+   */
+  artQuality?: ImageQuality;
 }) {
   const hostRef = useRef<HTMLSpanElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -308,7 +316,7 @@ export function HoloCard({
       <CardImage
         base={base}
         name={card.name}
-        quality="high"
+        quality={artQuality}
         priority
         decorative={decorative}
         className={active ? 'invisible' : undefined}

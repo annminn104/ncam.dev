@@ -2,6 +2,7 @@ import { createElement } from 'react';
 import { renderToString } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { CardImage } from './CardImage';
+import { rememberShown } from './use-image-fallback';
 
 const BASE = 'https://assets.tcgdex.net/en/swsh/swsh3/136';
 const render = (props: Parameters<typeof CardImage>[0]) =>
@@ -51,5 +52,17 @@ describe('CardImage', () => {
       /<span[^>]*aria-hidden="true"[^>]*data-fallback="unavailable"|<span[^>]*data-fallback="unavailable"[^>]*aria-hidden="true"/,
     );
     expect(html).not.toContain('role="img"');
+  });
+
+  it('shows art this page has shown before at once, sharp, with no placeholder or fade', () => {
+    // A tile going live mounts a new image of the same art: it must not
+    // blink through a placeholder it had already left behind.
+    const base = 'https://assets.tcgdex.net/en/swsh/swsh3/2';
+    rememberShown(`${base}/low.webp`);
+    const html = render({ base, name: 'Butterfree VMAX' });
+    const [art] = images(html);
+    expect(art).toContain('opacity-100');
+    expect(html).toMatch(/<span[^>]*data-placeholder="silhouette"[^>]*class="[^"]*opacity-0/);
+    expect(html).not.toContain('animate-pulse');
   });
 });

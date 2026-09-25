@@ -317,6 +317,18 @@ describe('EffectsView — tile markup', () => {
   });
 });
 
+describe('EffectsView — a tile going live keeps the art it showed', () => {
+  it('draws the live card on the grid’s own low-res art while its scene loads, not a high-res one', () => {
+    // The high-res art started blank, or blurred, and the tile blinked
+    // before its foil appeared. The scene still draws the high-res texture.
+    for (const [effect, card] of SELECTIONS.slice(0, 6)) {
+      const live = tiles(livePage(effect, card)).find((tile) => tile.pressed);
+      expect(live?.inner, card).toMatch(/src="[^"]*\/low\.webp"/);
+      expect(live?.inner, card).not.toMatch(/\/high\.(?:webp|png)/);
+    }
+  });
+});
+
 describe('EffectsView — a tile asks for its card only once its section is near', () => {
   // The default page used to ask TCGdex for all 90 cards at once, a burst
   // it has answered by refusing the visitor for a while.
