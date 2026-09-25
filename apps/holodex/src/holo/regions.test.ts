@@ -20,12 +20,13 @@ const LAYOUTS: CardLayout[] = [
   'modern-ex',
   'sv-illustration',
   'pocket-illustration',
+  'sv-special-illustration',
   'other',
 ];
 const SHAPES: ClipShape[] = ['full', 'regular', 'stage', 'trainer', 'borders'];
 const FIXED: ClipShape[] = ['full', 'trainer', 'borders'];
 /** The layouts that measured a trainer's window of their own. */
-const MEASURED_TRAINER: CardLayout[] = ['sv'];
+const MEASURED_TRAINER: CardLayout[] = ['sv', 'sv-special-illustration'];
 
 describe('regionFor', () => {
   it('returns the reference inset for a card no measured layout claims', () => {
@@ -277,5 +278,31 @@ describe('coversPoint', () => {
       expect(coversPoint('stage', 0.4, 0.14, false, layout), layout).toBe(true);
       expect(coversPoint('stage', 0.1, 0.25, false, layout), layout).toBe(true);
     }
+  });
+
+  it('foils a special illustration rare’s whole card, border and all, but the pre-evolution picture', () => {
+    const covers = (shape: ClipShape, x: number, y: number) =>
+      coversPoint(shape, x, y, false, 'sv-special-illustration');
+    // The border, the tab, the band, the text, the rule box: all foil.
+    for (const [x, y] of [
+      [0.01, 0.5],
+      [0.5, 0.01],
+      [0.08, 0.035],
+      [0.4, 0.105],
+      [0.5, 0.7],
+      [0.5, 0.93],
+    ]) {
+      for (const shape of ['regular', 'stage', 'trainer'] as const) {
+        expect(covers(shape, x, y), `${shape} ${x}, ${y}`).toBe(true);
+      }
+    }
+    // The picture inside an evolution's ring, and that only on an evolution.
+    expect(covers('stage', 0.1, 0.12)).toBe(false);
+    expect(covers('regular', 0.1, 0.12)).toBe(true);
+    expect(covers('trainer', 0.1, 0.12)).toBe(true);
+    // The ring round it keeps its foil, as the masks do.
+    expect(covers('stage', 0.02, 0.12)).toBe(true);
+    expect(covers('stage', 0.1, 0.185)).toBe(true);
+    expect(regionFor('trainer', 'sv-special-illustration')).toEqual(regionFor('full'));
   });
 });

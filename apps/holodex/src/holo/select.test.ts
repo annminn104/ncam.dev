@@ -670,14 +670,44 @@ describe('selectHolo — the Scarlet & Violet and Pocket rows, in every era', ()
 });
 
 describe('selectHolo — clip shape of the Scarlet & Violet effects', () => {
-  it('foils the whole card for the full-art ex, the special illustration rare and the gold tier', () => {
+  it('foils the whole card for the full-art ex and the gold tier', () => {
     // Their reference CSS confines them with a per-card mask and no
     // clip-path; with no mask to drop in, the foil covers the card.
     expect(selectHolo(CAPTURED_CARDS['sv03.5-182']).shape).toBe('full');
-    expect(selectHolo(CAPTURED_CARDS['sv03.5-198']).shape).toBe('full');
     expect(selectHolo(CAPTURED_CARDS['sv03.5-205']).shape).toBe('full');
     // A Hyper rare trainer as well: FULL_ART comes before the trainer rule.
     expect(selectHolo(CAPTURED_CARDS['sv03.5-206']).shape).toBe('full');
+  });
+
+  it('foils a special illustration rare’s whole card but an evolution’s pre-evolution picture', () => {
+    // Its reference has no clip-path either, but all seven of 151's masks
+    // leave that picture out, and a box can follow it.
+    const venusaur = selectHolo(CAPTURED_CARDS['sv03.5-198']);
+    expect([venusaur.effect, venusaur.shape, venusaur.layout]).toEqual([
+      'ex-special-illustration-rare',
+      'stage',
+      'sv-special-illustration',
+    ]);
+    const zapdos = selectHolo(
+      card({
+        id: 'sv03.5-202',
+        localId: '202',
+        rarity: 'Special illustration rare',
+        stage: 'Basic',
+      }),
+    );
+    expect([zapdos.shape, zapdos.layout]).toEqual(['regular', 'sv-special-illustration']);
+    // A Supporter's is the whole card: the trainer region of its frame.
+    const erika = selectHolo(
+      card({
+        id: 'sv03.5-203',
+        localId: '203',
+        category: 'Trainer',
+        trainerType: 'Supporter',
+        rarity: 'Special illustration rare',
+      }),
+    );
+    expect([erika.shape, erika.layout]).toEqual(['trainer', 'sv-special-illustration']);
   });
 
   it('clips illustration-rare to its full art’s frame, inside the border, by its stage', () => {

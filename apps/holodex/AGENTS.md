@@ -459,6 +459,18 @@ whose masks foil the border, are the Ultra Rare ex). The border rect it took
 until 2026-09-25 foiled the tab, and the picture and band; over those frame
 parts it agreed with the masks on 90% of the card, the frame now on 99.5%.
 
+A `Special illustration rare` (232: 167 Pokémon ex and 65 Supporters)
+takes its rarity's frame too (`sv-special-illustration`), but that frame
+is the whole card: its reference has no clip-path, and all seven of 151's
+masks (#198 to #204) foil the border, the tab, the band and the rule box
+alike, leaving out the figure, which no box can follow, and on an
+evolution the pre-evolution's picture inside its ring, which one box can.
+So `ex-special-illustration-rare` left `FULL_ART` for `regular`, `stage`
+and `trainer` on that frame: the whole card, less that picture on a Stage
+1 or 2. Over the frame parts the masks agree with it on 96.8% of the card,
+where the whole card agreed on 94.5% (the four evolutions 91.6% to 95.6%);
+the figure keeps the card as a whole at 80%.
+
 **The effect DSL and the generator.** Each of the 30 effect files under
 `holo/effects/` (e.g. `cosmos-holo.ts`) is a declarative `Effect`
 (`holo/shader/types.ts`): 1-3 `shine` elements and up to two glare elements,

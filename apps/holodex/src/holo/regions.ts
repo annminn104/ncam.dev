@@ -46,6 +46,7 @@ export type CardLayout =
   | 'modern-ex'
   | 'sv-illustration'
   | 'pocket-illustration'
+  | 'sv-special-illustration'
   | 'other';
 
 /** How many boxes one region can cut: the shader's uCutA and uCutB. */
@@ -224,6 +225,17 @@ const LAYOUTS: Readonly<Record<CardLayout, LayoutClip>> = {
     art: { top: 0.033, right: 0.04, bottom: 0.03, left: 0.042 },
     regular: [box(0, 0, 0.165, 0.083)],
     stage: [box(0, 0, 0.17, 0.17), box(0.15, 0.093, 0.6, 0.12)],
+  },
+  // A Special illustration rare, ex or Supporter: the reference has no
+  // clip-path for it, only its per-card masks, and on all seven of 151's they
+  // foil the whole card, border, tab, band and rule box included, all but
+  // the figure and, on an evolution, the pre-evolution's picture inside its
+  // ring (2026-09-25). The picture is the one part a box can take.
+  'sv-special-illustration': {
+    art: { top: 0, right: 0, bottom: 0, left: 0 },
+    regular: [],
+    stage: [box(0.035, 0.07, 0.163, 0.18)],
+    trainer: { top: 0, right: 0, bottom: 0, left: 0 },
   },
   other: {
     art: REFERENCE_ART,

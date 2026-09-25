@@ -26,7 +26,9 @@ import {
  * ex-special-illustration-rare.css (css.ts has the conversions and the
  * approximations every port shares). The reference confines its glitter to
  * the card's own foil mask; that is dropped, and select.ts's clip region
- * stands in. hyper-rare.css is this file with one number changed, and
+ * stands in: the whole card, less an evolution's pre-evolution picture, which
+ * those masks leave out (regions.ts's `sv-special-illustration`).
+ * hyper-rare.css is this file with one number changed, and
  * hyper-rare.ts ports it on its own.
  *
  * Approximations:
