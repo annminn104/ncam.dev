@@ -1,6 +1,21 @@
 import type { Effect } from '../shader/types';
+import { COVER, filterRGB, fixedFilter, grey, hsl, radial, stop } from './css';
+import { glareNeutral } from './legacy-glare';
 
-/** Cosmos foil: galaxy speckle under spectral bands, three parallaxed layers. */
+/** cosmos-holo.css's .card__glare filter, and its :after's own. */
+const GLARE_FILTER = { brightness: 0.75, contrast: 2, saturate: 2 };
+const AFTER_FILTER = { brightness: 0.75, contrast: 2.5, saturate: 2 };
+
+/**
+ * Cosmos foil: galaxy speckle under spectral bands, three parallaxed layers.
+ *
+ * The shine is derived by eye from pokemon-cards-css; the glare is ported from
+ * cosmos-holo.css, beneath the shine (legacy-glare.ts): its radial, overlaid,
+ * and an :after radial soft-lit onto it, which fades from opaque at the top of
+ * the card to a quarter at the bottom. Approximation: the reference clips the
+ * :after to the art window on stage and supporter cards; here it covers the
+ * card.
+ */
 export const cosmosHolo: Effect = {
   id: 'cosmos-holo',
   shine: [
@@ -51,23 +66,32 @@ export const cosmosHolo: Effect = {
       opacity: { base: 0.6, fromCenter: 0.3 },
     },
   ],
-  glare: [
+  beneath: [
     {
       layers: [
         {
-          source: {
-            kind: 'radial-pointer',
-            stops: [
-              { at: 0.05, color: [0.85, 0.94, 1] },
-              { at: 1, color: [0.17, 0.16, 0.22] },
-            ],
-          },
+          ...radial(
+            [stop(hsl(204, 100, 95), 5, 0.8), stop(hsl(250, 15, 20), 150)],
+            COVER,
+            glareNeutral('overlay', GLARE_FILTER),
+          ),
           blend: 'normal',
         },
+        {
+          // the :after, soft-lit onto it: calc(1 - var(--pointer-from-top) * .75)
+          ...radial([
+            stop(filterRGB(hsl(280, 100, 96), AFTER_FILTER), 5),
+            stop(filterRGB(grey(0.1), AFTER_FILTER), 60),
+          ]),
+          blend: 'soft-light',
+          opacity: { base: 1, fromTop: -0.75 },
+        },
       ],
-      filter: { brightness: { base: 0.75 }, contrast: { base: 2 }, saturate: { base: 2 } },
+      filter: fixedFilter(GLARE_FILTER),
+      // calc(var(--card-opacity) * (0.25 + var(--pointer-from-center)))
+      opacity: { base: 0.25, fromCenter: 1 },
       mixBlend: 'overlay',
-      opacity: { base: 0.25, fromCenter: 0.6 },
     },
   ],
+  glare: [],
 };

@@ -49,6 +49,30 @@ const SHAPE: Record<string, GlareShape> = {
     layerBlends: ['normal'],
     box: [1, 1],
   },
+  // reverse-holo.css: brightness(.7) contrast(1.5), overlay from base.css; its
+  // :after has no blend, so it and the glare's radial are one gradient
+  'reverse-holo': {
+    blend: 'overlay',
+    filter: { brightness: 0.7, contrast: 1.5 },
+    layerBlends: ['normal'],
+    box: [1, 1],
+  },
+  // cosmos-holo.css: brightness(.75) contrast(2) saturate(2), overlay,
+  // opacity calc(0.25 + pointer-from-center), and a soft-lit :after
+  'cosmos-holo': {
+    blend: 'overlay',
+    opacity: { base: 0.25, fromCenter: 1 },
+    filter: { brightness: 0.75, contrast: 2, saturate: 2 },
+    layerBlends: ['normal', 'soft-light'],
+    box: [1, 1],
+  },
+  // shiny-vmax.css: brightness(1) contrast(1.25), overlay from base.css, and an overlaid :after
+  'shiny-vmax': {
+    blend: 'overlay',
+    filter: { brightness: 1, contrast: 1.25 },
+    layerBlends: ['normal', 'overlay'],
+    box: [1, 1],
+  },
 };
 
 const glareOf = (id: string): Element => {
@@ -141,5 +165,37 @@ describe('regular-holo’s :after', () => {
     const [, after] = glareOf('regular-holo').layers;
     const got = colourAt(after, 0);
     [0.62, 0.8, 0.8].forEach((want, k) => expect(got[k]).toBeCloseTo(want, 4));
+  });
+});
+
+describe('the three with an :after', () => {
+  it('reverse-holo: paints its :after over the glare’s radial, as one gradient', () => {
+    // At t = 0 both are at their first stops: the :after's opaque white covers
+    // the glare's. At t = 1 the :after is 0.8 of the way from white .5 (20%)
+    // to black .5 (120%): grey 0.2 at .5, premultiplied; the glare is past its
+    // black .75 at 90%. Source-over: alpha .5 + .75·.5 = .875, colour
+    // (0.2·.5)/.875 = 0.114286. Folded toward the grey brightness(.7)
+    // contrast(1.5) turns into 0.5, 0.5/.7 = 0.714286:
+    // .875·0.114286 + .125·0.714286 = 0.189286.
+    const [layer] = glareOf('reverse-holo').layers;
+    expectGrey(colourAt(layer, 0), 1, 'at the pointer');
+    expectGrey(colourAt(layer, 1), 0.189286, 'at the far corner');
+  });
+
+  it('cosmos-holo: fades its :after as the pointer moves down the card', () => {
+    const [glare, after] = glareOf('cosmos-holo').layers;
+    // calc(1 - var(--pointer-from-top) * .75)
+    expect(terms(after.opacity)).toEqual(terms({ base: 1, fromTop: -0.75 }));
+    // hsl(204, 100%, 95%) is rgb(0.9, 0.96, 1) at alpha .8, folded toward the
+    // grey brightness(.75) contrast(2) turns into 0.5, 0.5/.75 = 0.666667
+    const got = colourAt(glare, 0);
+    [0.853333, 0.901333, 0.933333].forEach((want, k) => expect(got[k]).toBeCloseTo(want, 4));
+  });
+
+  it('shiny-vmax: overlays its :after, folded toward the grey overlay leaves alone', () => {
+    // its last stop, black .75 at 100%, stays black through brightness(1)
+    // contrast(1.25), folded toward 0.5: 0.25·0.5 = 0.125
+    const [, after] = glareOf('shiny-vmax').layers;
+    expectGrey(colourAt(after, 1), 0.125, 'at the far corner');
   });
 });
