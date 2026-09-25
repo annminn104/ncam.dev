@@ -10,6 +10,20 @@
 
 **Spec:** `docs/superpowers/specs/2026-09-25-holodex-per-scene-materials-design.md`
 
+**Executed 2026-09-25** as `92a6edd` (Task 1) and `c31b38d` (Task 2). Two of the
+commands below needed correcting on the way, and a re-run should use the fixes:
+
+- Task 1, Step 10: `git add` of `program-cache.ts` / `program-cache.test.ts`
+  fails once `git mv` has staged the rename (neither path exists any more).
+  Stage only the new and modified paths.
+- Both commit steps: commitlint rejects a body line over 100 characters, which
+  each one-paragraph `-m` is. The bodies went in wrapped, through
+  `git commit -F <file>`.
+
+The smoke pass also saw a burst of TCGdex fetches fail CORS in the browser
+while node's were clean (`ACAO: *`, `no-store`): transient throttling after
+this session's scans, gone on reload, and unrelated to materials.
+
 ## Global Constraints
 
 - Branch `feat/holodex-holo-v2`. Commit locally only: **never `git push`**, never open a PR.
