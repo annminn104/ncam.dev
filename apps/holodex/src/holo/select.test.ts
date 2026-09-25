@@ -198,7 +198,7 @@ describe('selectHolo — trainer gallery override', () => {
     // Every 'Full Art Trainer' in TCGdex is TG-numbered, so before
     // galleryEffect() grew this arm the effect was unreachable in practice
     // and the spec's "22 effects" was one short. A full art trainer is a full
-    // art first: it keeps its own foil and the whole-card clip rather than
+    // art first: it keeps its own foil and its full-art frame rather than
     // dropping to the gallery's borders clip.
     const selection = selectHolo(
       card({
@@ -208,8 +208,53 @@ describe('selectHolo — trainer gallery override', () => {
         trainerType: 'Supporter',
       }),
     );
-    expect(selection.effect).toBe('trainer-full-art');
-    expect(selection.shape).toBe('full');
+    expect([selection.effect, selection.shape, selection.layout]).toEqual([
+      'trainer-full-art',
+      'trainer',
+      'swsh-ultra',
+    ]);
+  });
+
+  it('routes a Trainer Gallery Ultra Rare Supporter to trainer-full-art too', () => {
+    // TCGdex files swsh10tg's Piers and swsh11tg's Kabu as Ultra Rare; the
+    // reference draws them, rare ultra Supporters, with trainer-full-art.css.
+    const piers = selectHolo(
+      card({
+        id: 'swsh10tg-TG28',
+        localId: 'TG28',
+        name: 'Piers',
+        category: 'Trainer',
+        trainerType: 'Supporter',
+        rarity: 'Ultra Rare',
+      }),
+    );
+    expect(piers.effect).toBe('trainer-full-art');
+    const kabu = selectHolo(
+      card({
+        id: 'swsh11tg-TG26',
+        localId: 'TG26',
+        name: 'Kabu',
+        category: 'Trainer',
+        trainerType: 'Supporter',
+        rarity: 'Ultra Rare',
+      }),
+    );
+    expect([kabu.effect, kabu.shape, kabu.layout]).toEqual([
+      'trainer-full-art',
+      'trainer',
+      'swsh-ultra',
+    ]);
+    // A gallery Pokémon Ultra Rare is no Supporter: it keeps the gallery holo.
+    const starmie = selectHolo(
+      card({
+        id: 'swsh10tg-TG13',
+        localId: 'TG13',
+        name: 'Starmie V',
+        rarity: 'Ultra Rare',
+        stage: 'Basic',
+      }),
+    );
+    expect(starmie.effect).toBe('trainer-gallery-holo');
   });
 });
 
@@ -269,12 +314,17 @@ describe('selectHolo — clip shape', () => {
     expect(selectHolo(card({ localId: 'TG20', rarity: 'Holo Rare' })).shape).toBe('borders');
   });
 
-  it('gives a full art trainer the whole card', () => {
-    expect(
-      selectHolo(
-        card({ rarity: 'Full Art Trainer', category: 'Trainer', trainerType: 'Supporter' }),
-      ).shape,
-    ).toBe('full');
+  it('gives a full art trainer its full-art frame: the whole card but its header and rule box', () => {
+    const s = selectHolo(
+      card({ rarity: 'Full Art Trainer', category: 'Trainer', trainerType: 'Supporter' }),
+    );
+    expect([s.shape, s.layout]).toEqual(['trainer', 'swsh-ultra']);
+    const covers = (x: number, y: number) =>
+      coversPoint(s.shape, x, y, s.invert, s.layout, s.border);
+    expect(covers(0.5, 0.5)).toBe(true);
+    expect(covers(0.01, 0.5)).toBe(true);
+    expect(covers(0.5, 0.045)).toBe(false);
+    expect(covers(0.6, 0.92)).toBe(false);
   });
 
   it('gives the full-art family the whole card', () => {
@@ -435,6 +485,48 @@ describe('selectHolo — Double rare is the standard-layout ex, not a full art',
     };
     expect(covers('Ultra Rare')).toEqual(['ex-full-art', true]);
     expect(covers('Double rare')).toEqual(['ex-regular', false]);
+  });
+});
+
+describe('selectHolo — an Ultra Rare Supporter is a full art trainer', () => {
+  const supporter = (id: string, localId: string, rarity = 'Ultra Rare') =>
+    selectHolo(
+      card({ id, localId, name: 'Test', category: 'Trainer', trainerType: 'Supporter', rarity }),
+    );
+
+  it('takes trainer-full-art before Scarlet & Violet, in every older frame', () => {
+    // Marnie's full art; a Sun & Moon one (sm12's Lillie) and an XY one.
+    for (const [id, localId, layout] of [
+      ['swsh1-200', '200', 'swsh-ultra'],
+      ['sm12-234', '234', 'full-card'],
+      ['xy7-95', '95', 'full-card'],
+    ] as const) {
+      const s = supporter(id, localId);
+      expect([s.effect, s.shape, s.layout], id).toEqual(['trainer-full-art', 'trainer', layout]);
+    }
+  });
+
+  it('keeps a Scarlet & Violet or Mega one on the full-art ex, whose CSS draws Supporters too', () => {
+    expect(supporter('sv03.5-194', '194').effect).toBe('ex-full-art');
+    expect(supporter('me01-165', '165').effect).toBe('ex-full-art');
+  });
+
+  it('leaves every other Ultra Rare where it was', () => {
+    // A Pokémon, and a trainer that is no Supporter.
+    const v = selectHolo(
+      card({ id: 'swsh3-183', localId: '183', name: 'Scizor V', rarity: 'Ultra Rare' }),
+    );
+    expect(v.effect).toBe('v-full-art');
+    const item = selectHolo(
+      card({
+        id: 'sm12-230',
+        localId: '230',
+        category: 'Trainer',
+        trainerType: 'Item',
+        rarity: 'Ultra Rare',
+      }),
+    );
+    expect(item.effect).toBe('v-full-art');
   });
 });
 
@@ -756,8 +848,9 @@ describe('selectHolo — clip shape of the Scarlet & Violet effects', () => {
         rarity: 'Ultra Rare',
       }),
     );
+    // An Ultra Rare Supporter is a full art trainer, on the same frame.
     expect([marnie.effect, marnie.shape, marnie.layout]).toEqual([
-      'v-full-art',
+      'trainer-full-art',
       'trainer',
       'swsh-ultra',
     ]);

@@ -7,7 +7,7 @@ import type { Card } from '../lib/tcgdex';
  *
  * Captured from `GET https://api.tcgdex.net/v2/en/cards/{id}` and trimmed to
  * what `selectHolo` reads (`rarity`, `suffix`, `localId`, `category`,
- * `stage`, the set id it takes off `id` for the card's era, and each
+ * `trainerType`, `stage`, the set id it takes off `id` for the card's era, and each
  * printing's `type` and `foil` in `variants_detailed`, for a Poké Ball
  * reverse), the reverse-printing flag (`variants`), the `image` the page
  * draws, and what the `Card` type requires. The first 87 were fetched on
@@ -20,7 +20,10 @@ import type { Card } from '../lib/tcgdex';
  * `variants_detailed`: every field already here matched, and Prismatic
  * Evolutions' Eevee (sv08.5-074) replaced 151's Wartortle; with the Master
  * Ball printing, its Exeggcute (sv08.5-001, captured the same day) replaced
- * 151's Squirtle. The subset-set cards
+ * 151's Squirtle. All 90 were fetched once more that day, when selection
+ * began reading `trainerType`: every field matched, the nine trainers took
+ * theirs, and the Trainer Gallery's Abomasnow (swsh10tg-TG01) and Charizard
+ * (swsh11tg-TG03) replaced its Piers and Opal, full art trainers now. The subset-set cards
  * (`swsh4.5sv-…` and the `swsh9tg`–`swsh12tg` Trainer Gallery ones) have no
  * `image` because the API links none: `lib/images.ts#cardImageBase` finds
  * their art. Every value is copied verbatim: never edit one by hand to make a
@@ -216,6 +219,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     name: 'Dangerous Laser',
     image: 'https://assets.tcgdex.net/en/sv/sv06.5/058',
     category: 'Trainer',
+    trainerType: 'Item',
     set: { id: 'sv06.5', name: 'Shrouded Fable', cardCount: { total: 99, official: 64 } },
     rarity: 'ACE SPEC Rare',
     variants: { firstEdition: false, holo: true, normal: false, reverse: false, wPromo: false },
@@ -227,6 +231,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     name: 'Max Rod',
     image: 'https://assets.tcgdex.net/en/sv/sv08.5/116',
     category: 'Trainer',
+    trainerType: 'Item',
     set: { id: 'sv08.5', name: 'Prismatic Evolutions', cardCount: { total: 180, official: 131 } },
     rarity: 'ACE SPEC Rare',
     variants: { firstEdition: false, holo: true, normal: false, reverse: false, wPromo: false },
@@ -238,6 +243,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     name: 'Deluxe Bomb',
     image: 'https://assets.tcgdex.net/en/sv/sv07/134',
     category: 'Trainer',
+    trainerType: 'Tool',
     set: { id: 'sv07', name: 'Stellar Crown', cardCount: { total: 175, official: 142 } },
     rarity: 'ACE SPEC Rare',
     variants: { firstEdition: false, holo: true, normal: false, reverse: false, wPromo: false },
@@ -590,31 +596,33 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     variants: { firstEdition: false, holo: true, normal: false, reverse: false, wPromo: false },
     variants_detailed: [{ type: 'holo' }, { type: 'holo' }],
   },
-  'swsh10tg-TG28': {
-    id: 'swsh10tg-TG28',
-    localId: 'TG28',
-    name: 'Piers',
-    category: 'Trainer',
+  'swsh10tg-TG01': {
+    id: 'swsh10tg-TG01',
+    localId: 'TG01',
+    name: 'Abomasnow',
+    category: 'Pokemon',
     set: {
       id: 'swsh10tg',
       name: 'Astral Radiance Trainer Gallery',
       cardCount: { total: 30, official: 30 },
     },
-    rarity: 'Ultra Rare',
+    rarity: 'Rare',
+    stage: 'Stage1',
     variants: { firstEdition: false, holo: true, normal: false, reverse: false, wPromo: false },
     variants_detailed: [{ type: 'holo' }],
   },
-  'swsh11tg-TG28': {
-    id: 'swsh11tg-TG28',
-    localId: 'TG28',
-    name: 'Opal',
-    category: 'Trainer',
+  'swsh11tg-TG03': {
+    id: 'swsh11tg-TG03',
+    localId: 'TG03',
+    name: 'Charizard',
+    category: 'Pokemon',
     set: {
       id: 'swsh11tg',
       name: 'Lost Origin Trainer Gallery',
       cardCount: { total: 30, official: 30 },
     },
-    rarity: 'Ultra Rare',
+    rarity: 'Rare',
+    stage: 'Stage2',
     variants: { firstEdition: false, holo: true, normal: false, reverse: false, wPromo: false },
     variants_detailed: [{ type: 'holo' }],
   },
@@ -848,6 +856,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     localId: 'TG23',
     name: 'Friends in Galar',
     category: 'Trainer',
+    trainerType: 'Supporter',
     set: {
       id: 'swsh12tg',
       name: 'Silver Tempest Trainer Gallery',
@@ -862,6 +871,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     localId: 'TG24',
     name: 'Gordie',
     category: 'Trainer',
+    trainerType: 'Supporter',
     set: {
       id: 'swsh12tg',
       name: 'Silver Tempest Trainer Gallery',
@@ -876,6 +886,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     localId: 'TG25',
     name: 'Judge',
     category: 'Trainer',
+    trainerType: 'Supporter',
     set: {
       id: 'swsh12tg',
       name: 'Silver Tempest Trainer Gallery',
@@ -1062,6 +1073,7 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     name: 'Switch',
     image: 'https://assets.tcgdex.net/en/sv/sv03.5/206',
     category: 'Trainer',
+    trainerType: 'Item',
     set: { id: 'sv03.5', name: '151', cardCount: { total: 207, official: 165 } },
     rarity: 'Hyper rare',
     variants: { firstEdition: false, holo: true, normal: false, reverse: false, wPromo: false },

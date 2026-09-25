@@ -227,13 +227,14 @@ const EXAMPLES: Omit<EffectExample, 'rarities'>[] = [
   },
   // Reached only through the card number now that Illustration rare, the
   // rarity that used to select it, has illustration-rare: a gallery card whose
-  // own effect has no gallery variant lands here, like these two Ultra Rare
-  // trainers and a Holo Rare.
+  // own effect has no gallery variant lands here, like these two Rares and a
+  // Holo Rare, the gallery's own holos. Its Ultra Rare Supporters are full
+  // art trainers (select.ts), and are not.
   {
     effect: 'trainer-gallery-holo',
     cardIds: [
-      'swsh10tg-TG28', // Piers
-      'swsh11tg-TG28', // Opal
+      'swsh10tg-TG01', // Abomasnow
+      'swsh11tg-TG03', // Charizard
       'swsh12tg-TG05', // Gardevoir
     ],
     override: FROM_CARD_NUMBER,
@@ -291,8 +292,10 @@ const EXAMPLES: Omit<EffectExample, 'rarities'>[] = [
     ],
     override: FROM_CARD_NUMBER,
   },
-  // One set by necessity, not carelessness: all six Full Art Trainer cards
-  // TCGdex has are in swsh12tg.
+  // The rarity's own: all six Full Art Trainer cards TCGdex has are in
+  // swsh12tg. An Ultra Rare Supporter before Scarlet & Violet (Marnie's full
+  // art, the Trainer Gallery's Piers) takes this effect too, by select.ts's
+  // rule rather than its table, as a suffixed Promo takes its foil.
   {
     effect: 'trainer-full-art',
     cardIds: [

@@ -295,7 +295,9 @@ const LAYOUTS: Readonly<Record<CardLayout, LayoutClip>> = {
   // (Peonia, Barry, Marnie) foil the whole card, the border included, but
   // leave out the frame's dark bars (2026-09-25): a Supporter's TRAINER
   // header and its rule box (94% and 92% of them bare, where its foiled
-  // parts are about half bare, their etching's lines). The black V drawn
+  // parts are about half bare, their etching's lines), as do the Trainer
+  // Gallery's full-art Supporters' (Kabu, Nessa and the Full Art Trainer
+  // Professor Burnet: 95% and 93%), which take this frame too. The black V drawn
   // over a V's top-left is left out as well, but it is a triangle whose
   // silver outlines take foil, and a color-dodged shine leaves black black.
   'swsh-ultra': {

@@ -378,7 +378,11 @@ const OLDER_ULTRA_RARE_FRAME: Partial<Record<CardLayout, CardLayout>> = {
  * (232: 167 Pokémon ex and 65 Supporters), and the gold tier's: a Scarlet &
  * Violet `Hyper rare` (74: 41 Pokémon, all ex, 21 trainers, 12 energies) and
  * a `Mega Hyper Rare` (8, Mega ex) or Pocket `Crown` (24), which take the
- * whole card, as a Pocket `Two Star` (263) does (checked 2026-09-25).
+ * whole card, as a Pocket `Two Star` (263) does (checked 2026-09-25). A
+ * `Full Art Trainer` (six, all swsh12tg's) is a Sword & Shield full-art
+ * Supporter, the frame its Ultra Rare twins take (OLDER_ULTRA_RARE_FRAME):
+ * the older reference's mask of one of them, Professor Burnet's, leaves out
+ * the same header and rule box as theirs.
  */
 const LAYOUT_BY_RARITY: Readonly<Record<string, CardLayout>> = {
   'Rare Holo LV.X': 'lv-x',
@@ -391,6 +395,7 @@ const LAYOUT_BY_RARITY: Readonly<Record<string, CardLayout>> = {
   'Mega Hyper Rare': 'full-card',
   Crown: 'full-card',
   'Two Star': 'full-card',
+  'Full Art Trainer': 'swsh-ultra',
 };
 
 /**
@@ -593,12 +598,12 @@ function galleryEffect(base: EffectId): EffectId {
   if (base === 'v-regular') return 'trainer-gallery-v-regular';
   if (base === 'v-max') return 'trainer-gallery-v-max';
   if (base === 'secret-rare') return 'trainer-gallery-secret-rare';
-  // Every 'Full Art Trainer' card TCGdex has is TG-numbered, so without this
-  // arm the gallery override swallowed all six of them into
-  // 'trainer-gallery-holo' and 'trainer-full-art' was unreachable — as was
-  // the `rarity === 'Full Art Trainer'` branch in clipShape() below. A full
-  // art trainer is a full art first and a gallery card second: it keeps its
-  // own effect and the `full` clip rather than the gallery `borders` clip.
+  // Every 'Full Art Trainer' card TCGdex has is TG-numbered, as are the
+  // Trainer Gallery's Ultra Rare Supporters (selectHolo), so without this arm
+  // the gallery override swallowed them all into 'trainer-gallery-holo'. A
+  // full art trainer is a full art first and a gallery card second: it keeps
+  // its own effect and its full-art frame (regions.ts's `swsh-ultra`) rather
+  // than the gallery `borders` clip.
   if (base === 'trainer-full-art') return 'trainer-full-art';
   return 'trainer-gallery-holo';
 }
@@ -610,7 +615,6 @@ function clipShape(effect: EffectId, card: Card): ClipShape {
   // inverts.
   if (BORDERS.has(effect)) return 'borders';
   if (ART_WINDOW.has(effect)) return 'regular';
-  if (card.rarity === 'Full Art Trainer') return 'full';
   if (FULL_ART.has(effect)) return 'full';
   if (card.category === 'Trainer') return 'trainer';
   if (card.stage === 'Stage1' || card.stage === 'Stage2') return 'stage';
@@ -651,6 +655,18 @@ export function selectHolo(card: Card, options: SelectOptions = {}): HoloSelecti
   // that gap rather than guess.
   if (base === 'basic' && rarity === 'Promo' && card.suffix) {
     base = modern ? 'ex-regular' : 'v-regular';
+  }
+
+  // An Ultra Rare Supporter before Scarlet & Violet is a full-art trainer.
+  // TCGdex files Sword & Shield's full-art Supporters as Ultra Rare, Marnie's
+  // and the Trainer Gallery's (swsh10tg's Piers, swsh11tg's Kabu) alike, and
+  // only six as Full Art Trainer; pokemon-cards-css draws every one, rare
+  // ultra and a Supporter, with trainer-full-art.css, which loads after
+  // v-full-art.css and overrides its Supporter rules, in a gallery or out of
+  // one (trainer-gallery-holo.css styles the gallery's Rares alone).
+  // galleryEffect keeps it.
+  if (base === 'v-full-art' && card.trainerType === 'Supporter') {
+    base = 'trainer-full-art';
   }
 
   let effect = base;

@@ -254,11 +254,18 @@ V or GX before, the full-art ex after: `ex-full-art`). `eraOf(card)` reads the
 era off the set id (the card id less `-${localId}`): `/^sv(\d|p$)/i`,
 `/^me(\d|p$)/i`, and by exact id `30th` and `30th-c`, the two Mega Evolution
 sets whose ids do not start with `me` (checked against `GET /series/me`; a
-new set with an odd id needs the same check against its series). Three
+new set with an odd id needs the same check against its series). Four
 overrides apply on top, in order: (1) a `Promo` with a `suffix` (V, ex, GX…)
 is a holo chase card, `ex-regular` in the modern era and `v-regular` before;
-(2) a card number matching `/^[tg]g/i` is a trainer-gallery printing and
-remaps its base effect to one of four gallery variants (`galleryEffect`); (3)
+(2) an `Ultra Rare` Supporter before Scarlet & Violet is a full art trainer,
+`trainer-full-art`, as pokemon-cards-css draws every rare ultra Supporter
+with `trainer-full-art.css` (loaded after `v-full-art.css`, whose Supporter
+rules it overrides), in a gallery or out of one: TCGdex files Sword &
+Shield's full-art Supporters as Ultra Rare, Marnie's and the Trainer
+Gallery's alike, and only six as `Full Art Trainer`; (3) a card number
+matching `/^[tg]g/i` is a trainer-gallery printing and remaps its base
+effect to one of four gallery variants (`galleryEffect`), which keeps a
+full art trainer as it is; (4)
 `options.variant` — the printing shown, an explicit choice never read off the
 card — on a card whose effect is `basic`, `regular-holo` or `sv-rare-holo`
 becomes a reverse foil with `invert: true`. `masterball` is `masterball-holo`;
@@ -290,8 +297,7 @@ but never silently: a coverage test asserts every one of the 42 rarities has
 a table entry and that the seven override-only effects (the three reverse
 foils and the four gallery variants) never appear as a table value. `selectHolo` also
 picks the card's `ClipShape` (`clipShape()` in the same file) from the
-resolved effect, the card's `category`/`stage`, and whether its rarity is
-literally `Full Art Trainer` — order matters, since `radiant-holo` and
+resolved effect and the card's `category`/`stage` — order matters, since `radiant-holo` and
 `trainer-gallery-holo` must claim `borders`, and `amazing-rare` the art
 window (`regular`, whatever the card's stage, as its unmasked CSS sets
 `--clip`), before the full-art and trainer rules would otherwise take them.
@@ -520,11 +526,19 @@ the whole card (`full-card`), as before. TCGdex's older `Ultra Rare` is not
 only full arts: it files some regular EX, GX and V there too (xy1's Venusaur
 EX, sm9's Celebi & Venusaur GX, swsh10's Starmie V), which therefore foil
 their whole card; a Sword & Shield V's frame is laid out like its full art,
-so its cuts land there as well. Two differences from the reference are left
-as they are: it draws a rare ultra Supporter with `trainer-full-art.css`,
-where TCGdex's `Ultra Rare` Supporters take `v-full-art` here, and a
-Trainer Gallery `Ultra Rare` Supporter (`swsh11tg`'s) takes
-`trainer-gallery-holo` here (`galleryEffect`).
+so its cuts land there as well. An `Ultra Rare` Supporter is not
+`v-full-art`'s at all but `trainer-full-art`'s (the overrides above), on
+the same frames: `swsh-ultra`'s trainer region for a Sword & Shield one,
+the Trainer Gallery's included (Kabu's and Nessa's masks leave out the
+same header and rule box, 95% and 93% bare), and the whole card for an
+older one. A `Full Art Trainer` takes `swsh-ultra` too, by its rarity, as
+the mask of one of the six, Professor Burnet's, leaves out the same bars:
+until 2026-09-25 it took the whole card, clipShape's one rule by rarity,
+now gone. One difference from the reference is left as it is: a Trainer
+Gallery `Ultra Rare` Pokémon V or VMAX (swsh10tg's Starmie V) takes
+`trainer-gallery-holo` here (`galleryEffect` knows `v-full-art` no gallery
+variant), where the reference draws a gallery V with `v-full-art.css` and a
+gallery VMAX with `trainer-gallery-v-max.css`.
 
 **The effect DSL and the generator.** Each of the 30 effect files under
 `holo/effects/` (e.g. `cosmos-holo.ts`) is a declarative `Effect`
