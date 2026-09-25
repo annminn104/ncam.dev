@@ -1,27 +1,20 @@
 import type { Effect } from '../shader/types';
+import { COVER, radial } from './css';
+import { BASE_GLARE, glareNeutral } from './legacy-glare';
 
-/** No foil. A soft pointer-tracking sheen so the card is not inert. */
+/**
+ * No foil: the card as printed, under base.css's glare, which pokemon-cards-css
+ * paints on every card (basic.css adds nothing to it). It lies beneath where a
+ * shine would be, as the reference's z-index stacks it; basic has no shine.
+ */
 export const basic: Effect = {
   id: 'basic',
   shine: [],
-  glare: [
+  beneath: [
     {
-      layers: [
-        {
-          source: {
-            kind: 'radial-pointer',
-            stops: [
-              { at: 0, color: [1, 1, 1] },
-              { at: 0.6, color: [0.15, 0.15, 0.18] },
-              { at: 1, color: [0, 0, 0] },
-            ],
-          },
-          blend: 'normal',
-        },
-      ],
-      filter: { brightness: { base: 0.9 }, contrast: { base: 1.3 } },
-      mixBlend: 'soft-light',
-      opacity: { base: 0.15, fromCenter: 0.35 },
+      layers: [{ ...radial(BASE_GLARE, COVER, glareNeutral('overlay')), blend: 'normal' }],
+      mixBlend: 'overlay',
     },
   ],
+  glare: [],
 };

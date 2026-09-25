@@ -1,6 +1,21 @@
 import type { Effect } from '../shader/types';
+import { BLACK, COVER, filterRGB, fixedFilter, grey, hsl, radial, stop, type RGB } from './css';
+import { BASE_GLARE, glareNeutral } from './legacy-glare';
 
-/** Rare Holo: spectral bands over scanlines, clipped to the art window. */
+/** regular-holo.css's .card__glare filter, and its :after's own. */
+const GLARE_FILTER = { brightness: 0.8, contrast: 1.5 };
+const AFTER_FILTER = { brightness: 0.6, contrast: 3 };
+const afterStop = (c: RGB, at: number, alpha = 1) => stop(filterRGB(c, AFTER_FILTER), at, alpha);
+
+/**
+ * Rare Holo: spectral bands over scanlines, clipped to the art window.
+ *
+ * The shine is derived by eye from pokemon-cards-css; the glare is ported from
+ * regular-holo.css: base.css's radial and an :after radial overlaid onto it,
+ * under the glare's own filter, painted beneath the shine (legacy-glare.ts).
+ * Approximation: the reference clips the :after to the art window on stage,
+ * supporter and item cards; here it covers the card.
+ */
 export const regularHolo: Effect = {
   id: 'regular-holo',
   shine: [
@@ -37,23 +52,29 @@ export const regularHolo: Effect = {
       opacity: { base: 0.45, fromCenter: 0.45 },
     },
   ],
-  glare: [
+  beneath: [
     {
       layers: [
+        // .card__glare paints base.css's radial
+        { ...radial(BASE_GLARE, COVER, glareNeutral('overlay', GLARE_FILTER)), blend: 'normal' },
+        // and its :after, under its own filter, overlaid onto it
         {
-          source: {
-            kind: 'radial-pointer',
-            stops: [
-              { at: 0, color: [1, 1, 1] },
-              { at: 1, color: [0.08, 0.08, 0.1] },
+          ...radial(
+            [
+              afterStop(hsl(180, 100, 95), 5),
+              afterStop(grey(0.39), 55, 0.25),
+              afterStop(BLACK, 110, 0.36),
             ],
-          },
-          blend: 'normal',
+            COVER,
+            grey(0.5),
+          ),
+          blend: 'overlay',
         },
       ],
-      filter: { brightness: { base: 0.85 }, contrast: { base: 1.7 } },
-      mixBlend: 'hard-light',
-      opacity: { base: 0.2, fromCenter: 0.6 },
+      filter: fixedFilter(GLARE_FILTER),
+      opacity: { base: 0.8 },
+      mixBlend: 'overlay',
     },
   ],
+  glare: [],
 };
