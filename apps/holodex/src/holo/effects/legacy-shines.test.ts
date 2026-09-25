@@ -94,3 +94,85 @@ describe('secret-rare’s shine, as secret-rare.css draws it unmasked', () => {
     expect(effect.glare).toEqual([]);
   });
 });
+
+describe('radiant-holo’s shine, as radiant-holo.css draws it unmasked', () => {
+  const effect: Effect = EFFECTS['radiant-holo'];
+  const [shine] = effect.shine;
+
+  it('is one group, colour-dodged through its filter', () => {
+    expect(effect.shine).toHaveLength(1);
+    expect(shine.mixBlend).toBe('color-dodge');
+    // brightness(.5) contrast(2) saturate(1.75)
+    expect(shine.filter).toEqual({
+      brightness: { base: 0.5 },
+      contrast: { base: 2 },
+      saturate: { base: 1.75 },
+    });
+  });
+
+  it('crosses two sets of grey bars under a glowing ellipse', () => {
+    expect(kinds(shine)).toEqual([
+      'css-linear normal',
+      'css-linear darken',
+      'css-radial exclusion',
+    ]);
+    for (const layer of shine.layers.slice(0, 2)) {
+      const stops = stopsOf(layer);
+      // 10% 0% and 1%, then each grey for one --barwidth (1.2%), ten of them
+      expect(stops).toHaveLength(21);
+      expect(stops.map((s) => +s.color[0].toFixed(3))).toEqual([
+        0.1, 0.1, 0.1, 0.2, 0.2, 0.35, 0.35, 0.425, 0.425, 0.5, 0.5, 0.425, 0.425, 0.35, 0.35, 0.2,
+        0.2, 0.1, 0.1, 0, 0,
+      ]);
+      expect(stops[0].at).toBe(0);
+      expect(stops[20].at).toBeCloseTo(1, 12);
+      expect(layer.source.kind === 'css-linear' && layer.source.repeating).toBe(true);
+    }
+    // farthest-corner ellipse, hsl(0, 0%, 95%) 20%, var(--card-glow) 130%
+    const ellipse = shine.layers[2].source;
+    expect(ellipse.kind === 'css-radial' && ellipse.ellipse).toBe(true);
+    expect(stopsOf(shine.layers[2])).toEqual([
+      { at: 0.2, color: [0.95, 0.95, 0.95] },
+      { at: 1.3, color: [0, 0, 0], glow: 1 },
+    ]);
+  });
+
+  it('paints :after (z-index auto) before :before (z-index 2)', () => {
+    const [after, before] = shine.children ?? [];
+    expect(shine.children).toHaveLength(2);
+
+    expect(kinds(after)).toEqual(['css-linear normal', 'trainerbg difference']);
+    expect(after.mixBlend).toBe('color-dodge');
+    expect(after.clip).toBe('regular');
+    // brightness(.6) contrast(3) saturate(2)
+    expect(after.filter).toEqual({
+      brightness: { base: 0.6 },
+      contrast: { base: 3 },
+      saturate: { base: 2 },
+    });
+    expect(stopsOf(after.layers[0])).toHaveLength(7);
+
+    expect(kinds(before)).toEqual(['css-radial normal', 'glitter color-dodge']);
+    expect(before.mixBlend).toBe('overlay');
+    // brightness(.66) contrast(2) saturate(.5)
+    expect(before.filter).toEqual({
+      brightness: { base: 0.66 },
+      contrast: { base: 2 },
+      saturate: { base: 0.5 },
+    });
+    // hsla(0, 0%, 58%, 0.8) 10%, hsla(0, 0%, 20%, 0.9) 20%, hsla(0, 0%, 20%, 0.5) 50%
+    expect(stopsOf(before.layers[0]).map((s) => [s.at, s.alpha])).toEqual([
+      [0.1, 0.8],
+      [0.2, 0.9],
+      [0.5, 0.5],
+    ]);
+    // 15% 15%
+    expect(before.layers[1].size).toEqual([1 / 0.15, 1 / 0.15]);
+  });
+
+  it('keeps its glare beneath, as ported', () => {
+    expect(effect.beneath).toHaveLength(1);
+    expect(effect.beneath?.[0].mixBlend).toBe('hard-light');
+    expect(effect.glare).toEqual([]);
+  });
+});
