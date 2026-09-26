@@ -551,13 +551,26 @@ describe('coversPoint', () => {
         expect(coversPoint(shape, 0.4, 0.3, false, layout, false, true), layout).toBe(true);
       }
     }
-    // A trainer's title is laid out otherwise, and the regular frame's sits
-    // above its art; the trainers' and energies' frames have none.
-    expect(inkStripFor('trainer', 'sv-special-illustration')).toBeUndefined();
+    // The regular frame's title sits above its art, and an energy on the
+    // trainers' frames has none.
     expect(inkStripFor('regular', 'sv')).toBeUndefined();
+    expect(inkStripFor('trainer', 'sv')).toBeUndefined();
     expect(inkStripFor('regular', 'sv-ultra')).toBeUndefined();
     expect(inkStripFor('regular', 'sv-hyper')).toBeUndefined();
     expect(coversPoint('regular', 0.4, 0.06, false, 'sv-ultra', false, true)).toBe(true);
+  });
+
+  it('cuts a full art trainer’s printed name, on the panel under its TRAINER banner', () => {
+    for (const layout of ['sv-special-illustration', 'sv-ultra', 'sv-hyper'] as const) {
+      const strip = inkStripFor('trainer', layout);
+      expect(strip, layout).toBeDefined();
+      expect(strip, layout).not.toEqual(inkStripFor('regular', 'sv-illustration'));
+      expect(coversPoint('trainer', 0.3, 0.11, false, layout, false, true), layout).toBe(false);
+      expect(coversPoint('trainer', 0.3, 0.11, false, layout, false, false), layout).toBe(true);
+      // the banner above it, and the art below, keep theirs
+      expect(coversPoint('trainer', 0.3, 0.05, false, layout, false, true), layout).toBe(true);
+      expect(coversPoint('trainer', 0.3, 0.3, false, layout, false, true), layout).toBe(true);
+    }
   });
 
   it('lays an evolution’s round picture over the border as well, where a banner’s box stops', () => {

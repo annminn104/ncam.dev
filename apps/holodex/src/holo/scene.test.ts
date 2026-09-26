@@ -169,6 +169,11 @@ describe('cutSlantUniform', () => {
 });
 
 describe('inkRectUniform', () => {
+  it('hands a trainer its own strip, its name’s', () => {
+    const strip = inkStripFor('trainer', 'sv-ultra')!;
+    expect(inkRectUniform('trainer', 'sv-ultra')).toEqual([strip.x0, strip.y0, strip.x1, strip.y1]);
+  });
+
   it('hands coverage() the title strip where a card’s ink is cut, x0, y0, x1, y1', () => {
     const strip = inkStripFor('stage', 'sv-illustration')!;
     expect(inkRectUniform('stage', 'sv-illustration')).toEqual([
@@ -181,7 +186,7 @@ describe('inkRectUniform', () => {
 
   it('sends zeros, a strip holding nothing, where no ink is cut', () => {
     expect(inkRectUniform('regular', 'sv')).toEqual([0, 0, 0, 0]);
-    expect(inkRectUniform('trainer', 'sv-special-illustration')).toEqual([0, 0, 0, 0]);
+    expect(inkRectUniform('trainer', 'sv')).toEqual([0, 0, 0, 0]);
   });
 });
 

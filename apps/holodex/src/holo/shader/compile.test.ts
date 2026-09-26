@@ -834,7 +834,7 @@ describe('coverage() in GLSL agrees with coversPoint() in JS', () => {
     let strips = 0;
     let kept = 0;
     for (const layout of layouts) {
-      for (const shape of ['regular', 'stage'] as const) {
+      for (const shape of ['regular', 'stage', 'trainer'] as const) {
         const strip = inkStripFor(shape, layout);
         if (!strip) continue;
         strips++;

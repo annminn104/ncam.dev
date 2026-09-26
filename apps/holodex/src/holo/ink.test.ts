@@ -58,6 +58,20 @@ describe('findInk', () => {
     expect(findInk(block).every((v) => v === 0)).toBe(true);
   });
 
+  it('finds a trainer’s name, black on its light panel with no outline of its own, i dots and all', () => {
+    // the panel is light enough to be an outline all round the letters
+    const pixels = strip(80, 30, 215, [
+      [20, 10, 5, 16, 0],
+      // an i: its stem, and its dot, 5 px tall, 3 px above it
+      [40, 12, 5, 14, 0],
+      [40, 4, 5, 5, 0],
+    ]);
+    const ink = findInk(pixels);
+    expect(at(ink, 80, 22, 18)).toBe(255);
+    expect(at(ink, 80, 42, 6)).toBe(255);
+    expect(at(ink, 80, 60, 18)).toBe(0);
+  });
+
   it('measures its sizes against a 600 px wide scan, and scales them with the scan', () => {
     // twice the scan: the letter at twice the size is still one, the speck
     // at twice the size still too small

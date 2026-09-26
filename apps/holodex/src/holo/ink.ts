@@ -26,8 +26,8 @@ export const INK = {
   reach: 3,
   /** The share of a blob's edge that must meet an outline for it to be a letter's. */
   outlined: 0.6,
-  /** A letter's height, px: a speck is smaller, a background bigger. */
-  minHeight: 6,
+  /** A letter's height, px, an i's dot's (5) up: a speck is smaller, a background bigger. */
+  minHeight: 4,
   maxHeight: 45,
   /** The widest a run of letters that touch gets, px. */
   maxWidth: 150,
@@ -39,9 +39,10 @@ export const INK = {
  * Where a card's title strip carries printed ink: a mask the size of
  * `pixels`, 255 where inked. Each blob of dark pixels is a letter's if it is
  * a letter's size, stays off the strip's edges (a background runs off them),
- * and meets a white outline along most of its edge, which is what sets the
- * title's letters apart from the dark art they are printed over. Kept blobs
- * grow by their outline. `scale` is the scan's width over 600.
+ * and meets a white outline along most of its edge, which is what sets a
+ * Pokémon's title apart from the dark art it is printed over; a trainer's
+ * name, printed on a light panel, meets the panel instead. Kept blobs grow
+ * by their outline. `scale` is the scan's width over 600.
  */
 export function findInk(pixels: Pixels, scale = 1): Uint8Array {
   const { data, width: w, height: h } = pixels;

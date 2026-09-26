@@ -112,6 +112,8 @@ interface LayoutClip {
    * illustration, have one.
    */
   ink?: CutBox;
+  /** Where a trainer's printed name lies, whose ink is cut the same way. */
+  trainerInk?: CutBox;
 }
 
 const box = (x0: number, y0: number, x1: number, y1: number): CutBox => ({ x0, y0, x1, y1 });
@@ -196,6 +198,16 @@ const SV_JUNCTION = slanted(0.16, 0.1155, 0.1785, 0.131, -0.0085);
  * keep theirs.
  */
 const TITLE_INK = box(0.17, 0.025, 0.955, 0.092);
+
+/**
+ * A Scarlet & Violet full art trainer's name, black on the light panel under
+ * its Supporter or Item and TRAINER banner, across the card. Unlike a
+ * Pokémon's title, 151's masks for its seven full art trainers foil the name
+ * with its panel, about half as much as their art (2026-09-26); it is cut
+ * all the same, the owner's call, so that every full art's printed title
+ * reads clean.
+ */
+const TRAINER_TITLE_INK = box(0.03, 0.075, 0.97, 0.15);
 
 /**
  * Each frame's art window and what it prints over it. Measured 2026-09-25 off
@@ -364,6 +376,7 @@ const LAYOUTS: Readonly<Record<CardLayout, LayoutClip>> = {
     stage: [SV_PICTURE],
     trainer: { top: 0, right: 0, bottom: 0, left: 0 },
     ink: TITLE_INK,
+    trainerInk: TRAINER_TITLE_INK,
   },
   // A Scarlet & Violet Hyper rare, the gold card, trainer or energy: the whole
   // card, but a trainer's rule box, the silver-blue one over its gold at the
@@ -377,6 +390,7 @@ const LAYOUTS: Readonly<Record<CardLayout, LayoutClip>> = {
     stage: [],
     trainer: { top: 0, right: 0, bottom: 0, left: 0 },
     trainerCuts: [box(0.335, 0.875, 0.975, 0.968)],
+    trainerInk: TRAINER_TITLE_INK,
   },
   // A Scarlet & Violet Hyper rare Pokémon, always an ex: the whole card but
   // its silver "Pokémon ex rule" box (17% of it foiled on Mew ex's mask).
@@ -401,6 +415,7 @@ const LAYOUTS: Readonly<Record<CardLayout, LayoutClip>> = {
     stage: [SV_PICTURE],
     trainer: { top: 0, right: 0, bottom: 0, left: 0 },
     trainerCuts: [box(0.335, 0.875, 0.975, 0.968)],
+    trainerInk: TRAINER_TITLE_INK,
   },
   // An Ultra Rare Pokémon, always an ex: the same, but its "Pokémon ex rule"
   // box (27% of it foiled on the masks), where a Hyper rare ex has its own.
@@ -567,11 +582,14 @@ export function cutsFor(shape: ClipShape, layout: CardLayout = 'other'): readonl
 }
 
 /**
- * The strip whose printed ink is cut (LayoutClip.ink): a full art Pokémon's
- * title, on its art window's shapes alone.
+ * The strip whose printed ink is cut: a full art Pokémon's title on its art
+ * window's shapes (LayoutClip.ink), a full art trainer's name on its own
+ * (LayoutClip.trainerInk).
  */
 export function inkStripFor(shape: ClipShape, layout: CardLayout = 'other'): CutBox | undefined {
-  return isArtWindow(shape) ? LAYOUTS[layout].ink : undefined;
+  if (isArtWindow(shape)) return LAYOUTS[layout].ink;
+  if (shape === 'trainer') return LAYOUTS[layout].trainerInk;
+  return undefined;
 }
 
 const insideRect = (r: RegionRect, x: number, y: number): boolean =>

@@ -574,8 +574,14 @@ its number) and foil the art round them, and letters differ on every card,
 so no box can take them: the scene finds them on the card's own scan
 instead. `LayoutClip.ink` (`TITLE_INK`, from the stage tab to the border
 over the title, on `sv-illustration`, `sv-special-illustration`,
-`sv-ultra-ex` and `sv-hyper-ex`, for `regular` and `stage` alone: a
-trainer's title is laid out otherwise) is the strip; `ink.ts#findInk` reads
+`sv-ultra-ex` and `sv-hyper-ex`, for `regular` and `stage`) is the strip;
+a full art trainer's name, black on the light panel under its Supporter or
+Item and TRAINER banner, has its own (`LayoutClip.trainerInk`,
+`TRAINER_TITLE_INK`, on `sv-special-illustration`, `sv-ultra` and
+`sv-hyper`, for `trainer`). Unlike a Pokémon's title, 151's masks for its
+seven full art trainers foil the name with its panel, at about half their
+art's foil; it is cut all the same, the owner's call (2026-09-26), so every
+full art's printed title reads clean. `ink.ts#findInk` reads
 it off the scan when the card or the selection changes (`scene.ts`), keeps
 each blob of dark pixels that is a letter's size, stays off the strip's
 edges and meets a white outline along most of its edge (a dark background
@@ -587,7 +593,9 @@ by 13 points or more; a plain luminance cut took the dark background behind
 Charmander's and Psyduck's titles with them, worse than no cut. A scan whose
 pixels cannot be read (a tainted canvas) keeps its title foiled. The type's
 symbol, which the illustration rares' masks leave out too, is no letter and
-keeps its foil but for its dark glyph.
+keeps its foil but for its dark glyph. A letter can be as short as an i's
+dot (`INK.minHeight` 4 px of a 600 px scan), which a trainer's name, with no
+outline to grow over its gap, would otherwise leave foiled.
 
 `v-full-art`, the older `Ultra Rare`'s, left `FULL_ART` as well, on the
 same evidence from the older reference: `v-full-art.css` has no clip-path,
