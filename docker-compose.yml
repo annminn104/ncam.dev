@@ -35,6 +35,7 @@ services:
         VIKTOR_REMOTE_URL: http://viktor.localhost:9004/remoteEntry.js
         BALI_REMOTE_URL: http://bali.localhost:9005/remoteEntry.js
         PROFILE_REMOTE_URL: http://profile.localhost:9006/remoteEntry.js
+        HOLODEX_REMOTE_URL: http://holodex.localhost:9007/remoteEntry.js
     image: ncam-monorepo:latest
     command: ['node', 'apps/portfolio/.output/server/index.mjs']
     environment:
@@ -54,6 +55,7 @@ services:
       - viktor
       - bali
       - profile
+      - holodex
 
   toonhub:
     image: ncam-monorepo:latest
@@ -125,6 +127,16 @@ services:
       default:
         aliases:
           - profile.localhost
+
+  holodex:
+    image: ncam-monorepo:latest
+    command: ['pnpm', '--filter', '@ncam/holodex', 'preview', '--host', '0.0.0.0', '--port', '9007']
+    ports:
+      - '9007:9007'
+    networks:
+      default:
+        aliases:
+          - holodex.localhost
 
   # ── CMS (Strapi): own image + Postgres, in the `cms` profile so the default
   # `docker compose up` (frontend stack) never needs apps/strapi/.env.

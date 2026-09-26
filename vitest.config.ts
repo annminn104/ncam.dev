@@ -12,6 +12,8 @@ export default defineConfig({
       'packages/*/src/**/*.test.ts',
       'apps/strapi/**/*.test.ts',
       'apps/*/scripts/**/*.test.ts',
+      'apps/holodex/src/**/*.test.ts',
+      'apps/portfolio/src/lib/**/*.test.ts',
     ],
     passWithNoTests: false,
     clearMocks: true,

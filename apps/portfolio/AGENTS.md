@@ -22,13 +22,56 @@ own six sections (the `profile` remote) on `/`. React 19.
     `styles.css` (base + project stage) and `home.css` (home shell).
   - `index.tsx` — the **home page**: a shell (nav, manifest rail, page-level
     transitions) around six federated modules. See "Home page" below.
-  - `projects/$projectId.tsx` — **SSRs** a project remote: the route `loader`
-    resolves `import('<remote>/ssr')` through `lib/federation.ts`
-    (`loadRemoteModuleSSR`) → `renderHeroSSR({ assetBase })`, returns
-    `{ html, css }`; the component inlines them (`<style>` +
-    `dangerouslySetInnerHTML`), then a `useEffect` calls
-    `import('<remote>/hydrate')` → `hydrate(el)`. Failures log
-    `project.ssr-fallback` at warn level and fall back to a client mount.
+  - `projects/$projectId.tsx` and `projects/$projectId_.$.tsx` — both **SSR a
+    project remote** and render it through the shared `ProjectStage` component
+    (below). `$projectId.tsx` is the project's own URL (`route: '/'`, the
+    remote's home view). `$projectId_.$.tsx` is a **splat** sibling
+    (`createFileRoute('/projects/$projectId_/$')`, path `/projects/$projectId/$`
+    — the trailing `_` opts it out of nesting under `$projectId`, so it renders
+    its own stage instead of an outlet) that hands the remote everything after
+    the project id as its own route: `_splat` + the query string become
+    `/sets/swsh3?type=Fire`, `/card/base1-4`, etc. via `toRemoteRoute()`
+    (`lib/remote-route.ts`). This is what lets a remote own **nested URLs** of
+    its own, shareable and refresh-safe — Holodex is the first remote to use
+    it (sets → a set with filters → a card → the collection all live under
+    `/projects/holodex/...`). A remote with no internal routes just ignores
+    `config.route` and keeps working under `$projectId.tsx` alone. Both
+    loaders resolve `import('<remote>/ssr')` through `lib/federation.ts`
+    (`loadRemoteModuleSSR`) → `renderHeroSSR({ config: { route }, assetBase })`;
+    failures log `project.ssr-fallback` at warn level and fall back to a
+    client mount.
+  - **`components/ProjectStage.tsx`** is what actually mounts a remote and
+    owns its lifecycle, shared by both routes above. SSR path: inline
+    `{ html, css }` (`<style>` + `dangerouslySetInnerHTML`), then a
+    `useEffect` calls `import('<remote>/hydrate')` → `hydrate(el, config)`.
+    No-SSR path: `import('<remote>/mount')` → `mount(el, config)`. `config` is
+    the **`MountConfig`** from `@ncam/mf-remote`
+    (`packages/mf-remote/src/contract.ts`) — `{ route?, onNavigate?, assetBase? }`
+    — and every entry returns a **`MountHandle`**: a disposer that may also
+    carry `update?: (route: string) => void`. `ProjectStage` keeps the handle
+    in a ref and, in a separate effect keyed on `route` alone, calls
+    `handleRef.current?.update?.(route)` whenever the route changes **without**
+    `projectId` changing. That is the whole point of `update()`: an in-app
+    click inside a route-aware remote (a set → a card, say) patches the
+    existing instance instead of tearing it down and remounting it — the thing
+    that would otherwise drop a WebGL context, a react-query cache or scroll
+    position on every click inside the remote. A remote whose `MountHandle`
+    never sets `update` (the other five) simply never receives this call and
+    is unaffected — the contract is additive and backward compatible.
+    `onNavigate` (identity-stable via `useCallback`, or the mount effect would
+    tear the remote down on every navigation) is how the remote _asks_ to go
+    somewhere; `ProjectStage` answers by calling `router.navigate()` with
+    `fromRemoteRoute(to)` (`lib/remote-route.ts`) turned back into splat params
+    — the remote never sees `/projects/<id>`, only its own path, so it can be
+    developed and deployed standalone on its own origin (see
+    `apps/holodex/AGENTS.md`, standalone on `:9007`).
+    **A future remote that wants its own nested URLs** needs, on the host
+    side, only: an entry in `ssrLoaders` / `hydrateLoaders` / `mountLoaders`
+    (already required for any remote) — the splat route and `ProjectStage`
+    are generic and need no per-remote change. On the remote side it needs a
+    `mount`/`hydrate`/`ssr` that reads `config.route`, and a `MountHandle`
+    whose `update()` re-renders in place instead of the caller unmounting and
+    remounting.
   - `blog/index.tsx` and `blog/$slug.tsx` — the **blog**, read from the Strapi
     CMS (`apps/strapi`) through **server functions** in
     `src/functions/blog.functions.ts` (`getBlogPosts`, `getBlogPost`), which call

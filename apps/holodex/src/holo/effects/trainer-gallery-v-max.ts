@@ -1,0 +1,43 @@
+import type { Effect } from '../shader/types';
+import { BLACK, COVER, fixedFilter, hsl, radial, stop } from './css';
+import { glareNeutral } from './legacy-glare';
+import { rainbowAltShine } from './rainbow-alt';
+
+/** trainer-gallery-v-max.css's .card__glare filter. */
+const GLARE_FILTER = { brightness: 1, contrast: 1 };
+
+/**
+ * A trainer gallery VMAX. Its shine is rainbow-alt's: pokemon-cards-css styles
+ * a gallery VMAX (`[data-rarity="rare holo vmax"][data-trainer-gallery="true"]`)
+ * by rainbow-alt.css's rules, at the 6% --space v-max.css sets on every VMAX.
+ * Its glare is ported from trainer-gallery-v-max.css, overlaid (from
+ * base.css), beneath the shine (legacy-glare.ts), and only as strong as the
+ * pointer is far from the middle. Its middle stop has no position, which CSS
+ * puts midway between its neighbours, at 60%. The reference confines the
+ * shine, its `:after` included, with the card's own mask, never a clip-path;
+ * select.ts's clip region stands in: the whole card less the header and the
+ * bars its masks leave out (regions.ts's `swsh-vmax`).
+ */
+export const trainerGalleryVMax: Effect = {
+  id: 'trainer-gallery-v-max',
+  shine: rainbowAltShine(6),
+  beneath: [
+    {
+      layers: [
+        {
+          ...radial(
+            [stop(hsl(50, 30, 90), 0), stop(hsl(162, 5, 40), 60), stop(BLACK, 120)],
+            COVER,
+            glareNeutral('overlay', GLARE_FILTER),
+          ),
+          blend: 'normal',
+        },
+      ],
+      filter: fixedFilter(GLARE_FILTER),
+      // calc(var(--card-opacity) * var(--pointer-from-center) * 0.85)
+      opacity: { base: 0, fromCenter: 0.85 },
+      mixBlend: 'overlay',
+    },
+  ],
+  glare: [],
+};

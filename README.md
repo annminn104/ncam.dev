@@ -23,6 +23,7 @@ Turborepo + pnpm workspaces, TypeScript everywhere.
 | `apps/immersive-ocean` | Immersive Ocean — creative-studio hero with looping video background. React 19, Tailwind v4.                                   | `http://localhost:9003` |
 | `apps/viktor`          | Viktor. — portfolio hero with crossfade video switcher. React 19, Tailwind v4.                                                 | `http://localhost:9004` |
 | `apps/bali`            | Bali Adventure — cinematic luxury-travel landing page. React 19, Tailwind v4, GSAP ScrollTrigger, framer-motion.               | `http://localhost:9005` |
+| `apps/holodex`         | Holodex — Pokémon TCG database explorer on the TCGdex API. React 19, Tailwind v4, TanStack Query, three.js WebGL holo cards.   | `http://localhost:9007` |
 | `apps/strapi`          | Strapi 5 headless CMS for the blog — Blocks editor, public read-only REST API. Backend service, not a remote.                  | `http://localhost:1337` |
 | `packages/*`           | `project-registry` (typed project list), `mf-remote` (`defineRemote()` + `.env` reader), `design-tokens`, `logger`, `tsconfig` | —                       |
 
@@ -61,7 +62,7 @@ mount }`). The host server-renders them in parallel, hydrates each into a
 
 ```bash
 pnpm install
-pnpm dev          # host :9000 + every remote :9001–:9006 via Turbo
+pnpm dev          # host :9000 + every remote :9001–:9007 via Turbo
 ```
 
 Open http://localhost:9000 and click a project — the host loads that remote at
@@ -98,13 +99,13 @@ environment, then `.env.local`, then `.env`. The runtime-only `STRAPI_*`
 variables are the exception: the built server reads them from the real
 environment only (see the table). Never put secrets in `.env`.
 
-| Variable                                                                                                                                | Purpose                                                                                                                                                                                      |
-| --------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `PORTFOLIO_PORT`, `TOONHUB_PORT`, `MINDLOOP_PORT`, `IMMERSIVE_OCEAN_PORT`, `VIKTOR_PORT`, `BALI_PORT`, `PROFILE_PORT`                   | Dev / preview ports.                                                                                                                                                                         |
-| `TOONHUB_REMOTE_URL`, `MINDLOOP_REMOTE_URL`, `IMMERSIVE_OCEAN_REMOTE_URL`, `VIKTOR_REMOTE_URL`, `BALI_REMOTE_URL`, `PROFILE_REMOTE_URL` | `remoteEntry.js` URL the host loads for each remote. **Baked at build.**                                                                                                                     |
-| `TOONHUB_BASE`, `MINDLOOP_BASE`, `IMMERSIVE_OCEAN_BASE`, `VIKTOR_BASE`, `BALI_BASE`, `PROFILE_BASE`                                     | Public base path per remote (default `/`).                                                                                                                                                   |
-| `SITE_URL`                                                                                                                              | The site's public origin: canonical / OG / JSON-LD plus the generated `robots.txt` and `sitemap.xml`. **Baked at build.** Falls back to Vercel's production domain, then `https://ncam.dev`. |
-| `STRAPI_URL`, `STRAPI_PUBLIC_URL`                                                                                                       | Blog CMS origin the **portfolio server** fetches from, and the origin browsers reach for media (defaults to `STRAPI_URL`). **Runtime** env — not baked; default `http://localhost:1337`.     |
+| Variable                                                                                                                                                      | Purpose                                                                                                                                                                                      |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PORTFOLIO_PORT`, `TOONHUB_PORT`, `MINDLOOP_PORT`, `IMMERSIVE_OCEAN_PORT`, `VIKTOR_PORT`, `BALI_PORT`, `PROFILE_PORT`                                         | Dev / preview ports.                                                                                                                                                                         |
+| `TOONHUB_REMOTE_URL`, `MINDLOOP_REMOTE_URL`, `IMMERSIVE_OCEAN_REMOTE_URL`, `VIKTOR_REMOTE_URL`, `BALI_REMOTE_URL`, `PROFILE_REMOTE_URL`, `HOLODEX_REMOTE_URL` | `remoteEntry.js` URL the host loads for each remote. **Baked at build.**                                                                                                                     |
+| `TOONHUB_BASE`, `MINDLOOP_BASE`, `IMMERSIVE_OCEAN_BASE`, `VIKTOR_BASE`, `BALI_BASE`, `PROFILE_BASE`                                                           | Public base path per remote (default `/`).                                                                                                                                                   |
+| `SITE_URL`                                                                                                                                                    | The site's public origin: canonical / OG / JSON-LD plus the generated `robots.txt` and `sitemap.xml`. **Baked at build.** Falls back to Vercel's production domain, then `https://ncam.dev`. |
+| `STRAPI_URL`, `STRAPI_PUBLIC_URL`                                                                                                                             | Blog CMS origin the **portfolio server** fetches from, and the origin browsers reach for media (defaults to `STRAPI_URL`). **Runtime** env — not baked; default `http://localhost:1337`.     |
 
 ## Thumbnails
 
@@ -245,7 +246,7 @@ One multi-stage image builds the whole monorepo; `docker-compose.yml` runs the
 SSR host and each remote (static preview) from that same image:
 
 ```bash
-docker compose up --build            # host http://localhost:9000, remotes :9001–:9005
+docker compose up --build            # host http://localhost:9000, remotes :9001–:9007
 docker compose --profile gateway up --build   # + nginx on :80 → http://ncam.localhost
 ```
 
