@@ -31,12 +31,14 @@ ARG IMMERSIVE_OCEAN_REMOTE_URL=http://immersive-ocean.localhost:9003/remoteEntry
 ARG VIKTOR_REMOTE_URL=http://viktor.localhost:9004/remoteEntry.js
 ARG BALI_REMOTE_URL=http://bali.localhost:9005/remoteEntry.js
 ARG PROFILE_REMOTE_URL=http://profile.localhost:9006/remoteEntry.js
+ARG HOLODEX_REMOTE_URL=http://holodex.localhost:9007/remoteEntry.js
 ENV TOONHUB_REMOTE_URL=$TOONHUB_REMOTE_URL \
     MINDLOOP_REMOTE_URL=$MINDLOOP_REMOTE_URL \
     IMMERSIVE_OCEAN_REMOTE_URL=$IMMERSIVE_OCEAN_REMOTE_URL \
     VIKTOR_REMOTE_URL=$VIKTOR_REMOTE_URL \
     BALI_REMOTE_URL=$BALI_REMOTE_URL \
-    PROFILE_REMOTE_URL=$PROFILE_REMOTE_URL
+    PROFILE_REMOTE_URL=$PROFILE_REMOTE_URL \
+    HOLODEX_REMOTE_URL=$HOLODEX_REMOTE_URL
 COPY . .
 # Strapi (apps/strapi) ships in its own image (apps/strapi/Dockerfile): neither its
 # dependencies nor its admin build belong in the monorepo image.
@@ -51,7 +53,7 @@ ENV NODE_ENV=production
 # `vite preview` for the static remotes).
 COPY --from=build /app ./
 # host (SSR) + remotes (static)
-EXPOSE 9000 9001 9002 9003 9004 9005 9006
+EXPOSE 9000 9001 9002 9003 9004 9005 9006 9007
 # Default: run the portfolio SSR host. docker-compose overrides the command
 # for the remote services (see docker-compose.yml).
 CMD ["node", "apps/portfolio/.output/server/index.mjs"]

@@ -207,6 +207,7 @@ services:
       - viktor
       - bali
       - profile
+      - holodex
     networks:
       default:
         aliases:
