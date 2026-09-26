@@ -54,7 +54,7 @@ export type CardLayout =
   | 'swsh-ultra'
   | 'swsh-ultra-v'
   | 'swsh-gallery-v'
-  | 'swsh-gallery-vmax'
+  | 'swsh-vmax'
   | 'swsh-galarian-trainer'
   | 'swsh-gallery-holo'
   | 'swsh-vstar'
@@ -357,19 +357,21 @@ const LAYOUTS: Readonly<Record<CardLayout, LayoutClip>> = {
     regular: [...SWSH_V_BARS, box(0.705, 0, 1, 0.095)],
     stage: [...SWSH_V_BARS, box(0.705, 0, 1, 0.095)],
   },
-  // A gallery VMAX, a Trainer Gallery's (swsh9tg to swsh12tg) or the
-  // Galarian Gallery's: the whole card, less its header and the same bars.
-  // The masks of all 18 (2026-09-26) foil the border, which on a VMAX is no
-  // black one, but leave out the header's silver panels, the VMAX mark over
-  // the picture of the V it evolves from (97% bare on the 15 Trainer Gallery
-  // masks) and the bands that name that V and its Dynamax (92%), and the
-  // weakness bar and the VMAX rule box, silver where a V's is black (96% and
-  // 98%). The header's box takes those panels whole, as TCGdex's scans have
-  // them (the bands' slanted ends at 58%, the picture's frame down to 16%),
-  // with the corner above them and the start of the name beside them, which
-  // the masks leave out too. The Galarian Gallery's three masks foil its
-  // bands, but the box still suits them best of those tried.
-  'swsh-gallery-vmax': {
+  // A Sword & Shield VMAX, a Holo Rare VMAX or a gallery's, a Trainer
+  // Gallery's (swsh9tg to swsh12tg) or the Galarian Gallery's: the whole
+  // card, less its header and the same bars. The masks of all 18 gallery VMAX
+  // (2026-09-26) foil the border, which on a VMAX is no black one, but leave
+  // out the header's silver panels, the VMAX mark over the picture of the V
+  // it evolves from (97% bare on the 15 Trainer Gallery masks) and the bands
+  // that name that V and its Dynamax (92%), and the weakness bar and the VMAX
+  // rule box, silver where a V's is black (96% and 98%); those of 82 Holo Rare
+  // VMAX the same (96%, 83%, 94% and 97%). The header's box takes those panels
+  // whole, as TCGdex's scans have them (the bands' slanted ends at 58%, the
+  // picture's frame down to 16%), with the corner above them and the start of
+  // the name beside them, which the masks leave out too, and suits the Holo
+  // Rare VMAX's best of those tried as well. The Galarian Gallery's three
+  // masks foil its bands, but the box still suits them best too.
+  'swsh-vmax': {
     art: { top: 0, right: 0, bottom: 0, left: 0 },
     regular: [box(0, 0, 0.58, 0.16), ...SWSH_V_BARS],
     stage: [box(0, 0, 0.58, 0.16), ...SWSH_V_BARS],

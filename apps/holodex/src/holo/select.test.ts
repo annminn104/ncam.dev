@@ -344,7 +344,7 @@ describe('selectHolo — trainer gallery override', () => {
       expect([s.effect, s.shape, s.layout]).toEqual([
         'trainer-gallery-v-max',
         'regular',
-        'swsh-gallery-vmax',
+        'swsh-vmax',
       ]);
     }
   });
@@ -463,7 +463,16 @@ describe('selectHolo — clip shape', () => {
 
   it('gives the full-art family the whole card', () => {
     expect(selectHolo(card({ rarity: 'Secret Rare' })).shape).toBe('full');
-    expect(selectHolo(card({ rarity: 'Holo Rare VMAX' })).shape).toBe('full');
+    expect(selectHolo(card({ rarity: 'Holo Rare V' })).shape).toBe('full');
+  });
+
+  it('frames a VMAX as a gallery VMAX: the whole card less its header and its bars', () => {
+    // 82 Holo Rare VMAX masks (2026-09-26) leave out the same silver header
+    // panels, weakness bar and VMAX rule box as the galleries' VMAX do.
+    for (const id of ['swsh3-2', 'cel25-7', 'swsh6-8']) {
+      const s = selectHolo(CAPTURED_CARDS[id]);
+      expect([s.effect, s.shape, s.layout], id).toEqual(['v-max', 'regular', 'swsh-vmax']);
+    }
   });
 
   it('clips each ported legacy shine where its CSS clips it', () => {
@@ -862,9 +871,9 @@ describe('layoutOf — the frame a card is printed in', () => {
     // The Galarian Gallery's silver border takes foil, as a full-art V's does.
     expect(gallery('swsh12.5gg-GG36', 'Entei V', 'Ultra Rare')).toBe('swsh-ultra-v');
     // A gallery VMAX has its own, in either gallery and either rarity.
-    expect(gallery('swsh9tg-TG17', 'Mimikyu VMAX', 'Ultra Rare')).toBe('swsh-gallery-vmax');
-    expect(gallery('swsh12tg-TG15', 'Blaziken VMAX', 'Holo Rare VMAX')).toBe('swsh-gallery-vmax');
-    expect(gallery('swsh12.5gg-GG42', 'Zeraora VMAX', 'Ultra Rare')).toBe('swsh-gallery-vmax');
+    expect(gallery('swsh9tg-TG17', 'Mimikyu VMAX', 'Ultra Rare')).toBe('swsh-vmax');
+    expect(gallery('swsh12tg-TG15', 'Blaziken VMAX', 'Holo Rare VMAX')).toBe('swsh-vmax');
+    expect(gallery('swsh12.5gg-GG42', 'Zeraora VMAX', 'Ultra Rare')).toBe('swsh-vmax');
     // A gallery VSTAR, all ten the Galarian Gallery's, a Galarian Gallery V's.
     expect(gallery('swsh12.5gg-GG35', 'Leafeon VSTAR', 'Ultra Rare')).toBe('swsh-ultra-v');
   });

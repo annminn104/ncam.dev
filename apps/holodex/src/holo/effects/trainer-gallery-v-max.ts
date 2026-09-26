@@ -16,7 +16,7 @@ const GLARE_FILTER = { brightness: 1, contrast: 1 };
  * puts midway between its neighbours, at 60%. The reference confines the
  * shine, its `:after` included, with the card's own mask, never a clip-path;
  * select.ts's clip region stands in: the whole card less the header and the
- * bars its masks leave out (regions.ts's `swsh-gallery-vmax`).
+ * bars its masks leave out (regions.ts's `swsh-vmax`).
  */
 export const trainerGalleryVMax: Effect = {
   id: 'trainer-gallery-v-max',

@@ -28,7 +28,7 @@ const LAYOUTS: CardLayout[] = [
   'swsh-ultra',
   'swsh-ultra-v',
   'swsh-gallery-v',
-  'swsh-gallery-vmax',
+  'swsh-vmax',
   'swsh-galarian-trainer',
   'swsh-gallery-holo',
   'swsh-vstar',
@@ -333,8 +333,7 @@ describe('cutsFor', () => {
   });
 
   it('foils a gallery VMAX’s whole card but its header and its bars', () => {
-    const covers = (x: number, y: number) =>
-      coversPoint('regular', x, y, false, 'swsh-gallery-vmax');
+    const covers = (x: number, y: number) => coversPoint('regular', x, y, false, 'swsh-vmax');
     // The header's silver panels: the VMAX mark, the picture of the V it
     // evolves from, and the bands that name it and its Dynamax.
     expect(covers(0.1, 0.06)).toBe(false);
@@ -343,7 +342,7 @@ describe('cutsFor', () => {
     // The weakness bar and the VMAX rule box, where a V has its bars.
     expect(covers(0.5, 0.873)).toBe(false);
     expect(covers(0.7, 0.935)).toBe(false);
-    expect(cutsFor('regular', 'swsh-gallery-vmax')).toHaveLength(3);
+    expect(cutsFor('regular', 'swsh-vmax')).toHaveLength(3);
     // Everything else: the border, the HP, the art, the strip between the
     // bars and the illustrator's corner.
     for (const [x, y] of [

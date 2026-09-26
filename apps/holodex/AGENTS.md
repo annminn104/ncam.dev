@@ -582,7 +582,7 @@ panels, the VMAX mark over the picture of the V it evolves from (97% bare
 on the Trainer Galleries' 15) and the bands naming that V and its Dynamax
 (92%), and the same weakness bar and rule box, the VMAX's silver (96% and
 98%). So in either gallery it takes the whole card less a box around those
-panels, as TCGdex's scans have them, and the bars (`swsh-gallery-vmax`):
+panels, as TCGdex's scans have them, and the bars (`swsh-vmax`):
 three boxes, one more than the shader cut before (`uCutC`). Over the frame
 the masks agree with it on 58.5% and 63.9%, from 26.5% and 43.0%; over the
 whole card on 36.9% and 45.7%, from 24.1% and 38.1% (the Galarian
@@ -592,7 +592,15 @@ which reads as if it escaped the mask, but the mask on `.card__shine`
 itself still confines it: with the `:after` hidden on poke-holo.simey.me,
 the pixels its mask leaves bare changed by 0.07 and 0.11, the ones it foils
 by 0.99 and 1.06, so the region stands in for the whole shine, as ours
-applies.
+applies. `v-max` left `FULL_ART` for the same frame: `v-max.css` has no
+clip-path, takes no mask off its shine (the shine and both pseudo-elements
+compute the card's mask on poke-holo.simey.me's Evolving Skies #29), and 82
+of the 88 `Holo Rare VMAX` masks (the CDN has no mask for the other six)
+leave out the same panels, bands and bars (96%, 83%, 94% and 97% bare),
+for which the same header box scored best of those tried. So a `Holo Rare
+VMAX` takes `swsh-vmax` by its rarity, and the masks agree with it on 65.7%
+of the frame (the border ring, the top 16% and the bottom 16%), where the
+whole card agreed on 38.4%; over the whole card on 74.9%, from 64.6%.
 
 A gallery secret rare keeps the whole card (`FULL_ART`), and here the
 reference agrees on either path: `trainer-gallery-secret-rare.css` sets

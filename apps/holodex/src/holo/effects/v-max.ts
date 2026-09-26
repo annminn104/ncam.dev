@@ -62,7 +62,10 @@ const PASTELS = [
  * pastel radial about the pointer, the group colour-dodged; its `:after` the V
  * family's sunpillars hue-blended onto its bands, lightened, strongest as the
  * pointer leaves the middle. The glare is ported from v-max.css, hard-lit,
- * beneath the shine (legacy-glare.ts).
+ * beneath the shine (legacy-glare.ts). The reference masks the shine with the
+ * card's own mask, never a clip-path; select.ts's clip region stands in: the
+ * whole card less the header and the bars its masks leave out (regions.ts's
+ * `swsh-vmax`, a gallery VMAX's frame too).
  *
  * Approximation: vmaxbg is drawn here (textures.ts), not the reference's
  * image.

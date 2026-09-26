@@ -369,7 +369,7 @@ const VSTAR_NAME = / VSTAR$/;
  * inside the black border a Trainer Gallery prints it in (`swsh-gallery-v`),
  * or over the silver border of the Galarian Gallery's, which takes foil
  * (`swsh-ultra-v`). A VMAX's, in either gallery, is the whole card less its
- * header and those bars (`swsh-gallery-vmax`, all 18). A Galarian Gallery
+ * header and those bars (`swsh-vmax`, all 18). A Galarian Gallery
  * trainer, every one an Ultra Rare Supporter, is the whole card less its rule
  * box (`swsh-galarian-trainer`), as its masks foil the TRAINER header a
  * Trainer Gallery Supporter's leave out. A VSTAR, every one the Galarian
@@ -384,7 +384,7 @@ function galleryFrame(
   card: Pick<Card, 'localId' | 'name'> & Partial<Pick<Card, 'category'>>,
 ): CardLayout | undefined {
   if (!isTrainerGallery(card.localId)) return undefined;
-  if (VMAX_NAME.test(card.name)) return 'swsh-gallery-vmax';
+  if (VMAX_NAME.test(card.name)) return 'swsh-vmax';
   if (V_NAME.test(card.name)) return /^tg/i.test(card.localId) ? 'swsh-gallery-v' : 'swsh-ultra-v';
   if (VSTAR_NAME.test(card.name)) return 'swsh-ultra-v';
   if (card.category === 'Trainer' && /^gg/i.test(card.localId)) return 'swsh-galarian-trainer';
@@ -418,7 +418,9 @@ const OLDER_ULTRA_RARE_FRAME: Partial<Record<CardLayout, CardLayout>> = {
  * the older reference's mask of one of them, Professor Burnet's, leaves out
  * the same header and rule box as theirs. A `Holo Rare VSTAR` (32, all
  * Sword & Shield's) has its own, the card between its header and its
- * weakness bar, which its masks foil alone (checked 2026-09-26).
+ * weakness bar, which its masks foil alone, and a `Holo Rare VMAX` (88, all
+ * Sword & Shield's) a gallery VMAX's, whose header and bars its masks leave
+ * out as theirs do (checked 2026-09-26).
  */
 const LAYOUT_BY_RARITY: Readonly<Record<string, CardLayout>> = {
   'Rare Holo LV.X': 'lv-x',
@@ -433,6 +435,7 @@ const LAYOUT_BY_RARITY: Readonly<Record<string, CardLayout>> = {
   'Two Star': 'full-card',
   'Full Art Trainer': 'swsh-ultra',
   'Holo Rare VSTAR': 'swsh-vstar',
+  'Holo Rare VMAX': 'swsh-vmax',
 };
 
 /**
@@ -549,7 +552,9 @@ function reverseEffect(card: Card): EffectId {
  * (checked on poke-holo.simey.me, 2026-09-26). So is v-star: v-star.css has
  * no clip-path, but its masks foil a Holo Rare VSTAR between its header and
  * its weakness bar alone (`swsh-vstar`, LAYOUT_BY_RARITY), and a Galarian
- * Gallery VSTAR as a Galarian Gallery V (galleryFrame). For the other older effects,
+ * Gallery VSTAR as a Galarian Gallery V (galleryFrame). So is v-max: v-max.css
+ * has no clip-path either, and its masks leave out a Holo Rare VMAX's header
+ * and bars as a gallery VMAX's do (`swsh-vmax`). For the other older effects,
  * the shine ports (legacy-shines.test.ts) take the clip-path
  * pokemon-cards-css's unmasked path computes, which for these is none; a
  * gallery secret rare is unclipped too, and on the masked path as well:
@@ -571,7 +576,6 @@ const FULL_ART: ReadonlySet<EffectId> = new Set<EffectId>([
   'shiny-v',
   'shiny-vmax',
   'v-regular',
-  'v-max',
   'swsh-pikachu',
 ]);
 
