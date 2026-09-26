@@ -243,6 +243,9 @@ vec4 srcCosmosTop4(vec2 uv, float scale) { return texture(uCosmosTop, uv * scale
 // a texture sampled with its alpha, on the RGBA path
 vec4 srcIllusionMask4(vec2 uv, float scale) { return texture(uIllusionMask, uv * scale); }
 vec3 srcCard(vec2 uv) { return texture(uCard, uv).rgb; }
+// the card's own alpha, the fragment's: a scan is transparent outside its
+// rounded corners, which must stay so, whatever the foil or glare does there
+float cardAlpha(vec2 uv) { return texture(uCard, uv).a; }
 
 vec3 srcScanlines(vec2 uv, float spacing, float light, float dark) {
   float s = step(0.5, fract(uv.y / max(spacing, 1e-4)));

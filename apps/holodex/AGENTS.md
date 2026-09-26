@@ -440,6 +440,13 @@ adds everything outside the `borders` rect to the region, `uBorder` in
 changes the border alone (frame, art and text box by exactly 0), and the
 reference's own Raichu darkens its border under the shine the same way.
 
+Every effect writes the **scan's own alpha** (`cardAlpha()` in
+`sources.ts`), never an opaque 1.0: a TCGdex scan is transparent outside
+its rounded corners (RGB black there), and an opaque fragment painted
+those corners square, black or lit by the foil and glare. The canvas's CSS
+`rounded-lg` cannot stand in for it once three.js tilts the card inside
+the canvas.
+
 An element can also carry a **clip of its own** (`Element.clip`, a region's
 rect, never inverted, never `stage`), which gates that element alone inside
 whatever the effect's region allows: the reference clips some

@@ -377,7 +377,7 @@ ${under}${shine}
   // would confine the glare to the region and flatten the card's edges.
 ${glare}
 
-  fragColor = vec4(acc, 1.0);
+  fragColor = vec4(acc, cardAlpha(vUv));
 }
 `;
 }

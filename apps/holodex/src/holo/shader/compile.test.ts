@@ -130,6 +130,18 @@ describe('compileEffect', () => {
     expect(compileEffect(rich)).toBe(compileEffect(rich));
   });
 
+  it('keeps the card’s own alpha, so the scan’s transparent rounded corners stay so', () => {
+    // A TCGdex scan is transparent outside its rounded corners. A fragment
+    // written opaque there painted each corner square, black where nothing
+    // lit it and lit where a foil or a glare reached it.
+    for (const effect of Object.values(EFFECTS)) {
+      const src = compileEffect(effect);
+      expect(src, effect.id).toContain('fragColor = vec4(acc, cardAlpha(vUv));');
+      expect(src, effect.id).not.toContain('fragColor = vec4(acc, 1.0);');
+    }
+    expect(sourcesGLSL).toContain('float cardAlpha(vec2 uv) { return texture(uCard, uv).a; }');
+  });
+
   it('emits no #version directive — three.js prepends its own', () => {
     // three.js builds '#version ' + glslVersion in WebGLProgram when the
     // material sets glslVersion, and GLSL3 === '300 es'. A second directive
