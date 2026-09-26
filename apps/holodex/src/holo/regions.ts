@@ -330,14 +330,15 @@ const LAYOUTS: Readonly<Record<CardLayout, LayoutClip>> = {
   // weakness bar and the V rule box (96% and 98%); the border's inner edge,
   // measured off TCGdex's scans, is the reference's --clip-borders inset
   // (2.8% 4%) to 0.15%. The border is not quite black (about 6 in 255), which
-  // a color-dodged shine would lift towards grey. The black V over the
-  // top-left and the black strip the HP sits on are left out as well, and
-  // stay in: when this frame was measured the shader cut two boxes, not
-  // three.
+  // a color-dodged shine would lift towards grey. The black strip its HP and
+  // type are printed on, beside the name, is left out too (100% bare), and
+  // cut from the name bar's round end (70.5% across, on TCGdex's scans) down
+  // to the art's top edge (9.5%). The black V over the top-left is left out
+  // as well, but it is a triangle, and stays.
   'swsh-gallery-v': {
     art: { top: 0.028, right: 0.04, bottom: 0.028, left: 0.04 },
-    regular: SWSH_V_BARS,
-    stage: SWSH_V_BARS,
+    regular: [...SWSH_V_BARS, box(0.705, 0, 1, 0.095)],
+    stage: [...SWSH_V_BARS, box(0.705, 0, 1, 0.095)],
   },
   // A gallery VMAX, a Trainer Gallery's (swsh9tg to swsh12tg) or the
   // Galarian Gallery's: the whole card, less its header and the same bars.

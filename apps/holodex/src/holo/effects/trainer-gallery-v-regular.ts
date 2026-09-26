@@ -11,8 +11,9 @@ import { vFullArt } from './v-full-art';
  * base.css's radial; it lies beneath the shine (legacy-glare.ts). The
  * reference confines the shine with the card's own mask, never a clip-path;
  * select.ts's clip region stands in: a full-art V's frame less the bars its
- * masks leave out, inside a Trainer Gallery's black border (regions.ts's
- * `swsh-gallery-v`, and `swsh-ultra-v` for the Galarian Gallery's).
+ * masks leave out, inside a Trainer Gallery's black border and less the
+ * black strip its HP is printed on (regions.ts's `swsh-gallery-v`, and
+ * `swsh-ultra-v` for the Galarian Gallery's).
  */
 export const trainerGalleryVRegular: Effect = {
   id: 'trainer-gallery-v-regular',

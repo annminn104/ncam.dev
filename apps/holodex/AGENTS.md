@@ -554,12 +554,14 @@ That border's inner edge on TCGdex's scans is the `borders` inset (2.8%
 4%) to 0.15%, and it is not quite black (about 6 in 255), which a
 colour-dodged shine lifts towards grey. So by its name and card number
 (`galleryFrame`) a Trainer Gallery V takes the inside of that border less
-the bars (`swsh-gallery-v`), and a Galarian Gallery V, whose silver border
-its masks foil, the whole card less them (`swsh-ultra-v`). Over the frame
-(the border ring, the top 10% and the bottom 16%) the masks agree with the
-region on 75.0% and 70.6% of its pixels, where the whole card agreed on
-17.0% and 55.0%; over the whole card, whose figures they leave out and no
-box follows, on 47.3% and 67.6%, from 28.8% and 62.6%.
+the bars and the black strip its HP is printed on (`swsh-gallery-v`; the
+strip is 100% bare on all 29, and was cut once the shader took a third
+box), and a Galarian Gallery V, whose silver border its masks foil, the
+whole card less the bars (`swsh-ultra-v`). Over the frame (the border
+ring, the top 10% and the bottom 16%) the masks agree with the region on
+80.4% and 70.6% of its pixels, where the whole card agreed on 17.0% and
+55.0%; over the whole card, whose figures they leave out and no box
+follows, on 49.0% and 67.6%, from 28.8% and 62.6%.
 
 A gallery VMAX left `FULL_ART` the same way. `rainbow-alt.css`, which
 styles it, has no clip-path, and all 18 gallery VMAX's masks foil the

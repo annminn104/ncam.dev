@@ -216,7 +216,7 @@ describe('cutsFor', () => {
     expect(covers('regular', 0.5, 0.045, 'swsh-ultra')).toBe(true);
   });
 
-  it('foils a Trainer Gallery V inside its black border but its dark bars', () => {
+  it('foils a Trainer Gallery V inside its black border but its dark bars and HP strip', () => {
     const covers = (x: number, y: number) => coversPoint('regular', x, y, false, 'swsh-gallery-v');
     // The black border all round, which its masks leave out.
     for (const [x, y] of [
@@ -227,15 +227,22 @@ describe('cutsFor', () => {
     ]) {
       expect(covers(x, y), `border ${x}, ${y}`).toBe(false);
     }
-    // The weakness bar and the V rule box, a full-art V's.
+    // The weakness bar and the V rule box, a full-art V's, and the black
+    // strip its HP is printed on, beside the name.
     expect(covers(0.5, 0.873)).toBe(false);
     expect(covers(0.7, 0.935)).toBe(false);
-    expect(cutsFor('regular', 'swsh-gallery-v')).toEqual(cutsFor('regular', 'swsh-ultra-v'));
-    // Everything inside the border else: the art, the name bar, the strip
-    // between the bars and the illustrator's corner.
+    expect(covers(0.85, 0.06)).toBe(false);
+    expect(cutsFor('regular', 'swsh-gallery-v').slice(0, 2)).toEqual(
+      cutsFor('regular', 'swsh-ultra-v'),
+    );
+    // Everything inside the border else: the art, the art just under the HP,
+    // the name bar to its round end, the strip between the bars and the
+    // illustrator's corner.
     for (const [x, y] of [
       [0.5, 0.5],
+      [0.85, 0.12],
       [0.4, 0.05],
+      [0.69, 0.06],
       [0.5, 0.897],
       [0.2, 0.93],
     ]) {
