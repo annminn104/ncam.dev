@@ -25,10 +25,15 @@ const GLARE_FILTER = { brightness: 0.55, contrast: 2 };
  * excluded; and, above them by z-index, a `:before` radial of pale lilac about
  * the pointer, hard-lit at .8. The glare is ported from v-star.css, hard-lit,
  * beneath the shine (legacy-glare.ts), only as strong as the pointer is far
- * from the middle.
+ * from the middle. The reference masks the shine with the card's own mask,
+ * never a clip-path; select.ts's clip region stands in: a Holo Rare VSTAR
+ * between its header and its weakness bar (regions.ts's `swsh-vstar`), and a
+ * Galarian Gallery VSTAR a gallery V's frame (`swsh-ultra-v`).
  *
  * Approximation: ancient is drawn here (textures.ts), not the reference's
- * image.
+ * image. The reference adds a radial about the pointer to the card's mask,
+ * which gives what the mask leaves bare some foil away from the pointer; the
+ * clip region leaves it bare.
  */
 export const vStar: Effect = {
   id: 'v-star',

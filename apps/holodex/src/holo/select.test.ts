@@ -282,14 +282,14 @@ describe('selectHolo — trainer gallery override', () => {
     // and VSTAR: a gallery V takes v-full-art.css under
     // trainer-gallery-v-regular.css's glare, a gallery VMAX rainbow-alt.css
     // under trainer-gallery-v-max.css's, and a gallery VSTAR v-star.css,
-    // which has no gallery variant. These are real cards (2026-09-26). A V
-    // and a VMAX take their frames (below); the VSTAR, the whole card.
+    // which has no gallery variant. These are real cards (2026-09-26), and
+    // each takes its frame's window (below).
     for (const [id, name, stage, effect, shape] of [
       ['swsh10tg-TG13', 'Starmie V', 'Basic', 'trainer-gallery-v-regular', 'regular'],
       ['swsh12.5gg-GG36', 'Entei V', 'Basic', 'trainer-gallery-v-regular', 'regular'],
       ['swsh9tg-TG17', 'Mimikyu VMAX', 'VMAX', 'trainer-gallery-v-max', 'regular'],
       ['swsh12.5gg-GG42', 'Zeraora VMAX', 'VMAX', 'trainer-gallery-v-max', 'regular'],
-      ['swsh12.5gg-GG35', 'Leafeon VSTAR', 'VSTAR', 'v-star', 'full'],
+      ['swsh12.5gg-GG35', 'Leafeon VSTAR', 'VSTAR', 'v-star', 'regular'],
     ] as const) {
       const localId = id.slice(id.lastIndexOf('-') + 1);
       const s = selectHolo(card({ id, localId, name, rarity: 'Ultra Rare', stage }));
@@ -865,8 +865,32 @@ describe('layoutOf — the frame a card is printed in', () => {
     expect(gallery('swsh9tg-TG17', 'Mimikyu VMAX', 'Ultra Rare')).toBe('swsh-gallery-vmax');
     expect(gallery('swsh12tg-TG15', 'Blaziken VMAX', 'Holo Rare VMAX')).toBe('swsh-gallery-vmax');
     expect(gallery('swsh12.5gg-GG42', 'Zeraora VMAX', 'Ultra Rare')).toBe('swsh-gallery-vmax');
-    // A gallery VSTAR keeps its rarity's.
-    expect(gallery('swsh12.5gg-GG35', 'Leafeon VSTAR', 'Ultra Rare')).toBe('swsh-ultra');
+    // A gallery VSTAR, all ten the Galarian Gallery's, a Galarian Gallery V's.
+    expect(gallery('swsh12.5gg-GG35', 'Leafeon VSTAR', 'Ultra Rare')).toBe('swsh-ultra-v');
+  });
+
+  it('gives a VSTAR its own frame, and a Galarian Gallery VSTAR a gallery V’s', () => {
+    // All 32 Holo Rare VSTAR's masks (2026-09-26) foil the card between its
+    // header and its weakness bar alone; the Galarian Gallery's ten foil the
+    // border, as its V's do, less their bars.
+    for (const id of ['swsh12-008', 'swsh12.5-014', 'swsh9-014']) {
+      const s = selectHolo(CAPTURED_CARDS[id]);
+      expect([s.effect, s.shape, s.layout], id).toEqual(['v-star', 'regular', 'swsh-vstar']);
+    }
+    const leafeon = selectHolo(
+      card({
+        id: 'swsh12.5gg-GG35',
+        localId: 'GG35',
+        name: 'Leafeon VSTAR',
+        rarity: 'Ultra Rare',
+        stage: 'VSTAR',
+      }),
+    );
+    expect([leafeon.effect, leafeon.shape, leafeon.layout]).toEqual([
+      'v-star',
+      'regular',
+      'swsh-ultra-v',
+    ]);
   });
 
   it('frames a Galarian Gallery trainer apart from a Trainer Gallery one', () => {

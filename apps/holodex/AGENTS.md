@@ -624,6 +624,25 @@ pixels, where the border rect agreed on 76.0% (the Trainer Galleries' Basics
 64.1%. A gallery trainer on it, of which TCGdex has none, keeps the border
 rect.
 
+`v-star` left `FULL_ART` too. `v-star.css` has no clip-path, and on its
+masked path adds a radial about the pointer to the card's mask (both
+layers compute on poke-holo.simey.me's Charizard VSTAR), which lends the
+parts the mask leaves bare some foil away from the pointer: hiding the
+shine moved them by 0.48, the parts it foils by 4.79. All 32 `Holo Rare
+VSTAR` masks (Sword & Shield's, 2026-09-26) foil the card between its
+header and its weakness bar alone, inside the pastel border: the header,
+its band naming the V it evolves from and the column of its VSTAR mark,
+and everything from the weakness bar down, rule box and illustrator's
+corner included, are left out. So a `Holo Rare VSTAR` takes a frame by its
+rarity (`swsh-vstar`: that rect, less the band and the column), and over
+the frame (the border ring, the top 16% and the bottom 16%) the masks agree
+with it on 89.9% of the pixels, where the whole card agreed on 10.4%; over
+the whole card on 53.6%, from 23.6%. Its gold VSTAR Power bar is left out
+too, but sits at one of two heights by the text above it, which no one box
+follows. The Galarian Gallery's ten VSTAR foil their silver border like its
+V's and leave out the same bars, so they take a Galarian Gallery V's frame
+(`swsh-ultra-v`, by `galleryFrame`): 70.7% of the frame, from 59.1%.
+
 **The effect DSL and the generator.** Each of the 30 effect files under
 `holo/effects/` (e.g. `cosmos-holo.ts`) is a declarative `Effect`
 (`holo/shader/types.ts`): 1-3 `shine` elements and up to two glare elements,

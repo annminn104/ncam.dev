@@ -57,6 +57,7 @@ export type CardLayout =
   | 'swsh-gallery-vmax'
   | 'swsh-galarian-trainer'
   | 'swsh-gallery-holo'
+  | 'swsh-vstar'
   | 'full-card'
   | 'other';
 
@@ -401,6 +402,26 @@ const LAYOUTS: Readonly<Record<CardLayout, LayoutClip>> = {
     art: { top: 0.028, right: 0.04, bottom: 0.028, left: 0.04 },
     regular: [box(0, 0.043, 0.17, 0.073), SWSH_WEAKNESS_BAR],
     stage: [box(0, 0.043, 0.16, 0.158), box(0.15, 0.093, 0.57, 0.12), SWSH_WEAKNESS_BAR],
+  },
+  // A Holo Rare VSTAR, all 32 of them Sword & Shield's: the card between its
+  // header and its weakness bar, inside its pastel border, less the header's
+  // reach below that (the band naming the V it evolves from, and the column of
+  // the VSTAR mark and its picture). The reference masks its shine with the
+  // card's own mask and a radial about the pointer, added, which lends the
+  // parts the mask leaves bare some foil away from the pointer (0.48 there,
+  // 4.79 where it foils, on poke-holo.simey.me's Charizard VSTAR); all 32
+  // masks (2026-09-26) leave out the border, the header, and everything from
+  // the weakness bar down, the rule box and the illustrator's corner included,
+  // and foil the art and the VSTAR Power between. Measured off the masks'
+  // average: the art's top edge at 9.7%, its sides at 3.9% and 95.9%, the
+  // weakness bar's top at 85.8%, the band to its slanted end at 57% and 12%
+  // down, the column to 15.5% across and 16% down. The gold VSTAR Power bar is
+  // left out too, but sits at one of two heights by the text above it (59.6%
+  // to 62.6%, or 65.6% to 68.8%), which no one box follows.
+  'swsh-vstar': {
+    art: { top: 0.097, right: 0.041, bottom: 0.142, left: 0.039 },
+    regular: [box(0, 0, 0.155, 0.16), box(0.155, 0, 0.57, 0.12)],
+    stage: [box(0, 0, 0.155, 0.16), box(0.155, 0, 0.57, 0.12)],
   },
   // The whole card, whatever it is: a Mega Hyper Rare, whose rule box is
   // gold like the rest of it, Pocket's Crown and Two Star, and an Ultra Rare

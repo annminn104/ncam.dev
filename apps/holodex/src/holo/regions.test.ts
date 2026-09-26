@@ -31,6 +31,7 @@ const LAYOUTS: CardLayout[] = [
   'swsh-gallery-vmax',
   'swsh-galarian-trainer',
   'swsh-gallery-holo',
+  'swsh-vstar',
   'full-card',
   'other',
 ];
@@ -246,6 +247,38 @@ describe('cutsFor', () => {
     expect(covers('stage', 0.1, 0.12)).toBe(false);
     expect(covers('stage', 0.3, 0.105)).toBe(false);
     expect(covers('stage', 0.3, 0.14)).toBe(true);
+  });
+
+  it('foils a VSTAR between its header and its weakness bar', () => {
+    const covers = (x: number, y: number) => coversPoint('regular', x, y, false, 'swsh-vstar');
+    // The border, the header, the evolves-from band and picture column under
+    // it, and everything from the weakness bar down.
+    for (const [x, y] of [
+      [0.02, 0.5],
+      [0.98, 0.5],
+      [0.5, 0.05],
+      [0.3, 0.11],
+      [0.1, 0.14],
+      [0.5, 0.873],
+      [0.7, 0.935],
+      [0.2, 0.93],
+    ]) {
+      expect(covers(x, y), `bare ${x}, ${y}`).toBe(false);
+    }
+    // The art, beside the band too, the attacks, the gold VSTAR Power bar,
+    // which sits at one of two heights by the text above it, and the VSTAR
+    // Power below it.
+    for (const [x, y] of [
+      [0.5, 0.3],
+      [0.8, 0.11],
+      [0.5, 0.55],
+      [0.5, 0.61],
+      [0.5, 0.67],
+      [0.5, 0.75],
+    ]) {
+      expect(covers(x, y), `foiled ${x}, ${y}`).toBe(true);
+    }
+    expect(cutsFor('regular', 'swsh-vstar')).toHaveLength(2);
   });
 
   it('foils a Galarian Gallery Supporter’s TRAINER header, and cuts its rule box alone', () => {
