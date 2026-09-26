@@ -487,16 +487,19 @@ describe('coversPoint', () => {
     expect(coversPoint('stage', 0.12, 0.16, false, 'sv')).toBe(false);
     expect(coversPoint('stage', 0.088, 0.184, false, 'sv')).toBe(false);
     expect(coversPoint('stage', 0.16, 0.135, false, 'sv')).toBe(false);
-    const [, picture] = cutsFor('stage', 'sv');
-    expect(picture.oval).toBe(true);
-    // Every other cut is a box.
-    for (const layout of LAYOUTS) {
-      for (const shape of SHAPES) {
-        for (const c of cutsFor(shape, layout)) {
-          if (c !== picture) expect(c.oval, `${layout} ${shape}`).toBeUndefined();
-        }
-      }
-    }
+    // An evolution's round picture is the one oval: every other cut is a box.
+    const ovals = LAYOUTS.flatMap((layout) =>
+      SHAPES.flatMap((shape) =>
+        cutsFor(shape, layout).flatMap((c, i) => (c.oval ? [`${layout} ${shape} ${i}`] : [])),
+      ),
+    );
+    expect(ovals).toEqual([
+      'sv stage 1',
+      'sv-illustration stage 1',
+      'sv-special-illustration stage 0',
+      'sv-ultra stage 0',
+      'sv-ultra-ex stage 1',
+    ]);
   });
 
   it('lays an evolution’s round picture over the border as well, where a banner’s box stops', () => {
@@ -570,6 +573,33 @@ describe('coversPoint', () => {
       expect(coversPoint('stage', 0.4, 0.07, false, layout), layout).toBe(true);
       expect(coversPoint('stage', 0.4, 0.14, false, layout), layout).toBe(true);
       expect(coversPoint('stage', 0.1, 0.25, false, layout), layout).toBe(true);
+    }
+  });
+
+  it('cuts an illustration rare evolution’s ring as the circle it is, with its tab and band', () => {
+    const covers = (x: number, y: number) => coversPoint('stage', x, y, false, 'sv-illustration');
+    // Beside the ring's lower right: art the picture's box took, which 151's
+    // masks foil right up to the ring.
+    expect(covers(0.17, 0.18)).toBe(true);
+    expect(covers(0.15, 0.176)).toBe(true);
+    // The ring, and its rim between the tab and the band, stay bare.
+    expect(covers(0.16, 0.135)).toBe(false);
+    expect(covers(0.088, 0.184)).toBe(false);
+    expect(covers(0.15, 0.08)).toBe(false);
+    // The ring is the regular frame's.
+    expect(cutsFor('stage', 'sv-illustration')[1]).toEqual(cutsFor('stage', 'sv')[1]);
+  });
+
+  it('cuts a special illustration or Ultra Rare evolution’s picture as the disc it is, none of its ring', () => {
+    for (const layout of ['sv-special-illustration', 'sv-ultra', 'sv-ultra-ex'] as const) {
+      const covers = (x: number, y: number) => coversPoint('stage', x, y, false, layout);
+      // The ring beside the disc, which the picture's box took.
+      expect(covers(0.16, 0.175), layout).toBe(true);
+      expect(covers(0.155, 0.078), layout).toBe(true);
+      // The disc, out to its left edge, which the box left foiled.
+      expect(covers(0.094, 0.122), layout).toBe(false);
+      expect(covers(0.032, 0.122), layout).toBe(false);
+      expect(covers(0.094, 0.169), layout).toBe(false);
     }
   });
 

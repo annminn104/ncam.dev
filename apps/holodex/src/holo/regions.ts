@@ -126,6 +126,26 @@ const SWSH_V_BARS: readonly CutBox[] = [SWSH_WEAKNESS_BAR, box(0.375, 0.905, 1, 
 const SWSH_SUPPORTER_RULE = box(0.338, 0.876, 0.972, 0.966);
 
 /**
+ * A Scarlet & Violet evolution's round picture, its silver ring and all: the
+ * ring's outer edge, off the averaged edges of fourteen 151 evolutions'
+ * scans, a circle of 47.75 px on a 600 by 825 scan within 1.3 px all along
+ * the edge the art meets, and a quarter pixel. The same on the regular frame
+ * and the illustration rare's, within a quarter pixel on every ray. 151's
+ * masks for both (Raichu's, Beedrill's, and all eight illustration rare
+ * evolutions') leave the whole ring out and foil the art right up to it.
+ */
+const SV_RING = oval(0.009, 0.071, 0.17, 0.187);
+
+/**
+ * The picture inside that ring, less the ring: the disc all twelve of 151's
+ * Ultra Rare and special illustration rare evolutions' masks leave out, to a
+ * thousandth on every one, where they foil the ring round it. It sits off
+ * the ring's centre, up and to the right: the ring's rim is thicker below
+ * and to the left.
+ */
+const SV_PICTURE = oval(0.029, 0.072, 0.159, 0.172);
+
+/**
  * Each frame's art window and what it prints over it. Measured 2026-09-25 off
  * TCGdex's high-res scans, headless: per layout, the edge maps of 3 to 12
  * holo Pokémon cards averaged into one picture (the frame, which has its
@@ -228,18 +248,14 @@ const LAYOUTS: Readonly<Record<CardLayout, LayoutClip>> = {
   // cards-151 kept for these cards; an evolution's round picture and its
   // "evolves from" band sit over the art's top-left, both much smaller than
   // the reference's --clip-stage cut. The picture is cut as the circle its
-  // silver ring is: 151's masks (Raichu's, Beedrill's) leave out the ring and
-  // foil the art right up to it and the border round it, where the box the
-  // picture had took the art in its corner (2026-09-26). The ring's outer
-  // edge, off the averaged edges of fourteen 151 evolutions' scans, is a
-  // circle of 47.75 px on a 600 by 825 scan, within 1.3 px all along the
-  // edge the art meets; the oval is that circle and a quarter pixel. A
-  // trainer's window is measured too, the reverse foils reaching the Items
-  // and Supporters of these sets.
+  // silver ring is (SV_RING), which 151's masks foil the art and the border
+  // right up to, where the box the picture had took the art in its corner
+  // (2026-09-26). A trainer's window is measured too, the reverse foils
+  // reaching the Items and Supporters of these sets.
   sv: {
     art: { top: 0.097, right: 0.075, bottom: 0.528, left: 0.078 },
     regular: [],
-    stage: [box(0, 0, 0.66, 0.123), oval(0.009, 0.071, 0.17, 0.187)],
+    stage: [box(0, 0, 0.66, 0.123), SV_RING],
     trainer: { top: 0.138, right: 0.077, bottom: 0.48, left: 0.08 },
   },
   // Pokémon TCG Pocket: the same window, and an evolution's octagon.
@@ -264,11 +280,15 @@ const LAYOUTS: Readonly<Record<CardLayout, LayoutClip>> = {
   // "evolves from" band beside the picture. pokemon-cards-151 clips it to the
   // border polygon, which leaves out the tab, and the per-card masks it draws
   // 151's sixteen with, their foil layers, leave out the picture and the band
-  // as well, on every one of them (2026-09-25).
+  // as well, on every one of them (2026-09-25). On an evolution the tab's box
+  // reaches down to the band, where the masks leave out the ring's rim
+  // between the two, and the picture is its ring (SV_RING), not the box that
+  // took the art in its corner: 92.7% of the eight evolutions' masks agree
+  // over the card's top-left, where the box agreed on 88.0% (2026-09-26).
   'sv-illustration': {
     art: { top: 0.028, right: 0.04, bottom: 0.027, left: 0.038 },
     regular: [box(0, 0, 0.17, 0.064)],
-    stage: [box(0, 0, 0.185, 0.19), box(0.15, 0.095, 0.675, 0.12)],
+    stage: [box(0, 0, 0.17, 0.095), SV_RING, box(0.15, 0.095, 0.675, 0.12)],
   },
   // A Pocket One Star, the same full art: its patterned border, its tab, an
   // evolution's octagon and band.
@@ -281,11 +301,13 @@ const LAYOUTS: Readonly<Record<CardLayout, LayoutClip>> = {
   // clip-path for it, only its per-card masks, and on all seven of 151's they
   // foil the whole card, border, tab, band and rule box included, all but
   // the figure and, on an evolution, the pre-evolution's picture inside its
-  // ring (2026-09-25). The picture is the one part a box can take.
+  // ring (2026-09-25): the one part a cut can take, as the disc it is
+  // (SV_PICTURE), where a box took the ring's corners and missed the disc's
+  // left edge (86.0% of the masks agreeing over the top-left, 91.7% now).
   'sv-special-illustration': {
     art: { top: 0, right: 0, bottom: 0, left: 0 },
     regular: [],
-    stage: [box(0.035, 0.07, 0.163, 0.18)],
+    stage: [SV_PICTURE],
     trainer: { top: 0, right: 0, bottom: 0, left: 0 },
   },
   // A Scarlet & Violet Hyper rare, the gold card, trainer or energy: the whole
@@ -313,13 +335,14 @@ const LAYOUTS: Readonly<Record<CardLayout, LayoutClip>> = {
   // pre-evolution's picture, where the special illustration rare's frame has
   // it. The reference has no clip-path, only its per-card masks, and all
   // sixteen of 151's (#182 to #197, 2026-09-25) foil the border, the tab and
-  // the band, but leave out the picture (25% of it foiled) and the rule box
-  // (4% of a Supporter's). A Mega's rule box is gold, where an SV one's is
-  // silver, and is cut the same, as the same frame's box: no mask shows it.
+  // the band, but leave out the picture (SV_PICTURE, the disc inside the
+  // ring) and the rule box (4% of a Supporter's). A Mega's rule box is gold,
+  // where an SV one's is silver, and is cut the same, as the same frame's
+  // box: no mask shows it.
   'sv-ultra': {
     art: { top: 0, right: 0, bottom: 0, left: 0 },
     regular: [],
-    stage: [box(0.035, 0.07, 0.163, 0.18)],
+    stage: [SV_PICTURE],
     trainer: { top: 0, right: 0, bottom: 0, left: 0 },
     trainerCuts: [box(0.335, 0.875, 0.975, 0.968)],
   },
@@ -328,7 +351,7 @@ const LAYOUTS: Readonly<Record<CardLayout, LayoutClip>> = {
   'sv-ultra-ex': {
     art: { top: 0, right: 0, bottom: 0, left: 0 },
     regular: [box(0.36, 0.892, 0.975, 0.958)],
-    stage: [box(0.36, 0.892, 0.975, 0.958), box(0.035, 0.07, 0.163, 0.18)],
+    stage: [box(0.36, 0.892, 0.975, 0.958), SV_PICTURE],
   },
   // A Sword & Shield Ultra Rare, the full-art V or Supporter. The older
   // reference has no clip-path for either, only its per-card masks, which

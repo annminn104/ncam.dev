@@ -494,13 +494,26 @@ out on all sixteen of 151's Illustration rares (#166 to #181; #182 to #193,
 whose masks foil the border, are the Ultra Rare ex). The border rect it took
 until 2026-09-25 foiled the tab, and the picture and band; over those frame
 parts it agreed with the masks on 90% of the card, the frame now on 99.5%.
+The picture is its ring, the regular frame's `SV_RING` oval (the ring sits
+within a quarter pixel of it on the averaged edges of the eight evolutions'
+scans), not the box that took the art in its corner; the tab's box reaches
+down to the band on an evolution, where the masks leave out the ring's rim
+between the two (a slant a box edge can only split: x 0.17 scored best).
+Over the card's top-left, 92.7% of the eight masks agree, from 88.0%
+(2026-09-26).
 
 A `Special illustration rare` (232: 167 Pokémon ex and 65 Supporters)
 takes its rarity's frame too (`sv-special-illustration`), but that frame
 is the whole card: its reference has no clip-path, and all seven of 151's
 masks (#198 to #204) foil the border, the tab, the band and the rule box
 alike, leaving out the figure, which no box can follow, and on an
-evolution the pre-evolution's picture inside its ring, which one box can.
+evolution the pre-evolution's picture inside its ring, which one cut can:
+the disc itself (`SV_PICTURE`), off the twelve Ultra Rare and special
+illustration rare evolutions' masks, which agree on it to a thousandth and
+line up with TCGdex's scans. It sits up and to the right of the ring's
+centre, whose rim is thicker below and to the left. The box it replaced
+(2026-09-26) cut the ring's corners and missed the disc's left edge: over
+the card's top-left the masks agree with the disc on 91.7%, the box 86.0%.
 So `ex-special-illustration-rare` left `FULL_ART` for `regular`, `stage`
 and `trainer` on that frame: the whole card, less that picture on a Stage
 1 or 2. Over the frame parts the masks agree with it on 96.8% of the card,
@@ -522,11 +535,12 @@ neither with a mask to measure against, take the whole card (`full-card`).
 `ex-full-art`, the last of them, left `FULL_ART` too. All sixteen of 151's
 Ultra Rare masks (#182 to #197: twelve ex, four Supporters) foil the border,
 the tab and the band, but leave out the rule box (27% of an ex's foiled, 4%
-of a Supporter's) and an evolution's pre-evolution picture (25%). A
+of a Supporter's) and an evolution's pre-evolution picture (the same disc,
+`SV_PICTURE`; 25% of the box it replaced was foiled). A
 Scarlet & Violet or Mega `Ultra Rare` (363: 207 Pokémon, all ex, 155
 trainers, one energy) is therefore the whole card less those: an ex's rule
 box and picture (`sv-ultra-ex`) or a trainer's rule box (`sv-ultra`), the
-boxes the hyper rare and special illustration rare frames measured, which
+cuts the hyper rare and special illustration rare frames measured, which
 fit it too; the energy has none. It is the one rarity whose frame is split
 by era (`MODERN_LAYOUT_BY_RARITY`): an older `Ultra Rare`, a V or GX full
 art on `v-full-art`, keeps its set's frame and its whole-card foil. A Mega

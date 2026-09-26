@@ -137,6 +137,9 @@ describe('cutUniform', () => {
 describe('cutOvalUniform', () => {
   it('flags each cut that is the ellipse its box holds, in the order coverage() reads them', () => {
     expect(cutOvalUniform(cutsFor('stage', 'sv'))).toEqual([0, 1, 0]);
+    expect(cutOvalUniform(cutsFor('stage', 'sv-illustration'))).toEqual([0, 1, 0]);
+    expect(cutOvalUniform(cutsFor('stage', 'sv-special-illustration'))).toEqual([1, 0, 0]);
+    expect(cutOvalUniform(cutsFor('stage', 'sv-ultra-ex'))).toEqual([0, 1, 0]);
   });
 
   it('flags none on a layout whose cuts are all boxes, nor for a cut it lacks', () => {
