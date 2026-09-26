@@ -90,8 +90,8 @@ importers:
         specifier: ^3.15.0
         version: 3.15.0
       lucide-react:
-        specifier: ^1.42.0
-        version: 1.42.0(react@19.3.0)
+        specifier: ^1.47.0
+        version: 1.47.0(react@19.3.0)
       react:
         specifier: 19.3.0
         version: 19.3.0
@@ -148,8 +148,8 @@ importers:
         specifier: ^2.1.1
         version: 2.1.1
       lucide-react:
-        specifier: ^1.42.0
-        version: 1.42.0(react@19.3.0)
+        specifier: ^1.47.0
+        version: 1.47.0(react@19.3.0)
       react:
         specifier: 19.3.0
         version: 19.3.0
@@ -209,8 +209,8 @@ importers:
         specifier: ^2.1.1
         version: 2.1.1
       lucide-react:
-        specifier: ^1.42.0
-        version: 1.42.0(react@19.3.0)
+        specifier: ^1.47.0
+        version: 1.47.0(react@19.3.0)
       react:
         specifier: 19.3.0
         version: 19.3.0
@@ -276,8 +276,8 @@ importers:
         specifier: ^1.6.16
         version: 1.6.16
       lucide-react:
-        specifier: ^1.42.0
-        version: 1.42.0(react@19.3.0)
+        specifier: ^1.47.0
+        version: 1.47.0(react@19.3.0)
       react:
         specifier: 19.3.0
         version: 19.3.0
@@ -419,8 +419,8 @@ importers:
         specifier: ^3.15.0
         version: 3.15.0
       lucide-react:
-        specifier: ^1.42.0
-        version: 1.42.0(react@19.3.0)
+        specifier: ^1.47.0
+        version: 1.47.0(react@19.3.0)
       react:
         specifier: 19.3.0
         version: 19.3.0
@@ -545,8 +545,8 @@ importers:
         specifier: ^2.1.1
         version: 2.1.1
       lucide-react:
-        specifier: ^1.42.0
-        version: 1.42.0(react@19.3.0)
+        specifier: ^1.47.0
+        version: 1.47.0(react@19.3.0)
       react:
         specifier: 19.3.0
         version: 19.3.0
@@ -6188,8 +6188,8 @@ packages:
   lru-memoizer@2.3.0:
     resolution: {integrity: sha512-GXn7gyHAMhO13WSKrIiNfztwxodVsP8IoZ3XfrJV4yH2x0/OeTO/FIaAHTY5YekdGgW94njfuKmyyt1E0mR6Ug==}
 
-  lucide-react@1.42.0:
-    resolution: {integrity: sha512-b3jprplnoLS8n5etw1z8xODe3hF/yjKATrTitsrKrnjUhCef5BdDct6Ppv3zVvzFwmtfWgLO6XNM3C9fAD93ug==}
+  lucide-react@1.47.0:
+    resolution: {integrity: sha512-o8C23aXpNQypRY73W7fW02EyvWJinEMXgKeGjFoKym0zj3Q73hD97A1IQps1g8C14HTGsOpZL0Am+xjfgFZAbg==}
     peerDependencies:
       react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
 
@@ -15123,7 +15123,7 @@ snapshots:
       lodash.clonedeep: 4.5.0
       lru-cache: 6.0.0
 
-  lucide-react@1.42.0(react@19.3.0):
+  lucide-react@1.47.0(react@19.3.0):
     dependencies:
       react: 19.3.0
 

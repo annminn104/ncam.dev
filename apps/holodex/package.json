@@ -15,7 +15,7 @@
     "@ncam/logger": "workspace:*",
     "@tanstack/react-query": "^5.90.0",
     "clsx": "^2.1.1",
-    "lucide-react": "^1.42.0",
+    "lucide-react": "^1.47.0",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "tailwind-merge": "^3.6.0",
