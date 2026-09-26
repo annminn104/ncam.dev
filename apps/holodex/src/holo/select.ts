@@ -359,6 +359,18 @@ const V_FRAME: Partial<Record<CardLayout, CardLayout>> = {
 };
 
 /**
+ * A gallery V's frame, by its card number, whatever TCGdex files it as (Ultra
+ * Rare, or swsh12tg's Holo Rare V): a full-art V's, whose bars its masks
+ * leave out too (all 38, 2026-09-26), inside the black border a Trainer
+ * Gallery prints it in (`swsh-gallery-v`), or over the silver border of the
+ * Galarian Gallery's, which takes foil (`swsh-ultra-v`).
+ */
+const GALLERY_V_FRAME: ReadonlyArray<readonly [RegExp, CardLayout]> = [
+  [/^tg/i, 'swsh-gallery-v'],
+  [/^gg/i, 'swsh-ultra-v'],
+];
+
+/**
  * The frame an Ultra Rare before Scarlet & Violet takes, by its set's: the
  * V or GX full art, and, as TCGdex files them there too, some regular EX, GX
  * and V (xy1's Venusaur EX, sm9's Celebi & Venusaur GX, swsh10's Starmie V).
@@ -423,6 +435,9 @@ const SP_SET = /^(?:pl\d|dpp)$/;
 
 /** Which frame a card is printed in: regions.ts's CardLayout. */
 export function layoutOf(card: Pick<Card, 'id' | 'localId' | 'name' | 'rarity'>): CardLayout {
+  const galleryV =
+    V_NAME.test(card.name) && GALLERY_V_FRAME.find(([number]) => number.test(card.localId))?.[1];
+  if (galleryV) return galleryV;
   const setId = setIdOf(card);
   const bySet = LAYOUT_BY_SET.find(([pattern]) => pattern.test(setId))?.[1] ?? 'other';
   const modern = eraOf(card) === 'modern';
@@ -496,18 +511,19 @@ function reverseEffect(card: Card): EffectId {
  * `sv-hyper` and the rest) less those, by the rules below. v-full-art is the
  * same on a Sword & Shield card, whose frame the older reference has masks
  * for (`swsh-ultra`), and every Ultra Rare it foils takes a whole-card frame
- * (OLDER_ULTRA_RARE_FRAME). For the other older effects, the
- * shine ports (legacy-shines.test.ts) take the clip-path pokemon-cards-css's
- * unmasked path computes, which for these is none. A gallery V is styled by
- * v-full-art.css's rules and a gallery VMAX by rainbow-alt.css's, so they are
- * unclipped too, as is a gallery secret rare. cosmos-holo departs from its
- * CSS, which clips the shine to the card's own region: the owner's call
- * (2026-09-25), as a Black White Rare is foiled over the whole card. The
- * Classic Collection cards it also covers have no art, so draw no scene.
+ * (OLDER_ULTRA_RARE_FRAME). trainer-gallery-v-regular is too: a gallery V is
+ * styled by v-full-art.css's rules, and its masks leave out the same bars
+ * (GALLERY_V_FRAME). For the other older effects, the shine ports
+ * (legacy-shines.test.ts) take the clip-path pokemon-cards-css's unmasked path
+ * computes, which for these is none. A gallery VMAX is styled by
+ * rainbow-alt.css's rules, so it is unclipped too, as is a gallery secret
+ * rare. cosmos-holo departs from its CSS, which clips the shine to the card's
+ * own region: the owner's call (2026-09-25), as a Black White Rare is foiled
+ * over the whole card. The Classic Collection cards it also covers have no
+ * art, so draw no scene.
  */
 const FULL_ART: ReadonlySet<EffectId> = new Set<EffectId>([
   'cosmos-holo',
-  'trainer-gallery-v-regular',
   'trainer-gallery-v-max',
   'trainer-gallery-secret-rare',
   'secret-rare',

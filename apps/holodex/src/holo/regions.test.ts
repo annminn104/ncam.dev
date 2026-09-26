@@ -27,6 +27,7 @@ const LAYOUTS: CardLayout[] = [
   'sv-ultra-ex',
   'swsh-ultra',
   'swsh-ultra-v',
+  'swsh-gallery-v',
   'full-card',
   'other',
 ];
@@ -212,6 +213,33 @@ describe('cutsFor', () => {
     // A VSTAR or an energy on the Supporters' frame: the whole card.
     expect(covers('regular', 0.5, 0.873, 'swsh-ultra')).toBe(true);
     expect(covers('regular', 0.5, 0.045, 'swsh-ultra')).toBe(true);
+  });
+
+  it('foils a Trainer Gallery V inside its black border but its dark bars', () => {
+    const covers = (x: number, y: number) => coversPoint('regular', x, y, false, 'swsh-gallery-v');
+    // The black border all round, which its masks leave out.
+    for (const [x, y] of [
+      [0.02, 0.5],
+      [0.98, 0.5],
+      [0.5, 0.015],
+      [0.5, 0.985],
+    ]) {
+      expect(covers(x, y), `border ${x}, ${y}`).toBe(false);
+    }
+    // The weakness bar and the V rule box, a full-art V's.
+    expect(covers(0.5, 0.873)).toBe(false);
+    expect(covers(0.7, 0.935)).toBe(false);
+    expect(cutsFor('regular', 'swsh-gallery-v')).toEqual(cutsFor('regular', 'swsh-ultra-v'));
+    // Everything inside the border else: the art, the name bar, the strip
+    // between the bars and the illustrator's corner.
+    for (const [x, y] of [
+      [0.5, 0.5],
+      [0.4, 0.05],
+      [0.5, 0.897],
+      [0.2, 0.93],
+    ]) {
+      expect(covers(x, y), `${x}, ${y}`).toBe(true);
+    }
   });
 
   it('keeps the one stage box every card had for a card no measured layout claims', () => {

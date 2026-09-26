@@ -53,6 +53,7 @@ export type CardLayout =
   | 'sv-ultra-ex'
   | 'swsh-ultra'
   | 'swsh-ultra-v'
+  | 'swsh-gallery-v'
   | 'full-card'
   | 'other';
 
@@ -89,6 +90,13 @@ interface LayoutClip {
 }
 
 const box = (x0: number, y0: number, x1: number, y1: number): CutBox => ({ x0, y0, x1, y1 });
+
+/**
+ * A Sword & Shield V's dark bars, the full art's and the gallery's alike:
+ * its weakness, resistance and retreat bar, and the V rule box below it,
+ * which runs into the black at the card's bottom right.
+ */
+const SWSH_V_BARS: readonly CutBox[] = [box(0.04, 0.857, 1, 0.89), box(0.375, 0.905, 1, 0.965)];
 
 /**
  * Each frame's art window and what it prints over it. Measured 2026-09-25 off
@@ -307,13 +315,27 @@ const LAYOUTS: Readonly<Record<CardLayout, LayoutClip>> = {
     trainer: { top: 0, right: 0, bottom: 0, left: 0 },
     trainerCuts: [box(0.025, 0.023, 0.975, 0.068), box(0.338, 0.876, 0.972, 0.966)],
   },
-  // A V's: the weakness, resistance and retreat bar and the V rule box
-  // below it, which runs into the black at the card's bottom right (89% and
-  // 86% bare).
+  // A V's: its bars (89% and 86% bare). A Galarian Gallery V, whose silver
+  // border its masks foil too, takes this frame as well (87% and 85% bare on
+  // all nine, 2026-09-26).
   'swsh-ultra-v': {
     art: { top: 0, right: 0, bottom: 0, left: 0 },
-    regular: [box(0.04, 0.857, 1, 0.89), box(0.375, 0.905, 1, 0.965)],
-    stage: [box(0.04, 0.857, 1, 0.89), box(0.375, 0.905, 1, 0.965)],
+    regular: SWSH_V_BARS,
+    stage: SWSH_V_BARS,
+  },
+  // A Trainer Gallery V (swsh9tg to swsh12tg), a full-art V inside a black
+  // border: the card inside that border, less the same bars. The masks of all
+  // 29 (2026-09-26) leave out the border (96% to 100% of it bare), the
+  // weakness bar and the V rule box (96% and 98%); the border's inner edge,
+  // measured off TCGdex's scans, is the reference's --clip-borders inset
+  // (2.8% 4%) to 0.15%. The border is not quite black (about 6 in 255), which
+  // a color-dodged shine would lift towards grey. The black V over the
+  // top-left and the black strip the HP sits on are left out as well, but a
+  // third box is one more than the shader has (MAX_CUTS).
+  'swsh-gallery-v': {
+    art: { top: 0.028, right: 0.04, bottom: 0.028, left: 0.04 },
+    regular: SWSH_V_BARS,
+    stage: SWSH_V_BARS,
   },
   // The whole card, whatever it is: a Mega Hyper Rare, whose rule box is
   // gold like the rest of it, Pocket's Crown and Two Star, and an Ultra Rare

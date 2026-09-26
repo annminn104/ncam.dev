@@ -589,6 +589,7 @@ describe('coverage() in GLSL agrees with coversPoint() in JS', () => {
     'sv-ultra-ex',
     'swsh-ultra',
     'swsh-ultra-v',
+    'swsh-gallery-v',
     'full-card',
     'other',
   ];

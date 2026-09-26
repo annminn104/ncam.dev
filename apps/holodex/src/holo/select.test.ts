@@ -265,17 +265,46 @@ describe('selectHolo — trainer gallery override', () => {
     // and VSTAR: a gallery V takes v-full-art.css under
     // trainer-gallery-v-regular.css's glare, a gallery VMAX rainbow-alt.css
     // under trainer-gallery-v-max.css's, and a gallery VSTAR v-star.css,
-    // which has no gallery variant. These are real cards (2026-09-26).
-    for (const [id, name, stage, effect] of [
-      ['swsh10tg-TG13', 'Starmie V', 'Basic', 'trainer-gallery-v-regular'],
-      ['swsh12.5gg-GG36', 'Entei V', 'Basic', 'trainer-gallery-v-regular'],
-      ['swsh9tg-TG17', 'Mimikyu VMAX', 'VMAX', 'trainer-gallery-v-max'],
-      ['swsh12.5gg-GG42', 'Zeraora VMAX', 'VMAX', 'trainer-gallery-v-max'],
-      ['swsh12.5gg-GG35', 'Leafeon VSTAR', 'VSTAR', 'v-star'],
+    // which has no gallery variant. These are real cards (2026-09-26). A V
+    // takes its frame (below); the VMAX and VSTAR, the whole card.
+    for (const [id, name, stage, effect, shape] of [
+      ['swsh10tg-TG13', 'Starmie V', 'Basic', 'trainer-gallery-v-regular', 'regular'],
+      ['swsh12.5gg-GG36', 'Entei V', 'Basic', 'trainer-gallery-v-regular', 'regular'],
+      ['swsh9tg-TG17', 'Mimikyu VMAX', 'VMAX', 'trainer-gallery-v-max', 'full'],
+      ['swsh12.5gg-GG42', 'Zeraora VMAX', 'VMAX', 'trainer-gallery-v-max', 'full'],
+      ['swsh12.5gg-GG35', 'Leafeon VSTAR', 'VSTAR', 'v-star', 'full'],
     ] as const) {
       const localId = id.slice(id.lastIndexOf('-') + 1);
       const s = selectHolo(card({ id, localId, name, rarity: 'Ultra Rare', stage }));
-      expect([s.effect, s.shape], id).toEqual([effect, 'full']);
+      expect([s.effect, s.shape], id).toEqual([effect, shape]);
+    }
+  });
+
+  it('frames a gallery V by its number, whatever its rarity, less the bars its masks leave out', () => {
+    // All 38 gallery V's masks (2026-09-26) leave out the weakness bar and
+    // the V rule box, and a Trainer Gallery V's its black border besides,
+    // where the Galarian Gallery's silver border takes foil.
+    const kricketune = selectHolo(CAPTURED_CARDS['swsh12tg-TG12']);
+    const mimikyu = selectHolo(CAPTURED_CARDS['swsh9tg-TG16']);
+    const entei = selectHolo(
+      card({
+        id: 'swsh12.5gg-GG36',
+        localId: 'GG36',
+        name: 'Entei V',
+        rarity: 'Ultra Rare',
+        stage: 'Basic',
+      }),
+    );
+    for (const [s, layout] of [
+      [kricketune, 'swsh-gallery-v'],
+      [mimikyu, 'swsh-gallery-v'],
+      [entei, 'swsh-ultra-v'],
+    ] as const) {
+      expect([s.effect, s.shape, s.layout]).toEqual([
+        'trainer-gallery-v-regular',
+        'regular',
+        layout,
+      ]);
     }
   });
 
@@ -371,9 +400,10 @@ describe('selectHolo — clip shape', () => {
     // shiny-rare.css: --clip, and --clip-stage on an evolution
     expect(selectHolo(card({ rarity: 'Shiny rare', stage: 'Basic' })).shape).toBe('regular');
     expect(selectHolo(card({ rarity: 'Shiny rare', stage: 'Stage1' })).shape).toBe('stage');
-    // a gallery V takes v-full-art.css's rules, which clip nothing
+    // a gallery V takes v-full-art.css's rules, which clip nothing, but its
+    // masks leave its bars out: the art window of its frame (layoutOf)
     const galleryV = selectHolo(card({ localId: 'TG12', rarity: 'Holo Rare V' }));
-    expect([galleryV.effect, galleryV.shape]).toEqual(['trainer-gallery-v-regular', 'full']);
+    expect([galleryV.effect, galleryV.shape]).toEqual(['trainer-gallery-v-regular', 'regular']);
     // v-regular.css clips a V nowhere, on the unmasked path
     const v = selectHolo(card({ rarity: 'Holo Rare V', stage: 'Basic' }));
     expect([v.effect, v.shape]).toEqual(['v-regular', 'full']);
@@ -749,6 +779,19 @@ describe('layoutOf — the frame a card is printed in', () => {
     // An EX of the older frames keeps its set's: the name rule is modern only.
     expect(layout('xy1', { name: 'Venusaur EX' })).toBe('bw-xy');
     expect(layout('ex1', { name: 'Blaziken ex' })).toBe('ex');
+  });
+
+  it('frames a gallery V by its number, a Trainer Gallery’s in its black border', () => {
+    const gallery = (id: string, name: string, rarity: string) =>
+      layoutOf({ id, localId: id.slice(id.lastIndexOf('-') + 1), name, rarity });
+    // Either rarity TCGdex files a Trainer Gallery V as.
+    expect(gallery('swsh9tg-TG16', 'Mimikyu V', 'Ultra Rare')).toBe('swsh-gallery-v');
+    expect(gallery('swsh12tg-TG12', 'Kricketune V', 'Holo Rare V')).toBe('swsh-gallery-v');
+    // The Galarian Gallery's silver border takes foil, as a full-art V's does.
+    expect(gallery('swsh12.5gg-GG36', 'Entei V', 'Ultra Rare')).toBe('swsh-ultra-v');
+    // A gallery VMAX keeps its rarity's frame.
+    expect(gallery('swsh9tg-TG17', 'Mimikyu VMAX', 'Ultra Rare')).toBe('swsh-ultra');
+    expect(gallery('swsh12tg-TG15', 'Blaziken VMAX', 'Holo Rare VMAX')).toBe('swsh');
   });
 });
 

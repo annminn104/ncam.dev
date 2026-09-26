@@ -306,8 +306,9 @@ resolved effect and the card's `category`/`stage` — order matters, since `radi
 window (`regular`, whatever the card's stage, as its unmasked CSS sets
 `--clip`), before the full-art and trainer rules would otherwise take them.
 `illustration-rare` takes `regular` or `stage` by the card's stage, on its
-rarity's own full-art frame (below). The other three gallery effects are full art, as their
-CSS's shine covers the whole card, and so is `cosmos-holo`, by the owner's
+rarity's own full-art frame (below), and `trainer-gallery-v-regular`
+`regular` on a gallery V's (below). The other two gallery effects are full
+art, as their CSS's shine covers the whole card, and so is `cosmos-holo`, by the owner's
 choice (2026-09-25), though its CSS keeps the shine to the card's own region:
 a Black White Rare is foiled over the whole card. `ex-regular` (a
 `Double rare`, the standard-layout ex) must never be `full`: its reference
@@ -542,13 +543,24 @@ now gone. A gallery `Ultra Rare` Pokémon is not `v-full-art`'s either:
 TCGdex files the V, VMAX and VSTAR of three Trainer Galleries and the
 Galarian Gallery as Ultra Rare (55 cards; `swsh12tg`'s are Holo Rare V and
 VMAX), which pokemontcg.io files as Rare Holo V, VMAX and VSTAR, so each
-takes its V family's gallery look (the overrides above), on the whole card
-as `swsh12tg`'s took it already. Until 2026-09-26 they took
-`trainer-gallery-holo`. Their masks, which the whole card does not follow,
-leave out the weakness bar and rule box (97% and 98% bare on twelve
-Trainer Gallery V and VMAX, 87% and 82% on four of the Galarian Gallery's)
-and a Trainer Gallery V's black border, which a colour-dodged shine leaves
-black anyway.
+takes its V family's gallery look (the overrides above). Until 2026-09-26
+they took `trainer-gallery-holo`. A gallery V, whatever TCGdex files it as,
+then left `FULL_ART` as `v-full-art` had, since `v-full-art.css` styles it
+too: all 38 gallery V's masks leave out the full-art V's bars (96% and 98%
+bare on the Trainer Galleries' 29, 87% and 85% on the Galarian Gallery's
+nine), and the Trainer Galleries' their black border besides (96% to 100%).
+That border's inner edge on TCGdex's scans is the `borders` inset (2.8%
+4%) to 0.15%, and it is not quite black (about 6 in 255), which a
+colour-dodged shine lifts towards grey. So by its card number
+(`GALLERY_V_FRAME`) a Trainer Gallery V takes the inside of that border
+less the bars (`swsh-gallery-v`), and a Galarian Gallery V, whose silver
+border its masks foil, the whole card less them (`swsh-ultra-v`). Over the
+frame (the border ring, the top 10% and the bottom 16%) the masks agree
+with the region on 75.0% and 70.6% of its pixels, where the whole card
+agreed on 17.0% and 55.0%; over the whole card, whose figures they leave
+out and no box follows, on 47.3% and 67.6%, from 28.8% and 62.6%. A gallery VMAX keeps
+the whole card, though its masks leave out the same bars (97% and 98% on
+five).
 
 **The effect DSL and the generator.** Each of the 30 effect files under
 `holo/effects/` (e.g. `cosmos-holo.ts`) is a declarative `Effect`
