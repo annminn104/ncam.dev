@@ -72,6 +72,23 @@ describe('findInk', () => {
     expect(at(ink, 80, 60, 18)).toBe(0);
   });
 
+  it('reads a stage tab’s grey letters in their white outline, told how light its ink runs', () => {
+    // the plate, as grey as the letters nearly, runs off the strip's edges
+    const pixels = strip(
+      80,
+      30,
+      140,
+      letter(20, 5, 6, 16).map(([x, y, w, h, grey]) =>
+        grey === 0 ? [x, y, w, h, 110] : [x, y, w, h, 235],
+      ),
+    );
+    expect(findInk(pixels).every((v) => v === 0)).toBe(true);
+    const ink = findInk(pixels, 1, { dark: 180 });
+    expect(at(ink, 80, 25, 15)).toBe(255);
+    expect(at(ink, 80, 5, 15)).toBe(0);
+    expect(at(ink, 80, 60, 15)).toBe(0);
+  });
+
   it('measures its sizes against a 600 px wide scan, and scales them with the scan', () => {
     // twice the scan: the letter at twice the size is still one, the speck
     // at twice the size still too small

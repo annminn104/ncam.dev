@@ -33,6 +33,16 @@ export interface CutBox {
 }
 
 /**
+ * Where to read a card's printed ink off its scan, and how light that ink
+ * may run: its letters are the pixels darker than `dark` (ink.ts's INK.dark
+ * where unset) in a white outline.
+ */
+export interface InkRead {
+  box: CutBox;
+  dark?: number;
+}
+
+/**
  * The frame a card is printed in, as far as its foil's clip cares: where the
  * art window sits, and what the frame lays over it. select.ts's `layoutOf`
  * reads it off the card's set, or its rarity for the frames a rarity brings
@@ -109,11 +119,11 @@ interface LayoutClip {
    * in a white outline) lies over the foiled art, whose ink is cut too: the
    * scene finds it on the card's own scan (ink.ts) and coverage() keeps the
    * foil off it. Only the full arts' frames, whose title is printed over the
-   * illustration, have one.
+   * illustration, have them.
    */
-  ink?: CutBox;
+  ink?: readonly InkRead[];
   /** Where a trainer's printed name lies, whose ink is cut the same way. */
-  trainerInk?: CutBox;
+  trainerInk?: readonly InkRead[];
 }
 
 const box = (x0: number, y0: number, x1: number, y1: number): CutBox => ({ x0, y0, x1, y1 });
@@ -194,10 +204,25 @@ const SV_JUNCTION = slanted(0.16, 0.1155, 0.1785, 0.131, -0.0085);
  * the border, over the name, HP, number and type: every one of 151's masks
  * for its 34 illustration rare, Ultra Rare, special illustration rare and
  * Hyper rare Pokémon leaves the title's letters out, and foils the art round
- * them (2026-09-26). A trainer's title is laid out otherwise, so trainers
- * keep theirs.
+ * them (2026-09-26). A trainer's title is laid out otherwise
+ * (TRAINER_TITLE_INK).
  */
-const TITLE_INK = box(0.17, 0.025, 0.955, 0.092);
+const TITLE_INK: InkRead = { box: box(0.17, 0.025, 0.955, 0.092) };
+
+/**
+ * Its BASIC or STAGE tab: grey letters in a white outline on the silver
+ * plate (gold on a Hyper rare), which those masks leave out too while they
+ * foil the plate round them. The letters' grey runs as light as the plate's,
+ * so anything short of the outline's white reads as ink here: the plate,
+ * running off the strip's edges, is no letter, and each letter, walled in by
+ * its outline, is. It found the tab's letters on all of 151's Ultra Rare,
+ * special illustration rare and Hyper rare Pokémon it was tried on, and
+ * nothing else (2026-09-26).
+ */
+const TAB_INK: InkRead = { box: box(0.02, 0.028, 0.17, 0.068), dark: 180 };
+
+/** A full art Pokémon's printed ink: its title's and its tab's. */
+const POKEMON_INK: readonly InkRead[] = [TITLE_INK, TAB_INK];
 
 /**
  * A Scarlet & Violet full art trainer's name, black on the light panel under
@@ -207,7 +232,7 @@ const TITLE_INK = box(0.17, 0.025, 0.955, 0.092);
  * all the same, the owner's call, so that every full art's printed title
  * reads clean.
  */
-const TRAINER_TITLE_INK = box(0.03, 0.075, 0.97, 0.15);
+const TRAINER_TITLE_INK: readonly InkRead[] = [{ box: box(0.03, 0.075, 0.97, 0.15) }];
 
 /**
  * Each frame's art window and what it prints over it. Measured 2026-09-25 off
@@ -354,7 +379,7 @@ const LAYOUTS: Readonly<Record<CardLayout, LayoutClip>> = {
     art: { top: 0.028, right: 0.04, bottom: 0.027, left: 0.038 },
     regular: [box(0, 0, 0.17, 0.064)],
     stage: [box(0, 0, 0.17, 0.095), SV_RING, SV_BAND, SV_JUNCTION],
-    ink: TITLE_INK,
+    ink: POKEMON_INK,
   },
   // A Pocket One Star, the same full art: its patterned border, its tab, an
   // evolution's octagon and band.
@@ -375,7 +400,7 @@ const LAYOUTS: Readonly<Record<CardLayout, LayoutClip>> = {
     regular: [],
     stage: [SV_PICTURE],
     trainer: { top: 0, right: 0, bottom: 0, left: 0 },
-    ink: TITLE_INK,
+    ink: POKEMON_INK,
     trainerInk: TRAINER_TITLE_INK,
   },
   // A Scarlet & Violet Hyper rare, the gold card, trainer or energy: the whole
@@ -398,7 +423,7 @@ const LAYOUTS: Readonly<Record<CardLayout, LayoutClip>> = {
     art: { top: 0, right: 0, bottom: 0, left: 0 },
     regular: [box(0.36, 0.892, 0.975, 0.958)],
     stage: [box(0.36, 0.892, 0.975, 0.958)],
-    ink: TITLE_INK,
+    ink: POKEMON_INK,
   },
   // A Scarlet & Violet or Mega Ultra Rare, the full-art ex or trainer: the
   // whole card, but a trainer's rule box, and on an evolution the
@@ -423,7 +448,7 @@ const LAYOUTS: Readonly<Record<CardLayout, LayoutClip>> = {
     art: { top: 0, right: 0, bottom: 0, left: 0 },
     regular: [box(0.36, 0.892, 0.975, 0.958)],
     stage: [box(0.36, 0.892, 0.975, 0.958), SV_PICTURE],
-    ink: TITLE_INK,
+    ink: POKEMON_INK,
   },
   // A Sword & Shield Ultra Rare, the full-art V or Supporter. The older
   // reference has no clip-path for either, only its per-card masks, which
@@ -582,14 +607,29 @@ export function cutsFor(shape: ClipShape, layout: CardLayout = 'other'): readonl
 }
 
 /**
- * The strip whose printed ink is cut: a full art Pokémon's title on its art
- * window's shapes (LayoutClip.ink), a full art trainer's name on its own
- * (LayoutClip.trainerInk).
+ * Where a card's printed ink is read and cut: a full art Pokémon's title and
+ * tab on its art window's shapes (LayoutClip.ink), a full art trainer's name
+ * on its own (LayoutClip.trainerInk); none elsewhere.
+ */
+export function inkReadsFor(shape: ClipShape, layout: CardLayout = 'other'): readonly InkRead[] {
+  if (isArtWindow(shape)) return LAYOUTS[layout].ink ?? [];
+  if (shape === 'trainer') return LAYOUTS[layout].trainerInk ?? [];
+  return [];
+}
+
+/**
+ * The strip those reads span, the one the scene's ink texture covers and
+ * coverage() places the ink in (uInkRect); none without reads.
  */
 export function inkStripFor(shape: ClipShape, layout: CardLayout = 'other'): CutBox | undefined {
-  if (isArtWindow(shape)) return LAYOUTS[layout].ink;
-  if (shape === 'trainer') return LAYOUTS[layout].trainerInk;
-  return undefined;
+  const reads = inkReadsFor(shape, layout);
+  if (!reads.length) return undefined;
+  return {
+    x0: Math.min(...reads.map((r) => r.box.x0)),
+    y0: Math.min(...reads.map((r) => r.box.y0)),
+    x1: Math.max(...reads.map((r) => r.box.x1)),
+    y1: Math.max(...reads.map((r) => r.box.y1)),
+  };
 }
 
 const insideRect = (r: RegionRect, x: number, y: number): boolean =>

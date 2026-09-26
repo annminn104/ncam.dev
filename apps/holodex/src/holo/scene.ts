@@ -21,10 +21,12 @@ import { createMaterial, NO_INK } from './material';
 import {
   BORDER_ROUND,
   cutsFor,
+  inkReadsFor,
   inkStripFor,
   regionFor,
   type CardLayout,
   type CutBox,
+  type InkRead,
 } from './regions';
 import type { ClipShape, HoloSelection } from './select';
 import type { Effect } from './shader/types';
@@ -212,27 +214,48 @@ export function inkRectUniform(
 }
 
 /**
- * The card's printed ink over a strip of it, found on its own scan (ink.ts),
- * as the texture coverage() reads it in: the strip's rows from the top, one
- * byte a texel. Null where the scan's pixels cannot be read, a tainted
- * canvas or none at all, which leaves the ink with its foil.
+ * The card's printed ink over the strip its reads span, found on its own
+ * scan (ink.ts), each read with its own darkness, as the texture coverage()
+ * reads it in: the strip's rows from the top, one byte a texel. Null where
+ * the scan's pixels cannot be read, a tainted canvas or none at all, which
+ * leaves the ink with its foil.
  */
-function inkTexture(card: Texture, strip: CutBox): DataTexture | null {
+function inkTexture(card: Texture, strip: CutBox, reads: readonly InkRead[]): DataTexture | null {
   const image = card.image as (CanvasImageSource & { width: number; height: number }) | null;
   if (!image?.width || !image.height) return null;
-  const x0 = Math.round(strip.x0 * image.width);
-  const y0 = Math.round(strip.y0 * image.height);
-  const width = Math.round(strip.x1 * image.width) - x0;
-  const height = Math.round(strip.y1 * image.height) - y0;
+  // a box in the scan's own pixels
+  const pixelsOf = (b: CutBox) => {
+    const x0 = Math.round(b.x0 * image.width);
+    const y0 = Math.round(b.y0 * image.height);
+    return {
+      x0,
+      y0,
+      w: Math.round(b.x1 * image.width) - x0,
+      h: Math.round(b.y1 * image.height) - y0,
+    };
+  };
+  const span = pixelsOf(strip);
+  const ink = new Uint8Array(span.w * span.h);
   try {
     const canvas = document.createElement('canvas');
-    canvas.width = width;
-    canvas.height = height;
     const context = canvas.getContext('2d', { willReadFrequently: true });
     if (!context) return null;
-    context.drawImage(image, x0, y0, width, height, 0, 0, width, height);
-    const ink = findInk(context.getImageData(0, 0, width, height), image.width / 600);
-    const texture = new DataTexture(ink, width, height, RedFormat);
+    for (const read of reads) {
+      const r = pixelsOf(read.box);
+      canvas.width = r.w;
+      canvas.height = r.h;
+      context.drawImage(image, r.x0, r.y0, r.w, r.h, 0, 0, r.w, r.h);
+      const found = findInk(context.getImageData(0, 0, r.w, r.h), image.width / 600, read);
+      for (let y = 0; y < r.h; y++) {
+        for (let x = 0; x < r.w; x++) {
+          const [sx, sy] = [r.x0 - span.x0 + x, r.y0 - span.y0 + y];
+          if (found[y * r.w + x] && sx >= 0 && sy >= 0 && sx < span.w && sy < span.h) {
+            ink[sy * span.w + sx] = 255;
+          }
+        }
+      }
+    }
+    const texture = new DataTexture(ink, span.w, span.h, RedFormat);
     // rows of one byte, as wide as the strip happens to be
     texture.unpackAlignment = 1;
     texture.minFilter = LinearFilter;
@@ -295,16 +318,18 @@ export function createHoloScene(canvas: HTMLCanvasElement): HoloScene {
   // The current selection, whose ink strip, with the card, says what ink
   // there is to cut; and that ink, found once per card and strip.
   let selection: HoloSelection | null = null;
-  let ink: { card: Texture; strip: CutBox; texture: DataTexture | null } | null = null;
+  let ink: { card: Texture; reads: readonly InkRead[]; texture: DataTexture | null } | null = null;
 
   // Binds the card's ink over the selection's strip onto a material, finding
   // it first if the card or the strip is new; none, where either is missing.
   const bindInk = (material: ShaderMaterial) => {
     if (!('uInk' in material.uniforms)) return;
     const strip = selection && inkStripFor(selection.shape, selection.layout);
-    if (strip && cardTexture && (ink?.card !== cardTexture || ink.strip !== strip)) {
+    // the layout's own reads, the same array for as long as the card is
+    const reads = selection ? inkReadsFor(selection.shape, selection.layout) : [];
+    if (strip && cardTexture && (ink?.card !== cardTexture || ink.reads !== reads)) {
       ink?.texture?.dispose();
-      ink = { card: cardTexture, strip, texture: inkTexture(cardTexture, strip) };
+      ink = { card: cardTexture, reads, texture: inkTexture(cardTexture, strip, reads) };
     }
     const texture = strip && ink?.card === cardTexture ? ink.texture : null;
     material.uniforms.uInk.value = texture ?? NO_INK;

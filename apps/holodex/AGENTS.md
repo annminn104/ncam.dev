@@ -572,9 +572,16 @@ masks for its 34 illustration rare, Ultra Rare, special illustration rare
 and Hyper rare Pokémon leave the title's letters out (the name, the HP and
 its number) and foil the art round them, and letters differ on every card,
 so no box can take them: the scene finds them on the card's own scan
-instead. `LayoutClip.ink` (`TITLE_INK`, from the stage tab to the border
-over the title, on `sv-illustration`, `sv-special-illustration`,
-`sv-ultra-ex` and `sv-hyper-ex`, for `regular` and `stage`) is the strip;
+instead. `LayoutClip.ink` lists where it is read, each `InkRead` a box and
+how light its ink may run: `TITLE_INK`, from the stage tab to the border
+over the title, and `TAB_INK`, the BASIC or STAGE tab, whose grey letters in
+their white outline the masks leave out too while they foil the plate round
+them, read with anything short of the outline's white as ink (`dark` 180:
+the letters' grey runs as light as the plate's, and the plate, running off
+the box's edges, is no letter). Both are on `sv-illustration`,
+`sv-special-illustration`, `sv-ultra-ex` and `sv-hyper-ex`, for `regular`
+and `stage` (the illustration rare's tab is cut whole already); the scene
+composes the reads into one texture over the strip they span (`inkStripFor`);
 a full art trainer's name, black on the light panel under its Supporter or
 Item and TRAINER banner, has its own (`LayoutClip.trainerInk`,
 `TRAINER_TITLE_INK`, on `sv-special-illustration`, `sv-ultra` and

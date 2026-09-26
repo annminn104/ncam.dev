@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { coversPoint, cutsFor, inkStripFor, MAX_CUTS, regionFor, type CardLayout } from './regions';
+import {
+  coversPoint,
+  cutsFor,
+  inkReadsFor,
+  inkStripFor,
+  MAX_CUTS,
+  regionFor,
+  type CardLayout,
+} from './regions';
 import type { ClipShape } from './select';
 
 const LAYOUTS: CardLayout[] = [
@@ -558,6 +566,31 @@ describe('coversPoint', () => {
     expect(inkStripFor('regular', 'sv-ultra')).toBeUndefined();
     expect(inkStripFor('regular', 'sv-hyper')).toBeUndefined();
     expect(coversPoint('regular', 0.4, 0.06, false, 'sv-ultra', false, true)).toBe(true);
+  });
+
+  it('cuts a full art Pokémon’s BASIC or STAGE tab letters by their ink too, read lighter', () => {
+    for (const layout of ['sv-special-illustration', 'sv-ultra-ex', 'sv-hyper-ex'] as const) {
+      for (const shape of ['regular', 'stage'] as const) {
+        // the tab's letters, where the frames foil the tab round them
+        expect(coversPoint(shape, 0.08, 0.045, false, layout, false, true), layout).toBe(false);
+        expect(coversPoint(shape, 0.08, 0.045, false, layout, false, false), layout).toBe(true);
+        // two reads, the title's and the tab's, whose grey letters read lighter
+        const reads = inkReadsFor(shape, layout);
+        expect(reads, layout).toHaveLength(2);
+        const [title, tab] = reads;
+        expect(tab.dark ?? 0).toBeGreaterThan(title.dark ?? 80);
+        // the strip the texture spans holds both
+        const strip = inkStripFor(shape, layout)!;
+        for (const { box: b } of reads) {
+          expect(b.x0 >= strip.x0 && b.x1 <= strip.x1 && b.y0 >= strip.y0 && b.y1 <= strip.y1).toBe(
+            true,
+          );
+        }
+      }
+    }
+    // a trainer reads its name alone
+    expect(inkReadsFor('trainer', 'sv-ultra')).toHaveLength(1);
+    expect(inkReadsFor('regular', 'sv')).toEqual([]);
   });
 
   it('cuts a full art trainer’s printed name, on the panel under its TRAINER banner', () => {

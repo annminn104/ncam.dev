@@ -42,9 +42,14 @@ export const INK = {
  * and meets a white outline along most of its edge, which is what sets a
  * Pokémon's title apart from the dark art it is printed over; a trainer's
  * name, printed on a light panel, meets the panel instead. Kept blobs grow
- * by their outline. `scale` is the scan's width over 600.
+ * by their outline. `scale` is the scan's width over 600; `dark` how light
+ * the strip's ink may run, INK.dark but for letters lighter than a title's.
  */
-export function findInk(pixels: Pixels, scale = 1): Uint8Array {
+export function findInk(
+  pixels: Pixels,
+  scale = 1,
+  { dark: darkest = INK.dark as number }: { dark?: number } = {},
+): Uint8Array {
   const { data, width: w, height: h } = pixels;
   const reach = Math.max(1, Math.round(INK.reach * scale));
   const grow = Math.max(1, Math.round(INK.grow * scale));
@@ -52,7 +57,7 @@ export function findInk(pixels: Pixels, scale = 1): Uint8Array {
   for (let i = 0; i < w * h; i++) {
     luma[i] = 0.2126 * data[i * 4] + 0.7152 * data[i * 4 + 1] + 0.0722 * data[i * 4 + 2];
   }
-  const dark = (i: number) => luma[i] < INK.dark;
+  const dark = (i: number) => luma[i] < darkest;
 
   const label = new Int32Array(w * h).fill(-1);
   const kept = new Uint8Array(w * h);
