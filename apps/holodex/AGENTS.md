@@ -602,13 +602,15 @@ pixels cannot be read (a tainted canvas) keeps its letters foiled. The
 type's symbol at the title's right end is no letter, but a circle at the
 same place on every one of the 34 masks, so it is painted into the same
 texture rather than read (`InkRead.painted`, `ink.ts#paintInk`), and the
-title's read stops 2 px past the HP number, short of it: an illustration
-rare's masks leave the whole symbol out (`SYMBOL_DISC`), the others' its
-white ring alone, 2.4 px wide, foiling the disc inside, glyph and all
-(`SYMBOL_RING`, `hole` 0.905), where reading the glyph as a letter had
-bared it. Over the symbol's corner the masks now agree on 84.0% and 84.9%,
-from 47.6% and 65.8%; a painted shape needs no pixels, so it stands where a
-scan cannot be read. A letter can be as short as an i's
+title's read stops 2 px past the HP number, short of it (`SYMBOL`). An
+illustration rare's masks leave the whole symbol out, the others' its white
+ring alone, 2.4 px wide, foiling the disc inside, glyph and all; painting
+that ring (`painted.hole` 0.905) brought the symbol's corner to 84.9% of the
+Ultra Rare, special illustration rare and Hyper rare masks, from 65.8%, and
+the whole disc the illustration rares' to 84.0%, from 47.6%. The whole disc
+is painted on all four frames all the same, the owner's call (2026-09-26),
+so no full art's symbol takes foil. A painted shape needs no pixels, so it
+stands where a scan cannot be read. A letter can be as short as an i's
 dot (`INK.minHeight` 4 px of a 600 px scan), which a trainer's name, with no
 outline to grow over its gap, would otherwise leave foiled.
 

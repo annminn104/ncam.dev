@@ -592,20 +592,22 @@ describe('coversPoint', () => {
     expect(inkReadsFor('regular', 'sv')).toEqual([]);
   });
 
-  it('paints a full art Pokémon’s type symbol as the masks leave it out, whole or its ring', () => {
+  it('paints a full art Pokémon’s type symbol whole, on every full art frame', () => {
     const symbol = (layout: CardLayout, shape: 'regular' | 'stage') => {
       const painted = inkReadsFor(shape, layout).filter((r) => r.painted);
       expect(painted, layout).toHaveLength(1);
       return painted[0];
     };
     for (const shape of ['regular', 'stage'] as const) {
-      // an illustration rare's, whole
-      expect(symbol('sv-illustration', shape).painted?.hole ?? 0).toBe(0);
-      // the others', its white ring alone, the disc inside it foiled
-      for (const layout of ['sv-special-illustration', 'sv-ultra-ex', 'sv-hyper-ex'] as const) {
-        const hole = symbol(layout, shape).painted?.hole ?? 0;
-        expect(hole, layout).toBeGreaterThan(0.85);
-        expect(hole, layout).toBeLessThan(0.95);
+      // an illustration rare's masks leave it out whole; the others' its ring
+      // alone, but the owner has it whole on all of them
+      for (const layout of [
+        'sv-illustration',
+        'sv-special-illustration',
+        'sv-ultra-ex',
+        'sv-hyper-ex',
+      ] as const) {
+        expect(symbol(layout, shape).painted?.hole ?? 0, layout).toBe(0);
         expect(symbol(layout, shape).box).toEqual(symbol('sv-illustration', shape).box);
       }
     }

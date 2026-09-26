@@ -234,17 +234,14 @@ const TAB_INK: InkRead = { box: box(0.02, 0.028, 0.17, 0.068), dark: 180 };
  * masks, to a third of a pixel. An illustration rare's masks leave the whole
  * symbol out; the Ultra Rare, special illustration rare and Hyper rare ones
  * leave out its white ring alone, 2.4 px wide, and foil the disc inside it,
- * glyph and all (2026-09-26). Painted, not read: its place is the frame's.
+ * glyph and all (2026-09-26). It is left out whole on all of them, the
+ * owner's call, so no full art's symbol takes foil. Painted, not read: its
+ * place is the frame's.
  */
-const SYMBOL_BOX = box(0.871, 0.03, 0.9534, 0.0898);
-const SYMBOL_DISC: InkRead = { box: SYMBOL_BOX, painted: {} };
-const SYMBOL_RING: InkRead = { box: SYMBOL_BOX, painted: { hole: 0.905 } };
+const SYMBOL: InkRead = { box: box(0.871, 0.03, 0.9534, 0.0898), painted: {} };
 
-/** An illustration rare's printed ink: its title's, its tab's, its symbol whole. */
-const ILLUSTRATION_INK: readonly InkRead[] = [TITLE_INK, TAB_INK, SYMBOL_DISC];
-
-/** The other full art Pokémon's: title, tab, and the symbol's ring. */
-const POKEMON_INK: readonly InkRead[] = [TITLE_INK, TAB_INK, SYMBOL_RING];
+/** A full art Pokémon's printed ink: its title's, its tab's, and its symbol. */
+const POKEMON_INK: readonly InkRead[] = [TITLE_INK, TAB_INK, SYMBOL];
 
 /**
  * A Scarlet & Violet full art trainer's name, black on the light panel under
@@ -401,7 +398,7 @@ const LAYOUTS: Readonly<Record<CardLayout, LayoutClip>> = {
     art: { top: 0.028, right: 0.04, bottom: 0.027, left: 0.038 },
     regular: [box(0, 0, 0.17, 0.064)],
     stage: [box(0, 0, 0.17, 0.095), SV_RING, SV_BAND, SV_JUNCTION],
-    ink: ILLUSTRATION_INK,
+    ink: POKEMON_INK,
   },
   // A Pocket One Star, the same full art: its patterned border, its tab, an
   // evolution's octagon and band.
