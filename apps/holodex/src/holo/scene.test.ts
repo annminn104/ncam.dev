@@ -137,28 +137,33 @@ describe('cutUniform', () => {
 // is data, and pinned here against the shader source itself.
 describe('cutOvalUniform', () => {
   it('flags each cut that is the ellipse its box holds, in the order coverage() reads them', () => {
-    expect(cutOvalUniform(cutsFor('stage', 'sv'))).toEqual([0, 1, 0]);
-    expect(cutOvalUniform(cutsFor('stage', 'sv-illustration'))).toEqual([0, 1, 0]);
-    expect(cutOvalUniform(cutsFor('stage', 'sv-special-illustration'))).toEqual([1, 0, 0]);
-    expect(cutOvalUniform(cutsFor('stage', 'sv-ultra-ex'))).toEqual([0, 1, 0]);
+    expect(cutOvalUniform(cutsFor('stage', 'sv'))).toEqual([0, 1, 0, 0]);
+    expect(cutOvalUniform(cutsFor('stage', 'sv-illustration'))).toEqual([0, 1, 0, 0]);
+    expect(cutOvalUniform(cutsFor('stage', 'sv-special-illustration'))).toEqual([1, 0, 0, 0]);
+    expect(cutOvalUniform(cutsFor('stage', 'sv-ultra-ex'))).toEqual([0, 1, 0, 0]);
   });
 
   it('flags none on a layout whose cuts are all boxes, nor for a cut it lacks', () => {
-    expect(cutOvalUniform(cutsFor('stage', 'dp'))).toEqual([0, 0, 0]);
-    expect(cutOvalUniform(cutsFor('regular', 'swsh'))).toEqual([0, 0, 0]);
+    expect(cutOvalUniform(cutsFor('stage', 'dp'))).toEqual([0, 0, 0, 0]);
+    expect(cutOvalUniform(cutsFor('regular', 'swsh'))).toEqual([0, 0, 0, 0]);
   });
 });
 
 describe('cutSlantUniform', () => {
   it('hands each cut’s slant, how far its right edge leans by its bottom, in coverage()’s order', () => {
-    const [band] = cutsFor('stage', 'sv');
-    expect(cutSlantUniform(cutsFor('stage', 'sv'))).toEqual([band.slant, 0, 0]);
-    expect(cutSlantUniform(cutsFor('stage', 'sv-illustration'))).toEqual([0, 0, band.slant]);
+    const [band, , junction] = cutsFor('stage', 'sv');
+    expect(cutSlantUniform(cutsFor('stage', 'sv'))).toEqual([band.slant, 0, junction.slant, 0]);
+    expect(cutSlantUniform(cutsFor('stage', 'sv-illustration'))).toEqual([
+      0,
+      0,
+      band.slant,
+      junction.slant,
+    ]);
   });
 
   it('leans none on a layout whose cuts are all upright, nor for a cut it lacks', () => {
-    expect(cutSlantUniform(cutsFor('stage', 'dp'))).toEqual([0, 0, 0]);
-    expect(cutSlantUniform(cutsFor('regular', 'swsh'))).toEqual([0, 0, 0]);
+    expect(cutSlantUniform(cutsFor('stage', 'dp'))).toEqual([0, 0, 0, 0]);
+    expect(cutSlantUniform(cutsFor('regular', 'swsh'))).toEqual([0, 0, 0, 0]);
   });
 });
 

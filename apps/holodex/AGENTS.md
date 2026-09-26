@@ -383,8 +383,10 @@ and `legacy-glares.test.ts` the 22.
 
 **Clip regions, and why reverse holo inverts.** `holo/regions.ts` maps each
 `ClipShape` (`regular`, `stage`, `trainer`, `borders`, `full`) to an inset
-`RegionRect` — fractions of the card — plus up to three boxes cut out of it
-(`cutsFor`, `MAX_CUTS`; two until a gallery VMAX's frame needed a third). `borders` and `full` are the reference's CSS `inset()`
+`RegionRect` — fractions of the card — plus up to four boxes cut out of it
+(`cutsFor`, `MAX_CUTS`; two until a gallery VMAX's frame needed a third, three
+until an illustration rare evolution's ring, tab, band and the ring's flare
+into the band needed a fourth). `borders` and `full` are the reference's CSS `inset()`
 percentages on every card, and `trainer` too but where a layout measured its
 own (Scarlet & Violet's). `regular` and `stage` are the art
 window of the card's **layout** (`CardLayout`), the frame it is printed in,
@@ -424,13 +426,18 @@ the band's top-right tip, took the art past its slant, and a strip of art
 0.75% of the card tall under all of it: over the band's surroundings the
 masks now agree on 92.7%, from 83.1% (96.4% from 87.9% on the illustration
 rares, which share the band). Where the ring meets the band's underside its
-rim flares 2 to 5 px past `SV_RING` for 6 px, which now takes foil.
+rim flares past `SV_RING`, 0.9% of the card wide at the band and narrowing to
+nothing 1.55% lower, which the band's box hid while it reached too low:
+`SV_JUNCTION`, a slanted box whose end follows the flare's edge and whose
+bottom corner sits on the ring's, so it leaves no corner of its own. Over
+that corner of the art the masks agree on 96.9% and 98.0%, from 94.5% and
+93.2%, and none of the rim takes foil.
 Pocket's (`pocket`) is the same window with an octagon. `other` (Pokémon
 Rumble, the energies, the sets without art) keeps the reference's clip and
 the one step-cut every evolution had before. A LEGEND half, all art, keeps
 its foil to the border. `coversPoint(shape, x, y, invert, layout)` is the tested twin
 of the GLSL `coverage()` in `shader/base.ts`, which reads the same numbers
-as uniforms (`uClipRect`, `uCutA`, `uCutB`, `uCutC`, `uCutOval`, `uCutSlant`, set by `scene.ts`, all zeros for
+as uniforms (`uClipRect`, `uCutA` to `uCutD`, `uCutOval`, `uCutSlant`, set by `scene.ts`, all zeros for
 a box the region lacks): `compile.test.ts` runs the emitted GLSL itself
 against it on every layout. The layout rides on `HoloSelection`, so
 `holoCanvasKey` reads it. Measure a new frame the same way — averaged edge

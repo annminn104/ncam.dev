@@ -521,6 +521,19 @@ describe('coversPoint', () => {
     expect(cutsFor('stage', 'sv-illustration')[2]).toEqual(band);
   });
 
+  it('keeps the foil off the ring’s rim where it flares into the band’s underside', () => {
+    for (const layout of ['sv', 'sv-illustration'] as const) {
+      const covers = (x: number, y: number) => coversPoint('stage', x, y, false, layout);
+      // The rim past the ring's oval, just under the band.
+      expect(covers(0.174, 0.12), layout).toBe(false);
+      expect(covers(0.172, 0.126), layout).toBe(false);
+      // The art beside it, and below where the flare meets the ring.
+      expect(covers(0.18, 0.122), layout).toBe(true);
+      expect(covers(0.1745, 0.13), layout).toBe(true);
+      expect(covers(0.175, 0.14), layout).toBe(true);
+    }
+  });
+
   it('lays an evolution’s round picture over the border as well, where a banner’s box stops', () => {
     const covers = (x: number, y: number) => coversPoint('stage', x, y, false, 'sv', true);
     // The ring where it overlaps the silver border: bare, as on the masks.

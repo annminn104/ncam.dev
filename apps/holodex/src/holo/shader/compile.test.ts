@@ -512,6 +512,7 @@ function transpileCoverage(glsl: string) {
       .replace(/\buCutA\b/g, 'cutA')
       .replace(/\buCutB\b/g, 'cutB')
       .replace(/\buCutC\b/g, 'cutC')
+      .replace(/\buCutD\b/g, 'cutD')
       .replace(/\buCutOval\b/g, 'cutOval')
       .replace(/\buCutSlant\b/g, 'cutSlant')
       .replace(/uBorderRound\.x/g, 'ringRound.x')
@@ -536,6 +537,7 @@ function transpileCoverage(glsl: string) {
     'cutA',
     'cutB',
     'cutC',
+    'cutD',
     'cutOval',
     'cutSlant',
     'ring',
@@ -551,8 +553,9 @@ function transpileCoverage(glsl: string) {
     cutA: CutBox,
     cutB: CutBox,
     cutC: CutBox,
-    cutOval: { x: number; y: number; z: number },
-    cutSlant: { x: number; y: number; z: number },
+    cutD: CutBox,
+    cutOval: { x: number; y: number; z: number; w: number },
+    cutSlant: { x: number; y: number; z: number; w: number },
     ring: RegionRect,
     ringRound: { x: number; y: number },
     invert: number,
@@ -575,11 +578,13 @@ function transpileCoverage(glsl: string) {
     layout?: CardLayout,
     border = false,
   ) => {
-    const [cutA = none, cutB = none, cutC = none] = cutsFor(shape, layout);
+    const [cutA = none, cutB = none, cutC = none, cutD = none] = cutsFor(shape, layout);
     // 1 where a cut is the ellipse its box holds (scene.ts's cutOvalUniform)
-    const cutOval = { x: cutA.oval ? 1 : 0, y: cutB.oval ? 1 : 0, z: cutC.oval ? 1 : 0 };
+    const [ovalA, ovalB, ovalC, ovalD] = [cutA, cutB, cutC, cutD].map((c) => (c.oval ? 1 : 0));
+    const cutOval = { x: ovalA, y: ovalB, z: ovalC, w: ovalD };
     // how far each cut's right edge leans by its bottom (scene.ts's cutSlantUniform)
-    const cutSlant = { x: cutA.slant ?? 0, y: cutB.slant ?? 0, z: cutC.slant ?? 0 };
+    const [slantA, slantB, slantC, slantD] = [cutA, cutB, cutC, cutD].map((c) => c.slant ?? 0);
+    const cutSlant = { x: slantA, y: slantB, z: slantC, w: slantD };
     const ring = border ? regionFor('borders') : noBorder;
     return compiled(
       { x, y },
@@ -587,6 +592,7 @@ function transpileCoverage(glsl: string) {
       cutA,
       cutB,
       cutC,
+      cutD,
       cutOval,
       cutSlant,
       ring,

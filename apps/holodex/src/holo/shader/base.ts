@@ -26,9 +26,10 @@ uniform vec4 uClipRect;   // top, right, bottom, left, as fractions
 uniform vec4 uCutA;       // boxes cut out of it (regions.ts's cutsFor):
 uniform vec4 uCutB;       // x0, y0, x1, y1, all zeros for none
 uniform vec4 uCutC;
-uniform vec3 uCutOval;    // 1.0 where that cut is the ellipse its box holds,
+uniform vec4 uCutD;
+uniform vec4 uCutOval;    // 1.0 where that cut is the ellipse its box holds,
                           // an evolution's round picture (CutBox.oval)
-uniform vec3 uCutSlant;   // how far each cut's right edge leans by its
+uniform vec4 uCutSlant;   // how far each cut's right edge leans by its
                           // bottom, a banner's slanted end (CutBox.slant)
 uniform vec4 uBorder;     // the border's inner edge, as uClipRect, when the
                           // foil covers the border too; all zeros for none
@@ -66,7 +67,8 @@ float coverage(vec2 uv) {
   float inA = inBox(uv, uCutA, uCutOval.x, uCutSlant.x);
   float inB = inBox(uv, uCutB, uCutOval.y, uCutSlant.y);
   float inC = inBox(uv, uCutC, uCutOval.z, uCutSlant.z);
-  inside *= (1.0 - inA) * (1.0 - inB) * (1.0 - inC);
+  float inD = inBox(uv, uCutD, uCutOval.w, uCutSlant.w);
+  inside *= (1.0 - inA) * (1.0 - inB) * (1.0 - inC) * (1.0 - inD);
   // The card's border, everything outside uBorder's rect with its corners
   // rounded by uBorderRound: none when both are all zeros, a plain rect that
   // holds the whole card. How far into a corner's radii uv lies, each 0
@@ -80,7 +82,8 @@ float coverage(vec2 uv) {
                      * step(cornerX * cornerX + cornerY * cornerY, 1.0);
   // An oval, a round picture the frame lays over the border as well, takes
   // the border's foil too; a box, a banner, stops at the region.
-  border *= (1.0 - inA * uCutOval.x) * (1.0 - inB * uCutOval.y) * (1.0 - inC * uCutOval.z);
+  border *= (1.0 - inA * uCutOval.x) * (1.0 - inB * uCutOval.y) * (1.0 - inC * uCutOval.z)
+          * (1.0 - inD * uCutOval.w);
   inside = max(inside, border);
 
   return mix(inside, 1.0 - inside, uInvert);

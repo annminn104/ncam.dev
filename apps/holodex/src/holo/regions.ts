@@ -74,8 +74,8 @@ export type CardLayout =
   | 'full-card'
   | 'other';
 
-/** How many boxes one region can cut: the shader's uCutA, uCutB and uCutC. */
-export const MAX_CUTS = 3;
+/** How many boxes one region can cut: the shader's uCutA, uCutB, uCutC and uCutD. */
+export const MAX_CUTS = 4;
 
 /**
  * The regions of the shapes that are not the art window: the trainer's,
@@ -168,6 +168,16 @@ const SV_PICTURE = oval(0.029, 0.072, 0.159, 0.172);
  * art past its slant, and reached 0.5% to 0.75% of the card below it.
  */
 const SV_BAND = slanted(0, 0.093, 0.685, 0.1155, -0.031);
+
+/**
+ * Where that ring meets the band's underside, its rim flares past SV_RING
+ * into the band: 0.9% of the card wide at the band and narrowing to nothing
+ * where it meets the ring again, 1.55% lower, on the averaged edges of both
+ * frames' scans. The box's slanted end follows the flare's edge, its top is
+ * the band's underside and its bottom corner sits on the ring's edge, so it
+ * leaves no corner of its own in the art.
+ */
+const SV_JUNCTION = slanted(0.16, 0.1155, 0.1785, 0.131, -0.0085);
 
 /**
  * Each frame's art window and what it prints over it. Measured 2026-09-25 off
@@ -274,13 +284,13 @@ const LAYOUTS: Readonly<Record<CardLayout, LayoutClip>> = {
   // the reference's --clip-stage cut. The picture is cut as the circle its
   // silver ring is (SV_RING), which 151's masks foil the art and the border
   // right up to, where the box the picture had took the art in its corner,
-  // and the band to its slanted end (SV_BAND) (2026-09-26). A trainer's
-  // window is measured too, the reverse foils reaching the Items and
-  // Supporters of these sets.
+  // the band to its slanted end (SV_BAND) and the ring's rim where it flares
+  // into the band (SV_JUNCTION) (2026-09-26). A trainer's window is measured
+  // too, the reverse foils reaching the Items and Supporters of these sets.
   sv: {
     art: { top: 0.097, right: 0.075, bottom: 0.528, left: 0.078 },
     regular: [],
-    stage: [SV_BAND, SV_RING],
+    stage: [SV_BAND, SV_RING, SV_JUNCTION],
     trainer: { top: 0.138, right: 0.077, bottom: 0.48, left: 0.08 },
   },
   // Pokémon TCG Pocket: the same window, and an evolution's octagon.
@@ -313,7 +323,7 @@ const LAYOUTS: Readonly<Record<CardLayout, LayoutClip>> = {
   'sv-illustration': {
     art: { top: 0.028, right: 0.04, bottom: 0.027, left: 0.038 },
     regular: [box(0, 0, 0.17, 0.064)],
-    stage: [box(0, 0, 0.17, 0.095), SV_RING, SV_BAND],
+    stage: [box(0, 0, 0.17, 0.095), SV_RING, SV_BAND, SV_JUNCTION],
   },
   // A Pocket One Star, the same full art: its patterned border, its tab, an
   // evolution's octagon and band.
