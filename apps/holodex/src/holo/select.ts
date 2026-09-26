@@ -527,7 +527,12 @@ function reverseEffect(card: Card): EffectId {
  * (checked on poke-holo.simey.me, 2026-09-26). For the other older effects,
  * the shine ports (legacy-shines.test.ts) take the clip-path
  * pokemon-cards-css's unmasked path computes, which for these is none; a
- * gallery secret rare is unclipped too. cosmos-holo departs from its CSS,
+ * gallery secret rare is unclipped too, and on the masked path as well:
+ * trainer-gallery-secret-rare.css sets `mask-image: none !important` on the
+ * shine and both its pseudo-elements, so poke-holo.simey.me draws it over the
+ * whole card whatever the card's mask (checked 2026-09-26: all three compute
+ * `none` on its gallery Mew VMAX, and the shine lights the pixels that mask
+ * leaves bare). cosmos-holo departs from its CSS,
  * which clips the shine to the card's own region: the owner's call
  * (2026-09-25), as a Black White Rare is foiled over the whole card. The
  * Classic Collection cards it also covers have no art, so draw no scene.

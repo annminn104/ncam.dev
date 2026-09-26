@@ -45,7 +45,10 @@ const CONIC = [CLR[3], CLR[4], CLR[5], CLR[0], CLR[1], CLR[2], CLR[3]].map((colo
  * geometric, the unmasked --foil, colour-burnt onto a pale radial, excluded;
  * and an `:after` of glitter in luminosity over a conic of the sunpillars,
  * soft-lit; the group colour-dodged over the whole card. The glare is ported
- * too, beneath the shine (legacy-glare.ts).
+ * too, beneath the shine (legacy-glare.ts). The whole card is the reference's
+ * own look on its masked path too: its CSS takes the card's mask off the
+ * shine and both pseudo-elements (`mask-image: none !important`), where every
+ * other full art's mask bounds its shine.
  *
  * Approximations: glitter and geometric are drawn here (textures.ts), not the
  * reference's images; --shift's 1px is at CARD_PX.

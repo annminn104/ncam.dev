@@ -582,6 +582,16 @@ the pixels its mask leaves bare changed by 0.07 and 0.11, the ones it foils
 by 0.99 and 1.06, so the region stands in for the whole shine, as ours
 applies.
 
+A gallery secret rare keeps the whole card (`FULL_ART`), and here the
+reference agrees on either path: `trainer-gallery-secret-rare.css` sets
+`mask-image: none !important` on the shine and both its pseudo-elements,
+so its masks (`…_foil_etched_swsecret_2x.webp`) bound nothing. On
+poke-holo.simey.me all three compute `none` on the gallery's Mew VMAX
+(`swsh11tg-TG30`), whose mask is loaded, and hiding the shine changes the
+pixels that mask leaves bare by 4.42 on average (20.15 where it foils): the
+shine lights them. Its masks are no evidence for its region, then, as
+they are for every other full art's.
+
 **The effect DSL and the generator.** Each of the 30 effect files under
 `holo/effects/` (e.g. `cosmos-holo.ts`) is a declarative `Effect`
 (`holo/shader/types.ts`): 1-3 `shine` elements and up to two glare elements,
