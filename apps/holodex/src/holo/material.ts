@@ -44,6 +44,7 @@ export function buildMaterial(effect: Effect): ShaderMaterial {
       // all zeros: no box cut until setSelection sets the card's own
       uCutA: { value: new Vector4(0, 0, 0, 0) },
       uCutB: { value: new Vector4(0, 0, 0, 0) },
+      uCutC: { value: new Vector4(0, 0, 0, 0) },
       // all zeros: no border foiled until setSelection says otherwise
       uBorder: { value: new Vector4(0, 0, 0, 0) },
       uInvert: { value: 0 },

@@ -271,9 +271,10 @@ export function createHoloScene(canvas: HTMLCanvasElement): HoloScene {
       // order its inBox() reads, and all zeros for a box the region lacks.
       const region = regionFor(selection.shape, selection.layout);
       material.uniforms.uClipRect.value.set(region.top, region.right, region.bottom, region.left);
-      const [cutA, cutB] = cutsFor(selection.shape, selection.layout);
+      const [cutA, cutB, cutC] = cutsFor(selection.shape, selection.layout);
       material.uniforms.uCutA.value.set(...cutUniform(cutA));
       material.uniforms.uCutB.value.set(...cutUniform(cutB));
+      material.uniforms.uCutC.value.set(...cutUniform(cutC));
       material.uniforms.uBorder.value.set(...borderUniform(selection.border));
       material.uniforms.uInvert.value = selection.invert ? 1 : 0;
       material.uniforms.uCardGlow.value.set(...selection.glow);

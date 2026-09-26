@@ -358,17 +358,25 @@ const V_FRAME: Partial<Record<CardLayout, CardLayout>> = {
   'swsh-ultra': 'swsh-ultra-v',
 };
 
+/** A Pokémon VMAX, by its name, as TCGdex spells every one ("Mimikyu VMAX"). */
+const VMAX_NAME = / VMAX$/;
+
 /**
- * A gallery V's frame, by its card number, whatever TCGdex files it as (Ultra
- * Rare, or swsh12tg's Holo Rare V): a full-art V's, whose bars its masks
- * leave out too (all 38, 2026-09-26), inside the black border a Trainer
- * Gallery prints it in (`swsh-gallery-v`), or over the silver border of the
- * Galarian Gallery's, which takes foil (`swsh-ultra-v`).
+ * A gallery V's or VMAX's frame, by its name and card number, whatever TCGdex
+ * files it as (Ultra Rare, or swsh12tg's Holo Rare V and VMAX). A V's is a
+ * full-art V's, whose bars its masks leave out too (all 38, 2026-09-26),
+ * inside the black border a Trainer Gallery prints it in (`swsh-gallery-v`),
+ * or over the silver border of the Galarian Gallery's, which takes foil
+ * (`swsh-ultra-v`). A VMAX's, in either gallery, is the whole card less its
+ * header and those bars (`swsh-gallery-vmax`, all 18). Any other card, in a
+ * gallery or not, has none.
  */
-const GALLERY_V_FRAME: ReadonlyArray<readonly [RegExp, CardLayout]> = [
-  [/^tg/i, 'swsh-gallery-v'],
-  [/^gg/i, 'swsh-ultra-v'],
-];
+function galleryFrame(card: Pick<Card, 'localId' | 'name'>): CardLayout | undefined {
+  if (!isTrainerGallery(card.localId)) return undefined;
+  if (VMAX_NAME.test(card.name)) return 'swsh-gallery-vmax';
+  if (V_NAME.test(card.name)) return /^tg/i.test(card.localId) ? 'swsh-gallery-v' : 'swsh-ultra-v';
+  return undefined;
+}
 
 /**
  * The frame an Ultra Rare before Scarlet & Violet takes, by its set's: the
@@ -435,9 +443,8 @@ const SP_SET = /^(?:pl\d|dpp)$/;
 
 /** Which frame a card is printed in: regions.ts's CardLayout. */
 export function layoutOf(card: Pick<Card, 'id' | 'localId' | 'name' | 'rarity'>): CardLayout {
-  const galleryV =
-    V_NAME.test(card.name) && GALLERY_V_FRAME.find(([number]) => number.test(card.localId))?.[1];
-  if (galleryV) return galleryV;
+  const gallery = galleryFrame(card);
+  if (gallery) return gallery;
   const setId = setIdOf(card);
   const bySet = LAYOUT_BY_SET.find(([pattern]) => pattern.test(setId))?.[1] ?? 'other';
   const modern = eraOf(card) === 'modern';
@@ -513,18 +520,20 @@ function reverseEffect(card: Card): EffectId {
  * for (`swsh-ultra`), and every Ultra Rare it foils takes a whole-card frame
  * (OLDER_ULTRA_RARE_FRAME). trainer-gallery-v-regular is too: a gallery V is
  * styled by v-full-art.css's rules, and its masks leave out the same bars
- * (GALLERY_V_FRAME). For the other older effects, the shine ports
- * (legacy-shines.test.ts) take the clip-path pokemon-cards-css's unmasked path
- * computes, which for these is none. A gallery VMAX is styled by
- * rainbow-alt.css's rules, so it is unclipped too, as is a gallery secret
- * rare. cosmos-holo departs from its CSS, which clips the shine to the card's
- * own region: the owner's call (2026-09-25), as a Black White Rare is foiled
- * over the whole card. The Classic Collection cards it also covers have no
- * art, so draw no scene.
+ * (galleryFrame). So is trainer-gallery-v-max: a gallery VMAX is styled by
+ * rainbow-alt.css's rules, which clip nothing, but its masks leave out its
+ * header and the same bars, and confine the shine's :after as well, whose
+ * `mask-image: none` does not undo the mask on the shine it belongs to
+ * (checked on poke-holo.simey.me, 2026-09-26). For the other older effects,
+ * the shine ports (legacy-shines.test.ts) take the clip-path
+ * pokemon-cards-css's unmasked path computes, which for these is none; a
+ * gallery secret rare is unclipped too. cosmos-holo departs from its CSS,
+ * which clips the shine to the card's own region: the owner's call
+ * (2026-09-25), as a Black White Rare is foiled over the whole card. The
+ * Classic Collection cards it also covers have no art, so draw no scene.
  */
 const FULL_ART: ReadonlySet<EffectId> = new Set<EffectId>([
   'cosmos-holo',
-  'trainer-gallery-v-max',
   'trainer-gallery-secret-rare',
   'secret-rare',
   'rainbow-holo',
@@ -625,7 +634,7 @@ function isTrainerGallery(localId: string | undefined): boolean {
  */
 const GALLERY_V_FAMILY: ReadonlyArray<readonly [RegExp, EffectId]> = [
   [V_NAME, 'trainer-gallery-v-regular'],
-  [/ VMAX$/, 'trainer-gallery-v-max'],
+  [VMAX_NAME, 'trainer-gallery-v-max'],
   [/ VSTAR$/, 'v-star'],
 ];
 

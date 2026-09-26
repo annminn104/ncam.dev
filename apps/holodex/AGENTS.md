@@ -306,9 +306,10 @@ resolved effect and the card's `category`/`stage` — order matters, since `radi
 window (`regular`, whatever the card's stage, as its unmasked CSS sets
 `--clip`), before the full-art and trainer rules would otherwise take them.
 `illustration-rare` takes `regular` or `stage` by the card's stage, on its
-rarity's own full-art frame (below), and `trainer-gallery-v-regular`
-`regular` on a gallery V's (below). The other two gallery effects are full
-art, as their CSS's shine covers the whole card, and so is `cosmos-holo`, by the owner's
+rarity's own full-art frame (below), and `trainer-gallery-v-regular` and
+`trainer-gallery-v-max` `regular` on a gallery V's or VMAX's (below). The
+other gallery effect, `trainer-gallery-secret-rare`, is full art, as its
+CSS's shine covers the whole card, and so is `cosmos-holo`, by the owner's
 choice (2026-09-25), though its CSS keeps the shine to the card's own region:
 a Black White Rare is foiled over the whole card. `ex-regular` (a
 `Double rare`, the standard-layout ex) must never be `full`: its reference
@@ -380,8 +381,8 @@ and `legacy-glares.test.ts` the 22.
 
 **Clip regions, and why reverse holo inverts.** `holo/regions.ts` maps each
 `ClipShape` (`regular`, `stage`, `trainer`, `borders`, `full`) to an inset
-`RegionRect` — fractions of the card — plus up to two boxes cut out of it
-(`cutsFor`). `borders` and `full` are the reference's CSS `inset()`
+`RegionRect` — fractions of the card — plus up to three boxes cut out of it
+(`cutsFor`, `MAX_CUTS`; two until a gallery VMAX's frame needed a third). `borders` and `full` are the reference's CSS `inset()`
 percentages on every card, and `trainer` too but where a layout measured its
 own (Scarlet & Violet's). `regular` and `stage` are the art
 window of the card's **layout** (`CardLayout`), the frame it is printed in,
@@ -406,7 +407,7 @@ Rumble, the energies, the sets without art) keeps the reference's clip and
 the one step-cut every evolution had before. A LEGEND half, all art, keeps
 its foil to the border. `coversPoint(shape, x, y, invert, layout)` is the tested twin
 of the GLSL `coverage()` in `shader/base.ts`, which reads the same numbers
-as uniforms (`uClipRect`, `uCutA`, `uCutB`, set by `scene.ts`, all zeros for
+as uniforms (`uClipRect`, `uCutA`, `uCutB`, `uCutC`, set by `scene.ts`, all zeros for
 a box the region lacks): `compile.test.ts` runs the emitted GLSL itself
 against it on every layout. The layout rides on `HoloSelection`, so
 `holoCanvasKey` reads it. Measure a new frame the same way — averaged edge
@@ -551,16 +552,33 @@ bare on the Trainer Galleries' 29, 87% and 85% on the Galarian Gallery's
 nine), and the Trainer Galleries' their black border besides (96% to 100%).
 That border's inner edge on TCGdex's scans is the `borders` inset (2.8%
 4%) to 0.15%, and it is not quite black (about 6 in 255), which a
-colour-dodged shine lifts towards grey. So by its card number
-(`GALLERY_V_FRAME`) a Trainer Gallery V takes the inside of that border
-less the bars (`swsh-gallery-v`), and a Galarian Gallery V, whose silver
-border its masks foil, the whole card less them (`swsh-ultra-v`). Over the
-frame (the border ring, the top 10% and the bottom 16%) the masks agree
-with the region on 75.0% and 70.6% of its pixels, where the whole card
-agreed on 17.0% and 55.0%; over the whole card, whose figures they leave
-out and no box follows, on 47.3% and 67.6%, from 28.8% and 62.6%. A gallery VMAX keeps
-the whole card, though its masks leave out the same bars (97% and 98% on
-five).
+colour-dodged shine lifts towards grey. So by its name and card number
+(`galleryFrame`) a Trainer Gallery V takes the inside of that border less
+the bars (`swsh-gallery-v`), and a Galarian Gallery V, whose silver border
+its masks foil, the whole card less them (`swsh-ultra-v`). Over the frame
+(the border ring, the top 10% and the bottom 16%) the masks agree with the
+region on 75.0% and 70.6% of its pixels, where the whole card agreed on
+17.0% and 55.0%; over the whole card, whose figures they leave out and no
+box follows, on 47.3% and 67.6%, from 28.8% and 62.6%.
+
+A gallery VMAX left `FULL_ART` the same way. `rainbow-alt.css`, which
+styles it, has no clip-path, and all 18 gallery VMAX's masks foil the
+border, which on a VMAX is no black one, but leave out the header's silver
+panels, the VMAX mark over the picture of the V it evolves from (97% bare
+on the Trainer Galleries' 15) and the bands naming that V and its Dynamax
+(92%), and the same weakness bar and rule box, the VMAX's silver (96% and
+98%). So in either gallery it takes the whole card less a box around those
+panels, as TCGdex's scans have them, and the bars (`swsh-gallery-vmax`):
+three boxes, one more than the shader cut before (`uCutC`). Over the frame
+the masks agree with it on 58.5% and 63.9%, from 26.5% and 43.0%; over the
+whole card on 36.9% and 45.7%, from 24.1% and 38.1% (the Galarian
+Gallery's three masks foil its bands, but the box still suits them best of
+those tried). The shine's `:after` sets `mask-image: none !important`,
+which reads as if it escaped the mask, but the mask on `.card__shine`
+itself still confines it: with the `:after` hidden on poke-holo.simey.me,
+the pixels its mask leaves bare changed by 0.07 and 0.11, the ones it foils
+by 0.99 and 1.06, so the region stands in for the whole shine, as ours
+applies.
 
 **The effect DSL and the generator.** Each of the 30 effect files under
 `holo/effects/` (e.g. `cosmos-holo.ts`) is a declarative `Effect`

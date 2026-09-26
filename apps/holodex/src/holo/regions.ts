@@ -54,11 +54,12 @@ export type CardLayout =
   | 'swsh-ultra'
   | 'swsh-ultra-v'
   | 'swsh-gallery-v'
+  | 'swsh-gallery-vmax'
   | 'full-card'
   | 'other';
 
-/** How many boxes one region can cut: the shader's uCutA and uCutB. */
-export const MAX_CUTS = 2;
+/** How many boxes one region can cut: the shader's uCutA, uCutB and uCutC. */
+export const MAX_CUTS = 3;
 
 /**
  * The regions of the shapes that are not the art window: the trainer's,
@@ -330,12 +331,30 @@ const LAYOUTS: Readonly<Record<CardLayout, LayoutClip>> = {
   // measured off TCGdex's scans, is the reference's --clip-borders inset
   // (2.8% 4%) to 0.15%. The border is not quite black (about 6 in 255), which
   // a color-dodged shine would lift towards grey. The black V over the
-  // top-left and the black strip the HP sits on are left out as well, but a
-  // third box is one more than the shader has (MAX_CUTS).
+  // top-left and the black strip the HP sits on are left out as well, and
+  // stay in: when this frame was measured the shader cut two boxes, not
+  // three.
   'swsh-gallery-v': {
     art: { top: 0.028, right: 0.04, bottom: 0.028, left: 0.04 },
     regular: SWSH_V_BARS,
     stage: SWSH_V_BARS,
+  },
+  // A gallery VMAX, a Trainer Gallery's (swsh9tg to swsh12tg) or the
+  // Galarian Gallery's: the whole card, less its header and the same bars.
+  // The masks of all 18 (2026-09-26) foil the border, which on a VMAX is no
+  // black one, but leave out the header's silver panels, the VMAX mark over
+  // the picture of the V it evolves from (97% bare on the 15 Trainer Gallery
+  // masks) and the bands that name that V and its Dynamax (92%), and the
+  // weakness bar and the VMAX rule box, silver where a V's is black (96% and
+  // 98%). The header's box takes those panels whole, as TCGdex's scans have
+  // them (the bands' slanted ends at 58%, the picture's frame down to 16%),
+  // with the corner above them and the start of the name beside them, which
+  // the masks leave out too. The Galarian Gallery's three masks foil its
+  // bands, but the box still suits them best of those tried.
+  'swsh-gallery-vmax': {
+    art: { top: 0, right: 0, bottom: 0, left: 0 },
+    regular: [box(0, 0, 0.58, 0.16), ...SWSH_V_BARS],
+    stage: [box(0, 0, 0.58, 0.16), ...SWSH_V_BARS],
   },
   // The whole card, whatever it is: a Mega Hyper Rare, whose rule box is
   // gold like the rest of it, Pocket's Crown and Two Star, and an Ultra Rare

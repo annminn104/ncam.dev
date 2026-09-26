@@ -496,6 +496,7 @@ function transpileCoverage(glsl: string) {
       .replace(/\bbox\.w\b/g, 'box.y1')
       .replace(/\buCutA\b/g, 'cutA')
       .replace(/\buCutB\b/g, 'cutB')
+      .replace(/\buCutC\b/g, 'cutC')
       .replace(/uBorder\.x/g, 'ring.top')
       .replace(/uBorder\.y/g, 'ring.right')
       .replace(/uBorder\.z/g, 'ring.bottom')
@@ -515,6 +516,7 @@ function transpileCoverage(glsl: string) {
     'rect',
     'cutA',
     'cutB',
+    'cutC',
     'ring',
     'invert',
     'step',
@@ -526,6 +528,7 @@ function transpileCoverage(glsl: string) {
     rect: RegionRect,
     cutA: CutBox,
     cutB: CutBox,
+    cutC: CutBox,
     ring: RegionRect,
     invert: number,
     step: (edge: number, v: number) => number,
@@ -545,13 +548,14 @@ function transpileCoverage(glsl: string) {
     layout?: CardLayout,
     border = false,
   ) => {
-    const [cutA = none, cutB = none] = cutsFor(shape, layout);
+    const [cutA = none, cutB = none, cutC = none] = cutsFor(shape, layout);
     const ring = border ? regionFor('borders') : noBorder;
     return compiled(
       { x, y },
       regionFor(shape, layout),
       cutA,
       cutB,
+      cutC,
       ring,
       invert ? 1 : 0,
       step,
@@ -590,6 +594,7 @@ describe('coverage() in GLSL agrees with coversPoint() in JS', () => {
     'swsh-ultra',
     'swsh-ultra-v',
     'swsh-gallery-v',
+    'swsh-gallery-vmax',
     'full-card',
     'other',
   ];

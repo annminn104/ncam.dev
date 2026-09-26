@@ -9,11 +9,14 @@ const GLARE_FILTER = { brightness: 1, contrast: 1 };
 /**
  * A trainer gallery VMAX. Its shine is rainbow-alt's: pokemon-cards-css styles
  * a gallery VMAX (`[data-rarity="rare holo vmax"][data-trainer-gallery="true"]`)
- * by rainbow-alt.css's rules, at the 6% --space v-max.css sets on every VMAX,
- * over the whole card. Its glare is ported from trainer-gallery-v-max.css,
- * overlaid (from base.css), beneath the shine (legacy-glare.ts), and only as
- * strong as the pointer is far from the middle. Its middle stop has no
- * position, which CSS puts midway between its neighbours, at 60%.
+ * by rainbow-alt.css's rules, at the 6% --space v-max.css sets on every VMAX.
+ * Its glare is ported from trainer-gallery-v-max.css, overlaid (from
+ * base.css), beneath the shine (legacy-glare.ts), and only as strong as the
+ * pointer is far from the middle. Its middle stop has no position, which CSS
+ * puts midway between its neighbours, at 60%. The reference confines the
+ * shine, its `:after` included, with the card's own mask, never a clip-path;
+ * select.ts's clip region stands in: the whole card less the header and the
+ * bars its masks leave out (regions.ts's `swsh-gallery-vmax`).
  */
 export const trainerGalleryVMax: Effect = {
   id: 'trainer-gallery-v-max',
