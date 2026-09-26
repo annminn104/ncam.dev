@@ -265,7 +265,11 @@ Shield's full-art Supporters as Ultra Rare, Marnie's and the Trainer
 Gallery's alike, and only six as `Full Art Trainer`; (3) a card number
 matching `/^[tg]g/i` is a trainer-gallery printing and remaps its base
 effect to one of four gallery variants (`galleryEffect`), which keeps a
-full art trainer as it is; (4)
+full art trainer as it is and gives an `Ultra Rare` Pokémon its V family's
+gallery look by its name, as the reference draws the Rare Holo V, VMAX and
+VSTAR that pokemontcg.io, its data, files these cards as: a V
+`trainer-gallery-v-regular`, a VMAX `trainer-gallery-v-max`, and a VSTAR
+`v-star`, as no gallery stylesheet names a VSTAR; (4)
 `options.variant` — the printing shown, an explicit choice never read off the
 card — on a card whose effect is `basic`, `regular-holo` or `sv-rare-holo`
 becomes a reverse foil with `invert: true`. `masterball` is `masterball-holo`;
@@ -534,11 +538,17 @@ same header and rule box, 95% and 93% bare), and the whole card for an
 older one. A `Full Art Trainer` takes `swsh-ultra` too, by its rarity, as
 the mask of one of the six, Professor Burnet's, leaves out the same bars:
 until 2026-09-25 it took the whole card, clipShape's one rule by rarity,
-now gone. One difference from the reference is left as it is: a Trainer
-Gallery `Ultra Rare` Pokémon V or VMAX (swsh10tg's Starmie V) takes
-`trainer-gallery-holo` here (`galleryEffect` knows `v-full-art` no gallery
-variant), where the reference draws a gallery V with `v-full-art.css` and a
-gallery VMAX with `trainer-gallery-v-max.css`.
+now gone. A gallery `Ultra Rare` Pokémon is not `v-full-art`'s either:
+TCGdex files the V, VMAX and VSTAR of three Trainer Galleries and the
+Galarian Gallery as Ultra Rare (55 cards; `swsh12tg`'s are Holo Rare V and
+VMAX), which pokemontcg.io files as Rare Holo V, VMAX and VSTAR, so each
+takes its V family's gallery look (the overrides above), on the whole card
+as `swsh12tg`'s took it already. Until 2026-09-26 they took
+`trainer-gallery-holo`. Their masks, which the whole card does not follow,
+leave out the weakness bar and rule box (97% and 98% bare on twelve
+Trainer Gallery V and VMAX, 87% and 82% on four of the Galarian Gallery's)
+and a Trainer Gallery V's black border, which a colour-dodged shine leaves
+black anyway.
 
 **The effect DSL and the generator.** Each of the 30 effect files under
 `holo/effects/` (e.g. `cosmos-holo.ts`) is a declarative `Effect`

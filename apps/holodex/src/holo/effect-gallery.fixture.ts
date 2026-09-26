@@ -23,7 +23,10 @@ import type { Card } from '../lib/tcgdex';
  * 151's Squirtle. All 90 were fetched once more that day, when selection
  * began reading `trainerType`: every field matched, the nine trainers took
  * theirs, and the Trainer Gallery's Abomasnow (swsh10tg-TG01) and Charizard
- * (swsh11tg-TG03) replaced its Piers and Opal, full art trainers now. The subset-set cards
+ * (swsh11tg-TG03) replaced its Piers and Opal, full art trainers now. On
+ * 2026-09-26, once a gallery Ultra Rare took its V family's look, the
+ * Trainer Gallery's Mimikyu V and VMAX (swsh9tg-TG16, -TG17, captured that
+ * day) replaced swsh12tg's Blaziken V and Rayquaza VMAX. The subset-set cards
  * (`swsh4.5sv-…` and the `swsh9tg`–`swsh12tg` Trainer Gallery ones) have no
  * `image` because the API links none: `lib/images.ts#cardImageBase` finds
  * their art. Every value is copied verbatim: never edit one by hand to make a
@@ -745,17 +748,17 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     variants: { firstEdition: false, holo: true, normal: false, reverse: false, wPromo: false },
     variants_detailed: [{ type: 'holo' }],
   },
-  'swsh12tg-TG14': {
-    id: 'swsh12tg-TG14',
-    localId: 'TG14',
-    name: 'Blaziken V',
+  'swsh9tg-TG16': {
+    id: 'swsh9tg-TG16',
+    localId: 'TG16',
+    name: 'Mimikyu V',
     category: 'Pokemon',
     set: {
-      id: 'swsh12tg',
-      name: 'Silver Tempest Trainer Gallery',
+      id: 'swsh9tg',
+      name: 'Brilliant Stars Trainer Gallery',
       cardCount: { total: 30, official: 30 },
     },
-    rarity: 'Holo Rare V',
+    rarity: 'Ultra Rare',
     stage: 'Basic',
     suffix: 'V',
     variants: { firstEdition: false, holo: true, normal: false, reverse: false, wPromo: false },
@@ -791,17 +794,17 @@ export const CAPTURED_CARDS: Readonly<Record<string, Card>> = {
     variants: { firstEdition: false, holo: true, normal: false, reverse: false, wPromo: false },
     variants_detailed: [{ type: 'holo' }],
   },
-  'swsh12tg-TG20': {
-    id: 'swsh12tg-TG20',
-    localId: 'TG20',
-    name: 'Rayquaza VMAX',
+  'swsh9tg-TG17': {
+    id: 'swsh9tg-TG17',
+    localId: 'TG17',
+    name: 'Mimikyu VMAX',
     category: 'Pokemon',
     set: {
-      id: 'swsh12tg',
-      name: 'Silver Tempest Trainer Gallery',
+      id: 'swsh9tg',
+      name: 'Brilliant Stars Trainer Gallery',
       cardCount: { total: 30, official: 30 },
     },
-    rarity: 'Holo Rare VMAX',
+    rarity: 'Ultra Rare',
     stage: 'VMAX',
     variants: { firstEdition: false, holo: true, normal: false, reverse: false, wPromo: false },
     variants_detailed: [{ type: 'holo' }],

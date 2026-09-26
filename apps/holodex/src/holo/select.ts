@@ -594,7 +594,27 @@ function isTrainerGallery(localId: string | undefined): boolean {
   return /^[tg]g/i.test(localId ?? '');
 }
 
-function galleryEffect(base: EffectId): EffectId {
+/**
+ * A gallery Ultra Rare Pokémon's look, by its name. TCGdex files the V, VMAX
+ * and VSTAR of three Trainer Galleries (`swsh9tg` to `swsh11tg`) and of the
+ * Galarian Gallery (`swsh12.5gg`) as Ultra Rare, 55 cards, and `swsh12tg`'s
+ * as Holo Rare V and VMAX, which galleryEffect's first two arms take (checked
+ * 2026-09-26, when no other set numbered a card TG or GG); pokemontcg.io,
+ * whose data the reference reads, files every one Rare Holo V, VMAX or VSTAR.
+ * pokemon-cards-css draws a gallery V (`rare holo v` with
+ * `data-trainer-gallery`) with v-full-art.css under
+ * trainer-gallery-v-regular.css's glare, a gallery VMAX with rainbow-alt.css
+ * under trainer-gallery-v-max.css's, and a gallery VSTAR with v-star.css,
+ * as no gallery stylesheet names a VSTAR.
+ */
+const GALLERY_V_FAMILY: ReadonlyArray<readonly [RegExp, EffectId]> = [
+  [V_NAME, 'trainer-gallery-v-regular'],
+  [/ VMAX$/, 'trainer-gallery-v-max'],
+  [/ VSTAR$/, 'v-star'],
+];
+
+/** The effect a gallery card takes, from the one its rarity gives it. */
+function galleryEffect(base: EffectId, name: string): EffectId {
   if (base === 'v-regular') return 'trainer-gallery-v-regular';
   if (base === 'v-max') return 'trainer-gallery-v-max';
   if (base === 'secret-rare') return 'trainer-gallery-secret-rare';
@@ -605,6 +625,14 @@ function galleryEffect(base: EffectId): EffectId {
   // its own effect and its full-art frame (regions.ts's `swsh-ultra`) rather
   // than the gallery `borders` clip.
   if (base === 'trainer-full-art') return 'trainer-full-art';
+  // A VSTAR of any rarity, as no gallery stylesheet names one.
+  if (base === 'v-star') return 'v-star';
+  // An Ultra Rare Pokémon: its V family's look. Any other keeps v-full-art,
+  // as v-full-art.css draws a rare ultra in a gallery or out of one, and no
+  // gallery stylesheet names one.
+  if (base === 'v-full-art') {
+    return GALLERY_V_FAMILY.find(([pattern]) => pattern.test(name))?.[1] ?? 'v-full-art';
+  }
   return 'trainer-gallery-holo';
 }
 
@@ -673,7 +701,7 @@ export function selectHolo(card: Card, options: SelectOptions = {}): HoloSelecti
   let invert = false;
 
   if (isTrainerGallery(card.localId)) {
-    effect = galleryEffect(base);
+    effect = galleryEffect(base, card.name);
   } else if (REVERSIBLE.has(base) && options.variant) {
     effect = options.variant === 'masterball' ? 'masterball-holo' : reverseEffect(card);
     invert = true;

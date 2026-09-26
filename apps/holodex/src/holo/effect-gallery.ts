@@ -228,8 +228,9 @@ const EXAMPLES: Omit<EffectExample, 'rarities'>[] = [
   // Reached only through the card number now that Illustration rare, the
   // rarity that used to select it, has illustration-rare: a gallery card whose
   // own effect has no gallery variant lands here, like these two Rares and a
-  // Holo Rare, the gallery's own holos. Its Ultra Rare Supporters are full
-  // art trainers (select.ts), and are not.
+  // Holo Rare, the gallery's own holos. Its Ultra Rares are not: a Supporter
+  // is a full art trainer, and a V, VMAX or VSTAR takes its V family's look
+  // (select.ts).
   {
     effect: 'trainer-gallery-holo',
     cardIds: [
@@ -263,23 +264,26 @@ const EXAMPLES: Omit<EffectExample, 'rarities'>[] = [
     variant: 'reverse',
     override: FROM_REVERSE_PRINTING,
   },
+  // TCGdex files a gallery V two ways, as a Holo Rare V in swsh12tg and an
+  // Ultra Rare in the other galleries (select.ts's galleryEffect), so both
+  // are here: two of the one and the reference's own Mimikyu V.
   {
     effect: 'trainer-gallery-v-regular',
     cardIds: [
       'swsh12tg-TG12', // Kricketune V
       'swsh12tg-TG13', // Serperior V
-      'swsh12tg-TG14', // Blaziken V
+      'swsh9tg-TG16', // Mimikyu V
     ],
     override: FROM_CARD_NUMBER,
   },
-  // Close to the ceiling: exactly four TCGdex cards select
-  // trainer-gallery-v-max, these three and swsh12tg-TG21, all in one set.
+  // A gallery VMAX the same two ways: two Holo Rare VMAX of swsh12tg and the
+  // reference's own Mimikyu VMAX, an Ultra Rare.
   {
     effect: 'trainer-gallery-v-max',
     cardIds: [
       'swsh12tg-TG15', // Blaziken VMAX
       'swsh12tg-TG19', // Corviknight VMAX
-      'swsh12tg-TG20', // Rayquaza VMAX
+      'swsh9tg-TG17', // Mimikyu VMAX
     ],
     override: FROM_CARD_NUMBER,
   },

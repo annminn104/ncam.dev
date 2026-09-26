@@ -244,7 +244,8 @@ describe('selectHolo — trainer gallery override', () => {
       'trainer',
       'swsh-ultra',
     ]);
-    // A gallery Pokémon Ultra Rare is no Supporter: it keeps the gallery holo.
+    // A gallery Pokémon Ultra Rare is no Supporter: it takes its V family's
+    // gallery look (below).
     const starmie = selectHolo(
       card({
         id: 'swsh10tg-TG13',
@@ -254,7 +255,41 @@ describe('selectHolo — trainer gallery override', () => {
         stage: 'Basic',
       }),
     );
-    expect(starmie.effect).toBe('trainer-gallery-holo');
+    expect(starmie.effect).toBe('trainer-gallery-v-regular');
+  });
+
+  it('routes a gallery Ultra Rare V, VMAX or VSTAR as the reference draws it', () => {
+    // TCGdex files the V family of three Trainer Galleries and the Galarian
+    // Gallery as Ultra Rare (swsh12tg's alone as Holo Rare V and VMAX), where
+    // pokemontcg.io, which the reference reads, files them Rare Holo V, VMAX
+    // and VSTAR: a gallery V takes v-full-art.css under
+    // trainer-gallery-v-regular.css's glare, a gallery VMAX rainbow-alt.css
+    // under trainer-gallery-v-max.css's, and a gallery VSTAR v-star.css,
+    // which has no gallery variant. These are real cards (2026-09-26).
+    for (const [id, name, stage, effect] of [
+      ['swsh10tg-TG13', 'Starmie V', 'Basic', 'trainer-gallery-v-regular'],
+      ['swsh12.5gg-GG36', 'Entei V', 'Basic', 'trainer-gallery-v-regular'],
+      ['swsh9tg-TG17', 'Mimikyu VMAX', 'VMAX', 'trainer-gallery-v-max'],
+      ['swsh12.5gg-GG42', 'Zeraora VMAX', 'VMAX', 'trainer-gallery-v-max'],
+      ['swsh12.5gg-GG35', 'Leafeon VSTAR', 'VSTAR', 'v-star'],
+    ] as const) {
+      const localId = id.slice(id.lastIndexOf('-') + 1);
+      const s = selectHolo(card({ id, localId, name, rarity: 'Ultra Rare', stage }));
+      expect([s.effect, s.shape], id).toEqual([effect, 'full']);
+    }
+  });
+
+  it('keeps a gallery VSTAR of any rarity on v-star, and any other gallery Ultra Rare on v-full-art', () => {
+    // No gallery stylesheet names a VSTAR, nor a rare ultra, which
+    // v-full-art.css draws in a gallery or out of one.
+    const vstar = selectHolo(
+      card({ localId: 'GG40', name: 'Test VSTAR', rarity: 'Holo Rare VSTAR', stage: 'VSTAR' }),
+    );
+    expect(vstar.effect).toBe('v-star');
+    const other = selectHolo(
+      card({ localId: 'TG40', name: 'Test', rarity: 'Ultra Rare', stage: 'Basic' }),
+    );
+    expect(other.effect).toBe('v-full-art');
   });
 });
 
