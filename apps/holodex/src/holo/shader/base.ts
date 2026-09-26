@@ -28,6 +28,8 @@ uniform vec4 uCutB;       // x0, y0, x1, y1, all zeros for none
 uniform vec4 uCutC;
 uniform vec4 uBorder;     // the border's inner edge, as uClipRect, when the
                           // foil covers the border too; all zeros for none
+uniform vec2 uBorderRound; // its corners' radii, x of the card's width and y
+                          // of its height (regions.ts's BORDER_ROUND); zeros for none
 uniform float uInvert;    // 1.0 for reverse holo
 uniform float uCardOpacity;
 
@@ -51,12 +53,17 @@ float coverage(vec2 uv) {
                * step(uClipRect.x, uv.y)
                * step(uv.y, 1.0 - uClipRect.z);
   inside *= (1.0 - inBox(uv, uCutA)) * (1.0 - inBox(uv, uCutB)) * (1.0 - inBox(uv, uCutC));
-  // The card's border, everything outside uBorder's rect: none when it is
-  // all zeros, a rect that holds the whole card.
+  // The card's border, everything outside uBorder's rect with its corners
+  // rounded by uBorderRound: none when both are all zeros, a plain rect that
+  // holds the whole card. How far into a corner's radii uv lies, each 0
+  // outside its corner and past 1 beyond the arc.
+  float cornerX = max(max(uBorder.w + uBorderRound.x - uv.x, uv.x - (1.0 - uBorder.y - uBorderRound.x)), 0.0) / max(uBorderRound.x, 1e-6);
+  float cornerY = max(max(uBorder.x + uBorderRound.y - uv.y, uv.y - (1.0 - uBorder.z - uBorderRound.y)), 0.0) / max(uBorderRound.y, 1e-6);
   float border = 1.0 - step(uBorder.w, uv.x)
                      * step(uv.x, 1.0 - uBorder.y)
                      * step(uBorder.x, uv.y)
-                     * step(uv.y, 1.0 - uBorder.z);
+                     * step(uv.y, 1.0 - uBorder.z)
+                     * step(cornerX * cornerX + cornerY * cornerY, 1.0);
   inside = max(inside, border);
 
   return mix(inside, 1.0 - inside, uInvert);

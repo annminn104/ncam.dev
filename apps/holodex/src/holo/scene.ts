@@ -14,7 +14,7 @@ import {
 import { firstLoaded, textureUrls } from '../lib/asset-proxy';
 import { EFFECTS } from './effects';
 import { createMaterial } from './material';
-import { cutsFor, regionFor, type CutBox } from './regions';
+import { BORDER_ROUND, cutsFor, regionFor, type CutBox } from './regions';
 import type { HoloSelection } from './select';
 import type { Effect } from './shader/types';
 import { makeTexture, type TextureName } from './textures';
@@ -157,6 +157,16 @@ export function borderUniform(border: boolean): [number, number, number, number]
   return [r.top, r.right, r.bottom, r.left];
 }
 
+/**
+ * uBorderRound for a selection: the radii of the border rect's corners
+ * (regions.ts's BORDER_ROUND), x of the card's width and y of its height, as
+ * the card face rounds its own, or zeros, which with uBorder's zeros leave the
+ * whole-card rect a plain one. Pure for the same reason as pointerToUV.
+ */
+export function borderRoundUniform(border: boolean): [number, number] {
+  return border ? [BORDER_ROUND.x, BORDER_ROUND.y] : [0, 0];
+}
+
 export function createHoloScene(canvas: HTMLCanvasElement): HoloScene {
   const renderer = new WebGLRenderer({ canvas, alpha: true, antialias: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -276,6 +286,7 @@ export function createHoloScene(canvas: HTMLCanvasElement): HoloScene {
       material.uniforms.uCutB.value.set(...cutUniform(cutB));
       material.uniforms.uCutC.value.set(...cutUniform(cutC));
       material.uniforms.uBorder.value.set(...borderUniform(selection.border));
+      material.uniforms.uBorderRound.value.set(...borderRoundUniform(selection.border));
       material.uniforms.uInvert.value = selection.invert ? 1 : 0;
       material.uniforms.uCardGlow.value.set(...selection.glow);
       material.uniforms.uFoilBrightness.value = selection.foilBrightness;

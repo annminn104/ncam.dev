@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { EFFECTS } from './effects';
 import { cutsFor } from './regions';
 import {
+  borderRoundUniform,
   borderUniform,
   cutUniform,
   orientTexture,
@@ -104,6 +105,16 @@ describe('borderUniform', () => {
 
   it('sends all zeros, a rect holding the whole card, which adds no border', () => {
     expect(borderUniform(false)).toEqual([0, 0, 0, 0]);
+  });
+});
+
+describe('borderRoundUniform', () => {
+  it('rounds the border rect’s corners as the card face’s, when the foil takes the border', () => {
+    expect(borderRoundUniform(true)).toEqual([0.011, 0.01]);
+  });
+
+  it('sends zeros with no border, which keeps the whole-card rect a plain one', () => {
+    expect(borderRoundUniform(false)).toEqual([0, 0]);
   });
 });
 

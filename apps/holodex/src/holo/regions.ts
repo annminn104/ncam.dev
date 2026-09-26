@@ -472,9 +472,29 @@ const insideRect = (r: RegionRect, x: number, y: number): boolean =>
   x >= r.left && x <= 1 - r.right && y >= r.top && y <= 1 - r.bottom;
 
 /**
+ * The radii of the card face's rounded corners, where it meets the border, as
+ * fractions of the card's width (x) and height (y): measured off 151's masks
+ * (Raichu's and Beedrill's), whose border foil fills the wedge each corner of
+ * the face leaves inside the `borders` rect's square corner, from 1.1% and 1%
+ * short of the corner. The border a foil takes (`coversPoint`'s `border`,
+ * coverage()'s uBorder and uBorderRound) is everything outside that rect so
+ * rounded.
+ */
+export const BORDER_ROUND = { x: 0.011, y: 0.01 } as const;
+
+/** Whether x, y lies inside a rect whose corners are rounded by radii r (fractions of the card). */
+function insideRoundedRect(rect: RegionRect, r: { x: number; y: number }, x: number, y: number) {
+  if (!insideRect(rect, x, y)) return false;
+  const cx = Math.max(rect.left + r.x - x, x - (1 - rect.right - r.x), 0) / r.x;
+  const cy = Math.max(rect.top + r.y - y, y - (1 - rect.bottom - r.y), 0) / r.y;
+  return cx * cx + cy * cy <= 1;
+}
+
+/**
  * Whether the foil covers this point. `x` and `y` are fractions of the card
  * from its top-left; `border` adds the card's border, all of it outside the
- * `borders` rect, for an effect whose foil covers that too
+ * `borders` rect with its corners rounded as the card face's
+ * (BORDER_ROUND), for an effect whose foil covers that too
  * (HoloSelection.border). The GLSL coverage() in shader/base.ts computes the
  * same thing from the same numbers, which the scene hands it as uniforms —
  * this is its testable twin.
@@ -490,6 +510,6 @@ export function coversPoint(
   let inside = insideRect(regionFor(shape, layout), x, y);
   if (inside && cutsFor(shape, layout).some((c) => x >= c.x0 && x < c.x1 && y >= c.y0 && y < c.y1))
     inside = false;
-  if (border && !insideRect(REGIONS.borders, x, y)) inside = true;
+  if (border && !insideRoundedRect(REGIONS.borders, BORDER_ROUND, x, y)) inside = true;
   return invert ? !inside : inside;
 }

@@ -47,6 +47,7 @@ export function buildMaterial(effect: Effect): ShaderMaterial {
       uCutC: { value: new Vector4(0, 0, 0, 0) },
       // all zeros: no border foiled until setSelection says otherwise
       uBorder: { value: new Vector4(0, 0, 0, 0) },
+      uBorderRound: { value: new Vector2(0, 0) },
       uInvert: { value: 0 },
       uCardOpacity: { value: 1 },
       // :root's --card-glow until setSelection sets the card's own

@@ -3,6 +3,7 @@ import { BLEND_ID } from './blend';
 import { compileEffect, needsRGBA, VERTEX_SHADER } from './compile';
 import { baseGLSL } from './base';
 import {
+  BORDER_ROUND,
   coversPoint,
   cutsFor,
   MAX_CUTS,
@@ -509,6 +510,8 @@ function transpileCoverage(glsl: string) {
       .replace(/\buCutA\b/g, 'cutA')
       .replace(/\buCutB\b/g, 'cutB')
       .replace(/\buCutC\b/g, 'cutC')
+      .replace(/uBorderRound\.x/g, 'ringRound.x')
+      .replace(/uBorderRound\.y/g, 'ringRound.y')
       .replace(/uBorder\.x/g, 'ring.top')
       .replace(/uBorder\.y/g, 'ring.right')
       .replace(/uBorder\.z/g, 'ring.bottom')
@@ -530,6 +533,7 @@ function transpileCoverage(glsl: string) {
     'cutB',
     'cutC',
     'ring',
+    'ringRound',
     'invert',
     'step',
     'mix',
@@ -542,6 +546,7 @@ function transpileCoverage(glsl: string) {
     cutB: CutBox,
     cutC: CutBox,
     ring: RegionRect,
+    ringRound: { x: number; y: number },
     invert: number,
     step: (edge: number, v: number) => number,
     mix: (a: number, b: number, t: number) => number,
@@ -549,9 +554,11 @@ function transpileCoverage(glsl: string) {
   ) => number;
 
   // A box the region lacks reaches the shader as all zeros (scene.ts's
-  // cutUniform), and so does the border it does not foil (borderUniform).
+  // cutUniform), and so does the border it does not foil (borderUniform),
+  // corners and all (borderRoundUniform).
   const none: CutBox = { x0: 0, y0: 0, x1: 0, y1: 0 };
   const noBorder: RegionRect = { top: 0, right: 0, bottom: 0, left: 0 };
+  const noRound = { x: 0, y: 0 };
   return (
     shape: ClipShape,
     x: number,
@@ -569,6 +576,7 @@ function transpileCoverage(glsl: string) {
       cutB,
       cutC,
       ring,
+      border ? BORDER_ROUND : noRound,
       invert ? 1 : 0,
       step,
       mix,
@@ -654,6 +662,43 @@ describe('coverage() in GLSL agrees with coversPoint() in JS', () => {
     // The frame between the border and the art stays bare.
     expect(coverage('regular', 0.06, 0.3, false, 'sv', true)).toBe(0);
     expect(coverage('regular', 0.5, 0.7, false, 'sv', true)).toBe(0);
+  });
+
+  it('rounds the border’s inner corners as coversPoint() does, finely enough to see the arc', () => {
+    // The card-wide grid above is too coarse to land in the wedge each corner
+    // rounds off, so walk every corner of the `borders` rect on its own grid.
+    const r = regionFor('borders');
+    const corners: [number, number][] = [
+      [r.left, r.top],
+      [1 - r.right, r.top],
+      [r.left, 1 - r.bottom],
+      [1 - r.right, 1 - r.bottom],
+    ];
+    const disagreements: string[] = [];
+    let wedge = 0;
+    for (const [cx, cy] of corners) {
+      for (let i = -20; i <= 20; i++) {
+        for (let j = -20; j <= 20; j++) {
+          const x = cx + (i + 0.37) * 0.001;
+          const y = cy + (j + 0.37) * 0.001;
+          for (const invert of [false, true]) {
+            const gpu = coverage('regular', x, y, invert, 'sv', true) > 0.5;
+            const cpu = coversPoint('regular', x, y, invert, 'sv', true);
+            if (gpu !== cpu) disagreements.push(`(${x.toFixed(4)}, ${y.toFixed(4)})`);
+          }
+          // what the border adds inside the rect's square corner: the wedge
+          const insideSquare = x >= r.left && x <= 1 - r.right && y >= r.top && y <= 1 - r.bottom;
+          const added =
+            coversPoint('regular', x, y, false, 'sv', true) &&
+            !coversPoint('regular', x, y, false, 'sv', false);
+          if (insideSquare && added) wedge++;
+        }
+      }
+    }
+    expect(disagreements).toEqual([]);
+    // Each corner's wedge is about 24 of these cells (1 - π/4 of the radii's
+    // box), so a count well short of that walked nothing the rounding changed.
+    expect(wedge).toBeGreaterThan(4 * 15);
   });
 
   it('actually exercises both verdicts, so agreement is not vacuous', () => {

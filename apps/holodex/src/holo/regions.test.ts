@@ -394,6 +394,25 @@ describe('coversPoint', () => {
     expect(coversPoint('full', 0.5, 0.5, true)).toBe(false);
   });
 
+  it('rounds the border’s inner corners as the card face rounds its own', () => {
+    // 151's masks foil the border into the wedge each corner of the face
+    // leaves inside the border rect's square corner; a point further in is
+    // the face.
+    const border = (x: number, y: number) => coversPoint('regular', x, y, false, 'sv', true);
+    expect(border(0.0415, 0.0295)).toBe(true);
+    expect(border(0.9585, 0.9705)).toBe(true);
+    expect(border(0.0415, 0.9705)).toBe(true);
+    expect(border(0.9585, 0.0295)).toBe(true);
+    expect(border(0.045, 0.032)).toBe(false);
+    expect(border(0.955, 0.968)).toBe(false);
+    // The border itself, and its straight edges, as before.
+    expect(border(0.02, 0.5)).toBe(true);
+    expect(border(0.5, 0.015)).toBe(true);
+    expect(border(0.042, 0.5)).toBe(false);
+    // With no border, the whole card's own corners take none.
+    expect(coversPoint('regular', 0.001, 0.001, false, 'sv', false)).toBe(false);
+  });
+
   it('steps the stage shape in at the top-left, where the evolution box sits', () => {
     // Inside the regular window but within the stage cut-out.
     expect(coversPoint('regular', 0.2, 0.12, false)).toBe(true);

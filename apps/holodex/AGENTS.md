@@ -439,6 +439,13 @@ adds everything outside the `borders` rect to the region, `uBorder` in
 `coversPoint`'s `border` its twin. Toggling `uBorder` on a live card
 changes the border alone (frame, art and text box by exactly 0), and the
 reference's own Raichu darkens its border under the shine the same way.
+That rect's corners are **rounded** as the card face's own
+(`regions.ts#BORDER_ROUND`: 1.1% of the width by 1% of the height,
+`uBorderRound`, zeros for none): the same two masks fill the wedge each
+rounded corner of the face leaves inside the rect's square one, and a
+square ring painted a square notch of foil into the face at every corner
+(Raichu's, 2026-09-26). `compile.test.ts` walks each corner on a grid fine
+enough to land in the wedge, which the card-wide one never does.
 
 Every effect writes the **scan's own alpha** (`cardAlpha()` in
 `sources.ts`), never an opaque 1.0: a TCGdex scan is transparent outside
