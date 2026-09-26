@@ -598,9 +598,17 @@ the strip, and `coverage()`'s `inkAt()` keeps the foil off it. Over the
 strips the masks agree with it on 83.4%, from 64.3% with no cut, every card
 by 13 points or more; a plain luminance cut took the dark background behind
 Charmander's and Psyduck's titles with them, worse than no cut. A scan whose
-pixels cannot be read (a tainted canvas) keeps its title foiled. The type's
-symbol, which the illustration rares' masks leave out too, is no letter and
-keeps its foil but for its dark glyph. A letter can be as short as an i's
+pixels cannot be read (a tainted canvas) keeps its letters foiled. The
+type's symbol at the title's right end is no letter, but a circle at the
+same place on every one of the 34 masks, so it is painted into the same
+texture rather than read (`InkRead.painted`, `ink.ts#paintInk`), and the
+title's read stops 2 px past the HP number, short of it: an illustration
+rare's masks leave the whole symbol out (`SYMBOL_DISC`), the others' its
+white ring alone, 2.4 px wide, foiling the disc inside, glyph and all
+(`SYMBOL_RING`, `hole` 0.905), where reading the glyph as a letter had
+bared it. Over the symbol's corner the masks now agree on 84.0% and 84.9%,
+from 47.6% and 65.8%; a painted shape needs no pixels, so it stands where a
+scan cannot be read. A letter can be as short as an i's
 dot (`INK.minHeight` 4 px of a 600 px scan), which a trainer's name, with no
 outline to grow over its gap, would otherwise leave foiled.
 

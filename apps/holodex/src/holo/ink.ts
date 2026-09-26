@@ -136,3 +136,30 @@ export function findInk(
   }
   return ink;
 }
+
+/** A box in a mask's own pixels. */
+export interface PixelBox {
+  x0: number;
+  y0: number;
+  w: number;
+  h: number;
+}
+
+/**
+ * Inks the ellipse `box` holds into `ink`, a mask `width` wide (255 where
+ * inked), less the ellipse `hole` of its size at its middle, for a ring: a
+ * shape the card prints at a fixed place, which is painted rather than read.
+ */
+export function paintInk(ink: Uint8Array, width: number, box: PixelBox, hole = 0): void {
+  const height = ink.length / width;
+  const [rx, ry] = [box.w / 2, box.h / 2];
+  const [cx, cy] = [box.x0 + rx, box.y0 + ry];
+  for (let y = Math.max(0, box.y0); y < Math.min(height, box.y0 + box.h); y++) {
+    for (let x = Math.max(0, box.x0); x < Math.min(width, box.x0 + box.w); x++) {
+      const ex = (x + 0.5 - cx) / rx;
+      const ey = (y + 0.5 - cy) / ry;
+      const s = ex * ex + ey * ey;
+      if (s < 1 && s >= hole * hole) ink[y * width + x] = 255;
+    }
+  }
+}

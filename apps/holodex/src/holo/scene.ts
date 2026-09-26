@@ -16,7 +16,7 @@ import {
 } from 'three';
 import { firstLoaded, textureUrls } from '../lib/asset-proxy';
 import { EFFECTS } from './effects';
-import { findInk } from './ink';
+import { findInk, paintInk } from './ink';
 import { createMaterial, NO_INK } from './material';
 import {
   BORDER_ROUND,
@@ -214,11 +214,12 @@ export function inkRectUniform(
 }
 
 /**
- * The card's printed ink over the strip its reads span, found on its own
- * scan (ink.ts), each read with its own darkness, as the texture coverage()
- * reads it in: the strip's rows from the top, one byte a texel. Null where
- * the scan's pixels cannot be read, a tainted canvas or none at all, which
- * leaves the ink with its foil.
+ * The card's printed ink over the strip its reads span, as the texture
+ * coverage() reads it in (the strip's rows from the top, one byte a texel):
+ * the frame's painted shapes, and the letters found on the card's own scan
+ * (ink.ts), each read with its own darkness. A scan whose pixels cannot be
+ * read (a tainted canvas) keeps its letters foiled; null for an image with no
+ * size at all.
  */
 function inkTexture(card: Texture, strip: CutBox, reads: readonly InkRead[]): DataTexture | null {
   const image = card.image as (CanvasImageSource & { width: number; height: number }) | null;
@@ -236,11 +237,18 @@ function inkTexture(card: Texture, strip: CutBox, reads: readonly InkRead[]): Da
   };
   const span = pixelsOf(strip);
   const ink = new Uint8Array(span.w * span.h);
+  // the frame's own shapes first: they need no pixels read
+  for (const read of reads) {
+    if (!read.painted) continue;
+    const r = pixelsOf(read.box);
+    paintInk(ink, span.w, { ...r, x0: r.x0 - span.x0, y0: r.y0 - span.y0 }, read.painted.hole);
+  }
   try {
     const canvas = document.createElement('canvas');
     const context = canvas.getContext('2d', { willReadFrequently: true });
-    if (!context) return null;
+    if (!context) throw new Error('no 2d context');
     for (const read of reads) {
+      if (read.painted) continue;
       const r = pixelsOf(read.box);
       canvas.width = r.w;
       canvas.height = r.h;
@@ -255,16 +263,16 @@ function inkTexture(card: Texture, strip: CutBox, reads: readonly InkRead[]): Da
         }
       }
     }
-    const texture = new DataTexture(ink, span.w, span.h, RedFormat);
-    // rows of one byte, as wide as the strip happens to be
-    texture.unpackAlignment = 1;
-    texture.minFilter = LinearFilter;
-    texture.magFilter = LinearFilter;
-    texture.needsUpdate = true;
-    return texture;
   } catch {
-    return null;
+    // pixels that cannot be read leave the letters foiled; the painted shapes stand
   }
+  const texture = new DataTexture(ink, span.w, span.h, RedFormat);
+  // rows of one byte, as wide as the strip happens to be
+  texture.unpackAlignment = 1;
+  texture.minFilter = LinearFilter;
+  texture.magFilter = LinearFilter;
+  texture.needsUpdate = true;
+  return texture;
 }
 
 export function createHoloScene(canvas: HTMLCanvasElement): HoloScene {

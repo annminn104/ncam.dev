@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { findInk, type Pixels } from './ink';
+import { findInk, paintInk, type Pixels } from './ink';
 
 /** A strip of one grey, painted on with filled rects, [x, y, w, h, grey]. */
 function strip(width: number, height: number, background: number, rects: number[][]): Pixels {
@@ -97,5 +97,29 @@ describe('findInk', () => {
     expect(at(ink, 120, 50, 30)).toBe(255);
     const speck = strip(120, 60, 128, letter(40, 20, 6, 6, 2));
     expect(findInk(speck, 2).every((v) => v === 0)).toBe(true);
+  });
+});
+
+describe('paintInk', () => {
+  it('inks the ellipse a box holds, and none of the box’s corners', () => {
+    const ink = new Uint8Array(40 * 30);
+    paintInk(ink, 40, { x0: 10, y0: 5, w: 20, h: 16 });
+    expect(at(ink, 40, 20, 13)).toBe(255);
+    expect(at(ink, 40, 11, 6)).toBe(0);
+    expect(at(ink, 40, 5, 13)).toBe(0);
+  });
+
+  it('leaves a ring’s hole bare, the ink its rim alone', () => {
+    const ink = new Uint8Array(40 * 30);
+    paintInk(ink, 40, { x0: 10, y0: 5, w: 20, h: 16 }, 0.8);
+    expect(at(ink, 40, 20, 13)).toBe(0);
+    expect(at(ink, 40, 10, 13)).toBe(255);
+    expect(at(ink, 40, 20, 5)).toBe(255);
+  });
+
+  it('stays within the mask where the box runs off it', () => {
+    const ink = new Uint8Array(20 * 10);
+    expect(() => paintInk(ink, 20, { x0: 15, y0: 5, w: 20, h: 16 })).not.toThrow();
+    expect(ink.length).toBe(200);
   });
 });

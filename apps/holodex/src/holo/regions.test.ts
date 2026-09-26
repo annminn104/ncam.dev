@@ -574,10 +574,9 @@ describe('coversPoint', () => {
         // the tab's letters, where the frames foil the tab round them
         expect(coversPoint(shape, 0.08, 0.045, false, layout, false, true), layout).toBe(false);
         expect(coversPoint(shape, 0.08, 0.045, false, layout, false, false), layout).toBe(true);
-        // two reads, the title's and the tab's, whose grey letters read lighter
+        // the title's letters, and the tab's, whose grey reads lighter
         const reads = inkReadsFor(shape, layout);
-        expect(reads, layout).toHaveLength(2);
-        const [title, tab] = reads;
+        const [title, tab] = reads.filter((r) => !r.painted);
         expect(tab.dark ?? 0).toBeGreaterThan(title.dark ?? 80);
         // the strip the texture spans holds both
         const strip = inkStripFor(shape, layout)!;
@@ -591,6 +590,28 @@ describe('coversPoint', () => {
     // a trainer reads its name alone
     expect(inkReadsFor('trainer', 'sv-ultra')).toHaveLength(1);
     expect(inkReadsFor('regular', 'sv')).toEqual([]);
+  });
+
+  it('paints a full art Pokémon’s type symbol as the masks leave it out, whole or its ring', () => {
+    const symbol = (layout: CardLayout, shape: 'regular' | 'stage') => {
+      const painted = inkReadsFor(shape, layout).filter((r) => r.painted);
+      expect(painted, layout).toHaveLength(1);
+      return painted[0];
+    };
+    for (const shape of ['regular', 'stage'] as const) {
+      // an illustration rare's, whole
+      expect(symbol('sv-illustration', shape).painted?.hole ?? 0).toBe(0);
+      // the others', its white ring alone, the disc inside it foiled
+      for (const layout of ['sv-special-illustration', 'sv-ultra-ex', 'sv-hyper-ex'] as const) {
+        const hole = symbol(layout, shape).painted?.hole ?? 0;
+        expect(hole, layout).toBeGreaterThan(0.85);
+        expect(hole, layout).toBeLessThan(0.95);
+        expect(symbol(layout, shape).box).toEqual(symbol('sv-illustration', shape).box);
+      }
+    }
+    // the title's letters stop short of it, so its glyph is not read as a letter
+    const [title] = inkReadsFor('regular', 'sv-ultra-ex');
+    expect(title.box.x1).toBeLessThan(symbol('sv-ultra-ex', 'regular').box.x0);
   });
 
   it('cuts a full art trainer’s printed name, on the panel under its TRAINER banner', () => {
