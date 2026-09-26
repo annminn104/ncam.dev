@@ -56,6 +56,7 @@ export type CardLayout =
   | 'swsh-gallery-v'
   | 'swsh-gallery-vmax'
   | 'swsh-galarian-trainer'
+  | 'swsh-gallery-holo'
   | 'full-card'
   | 'other';
 
@@ -94,11 +95,17 @@ interface LayoutClip {
 const box = (x0: number, y0: number, x1: number, y1: number): CutBox => ({ x0, y0, x1, y1 });
 
 /**
- * A Sword & Shield V's dark bars, the full art's and the gallery's alike:
- * its weakness, resistance and retreat bar, and the V rule box below it,
- * which runs into the black at the card's bottom right.
+ * A Sword & Shield Pokémon's weakness, resistance and retreat bar, in the
+ * frame the galleries and the full arts share.
  */
-const SWSH_V_BARS: readonly CutBox[] = [box(0.04, 0.857, 1, 0.89), box(0.375, 0.905, 1, 0.965)];
+const SWSH_WEAKNESS_BAR = box(0.04, 0.857, 1, 0.89);
+
+/**
+ * A Sword & Shield V's dark bars, the full art's and the gallery's alike:
+ * the weakness bar, and the V rule box below it, which runs into the black at
+ * the card's bottom right.
+ */
+const SWSH_V_BARS: readonly CutBox[] = [SWSH_WEAKNESS_BAR, box(0.375, 0.905, 1, 0.965)];
 
 /**
  * A Sword & Shield full-art Supporter's rule box, the orange one at its
@@ -379,6 +386,21 @@ const LAYOUTS: Readonly<Record<CardLayout, LayoutClip>> = {
     stage: [],
     trainer: { top: 0, right: 0, bottom: 0, left: 0 },
     trainerCuts: [SWSH_SUPPORTER_RULE],
+  },
+  // A gallery holo, a Trainer Gallery or Galarian Gallery Pokémon that is no
+  // V: the reference clips its shine to --clip-borders and masks it with the
+  // card's own mask besides, and all 80 masks (2026-09-26), solid where they
+  // foil, leave out the border that clip does and the weakness bar (90% and
+  // 91% bare), a Basic's BASIC tab, and an evolution's picture of what it
+  // evolves from (99%) and the band beside it that names it. So the window is
+  // --clip-borders' rect, less the tab on a Basic and the picture and band on
+  // an evolution, measured off the masks' average (the tab's round end at 17%,
+  // the picture's frame to 16% across and 15.8% down, the band's slanted end
+  // at 57%), and the weakness bar either way.
+  'swsh-gallery-holo': {
+    art: { top: 0.028, right: 0.04, bottom: 0.028, left: 0.04 },
+    regular: [box(0, 0.043, 0.17, 0.073), SWSH_WEAKNESS_BAR],
+    stage: [box(0, 0.043, 0.16, 0.158), box(0.15, 0.093, 0.57, 0.12), SWSH_WEAKNESS_BAR],
   },
   // The whole card, whatever it is: a Mega Hyper Rare, whose rule box is
   // gold like the rest of it, Pocket's Crown and Two Star, and an Ultra Rare

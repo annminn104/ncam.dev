@@ -30,6 +30,7 @@ const LAYOUTS: CardLayout[] = [
   'swsh-gallery-v',
   'swsh-gallery-vmax',
   'swsh-galarian-trainer',
+  'swsh-gallery-holo',
   'full-card',
   'other',
 ];
@@ -216,6 +217,35 @@ describe('cutsFor', () => {
     // A VSTAR or an energy on the Supporters' frame: the whole card.
     expect(covers('regular', 0.5, 0.873, 'swsh-ultra')).toBe(true);
     expect(covers('regular', 0.5, 0.045, 'swsh-ultra')).toBe(true);
+  });
+
+  it('foils a gallery holo inside the border but its tab or picture and band, and weakness bar', () => {
+    const covers = (shape: ClipShape, x: number, y: number) =>
+      coversPoint(shape, x, y, false, 'swsh-gallery-holo');
+    expect(regionFor('regular', 'swsh-gallery-holo')).toEqual(regionFor('borders'));
+    for (const shape of ['regular', 'stage'] as const) {
+      // The border, as --clip-borders, and the weakness bar.
+      expect(covers(shape, 0.02, 0.5), shape).toBe(false);
+      expect(covers(shape, 0.5, 0.873), shape).toBe(false);
+      // The name bar, the art, the strip under the bar and the corner below.
+      for (const [x, y] of [
+        [0.4, 0.06],
+        [0.5, 0.5],
+        [0.5, 0.897],
+        [0.2, 0.93],
+      ]) {
+        expect(covers(shape, x, y), `${shape} ${x}, ${y}`).toBe(true);
+      }
+    }
+    // A Basic's BASIC tab; an evolution's picture of what it evolves from,
+    // and the band that names it.
+    expect(covers('regular', 0.1, 0.06)).toBe(false);
+    expect(covers('regular', 0.1, 0.12)).toBe(true);
+    expect(covers('regular', 0.3, 0.105)).toBe(true);
+    expect(covers('stage', 0.1, 0.06)).toBe(false);
+    expect(covers('stage', 0.1, 0.12)).toBe(false);
+    expect(covers('stage', 0.3, 0.105)).toBe(false);
+    expect(covers('stage', 0.3, 0.14)).toBe(true);
   });
 
   it('foils a Galarian Gallery Supporter’s TRAINER header, and cuts its rule box alone', () => {

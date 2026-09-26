@@ -358,22 +358,24 @@ const V_FRAME: Partial<Record<CardLayout, CardLayout>> = {
   'swsh-ultra': 'swsh-ultra-v',
 };
 
-/** A Pokémon VMAX, by its name, as TCGdex spells every one ("Mimikyu VMAX"). */
+/** A Pokémon VMAX or VSTAR, by its name, as TCGdex spells every one ("Mimikyu VMAX"). */
 const VMAX_NAME = / VMAX$/;
+const VSTAR_NAME = / VSTAR$/;
 
 /**
- * A gallery V's or VMAX's frame, by its name and card number, whatever TCGdex
- * files it as (Ultra Rare, or swsh12tg's Holo Rare V and VMAX), and a
- * Galarian Gallery trainer's. A V's is a full-art V's, whose bars its masks
- * leave out too (all 38, 2026-09-26), inside the black border a Trainer
- * Gallery prints it in (`swsh-gallery-v`), or over the silver border of the
- * Galarian Gallery's, which takes foil (`swsh-ultra-v`). A VMAX's, in either
- * gallery, is the whole card less its header and those bars
- * (`swsh-gallery-vmax`, all 18). A Galarian Gallery trainer, every one an
- * Ultra Rare Supporter, is the whole card less its rule box
- * (`swsh-galarian-trainer`), as its masks foil the TRAINER header a Trainer
- * Gallery Supporter's leave out. Any other card, in a gallery or not, has
- * none, and so has a card whose category the caller left out.
+ * A gallery card's frame, by its name, category and card number, whatever
+ * TCGdex files it as (Ultra Rare, or swsh12tg's Holo Rare V and VMAX). A V's
+ * is a full-art V's, whose bars its masks leave out too (all 38, 2026-09-26),
+ * inside the black border a Trainer Gallery prints it in (`swsh-gallery-v`),
+ * or over the silver border of the Galarian Gallery's, which takes foil
+ * (`swsh-ultra-v`). A VMAX's, in either gallery, is the whole card less its
+ * header and those bars (`swsh-gallery-vmax`, all 18). A Galarian Gallery
+ * trainer, every one an Ultra Rare Supporter, is the whole card less its rule
+ * box (`swsh-galarian-trainer`), as its masks foil the TRAINER header a
+ * Trainer Gallery Supporter's leave out. Any other gallery Pokémon but a
+ * VSTAR is a gallery holo, whose window is the border rect less what its
+ * masks leave out (`swsh-gallery-holo`, all 80). Any other card, in a gallery
+ * or not, has none, and so has a card whose category the caller left out.
  */
 function galleryFrame(
   card: Pick<Card, 'localId' | 'name'> & Partial<Pick<Card, 'category'>>,
@@ -382,6 +384,7 @@ function galleryFrame(
   if (VMAX_NAME.test(card.name)) return 'swsh-gallery-vmax';
   if (V_NAME.test(card.name)) return /^tg/i.test(card.localId) ? 'swsh-gallery-v' : 'swsh-ultra-v';
   if (card.category === 'Trainer' && /^gg/i.test(card.localId)) return 'swsh-galarian-trainer';
+  if (card.category === 'Pokemon' && !VSTAR_NAME.test(card.name)) return 'swsh-gallery-holo';
   return undefined;
 }
 
@@ -571,7 +574,10 @@ const FULL_ART: ReadonlySet<EffectId> = new Set<EffectId>([
  * the border already (regions.ts's `sv-illustration` and
  * `pocket-illustration`, its rarity's frames), and the rules below give it
  * that window less the stage tab, and an evolution's picture and band, which
- * the border rect foiled.
+ * the border rect foiled. A gallery holo Pokémon is not either: its CSS clips
+ * it to the border, but its masks leave more out, so it takes its gallery
+ * frame's window, the border rect less those (clipShape, galleryFrame); a
+ * gallery trainer on it, of which TCGdex has none, keeps the border rect.
  */
 const BORDERS: ReadonlySet<EffectId> = new Set<EffectId>(['radiant-holo', 'trainer-gallery-holo']);
 
@@ -652,7 +658,7 @@ function isTrainerGallery(localId: string | undefined): boolean {
 const GALLERY_V_FAMILY: ReadonlyArray<readonly [RegExp, EffectId]> = [
   [V_NAME, 'trainer-gallery-v-regular'],
   [VMAX_NAME, 'trainer-gallery-v-max'],
-  [/ VSTAR$/, 'v-star'],
+  [VSTAR_NAME, 'v-star'],
 ];
 
 /** The effect a gallery card takes, from the one its rarity gives it. */
@@ -679,16 +685,21 @@ function galleryEffect(base: EffectId, name: string): EffectId {
 }
 
 function clipShape(effect: EffectId, card: Card): ClipShape {
-  // Order matters: radiant and the gallery effects clip to the border, and
-  // would otherwise be claimed by the full-art or trainer rules below. Every
-  // reverse foil falls through to the card's own region, which selectHolo
-  // inverts.
+  const evolution = card.stage === 'Stage1' || card.stage === 'Stage2';
+  // A gallery holo Pokémon takes its gallery frame's window (galleryFrame),
+  // the border rect less what its masks leave out, by its stage.
+  if (effect === 'trainer-gallery-holo' && card.category === 'Pokemon') {
+    return evolution ? 'stage' : 'regular';
+  }
+  // Order matters: radiant and the gallery holo on anything else clip to the
+  // border, and would otherwise be claimed by the full-art or trainer rules
+  // below. Every reverse foil falls through to the card's own region, which
+  // selectHolo inverts.
   if (BORDERS.has(effect)) return 'borders';
   if (ART_WINDOW.has(effect)) return 'regular';
   if (FULL_ART.has(effect)) return 'full';
   if (card.category === 'Trainer') return 'trainer';
-  if (card.stage === 'Stage1' || card.stage === 'Stage2') return 'stage';
-  return 'regular';
+  return evolution ? 'stage' : 'regular';
 }
 
 /**

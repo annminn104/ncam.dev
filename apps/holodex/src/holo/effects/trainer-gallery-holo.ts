@@ -46,7 +46,12 @@ const HALFWAY: [PointerDriven, PointerDriven] = [
  * colour-dodged inside the card's borders; its `:before` is switched off. The
  * glare is ported too, soft-lit with no filter, beneath the shine
  * (legacy-glare.ts). trainer-gallery-v-regular and trainer-gallery-v-max
- * spread this effect but paint glares of their own.
+ * spread this effect but paint glares of their own. The reference clips the
+ * shine to the borders (--clip-borders) and masks it with the card's own
+ * mask besides; select.ts's clip region stands in for both on a Pokémon: the
+ * border rect less the weakness bar, and a Basic's tab or an evolution's
+ * picture and band, which its masks leave out (regions.ts's
+ * `swsh-gallery-holo`).
  */
 export const trainerGalleryHolo: Effect = {
   id: 'trainer-gallery-holo',

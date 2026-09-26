@@ -301,10 +301,12 @@ but never silently: a coverage test asserts every one of the 42 rarities has
 a table entry and that the seven override-only effects (the three reverse
 foils and the four gallery variants) never appear as a table value. `selectHolo` also
 picks the card's `ClipShape` (`clipShape()` in the same file) from the
-resolved effect and the card's `category`/`stage` — order matters, since `radiant-holo` and
-`trainer-gallery-holo` must claim `borders`, and `amazing-rare` the art
+resolved effect and the card's `category`/`stage` — order matters, since `radiant-holo`
+must claim `borders`, and `amazing-rare` the art
 window (`regular`, whatever the card's stage, as its unmasked CSS sets
 `--clip`), before the full-art and trainer rules would otherwise take them.
+`trainer-gallery-holo` takes `regular` or `stage` on a Pokémon, by its
+stage, on a gallery holo's frame (below), and `borders` on anything else.
 `illustration-rare` takes `regular` or `stage` by the card's stage, on its
 rarity's own full-art frame (below), and `trainer-gallery-v-regular` and
 `trainer-gallery-v-max` `regular` on a gallery V's or VMAX's (below). The
@@ -601,6 +603,26 @@ poke-holo.simey.me all three compute `none` on the gallery's Mew VMAX
 pixels that mask leaves bare by 4.42 on average (20.15 where it foils): the
 shine lights them. Its masks are no evidence for its region, then, as
 they are for every other full art's.
+
+A gallery holo, the galleries' Pokémon that are no V (TCGdex's `Rare`, and
+`swsh12tg`'s `Holo Rare`: 80 cards), is clipped by `trainer-gallery-holo.css`
+to `--clip-borders` and masked with its card's mask as well (the shine and
+both pseudo-elements compute the mask on poke-holo.simey.me's Charizard,
+and hiding the shine moves the pixels it leaves bare by 0.45, the ones it
+foils by 10.46). Its masks (`…_foil_holo_rainbow_2x.webp`) are solid where
+they foil, and all 80 leave out, besides the border the clip takes, the
+weakness bar (90% and 91% bare), a Basic's BASIC tab, and an evolution's
+picture of what it evolves from (99%) and the "evolves from" band beside
+it. So on a Pokémon it takes its stage's window of a frame of its own
+(`swsh-gallery-holo`, by `galleryFrame`): the border rect less the tab and
+the bar on a Basic, the picture, the band and the bar on an evolution,
+each measured off the masks' average. Over the frame (the border ring, the
+top 16% and the bottom 16%) the masks agree with it on 85.3% of the
+pixels, where the border rect agreed on 76.0% (the Trainer Galleries' Basics
+82.1% from 75.2%, their evolutions 83.6% from 71.6%, the Galarian Gallery's
+88.8% from 82.2% and 86.9% from 75.3%); over the whole card on 67.7%, from
+64.1%. A gallery trainer on it, of which TCGdex has none, keeps the border
+rect.
 
 **The effect DSL and the generator.** Each of the 30 effect files under
 `holo/effects/` (e.g. `cosmos-holo.ts`) is a declarative `Effect`

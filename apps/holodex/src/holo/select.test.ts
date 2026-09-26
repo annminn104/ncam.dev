@@ -414,9 +414,38 @@ describe('selectHolo — reverse holo override', () => {
 });
 
 describe('selectHolo — clip shape', () => {
-  it('clips radiant and gallery cards to the borders', () => {
+  it('clips radiant to the borders, and a gallery holo to its frame inside them', () => {
     expect(selectHolo(card({ rarity: 'Radiant Rare' })).shape).toBe('borders');
-    expect(selectHolo(card({ localId: 'TG20', rarity: 'Holo Rare' })).shape).toBe('borders');
+    const gallery = selectHolo(card({ localId: 'TG20', rarity: 'Holo Rare' }));
+    expect([gallery.effect, gallery.shape, gallery.layout]).toEqual([
+      'trainer-gallery-holo',
+      'regular',
+      'swsh-gallery-holo',
+    ]);
+  });
+
+  it('frames a gallery holo by its stage: the tab, or the picture and band, and the weakness bar', () => {
+    // All 80 gallery holos' masks (2026-09-26) leave out the border, which
+    // their CSS's --clip-borders cuts too, and the weakness bar; a Basic's
+    // its BASIC tab, an evolution's its picture and "evolves from" band.
+    const pikachu = selectHolo(
+      card({
+        id: 'swsh11tg-TG05',
+        localId: 'TG05',
+        name: 'Pikachu',
+        rarity: 'Rare',
+        stage: 'Basic',
+      }),
+    );
+    expect([pikachu.shape, pikachu.layout]).toEqual(['regular', 'swsh-gallery-holo']);
+    for (const id of ['swsh10tg-TG01', 'swsh11tg-TG03', 'swsh12tg-TG05']) {
+      const s = selectHolo(CAPTURED_CARDS[id]);
+      expect([s.effect, s.shape, s.layout], id).toEqual([
+        'trainer-gallery-holo',
+        'stage',
+        'swsh-gallery-holo',
+      ]);
+    }
   });
 
   it('gives a full art trainer its full-art frame: the whole card but its header and rule box', () => {
@@ -1139,9 +1168,10 @@ describe('selectHolo — clip shape of the Scarlet & Violet effects', () => {
     ]);
   });
 
-  it('still clips radiant and the trainer gallery to the border rect', () => {
+  it('still clips radiant to the border rect, and a gallery holo to its frame inside it', () => {
     expect(selectHolo(card({ rarity: 'Radiant Rare' })).shape).toBe('borders');
-    expect(selectHolo(card({ localId: 'TG05', rarity: 'Holo Rare' })).shape).toBe('borders');
+    const gallery = selectHolo(card({ localId: 'TG05', rarity: 'Holo Rare' }));
+    expect([gallery.shape, gallery.layout]).toEqual(['regular', 'swsh-gallery-holo']);
   });
 });
 
