@@ -206,6 +206,19 @@ const SV_BAND = slanted(0, 0.093, 0.685, 0.1155, -0.031);
 const SV_JUNCTION = slanted(0.16, 0.1155, 0.1785, 0.131, -0.0085);
 
 /**
+ * A Pokémon TCG Pocket evolution's "evolves from" band, the regular frame's
+ * and the One Star's alike: 9.15% to 11.15% of the card down, its silver end
+ * leaning from 57.2% across at 9.6% to 55.2% at 11% (the same on both frames'
+ * averaged scans, thirteen regular and eleven One Star evolutions of Genetic
+ * Apex, to a pixel), and 0.2% wide of it. No mask shows a Pocket card, so the
+ * scans are all there is. The boxes before it (2026-09-26) ended square,
+ * taking the art past the slant, and reached 0.65% and 0.85% of the card
+ * below the band; the One Star's top bevel still pokes 0.5% past the slant
+ * for a pixel or two.
+ */
+const POCKET_BAND = slanted(0, 0.0915, 0.5796, 0.1115, -0.0276);
+
+/**
  * A Scarlet & Violet full art Pokémon's title strip, from the stage tab to
  * its type's symbol, over the name, HP and number (its right end 2 px past
  * the number's, 0.4% short of the symbol's white ring): every one of 151's masks
@@ -367,11 +380,12 @@ const LAYOUTS: Readonly<Record<CardLayout, LayoutClip>> = {
     stage: [SV_BAND, SV_RING, SV_JUNCTION],
     trainer: { top: 0.138, right: 0.077, bottom: 0.48, left: 0.08 },
   },
-  // Pokémon TCG Pocket: the same window, and an evolution's octagon.
+  // Pokémon TCG Pocket: the same window, and an evolution's band
+  // (POCKET_BAND) and octagon.
   pocket: {
     art: { top: 0.097, right: 0.075, bottom: 0.528, left: 0.078 },
     regular: [],
-    stage: [box(0, 0, 0.57, 0.118), box(0, 0, 0.16, 0.175)],
+    stage: [POCKET_BAND, box(0, 0, 0.16, 0.175)],
   },
   // The ex of Scarlet & Violet, Mega and Pocket, Tera and Mega ex included:
   // the illustration runs border to border down to the silver bar over the
@@ -401,11 +415,11 @@ const LAYOUTS: Readonly<Record<CardLayout, LayoutClip>> = {
     ink: POKEMON_INK,
   },
   // A Pocket One Star, the same full art: its patterned border, its tab, an
-  // evolution's octagon and band.
+  // evolution's octagon and band, the regular frame's (POCKET_BAND).
   'pocket-illustration': {
     art: { top: 0.033, right: 0.04, bottom: 0.03, left: 0.042 },
     regular: [box(0, 0, 0.165, 0.083)],
-    stage: [box(0, 0, 0.17, 0.17), box(0.15, 0.093, 0.6, 0.12)],
+    stage: [box(0, 0, 0.17, 0.17), POCKET_BAND],
   },
   // A Special illustration rare, ex or Supporter: the reference has no
   // clip-path for it, only its per-card masks, and on all seven of 151's they

@@ -629,6 +629,22 @@ describe('coversPoint', () => {
     }
   });
 
+  it('cuts a Pocket evolution’s band to its slanted end and underside, no art past them', () => {
+    for (const layout of ['pocket', 'pocket-illustration'] as const) {
+      const covers = (x: number, y: number) => coversPoint('stage', x, y, false, layout);
+      // the band itself
+      expect(covers(0.4, 0.1), layout).toBe(false);
+      expect(covers(0.57, 0.0975), layout).toBe(false);
+      // under it, art the boxes took down to 11.8% and 12%
+      expect(covers(0.4, 0.114), layout).toBe(true);
+      // past its slant near the bottom, where their square ends reached
+      expect(covers(0.56, 0.108), layout).toBe(true);
+    }
+    // one band for both frames, whose ends lean alike
+    expect(cutsFor('stage', 'pocket')[0]).toEqual(cutsFor('stage', 'pocket-illustration')[1]);
+    expect(cutsFor('stage', 'pocket')[0].slant).toBeLessThan(0);
+  });
+
   it('lays an evolution’s round picture over the border as well, where a banner’s box stops', () => {
     const covers = (x: number, y: number) => coversPoint('stage', x, y, false, 'sv', true);
     // The ring where it overlaps the silver border: bare, as on the masks.

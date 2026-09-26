@@ -432,7 +432,11 @@ nothing 1.55% lower, which the band's box hid while it reached too low:
 bottom corner sits on the ring's, so it leaves no corner of its own. Over
 that corner of the art the masks agree on 96.9% and 98.0%, from 94.5% and
 93.2%, and none of the rim takes foil.
-Pocket's (`pocket`) is the same window with an octagon. `other` (Pokémon
+Pocket's (`pocket`) is the same window with an octagon, and its band, the
+One Star's too, is cut to its own slanted end and underside (`POCKET_BAND`,
+off the averaged edges of 24 Genetic Apex evolutions' scans, no mask showing
+a Pocket card), where the square boxes took the art past the slant and
+under the band (2026-09-26). `other` (Pokémon
 Rumble, the energies, the sets without art) keeps the reference's clip and
 the one step-cut every evolution had before. A LEGEND half, all art, keeps
 its foil to the border. `coversPoint(shape, x, y, invert, layout)` is the tested twin
