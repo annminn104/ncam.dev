@@ -489,7 +489,7 @@ describe('compileEffect', () => {
  * shader mutates what runs here.
  */
 function transpileCoverage(glsl: string) {
-  const inBox = /float inBox\(vec2 uv, vec4 box\) \{\n([\s\S]*?)\n\}/.exec(glsl)?.[1];
+  const inBox = /float inBox\(vec2 uv, vec4 box, float oval\) \{\n([\s\S]*?)\n\}/.exec(glsl)?.[1];
   const body = /float coverage\(vec2 uv\) \{\n([\s\S]*?)\n\}/.exec(glsl)?.[1];
   if (!inBox || !body) {
     throw new Error('coverage() no longer has the shape this translation assumes');
@@ -510,6 +510,7 @@ function transpileCoverage(glsl: string) {
       .replace(/\buCutA\b/g, 'cutA')
       .replace(/\buCutB\b/g, 'cutB')
       .replace(/\buCutC\b/g, 'cutC')
+      .replace(/\buCutOval\b/g, 'cutOval')
       .replace(/uBorderRound\.x/g, 'ringRound.x')
       .replace(/uBorderRound\.y/g, 'ringRound.y')
       .replace(/uBorder\.x/g, 'ring.top')
@@ -517,7 +518,7 @@ function transpileCoverage(glsl: string) {
       .replace(/uBorder\.z/g, 'ring.bottom')
       .replace(/uBorder\.w/g, 'ring.left')
       .replace(/uInvert/g, 'invert');
-  const js = `const inBox = (uv, box) => {\n${toJS(inBox)}\n};\n${toJS(body)}`;
+  const js = `const inBox = (uv, box, oval) => {\n${toJS(inBox)}\n};\n${toJS(body)}`;
 
   // A translation that quietly left GLSL behind would be a twin all over
   // again, so fail loudly rather than evaluate something half-converted.
@@ -532,6 +533,7 @@ function transpileCoverage(glsl: string) {
     'cutA',
     'cutB',
     'cutC',
+    'cutOval',
     'ring',
     'ringRound',
     'invert',
@@ -545,6 +547,7 @@ function transpileCoverage(glsl: string) {
     cutA: CutBox,
     cutB: CutBox,
     cutC: CutBox,
+    cutOval: { x: number; y: number; z: number },
     ring: RegionRect,
     ringRound: { x: number; y: number },
     invert: number,
@@ -568,6 +571,8 @@ function transpileCoverage(glsl: string) {
     border = false,
   ) => {
     const [cutA = none, cutB = none, cutC = none] = cutsFor(shape, layout);
+    // 1 where a cut is the ellipse its box holds (scene.ts's cutOvalUniform)
+    const cutOval = { x: cutA.oval ? 1 : 0, y: cutB.oval ? 1 : 0, z: cutC.oval ? 1 : 0 };
     const ring = border ? regionFor('borders') : noBorder;
     return compiled(
       { x, y },
@@ -575,6 +580,7 @@ function transpileCoverage(glsl: string) {
       cutA,
       cutB,
       cutC,
+      cutOval,
       ring,
       border ? BORDER_ROUND : noRound,
       invert ? 1 : 0,
@@ -699,6 +705,49 @@ describe('coverage() in GLSL agrees with coversPoint() in JS', () => {
     // Each corner's wedge is about 24 of these cells (1 - π/4 of the radii's
     // box), so a count well short of that walked nothing the rounding changed.
     expect(wedge).toBeGreaterThan(4 * 15);
+  });
+
+  it('cuts an oval as coversPoint() does, finely enough to see its curve, border and all', () => {
+    // An oval's box holds corners the oval gives back, too small for the
+    // card-wide grid to be sure of, so walk each oval's box on its own grid,
+    // a little past it all round, where it meets the art and the border.
+    const disagreements: string[] = [];
+    let ovals = 0;
+    let givenBack = 0;
+    for (const layout of layouts) {
+      for (const shape of ['regular', 'stage'] as const) {
+        for (const c of cutsFor(shape, layout)) {
+          if (!c.oval) continue;
+          ovals++;
+          for (let i = -6; i <= 46; i++) {
+            for (let j = -6; j <= 46; j++) {
+              const x = c.x0 + ((i + 0.37) / 40) * (c.x1 - c.x0);
+              const y = c.y0 + ((j + 0.37) / 40) * (c.y1 - c.y0);
+              // vUv never leaves the card
+              if (x < 0 || x > 1 || y < 0 || y > 1) continue;
+              for (const invert of [false, true]) {
+                for (const border of [false, true]) {
+                  const gpu = coverage(shape, x, y, invert, layout, border) > 0.5;
+                  const cpu = coversPoint(shape, x, y, invert, layout, border);
+                  if (gpu !== cpu) {
+                    disagreements.push(
+                      `${layout} ${shape}${invert ? '/inv' : ''}${border ? '/border' : ''} (${x.toFixed(4)}, ${y.toFixed(4)})`,
+                    );
+                  }
+                }
+              }
+              const inBoxOf = x >= c.x0 && x < c.x1 && y >= c.y0 && y < c.y1;
+              if (inBoxOf && coversPoint(shape, x, y, false, layout)) givenBack++;
+            }
+          }
+        }
+      }
+    }
+    expect(ovals).toBeGreaterThan(0);
+    expect(disagreements).toEqual([]);
+    // The art inside an oval's box but outside the oval: a box would have cut
+    // it, so none found here means the curve went untested.
+    expect(givenBack).toBeGreaterThan(40);
   });
 
   it('actually exercises both verdicts, so agreement is not vacuous', () => {

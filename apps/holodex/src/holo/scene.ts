@@ -146,6 +146,16 @@ export function cutUniform(box: CutBox | undefined): [number, number, number, nu
 }
 
 /**
+ * uCutOval for a region's cuts, in the order uCutA, uCutB and uCutC take
+ * them: 1 where a cut is the ellipse its box holds (CutBox.oval), 0 for a box
+ * or a cut the region lacks. Pure for the same reason as pointerToUV.
+ */
+export function cutOvalUniform(cuts: readonly CutBox[]): [number, number, number] {
+  const [a, b, c] = cuts;
+  return [a?.oval ? 1 : 0, b?.oval ? 1 : 0, c?.oval ? 1 : 0];
+}
+
+/**
  * uBorder for a selection (HoloSelection.border): the `borders` rect, top,
  * right, bottom, left, whose outside coverage() adds to the region, or all
  * zeros, a rect holding the whole card, which adds nothing. Pure for the same
@@ -281,10 +291,12 @@ export function createHoloScene(canvas: HTMLCanvasElement): HoloScene {
       // order its inBox() reads, and all zeros for a box the region lacks.
       const region = regionFor(selection.shape, selection.layout);
       material.uniforms.uClipRect.value.set(region.top, region.right, region.bottom, region.left);
-      const [cutA, cutB, cutC] = cutsFor(selection.shape, selection.layout);
+      const cuts = cutsFor(selection.shape, selection.layout);
+      const [cutA, cutB, cutC] = cuts;
       material.uniforms.uCutA.value.set(...cutUniform(cutA));
       material.uniforms.uCutB.value.set(...cutUniform(cutB));
       material.uniforms.uCutC.value.set(...cutUniform(cutC));
+      material.uniforms.uCutOval.value.set(...cutOvalUniform(cuts));
       material.uniforms.uBorder.value.set(...borderUniform(selection.border));
       material.uniforms.uBorderRound.value.set(...borderRoundUniform(selection.border));
       material.uniforms.uInvert.value = selection.invert ? 1 : 0;

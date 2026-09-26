@@ -478,6 +478,41 @@ describe('coversPoint', () => {
     expect(coversPoint('stage', 0.5, 0.01, true, 'sv', true)).toBe(false);
   });
 
+  it('cuts a Scarlet & Violet evolution’s round picture as the circle it is, not its box', () => {
+    // Beside the ring and under the band: art the picture's box took, which
+    // 151's masks foil (Raichu's, Beedrill's) right up to the ring.
+    expect(coversPoint('stage', 0.165, 0.18, false, 'sv')).toBe(true);
+    expect(coversPoint('stage', 0.15, 0.176, false, 'sv')).toBe(true);
+    // The ring and the picture inside it, out to the ring's outer edge.
+    expect(coversPoint('stage', 0.12, 0.16, false, 'sv')).toBe(false);
+    expect(coversPoint('stage', 0.088, 0.184, false, 'sv')).toBe(false);
+    expect(coversPoint('stage', 0.16, 0.135, false, 'sv')).toBe(false);
+    const [, picture] = cutsFor('stage', 'sv');
+    expect(picture.oval).toBe(true);
+    // Every other cut is a box.
+    for (const layout of LAYOUTS) {
+      for (const shape of SHAPES) {
+        for (const c of cutsFor(shape, layout)) {
+          if (c !== picture) expect(c.oval, `${layout} ${shape}`).toBeUndefined();
+        }
+      }
+    }
+  });
+
+  it('lays an evolution’s round picture over the border as well, where a banner’s box stops', () => {
+    const covers = (x: number, y: number) => coversPoint('stage', x, y, false, 'sv', true);
+    // The ring where it overlaps the silver border: bare, as on the masks.
+    expect(covers(0.02, 0.13)).toBe(false);
+    expect(covers(0.03, 0.1)).toBe(false);
+    // The border round it, and beside the band, whose box cuts the art alone.
+    expect(covers(0.005, 0.13)).toBe(true);
+    expect(covers(0.02, 0.25)).toBe(true);
+    expect(covers(0.02, 0.05)).toBe(true);
+    expect(covers(0.5, 0.015)).toBe(true);
+    // With no border to foil, nothing changes beside the art.
+    expect(coversPoint('stage', 0.005, 0.13, false, 'sv', false)).toBe(false);
+  });
+
   it('cuts a Scarlet & Violet evolution’s band and picture, and no more of its art', () => {
     // Under the band, right of the picture: art the old 57% by 16% step took.
     expect(coversPoint('stage', 0.3, 0.14, false, 'sv')).toBe(true);

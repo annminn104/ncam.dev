@@ -5,6 +5,7 @@ import { cutsFor } from './regions';
 import {
   borderRoundUniform,
   borderUniform,
+  cutOvalUniform,
   cutUniform,
   orientTexture,
   pointerFromCenter,
@@ -133,6 +134,17 @@ describe('cutUniform', () => {
 
 // setSelection's binding loop needs a live renderer, but what it binds where
 // is data, and pinned here against the shader source itself.
+describe('cutOvalUniform', () => {
+  it('flags each cut that is the ellipse its box holds, in the order coverage() reads them', () => {
+    expect(cutOvalUniform(cutsFor('stage', 'sv'))).toEqual([0, 1, 0]);
+  });
+
+  it('flags none on a layout whose cuts are all boxes, nor for a cut it lacks', () => {
+    expect(cutOvalUniform(cutsFor('stage', 'dp'))).toEqual([0, 0, 0]);
+    expect(cutOvalUniform(cutsFor('regular', 'swsh'))).toEqual([0, 0, 0]);
+  });
+});
+
 describe('SHARED_TEXTURE_UNIFORM', () => {
   it('feeds every sampler the shaders declare, but the card’s own, from exactly one texture', () => {
     // A sampler nothing feeds reads black on the GPU; a texture bound to a

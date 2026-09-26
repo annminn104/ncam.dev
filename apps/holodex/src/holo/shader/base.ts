@@ -26,6 +26,8 @@ uniform vec4 uClipRect;   // top, right, bottom, left, as fractions
 uniform vec4 uCutA;       // boxes cut out of it (regions.ts's cutsFor):
 uniform vec4 uCutB;       // x0, y0, x1, y1, all zeros for none
 uniform vec4 uCutC;
+uniform vec3 uCutOval;    // 1.0 where that cut is the ellipse its box holds,
+                          // an evolution's round picture (CutBox.oval)
 uniform vec4 uBorder;     // the border's inner edge, as uClipRect, when the
                           // foil covers the border too; all zeros for none
 uniform vec2 uBorderRound; // its corners' radii, x of the card's width and y
@@ -34,12 +36,17 @@ uniform float uInvert;    // 1.0 for reverse holo
 uniform float uCardOpacity;
 
 /**
- * Whether uv lies in a cut box: x0 <= x < x1 and y0 <= y < y1, matching
- * coversPoint's comparisons. step(edge, v) is v >= edge, so 1.0 - step(edge,
- * v) is v < edge. A box of zeros holds no point.
+ * Whether uv lies in a cut: its box, x0 <= x < x1 and y0 <= y < y1, matching
+ * coversPoint's comparisons, and with oval 1.0 the ellipse that box holds as
+ * well, whose inside is strictly under 1. step(edge, v) is v >= edge, so
+ * 1.0 - step(edge, v) is v < edge. A box of zeros holds no point.
  */
-float inBox(vec2 uv, vec4 box) {
-  return step(box.x, uv.x) * (1.0 - step(box.z, uv.x)) * step(box.y, uv.y) * (1.0 - step(box.w, uv.y));
+float inBox(vec2 uv, vec4 box, float oval) {
+  float ex = (uv.x - (box.x + box.z) * 0.5) / max((box.z - box.x) * 0.5, 1e-6);
+  float ey = (uv.y - (box.y + box.w) * 0.5) / max((box.w - box.y) * 0.5, 1e-6);
+  float ellipse = 1.0 - step(1.0, ex * ex + ey * ey);
+  return step(box.x, uv.x) * (1.0 - step(box.z, uv.x)) * step(box.y, uv.y) * (1.0 - step(box.w, uv.y))
+       * mix(1.0, ellipse, oval);
 }
 
 /**
@@ -52,7 +59,10 @@ float coverage(vec2 uv) {
                * step(uv.x, 1.0 - uClipRect.y)
                * step(uClipRect.x, uv.y)
                * step(uv.y, 1.0 - uClipRect.z);
-  inside *= (1.0 - inBox(uv, uCutA)) * (1.0 - inBox(uv, uCutB)) * (1.0 - inBox(uv, uCutC));
+  float inA = inBox(uv, uCutA, uCutOval.x);
+  float inB = inBox(uv, uCutB, uCutOval.y);
+  float inC = inBox(uv, uCutC, uCutOval.z);
+  inside *= (1.0 - inA) * (1.0 - inB) * (1.0 - inC);
   // The card's border, everything outside uBorder's rect with its corners
   // rounded by uBorderRound: none when both are all zeros, a plain rect that
   // holds the whole card. How far into a corner's radii uv lies, each 0
@@ -64,6 +74,9 @@ float coverage(vec2 uv) {
                      * step(uBorder.x, uv.y)
                      * step(uv.y, 1.0 - uBorder.z)
                      * step(cornerX * cornerX + cornerY * cornerY, 1.0);
+  // An oval, a round picture the frame lays over the border as well, takes
+  // the border's foil too; a box, a banner, stops at the region.
+  border *= (1.0 - inA * uCutOval.x) * (1.0 - inB * uCutOval.y) * (1.0 - inC * uCutOval.z);
   inside = max(inside, border);
 
   return mix(inside, 1.0 - inside, uInvert);

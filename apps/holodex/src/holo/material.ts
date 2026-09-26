@@ -45,6 +45,8 @@ export function buildMaterial(effect: Effect): ShaderMaterial {
       uCutA: { value: new Vector4(0, 0, 0, 0) },
       uCutB: { value: new Vector4(0, 0, 0, 0) },
       uCutC: { value: new Vector4(0, 0, 0, 0) },
+      // all zeros: every cut a box
+      uCutOval: { value: new Vector3(0, 0, 0) },
       // all zeros: no border foiled until setSelection says otherwise
       uBorder: { value: new Vector4(0, 0, 0, 0) },
       uBorderRound: { value: new Vector2(0, 0) },

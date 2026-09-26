@@ -403,13 +403,24 @@ Shield card's, and on an HGSS card, say, left the art's outer 3% and bottom
 boxes, banner and picture. Scarlet & Violet and Mega share one frame
 (`sv`), whose art sits within half a percent of that `--clip` (pokemon-
 cards-151 kept it for them) but whose evolution picture and band are much
-smaller than the `--clip-stage` cut, which had taken the art's top-left;
+smaller than the `--clip-stage` cut, which had taken the art's top-left.
+Its picture is cut as the **circle** its silver ring is, not a box
+(`CutBox.oval`, the ellipse its box holds; `uCutOval` in `coverage()`):
+151's masks (Raichu's, Beedrill's) leave the ring out and foil the art right
+up to it, where the box took the art in its corner, a square patch beside the
+ring (Raichu, 2026-09-26). The ring's outer edge, off the averaged edges of
+fourteen 151 evolutions' scans, is a circle of 47.75 px on a 600 by 825
+scan, within 1.3 px of every ray where the art meets it. The ring also
+overlaps the silver border, which the masks leave bare there too, so an
+oval takes a bordered foil's border off as well, where a box, a banner,
+stops at the art. `compile.test.ts` walks each oval's box on a fine grid,
+border and all; the card-wide one is too coarse to be sure of its curve.
 Pocket's (`pocket`) is the same window with an octagon. `other` (Pokémon
 Rumble, the energies, the sets without art) keeps the reference's clip and
 the one step-cut every evolution had before. A LEGEND half, all art, keeps
 its foil to the border. `coversPoint(shape, x, y, invert, layout)` is the tested twin
 of the GLSL `coverage()` in `shader/base.ts`, which reads the same numbers
-as uniforms (`uClipRect`, `uCutA`, `uCutB`, `uCutC`, set by `scene.ts`, all zeros for
+as uniforms (`uClipRect`, `uCutA`, `uCutB`, `uCutC`, `uCutOval`, set by `scene.ts`, all zeros for
 a box the region lacks): `compile.test.ts` runs the emitted GLSL itself
 against it on every layout. The layout rides on `HoloSelection`, so
 `holoCanvasKey` reads it. Measure a new frame the same way — averaged edge

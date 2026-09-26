@@ -17,6 +17,13 @@ export interface CutBox {
   y0: number;
   x1: number;
   y1: number;
+  /**
+   * Cut the ellipse the box holds instead of the box: an evolution's round
+   * picture, which the frame lays over the card's border as well, so an oval
+   * takes the border's foil too (HoloSelection.border), where a box stops at
+   * the region.
+   */
+  oval?: true;
 }
 
 /**
@@ -94,6 +101,10 @@ interface LayoutClip {
 }
 
 const box = (x0: number, y0: number, x1: number, y1: number): CutBox => ({ x0, y0, x1, y1 });
+const oval = (x0: number, y0: number, x1: number, y1: number): CutBox => ({
+  ...box(x0, y0, x1, y1),
+  oval: true,
+});
 
 /**
  * A Sword & Shield Pokémon's weakness, resistance and retreat bar, in the
@@ -216,12 +227,19 @@ const LAYOUTS: Readonly<Record<CardLayout, LayoutClip>> = {
   // sits within half a percent of the reference's --clip, which pokemon-
   // cards-151 kept for these cards; an evolution's round picture and its
   // "evolves from" band sit over the art's top-left, both much smaller than
-  // the reference's --clip-stage cut. A trainer's window is measured too, the
-  // reverse foils reaching the Items and Supporters of these sets.
+  // the reference's --clip-stage cut. The picture is cut as the circle its
+  // silver ring is: 151's masks (Raichu's, Beedrill's) leave out the ring and
+  // foil the art right up to it and the border round it, where the box the
+  // picture had took the art in its corner (2026-09-26). The ring's outer
+  // edge, off the averaged edges of fourteen 151 evolutions' scans, is a
+  // circle of 47.75 px on a 600 by 825 scan, within 1.3 px all along the
+  // edge the art meets; the oval is that circle and a quarter pixel. A
+  // trainer's window is measured too, the reverse foils reaching the Items
+  // and Supporters of these sets.
   sv: {
     art: { top: 0.097, right: 0.075, bottom: 0.528, left: 0.078 },
     regular: [],
-    stage: [box(0, 0, 0.66, 0.123), box(0, 0, 0.18, 0.185)],
+    stage: [box(0, 0, 0.66, 0.123), oval(0.009, 0.071, 0.17, 0.187)],
     trainer: { top: 0.138, right: 0.077, bottom: 0.48, left: 0.08 },
   },
   // Pokémon TCG Pocket: the same window, and an evolution's octagon.
@@ -491,11 +509,25 @@ function insideRoundedRect(rect: RegionRect, r: { x: number; y: number }, x: num
 }
 
 /**
+ * Whether a cut holds x, y: its box, or the ellipse the box holds for an
+ * oval, whose inside is strictly under 1, the comparisons shader/base.ts's
+ * inBox() makes, in the same order.
+ */
+function inCut(c: CutBox, x: number, y: number): boolean {
+  if (!(x >= c.x0 && x < c.x1 && y >= c.y0 && y < c.y1)) return false;
+  if (!c.oval) return true;
+  const ex = (x - (c.x0 + c.x1) * 0.5) / ((c.x1 - c.x0) * 0.5);
+  const ey = (y - (c.y0 + c.y1) * 0.5) / ((c.y1 - c.y0) * 0.5);
+  return ex * ex + ey * ey < 1;
+}
+
+/**
  * Whether the foil covers this point. `x` and `y` are fractions of the card
  * from its top-left; `border` adds the card's border, all of it outside the
  * `borders` rect with its corners rounded as the card face's
  * (BORDER_ROUND), for an effect whose foil covers that too
- * (HoloSelection.border). The GLSL coverage() in shader/base.ts computes the
+ * (HoloSelection.border), less any oval cut, a round picture the frame lays
+ * over the border too. The GLSL coverage() in shader/base.ts computes the
  * same thing from the same numbers, which the scene hands it as uniforms —
  * this is its testable twin.
  */
@@ -507,9 +539,14 @@ export function coversPoint(
   layout: CardLayout = 'other',
   border = false,
 ): boolean {
+  const cuts = cutsFor(shape, layout);
   let inside = insideRect(regionFor(shape, layout), x, y);
-  if (inside && cutsFor(shape, layout).some((c) => x >= c.x0 && x < c.x1 && y >= c.y0 && y < c.y1))
-    inside = false;
-  if (border && !insideRoundedRect(REGIONS.borders, BORDER_ROUND, x, y)) inside = true;
+  if (inside && cuts.some((c) => inCut(c, x, y))) inside = false;
+  if (
+    border &&
+    !insideRoundedRect(REGIONS.borders, BORDER_ROUND, x, y) &&
+    !cuts.some((c) => c.oval && inCut(c, x, y))
+  )
+    inside = true;
   return invert ? !inside : inside;
 }
