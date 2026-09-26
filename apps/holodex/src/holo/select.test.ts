@@ -244,6 +244,23 @@ describe('selectHolo — trainer gallery override', () => {
       'trainer',
       'swsh-ultra',
     ]);
+    // The Galarian Gallery's are too, on a frame of their own: its ten masks
+    // foil the TRAINER header the others leave out, and cut the rule box alone.
+    const cynthia = selectHolo(
+      card({
+        id: 'swsh12.5gg-GG60',
+        localId: 'GG60',
+        name: 'Cynthia’s Ambition',
+        category: 'Trainer',
+        trainerType: 'Supporter',
+        rarity: 'Ultra Rare',
+      }),
+    );
+    expect([cynthia.effect, cynthia.shape, cynthia.layout]).toEqual([
+      'trainer-full-art',
+      'trainer',
+      'swsh-galarian-trainer',
+    ]);
     // A gallery Pokémon Ultra Rare is no Supporter: it takes its V family's
     // gallery look (below).
     const starmie = selectHolo(
@@ -821,6 +838,26 @@ describe('layoutOf — the frame a card is printed in', () => {
     expect(gallery('swsh12.5gg-GG42', 'Zeraora VMAX', 'Ultra Rare')).toBe('swsh-gallery-vmax');
     // A gallery VSTAR keeps its rarity's.
     expect(gallery('swsh12.5gg-GG35', 'Leafeon VSTAR', 'Ultra Rare')).toBe('swsh-ultra');
+  });
+
+  it('frames a Galarian Gallery trainer apart from a Trainer Gallery one', () => {
+    const trainer = (id: string, name: string, rarity: string) =>
+      layoutOf({
+        id,
+        localId: id.slice(id.lastIndexOf('-') + 1),
+        name,
+        rarity,
+        category: 'Trainer',
+      });
+    expect(trainer('swsh12.5gg-GG60', 'Cynthia’s Ambition', 'Ultra Rare')).toBe(
+      'swsh-galarian-trainer',
+    );
+    expect(trainer('swsh11tg-TG26', 'Kabu', 'Ultra Rare')).toBe('swsh-ultra');
+    expect(trainer('swsh12tg-TG26', 'Professor Burnet', 'Full Art Trainer')).toBe('swsh-ultra');
+    // Without its category a card keeps its rarity's frame.
+    expect(
+      layoutOf({ id: 'swsh12.5gg-GG60', localId: 'GG60', name: 'Test', rarity: 'Ultra Rare' }),
+    ).toBe('swsh-ultra');
   });
 });
 

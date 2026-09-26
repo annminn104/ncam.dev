@@ -35,6 +35,11 @@ const FILTER: Filter = {
  * The glare is ported from trainer-full-art.css, which styles a supporter's:
  * base.css's radial drawn 170% of the card from its top left corner (it sets a
  * size and no position), multiplied, beneath the shine (legacy-glare.ts).
+ * The reference confines the shine with the card's own mask, never a
+ * clip-path; select.ts's clip region stands in: the whole card less the
+ * TRAINER header and the rule box its masks leave out (regions.ts's
+ * `swsh-ultra`), or the rule box alone on a Galarian Gallery card
+ * (`swsh-galarian-trainer`).
  *
  * Approximation: trainerbg is drawn here (textures.ts), not the reference's
  * image.

@@ -55,6 +55,7 @@ export type CardLayout =
   | 'swsh-ultra-v'
   | 'swsh-gallery-v'
   | 'swsh-gallery-vmax'
+  | 'swsh-galarian-trainer'
   | 'full-card'
   | 'other';
 
@@ -98,6 +99,12 @@ const box = (x0: number, y0: number, x1: number, y1: number): CutBox => ({ x0, y
  * which runs into the black at the card's bottom right.
  */
 const SWSH_V_BARS: readonly CutBox[] = [box(0.04, 0.857, 1, 0.89), box(0.375, 0.905, 1, 0.965)];
+
+/**
+ * A Sword & Shield full-art Supporter's rule box, the orange one at its
+ * bottom right ("You may play only 1 Supporter card during your turn").
+ */
+const SWSH_SUPPORTER_RULE = box(0.338, 0.876, 0.972, 0.966);
 
 /**
  * Each frame's art window and what it prints over it. Measured 2026-09-25 off
@@ -300,21 +307,23 @@ const LAYOUTS: Readonly<Record<CardLayout, LayoutClip>> = {
   // A Sword & Shield Ultra Rare, the full-art V or Supporter. The older
   // reference has no clip-path for either, only its per-card masks, which
   // keep their foil in alpha, and its six V full arts' (Mew, Scizor, Unown,
-  // Celebi, Giratina and Origin Forme Dialga V) and three Supporters'
-  // (Peonia, Barry, Marnie) foil the whole card, the border included, but
-  // leave out the frame's dark bars (2026-09-25): a Supporter's TRAINER
-  // header and its rule box (94% and 92% of them bare, where its foiled
-  // parts are about half bare, their etching's lines), as do the Trainer
-  // Gallery's full-art Supporters' (Kabu, Nessa and the Full Art Trainer
-  // Professor Burnet: 95% and 93%), which take this frame too. The black V drawn
-  // over a V's top-left is left out as well, but it is a triangle whose
-  // silver outlines take foil, and a color-dodged shine leaves black black.
+  // Celebi, Giratina and Origin Forme Dialga V) foil the whole card, the
+  // border included, but leave out the frame's dark bars (2026-09-25), as
+  // `swsh-ultra-v` cuts. A Supporter's leave out its silver TRAINER header
+  // and its orange rule box instead: 94% and 92.5% of them bare on all 81
+  // Sword & Shield full-art Supporters' masks, where a foiled part is about
+  // half bare, its etching's lines (2026-09-26). So do the Trainer Gallery's
+  // (95% and 93% on its 16 Ultra Rare Supporters and its six Full Art
+  // Trainers), which take this frame too; the Galarian Gallery's foil the
+  // header (`swsh-galarian-trainer`). The black V drawn over a V's top-left
+  // is left out as well, but it is a triangle whose silver outlines take
+  // foil, and a color-dodged shine leaves black black.
   'swsh-ultra': {
     art: { top: 0, right: 0, bottom: 0, left: 0 },
     regular: [],
     stage: [],
     trainer: { top: 0, right: 0, bottom: 0, left: 0 },
-    trainerCuts: [box(0.025, 0.023, 0.975, 0.068), box(0.338, 0.876, 0.972, 0.966)],
+    trainerCuts: [box(0.025, 0.023, 0.975, 0.068), SWSH_SUPPORTER_RULE],
   },
   // A V's: its bars (89% and 86% bare). A Galarian Gallery V, whose silver
   // border its masks foil too, takes this frame as well (87% and 85% bare on
@@ -356,6 +365,20 @@ const LAYOUTS: Readonly<Record<CardLayout, LayoutClip>> = {
     art: { top: 0, right: 0, bottom: 0, left: 0 },
     regular: [box(0, 0, 0.58, 0.16), ...SWSH_V_BARS],
     stage: [box(0, 0, 0.58, 0.16), ...SWSH_V_BARS],
+  },
+  // A Galarian Gallery Supporter (swsh12.5gg's ten, all Ultra Rare): the
+  // whole card less its rule box. Its header is the same silver TRAINER bar
+  // as every Sword & Shield full-art Supporter's, but its masks foil it (46%
+  // bare on all ten, 2026-09-26, the etched half of a foiled part and its
+  // letters) where theirs leave it out, and leave out the rule box as theirs
+  // do (93.5%): cutting the header too matched them on 69.3% of the frame,
+  // the rule box alone on 71.8%.
+  'swsh-galarian-trainer': {
+    art: { top: 0, right: 0, bottom: 0, left: 0 },
+    regular: [],
+    stage: [],
+    trainer: { top: 0, right: 0, bottom: 0, left: 0 },
+    trainerCuts: [SWSH_SUPPORTER_RULE],
   },
   // The whole card, whatever it is: a Mega Hyper Rare, whose rule box is
   // gold like the rest of it, Pocket's Crown and Two Star, and an Ultra Rare

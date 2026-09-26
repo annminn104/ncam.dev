@@ -29,6 +29,7 @@ const LAYOUTS: CardLayout[] = [
   'swsh-ultra-v',
   'swsh-gallery-v',
   'swsh-gallery-vmax',
+  'swsh-galarian-trainer',
   'full-card',
   'other',
 ];
@@ -40,10 +41,11 @@ const MEASURED_TRAINER: CardLayout[] = [
   'sv-hyper',
   'sv-ultra',
   'swsh-ultra',
+  'swsh-galarian-trainer',
   'full-card',
 ];
 /** The layouts that cut a trainer's window. */
-const CUT_TRAINER: CardLayout[] = ['sv-hyper', 'sv-ultra', 'swsh-ultra'];
+const CUT_TRAINER: CardLayout[] = ['sv-hyper', 'sv-ultra', 'swsh-ultra', 'swsh-galarian-trainer'];
 
 describe('regionFor', () => {
   it('returns the reference inset for a card no measured layout claims', () => {
@@ -214,6 +216,23 @@ describe('cutsFor', () => {
     // A VSTAR or an energy on the Supporters' frame: the whole card.
     expect(covers('regular', 0.5, 0.873, 'swsh-ultra')).toBe(true);
     expect(covers('regular', 0.5, 0.045, 'swsh-ultra')).toBe(true);
+  });
+
+  it('foils a Galarian Gallery Supporter’s TRAINER header, and cuts its rule box alone', () => {
+    const covers = (x: number, y: number) =>
+      coversPoint('trainer', x, y, false, 'swsh-galarian-trainer');
+    expect(covers(0.6, 0.92)).toBe(false);
+    expect(cutsFor('trainer', 'swsh-galarian-trainer')).toEqual([
+      cutsFor('trainer', 'swsh-ultra')[1],
+    ]);
+    for (const [x, y] of [
+      [0.5, 0.045],
+      [0.01, 0.5],
+      [0.5, 0.5],
+      [0.2, 0.93],
+    ]) {
+      expect(covers(x, y), `${x}, ${y}`).toBe(true);
+    }
   });
 
   it('foils a Trainer Gallery V inside its black border but its dark bars and HP strip', () => {

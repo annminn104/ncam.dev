@@ -516,10 +516,10 @@ and poke-holo.simey.me draws its cards with per-card masks
 which keep their foil in **alpha** (their colour is dark throughout), where
 151's keep it in luminance: read the right channel, or every pixel reads
 bare. Its six V full arts' and three Supporters' masks foil the whole card,
-the border included, but leave out the frame's dark bars: a V's weakness
+the border included, but leave out the frame's bars: a V's dark weakness
 bar and V rule box (89% and 86% of them bare, where the etching leaves
-about half of a foiled part bare), and a Supporter's TRAINER header and
-rule box (94% and 92%). So a Sword & Shield `Ultra Rare` is the whole card
+about half of a foiled part bare), and a Supporter's silver TRAINER header
+and orange rule box (94% and 92%). So a Sword & Shield `Ultra Rare` is the whole card
 less those (`swsh-ultra-v`, by the ` V` its name ends in, or `swsh-ultra`,
 whose trainer region carries the Supporter's cuts); a VMAX, VSTAR or energy
 there takes the whole card. The black V over a V's top-left is left out by
@@ -535,12 +535,22 @@ their whole card; a Sword & Shield V's frame is laid out like its full art,
 so its cuts land there as well. An `Ultra Rare` Supporter is not
 `v-full-art`'s at all but `trainer-full-art`'s (the overrides above), on
 the same frames: `swsh-ultra`'s trainer region for a Sword & Shield one,
-the Trainer Gallery's included (Kabu's and Nessa's masks leave out the
-same header and rule box, 95% and 93% bare), and the whole card for an
-older one. A `Full Art Trainer` takes `swsh-ultra` too, by its rarity, as
-the mask of one of the six, Professor Burnet's, leaves out the same bars:
-until 2026-09-25 it took the whole card, clipShape's one rule by rarity,
-now gone. A gallery `Ultra Rare` Pokémon is not `v-full-art`'s either:
+the Trainer Gallery's included, and the whole card for an older one. A
+`Full Art Trainer` takes `swsh-ultra` too, by its rarity: until 2026-09-25
+it took the whole card, clipShape's one rule by rarity, now gone.
+`trainer-full-art.css` takes no mask off the shine (only v-full-art.css's
+`:before`, which the shine's own mask still bounds: its `mask-image`
+computes to the card's mask on poke-holo.simey.me's Marnie and Nessa), so
+the masks are evidence here, and all 113 Sword & Shield full-art
+Supporters' bear the frame out (2026-09-26): the 81 of the main sets leave
+out the header and rule box (94% and 92.5% bare), and the region agrees
+with them on 79.7% of the frame, from 53.2% for the whole card; the Trainer
+Gallery's 16 Ultra Rare Supporters and six Full Art Trainers the same (95%
+and 93%; 76.6% and 76.0%, from 50.3% and 49.9%). The Galarian Gallery's ten
+are the exception: the same silver header takes foil on their masks (46%
+bare), so by its card number (`galleryFrame`) a Galarian Gallery trainer
+cuts the rule box alone (`swsh-galarian-trainer`, 71.8% of the frame, where
+both cuts made 69.3% and the whole card 56.3%). A gallery `Ultra Rare` Pokémon is not `v-full-art`'s either:
 TCGdex files the V, VMAX and VSTAR of three Trainer Galleries and the
 Galarian Gallery as Ultra Rare (55 cards; `swsh12tg`'s are Holo Rare V and
 VMAX), which pokemontcg.io files as Rare Holo V, VMAX and VSTAR, so each

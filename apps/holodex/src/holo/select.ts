@@ -363,18 +363,25 @@ const VMAX_NAME = / VMAX$/;
 
 /**
  * A gallery V's or VMAX's frame, by its name and card number, whatever TCGdex
- * files it as (Ultra Rare, or swsh12tg's Holo Rare V and VMAX). A V's is a
- * full-art V's, whose bars its masks leave out too (all 38, 2026-09-26),
- * inside the black border a Trainer Gallery prints it in (`swsh-gallery-v`),
- * or over the silver border of the Galarian Gallery's, which takes foil
- * (`swsh-ultra-v`). A VMAX's, in either gallery, is the whole card less its
- * header and those bars (`swsh-gallery-vmax`, all 18). Any other card, in a
- * gallery or not, has none.
+ * files it as (Ultra Rare, or swsh12tg's Holo Rare V and VMAX), and a
+ * Galarian Gallery trainer's. A V's is a full-art V's, whose bars its masks
+ * leave out too (all 38, 2026-09-26), inside the black border a Trainer
+ * Gallery prints it in (`swsh-gallery-v`), or over the silver border of the
+ * Galarian Gallery's, which takes foil (`swsh-ultra-v`). A VMAX's, in either
+ * gallery, is the whole card less its header and those bars
+ * (`swsh-gallery-vmax`, all 18). A Galarian Gallery trainer, every one an
+ * Ultra Rare Supporter, is the whole card less its rule box
+ * (`swsh-galarian-trainer`), as its masks foil the TRAINER header a Trainer
+ * Gallery Supporter's leave out. Any other card, in a gallery or not, has
+ * none, and so has a card whose category the caller left out.
  */
-function galleryFrame(card: Pick<Card, 'localId' | 'name'>): CardLayout | undefined {
+function galleryFrame(
+  card: Pick<Card, 'localId' | 'name'> & Partial<Pick<Card, 'category'>>,
+): CardLayout | undefined {
   if (!isTrainerGallery(card.localId)) return undefined;
   if (VMAX_NAME.test(card.name)) return 'swsh-gallery-vmax';
   if (V_NAME.test(card.name)) return /^tg/i.test(card.localId) ? 'swsh-gallery-v' : 'swsh-ultra-v';
+  if (card.category === 'Trainer' && /^gg/i.test(card.localId)) return 'swsh-galarian-trainer';
   return undefined;
 }
 
@@ -441,8 +448,13 @@ const MODERN_LAYOUT_BY_RARITY: Readonly<Record<string, CardLayout>> = {
 const SP_NAME = / (?:G|GL|E4|FB|C)(?: LV\.X)?$/;
 const SP_SET = /^(?:pl\d|dpp)$/;
 
-/** Which frame a card is printed in: regions.ts's CardLayout. */
-export function layoutOf(card: Pick<Card, 'id' | 'localId' | 'name' | 'rarity'>): CardLayout {
+/**
+ * Which frame a card is printed in: regions.ts's CardLayout. Its category
+ * matters only to a Galarian Gallery trainer (galleryFrame).
+ */
+export function layoutOf(
+  card: Pick<Card, 'id' | 'localId' | 'name' | 'rarity'> & Partial<Pick<Card, 'category'>>,
+): CardLayout {
   const gallery = galleryFrame(card);
   if (gallery) return gallery;
   const setId = setIdOf(card);
