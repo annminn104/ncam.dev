@@ -13,6 +13,10 @@ apps/
              project remote at runtime. (has its own AGENTS.md)
   toonhub/   The TOONHUB collectible-figurine hero, now a federated remote
              exposing a framework-free mount() function. (has its own AGENTS.md)
+  holodex/   Pokémon TCG explorer remote (port 9007) with a route-aware
+             MountConfig/MountHandle contract (host-owned nested URLs, no
+             remount on in-app navigation) and a lazily-chunked three.js holo
+             card renderer. (has its own AGENTS.md)
   strapi/    Strapi 5 headless CMS for the blog — a backend service, not a
              federation remote: public read-only REST API on :1337. (has its own AGENTS.md)
 packages/
@@ -39,7 +43,7 @@ Commands (from the root):
 
 ```bash
 pnpm install
-pnpm dev        # runs every app's dev server (shell :9000, remotes :9001–:9006, strapi :1337)
+pnpm dev        # runs every app's dev server (shell :9000, remotes :9001–:9007, strapi :1337)
 pnpm build      # builds every app
 pnpm typecheck
 pnpm assets     # downloads project image assets where apps define it
@@ -57,6 +61,12 @@ pnpm assets     # downloads project image assets where apps define it
   `apps/toonhub/src/mount.ts`), never assume the host origin.
 - `shared: {}` — there is no shared framework to dedupe. Keep it that way unless a
   genuine shared runtime is introduced.
+- `dts: false` on every remote (`packages/mf-remote`) as on the host: the host
+  types each remote by hand in `apps/portfolio/src/types/remote/`. Don't turn
+  the plugin's generated types back on: in dev it runs a full `tsc` for every
+  file event a dev server sees, all at once and never debounced, and a build
+  writing into `dist-ssr` (which Vite's watcher did not ignore; the remote
+  config now does) once spawned ~400 and took the machine down.
 
 ## Adding a new project
 

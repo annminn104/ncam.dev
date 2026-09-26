@@ -1,0 +1,768 @@
+import type { ClipShape } from './select';
+
+/** Insets as fractions of the card, matching the reference's CSS percentages. */
+export interface RegionRect {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+}
+
+/**
+ * A box cut out of a region: every point with x0 ≤ x < x1 and y0 ≤ y < y1,
+ * as fractions of the card from its top-left. Corners, not insets.
+ */
+export interface CutBox {
+  x0: number;
+  y0: number;
+  x1: number;
+  y1: number;
+  /**
+   * Cut the ellipse the box holds instead of the box: an evolution's round
+   * picture, which the frame lays over the card's border as well, so an oval
+   * takes the border's foil too (HoloSelection.border), where a box stops at
+   * the region.
+   */
+  oval?: true;
+  /**
+   * Lean the box's right edge: it runs from x1 at y0 to x1 + slant at y1, a
+   * banner's slanted end (negative, leaning left at the bottom). A box's
+   * only, never an oval's.
+   */
+  slant?: number;
+  /**
+   * Cut the octagon the box holds: its corners chamfered where |ex| + |ey|,
+   * each measured from the box's middle in its own half size, reaches this
+   * (√2 for a regular octagon, 2 for the box itself). A Pocket evolution's
+   * picture. A box's only, never an oval's or a slanted one's.
+   */
+  chamfer?: number;
+}
+
+/**
+ * Where to read a card's printed ink off its scan, and how light that ink
+ * may run: its letters are the pixels darker than `dark` (ink.ts's INK.dark
+ * where unset) in a white outline.
+ */
+export interface InkRead {
+  box: CutBox;
+  dark?: number;
+  /**
+   * Not read but painted: the ellipse the box holds, less the ellipse
+   * `hole` of its size at its middle for a ring, a shape the frame prints at
+   * a fixed place (the type's symbol).
+   */
+  painted?: { hole?: number };
+}
+
+/**
+ * The frame a card is printed in, as far as its foil's clip cares: where the
+ * art window sits, and what the frame lays over it. select.ts's `layoutOf`
+ * reads it off the card's set, or its rarity for the frames a rarity brings
+ * (LV.X, Prime, LEGEND and the illustration rares' full art), or its name for
+ * the ex frame of Scarlet & Violet, Mega and Pocket. `other` is every card no measured layout claims
+ * (Pokémon Rumble, the energies, the sets without card art) and keeps the
+ * clip every card had before the layouts: the reference's.
+ */
+export type CardLayout =
+  | 'wotc'
+  | 'e-card'
+  | 'ex'
+  | 'dp'
+  | 'dp-sp'
+  | 'lv-x'
+  | 'hgss'
+  | 'prime'
+  | 'legend'
+  | 'bw-xy'
+  | 'sm'
+  | 'swsh'
+  | 'sv'
+  | 'pocket'
+  | 'modern-ex'
+  | 'sv-illustration'
+  | 'pocket-illustration'
+  | 'sv-special-illustration'
+  | 'sv-hyper'
+  | 'sv-hyper-ex'
+  | 'sv-ultra'
+  | 'sv-ultra-ex'
+  | 'swsh-ultra'
+  | 'swsh-ultra-v'
+  | 'swsh-gallery-v'
+  | 'swsh-vmax'
+  | 'swsh-galarian-trainer'
+  | 'swsh-gallery-holo'
+  | 'swsh-vstar'
+  | 'full-card'
+  | 'other';
+
+/** How many boxes one region can cut: the shader's uCutA, uCutB, uCutC and uCutD. */
+export const MAX_CUTS = 4;
+
+/**
+ * The regions of the shapes that are not the art window: the trainer's,
+ * which a layout may measure for itself (LayoutClip's `trainer`), and the
+ * border's and the whole card's, the same on every card.
+ */
+const REGIONS: Record<Exclude<ClipShape, 'regular' | 'stage'>, RegionRect> = {
+  // --clip-trainer: inset(14.5% 8.5% 48.2% 8.5%)
+  trainer: { top: 0.145, right: 0.085, bottom: 0.482, left: 0.085 },
+  // --clip-borders: inset(2.8% 4% round 2.55% / 1.5%), less the rounding
+  borders: { top: 0.028, right: 0.04, bottom: 0.028, left: 0.04 },
+  full: { top: 0, right: 0, bottom: 0, left: 0 },
+};
+
+/** pokemon-cards-css's --clip: inset(9.85% 8% 52.85% 8%), a Sword & Shield card's art. */
+const REFERENCE_ART: RegionRect = { top: 0.0985, right: 0.08, bottom: 0.5285, left: 0.08 };
+
+interface LayoutClip {
+  /** The art window: the region of both `regular` and `stage`. */
+  art: RegionRect;
+  /** What the frame lays over the art on any card but an evolution. */
+  regular: readonly CutBox[];
+  /** What it lays over the art on a Stage 1 or 2: the "evolves from" box. */
+  stage: readonly CutBox[];
+  /** A trainer's art window, where measured; the reference's --clip-trainer otherwise. */
+  trainer?: RegionRect;
+  /** What the frame lays over a trainer's window, where measured. */
+  trainerCuts?: readonly CutBox[];
+  /**
+   * Where a Pokémon's printed title (its name, HP and number, black letters
+   * in a white outline) lies over the foiled art, whose ink is cut too: the
+   * scene finds it on the card's own scan (ink.ts) and coverage() keeps the
+   * foil off it. Only the full arts' frames, whose title is printed over the
+   * illustration, have them.
+   */
+  ink?: readonly InkRead[];
+  /** Where a trainer's printed name lies, whose ink is cut the same way. */
+  trainerInk?: readonly InkRead[];
+}
+
+const box = (x0: number, y0: number, x1: number, y1: number): CutBox => ({ x0, y0, x1, y1 });
+const oval = (x0: number, y0: number, x1: number, y1: number): CutBox => ({
+  ...box(x0, y0, x1, y1),
+  oval: true,
+});
+const slanted = (x0: number, y0: number, x1: number, y1: number, slant: number): CutBox => ({
+  ...box(x0, y0, x1, y1),
+  slant,
+});
+const octagon = (x0: number, y0: number, x1: number, y1: number, chamfer: number): CutBox => ({
+  ...box(x0, y0, x1, y1),
+  chamfer,
+});
+
+/**
+ * A Sword & Shield Pokémon's weakness, resistance and retreat bar, in the
+ * frame the galleries and the full arts share.
+ */
+const SWSH_WEAKNESS_BAR = box(0.04, 0.857, 1, 0.89);
+
+/**
+ * A Sword & Shield V's dark bars, the full art's and the gallery's alike:
+ * the weakness bar, and the V rule box below it, which runs into the black at
+ * the card's bottom right.
+ */
+const SWSH_V_BARS: readonly CutBox[] = [SWSH_WEAKNESS_BAR, box(0.375, 0.905, 1, 0.965)];
+
+/**
+ * A Sword & Shield full-art Supporter's rule box, the orange one at its
+ * bottom right ("You may play only 1 Supporter card during your turn").
+ */
+const SWSH_SUPPORTER_RULE = box(0.338, 0.876, 0.972, 0.966);
+
+/**
+ * A Scarlet & Violet evolution's round picture, its silver ring and all: the
+ * ring's outer edge, off the averaged edges of fourteen 151 evolutions'
+ * scans, a circle of 47.75 px on a 600 by 825 scan within 1.3 px all along
+ * the edge the art meets, and a quarter pixel. The same on the regular frame
+ * and the illustration rare's, within a quarter pixel on every ray. 151's
+ * masks for both (Raichu's, Beedrill's, and all eight illustration rare
+ * evolutions') leave the whole ring out and foil the art right up to it.
+ */
+const SV_RING = oval(0.009, 0.071, 0.17, 0.187);
+
+/**
+ * The picture inside that ring, less the ring: the disc all twelve of 151's
+ * Ultra Rare and special illustration rare evolutions' masks leave out, to a
+ * thousandth on every one, where they foil the ring round it. It sits off
+ * the ring's centre, up and to the right: the ring's rim is thicker below
+ * and to the left.
+ */
+const SV_PICTURE = oval(0.029, 0.072, 0.159, 0.172);
+
+/**
+ * A Scarlet & Violet evolution's "evolves from" band, from the ring to its
+ * slanted end: 9.3% to 11.55% of the card down, on the regular frame and the
+ * illustration rare's alike, where 151's masks leave it out (Raichu's and
+ * Beedrill's, the eight illustration rare evolutions') and foil the art
+ * right under it and past its end. The end leans from 68.5% across at the
+ * top to 65.4% at the bottom: the slant through the averaged edges of both
+ * frames' scans and the masks, within half a percent all down it, and wide
+ * of the band's corners so no foil reaches the band. The boxes before it
+ * (2026-09-26) ended square, missing the band's top-right tip and taking the
+ * art past its slant, and reached 0.5% to 0.75% of the card below it.
+ */
+const SV_BAND = slanted(0, 0.093, 0.685, 0.1155, -0.031);
+
+/**
+ * Where that ring meets the band's underside, its rim flares past SV_RING
+ * into the band: 0.9% of the card wide at the band and narrowing to nothing
+ * where it meets the ring again, 1.55% lower, on the averaged edges of both
+ * frames' scans. The box's slanted end follows the flare's edge, its top is
+ * the band's underside and its bottom corner sits on the ring's edge, so it
+ * leaves no corner of its own in the art.
+ */
+const SV_JUNCTION = slanted(0.16, 0.1155, 0.1785, 0.131, -0.0085);
+
+/**
+ * A Pokémon TCG Pocket evolution's "evolves from" band, the regular frame's
+ * and the One Star's alike: 9.15% to 11.15% of the card down, its silver end
+ * leaning from 57.2% across at 9.6% to 55.2% at 11% (the same on both frames'
+ * averaged scans, thirteen regular and eleven One Star evolutions of Genetic
+ * Apex, to a pixel), and 0.2% wide of it. No mask shows a Pocket card, so the
+ * scans are all there is. The boxes before it (2026-09-26) ended square,
+ * taking the art past the slant, and reached 0.65% and 0.85% of the card
+ * below the band; the One Star's top bevel still pokes 0.5% past the slant
+ * for a pixel or two.
+ */
+const POCKET_BAND = slanted(0, 0.0915, 0.5796, 0.1115, -0.0276);
+
+/**
+ * Its pre-evolution's picture, the octagon of its silver frame, the regular
+ * frame's and the One Star's alike: 34.9 px across the half by 34.5 px down
+ * on a 600 by 825 scan, round (0.0984, 0.117), its chamfers 38.8 px out along
+ * the diagonals (1.58 of the half sizes, less chamfered than a regular
+ * octagon's √2), off the same averaged scans, and half a pixel wide of them.
+ * The boxes before it (2026-09-26) took the art past the chamfers, and 1.6%
+ * of the card below the octagon on the regular frame, 1.1% on the One Star's
+ * along with 1.6% right of it.
+ */
+const POCKET_PICTURE = octagon(0.0394, 0.0746, 0.1574, 0.1594, 1.58);
+
+/**
+ * A Scarlet & Violet full art Pokémon's title strip, from the stage tab to
+ * its type's symbol, over the name, HP and number (its right end 2 px past
+ * the number's, 0.4% short of the symbol's white ring): every one of 151's masks
+ * for its 34 illustration rare, Ultra Rare, special illustration rare and
+ * Hyper rare Pokémon leaves the title's letters out, and foils the art round
+ * them (2026-09-26). A trainer's title is laid out otherwise
+ * (TRAINER_TITLE_INK).
+ */
+const TITLE_INK: InkRead = { box: box(0.17, 0.025, 0.869, 0.092) };
+
+/**
+ * Its BASIC or STAGE tab: grey letters in a white outline on the silver
+ * plate (gold on a Hyper rare), which those masks leave out too while they
+ * foil the plate round them. The letters' grey runs as light as the plate's,
+ * so anything short of the outline's white reads as ink here: the plate,
+ * running off the strip's edges, is no letter, and each letter, walled in by
+ * its outline, is. It found the tab's letters on all of 151's Ultra Rare,
+ * special illustration rare and Hyper rare Pokémon it was tried on, and
+ * nothing else (2026-09-26).
+ */
+const TAB_INK: InkRead = { box: box(0.02, 0.028, 0.17, 0.068), dark: 180 };
+
+/**
+ * Its type's symbol, at the title's right end: a circle 24.7 px round on a
+ * 600 by 825 scan, at the same place on all 34 of 151's full art Pokémon's
+ * masks, to a third of a pixel. An illustration rare's masks leave the whole
+ * symbol out; the Ultra Rare, special illustration rare and Hyper rare ones
+ * leave out its white ring alone, 2.4 px wide, and foil the disc inside it,
+ * glyph and all (2026-09-26). It is left out whole on all of them, the
+ * owner's call, so no full art's symbol takes foil. Painted, not read: its
+ * place is the frame's.
+ */
+const SYMBOL: InkRead = { box: box(0.871, 0.03, 0.9534, 0.0898), painted: {} };
+
+/** A full art Pokémon's printed ink: its title's, its tab's, and its symbol. */
+const POKEMON_INK: readonly InkRead[] = [TITLE_INK, TAB_INK, SYMBOL];
+
+/**
+ * A Scarlet & Violet full art trainer's name, black on the light panel under
+ * its Supporter or Item and TRAINER banner, across the card. Unlike a
+ * Pokémon's title, 151's masks for its seven full art trainers foil the name
+ * with its panel, about half as much as their art (2026-09-26); it is cut
+ * all the same, the owner's call, so that every full art's printed title
+ * reads clean.
+ */
+const TRAINER_TITLE_INK: readonly InkRead[] = [{ box: box(0.03, 0.075, 0.97, 0.15) }];
+
+/**
+ * Each frame's art window and what it prints over it. Measured 2026-09-25 off
+ * TCGdex's high-res scans, headless: per layout, the edge maps of 3 to 12
+ * holo Pokémon cards averaged into one picture (the frame, which has its
+ * edges in the same place on every card, stands out; the art averages away),
+ * the peaks read off its row and column profiles, and every edge checked by
+ * eye on a 1% grid over the zoomed corners of real cards. A rect is the art's
+ * own edge, to about half a percent. A box takes whole what it covers,
+ * slanted ends and round corners included, so the foil never shines on a
+ * banner — at the price of a sliver of art beside one.
+ *
+ * `swsh` keeps the reference's --clip, which its art measures within a
+ * percent of, and cuts the reference's --clip-stage polygon (91.5% 9.85%, 57%
+ * 9.85%, 54% 12%, 17% 12%, 16% 14%, 12% 16%, 8% 16% …) as two boxes, the
+ * banner and the picture. One box, x < 57% by y < 16%, stood in for both
+ * until then and took the art between them too; `other`, unmeasured, keeps
+ * it.
+ */
+const LAYOUTS: Readonly<Record<CardLayout, LayoutClip>> = {
+  // Base to Neo, and Legendary Collection. An evolution's badge, a star or a
+  // disc holding its pre-evolution, sits over the art's top-left corner.
+  wotc: {
+    art: { top: 0.114, right: 0.105, bottom: 0.49, left: 0.108 },
+    regular: [],
+    stage: [box(0, 0, 0.21, 0.17)],
+  },
+  // Expedition, Aquapolis and Skyridge. The art runs almost to the card's
+  // right edge; its left corners are round, and the rect foils the frame in
+  // them. An evolution's disc sits above the art.
+  'e-card': {
+    art: { top: 0.123, right: 0.037, bottom: 0.515, left: 0.1 },
+    regular: [],
+    stage: [],
+  },
+  // The EX sets. An evolution's disc sits at the art's bottom left, half over it.
+  ex: {
+    art: { top: 0.099, right: 0.078, bottom: 0.53, left: 0.077 },
+    regular: [],
+    stage: [box(0, 0.44, 0.18, 1)],
+  },
+  // Diamond & Pearl and Platinum. A Basic's BASIC banner crosses the art's
+  // top left; an evolution's banner is longer, and its disc hangs below it.
+  dp: {
+    art: { top: 0.092, right: 0.07, bottom: 0.497, left: 0.068 },
+    regular: [box(0, 0, 0.245, 0.123)],
+    stage: [box(0, 0, 0.57, 0.125), box(0, 0, 0.19, 0.165)],
+  },
+  // Platinum's SP Pokémon, all Basic: a wider window, the BASIC banner, and
+  // the owner's portrait over the art's bottom right.
+  'dp-sp': {
+    art: { top: 0.09, right: 0.06, bottom: 0.497, left: 0.058 },
+    regular: [box(0, 0, 0.245, 0.12), box(0.78, 0.43, 1, 1)],
+    stage: [box(0, 0, 0.245, 0.12), box(0.78, 0.43, 1, 1)],
+  },
+  // A LV.X: the LEVEL-UP banner over the art's top. Its stage is LEVEL-UP,
+  // never Stage 1 or 2, so its `stage` is never used and only mirrors `regular`.
+  'lv-x': {
+    art: { top: 0.09, right: 0.067, bottom: 0.49, left: 0.065 },
+    regular: [box(0, 0, 0.57, 0.124)],
+    stage: [box(0, 0, 0.57, 0.124)],
+  },
+  // HeartGold & SoulSilver and Call of Legends: a wide window, with the
+  // banners along its top edge — the evolution's picture sits above the art.
+  hgss: {
+    art: { top: 0.087, right: 0.047, bottom: 0.482, left: 0.048 },
+    regular: [box(0, 0, 0.24, 0.108)],
+    stage: [box(0, 0, 0.555, 0.111)],
+  },
+  // An HGSS Prime: a taller window, and the same banners.
+  prime: {
+    art: { top: 0.098, right: 0.055, bottom: 0.478, left: 0.05 },
+    regular: [box(0, 0, 0.21, 0.106)],
+    stage: [box(0, 0, 0.53, 0.113)],
+  },
+  // A LEGEND half: its art is the whole card, so the foil keeps to the border.
+  legend: {
+    art: REGIONS.borders,
+    regular: [],
+    stage: [],
+  },
+  // Black & White and XY, one frame: an evolution's disc, and the thin
+  // "evolves from" band under the name.
+  'bw-xy': {
+    art: { top: 0.098, right: 0.094, bottom: 0.501, left: 0.085 },
+    regular: [],
+    stage: [box(0, 0, 0.58, 0.113), box(0, 0, 0.19, 0.16)],
+  },
+  // Sun & Moon: an evolution's octagon, and its band.
+  sm: {
+    art: { top: 0.083, right: 0.058, bottom: 0.527, left: 0.057 },
+    regular: [],
+    stage: [box(0, 0, 0.56, 0.107), box(0, 0, 0.135, 0.165)],
+  },
+  swsh: {
+    art: REFERENCE_ART,
+    regular: [],
+    stage: [box(0, 0, 0.555, 0.12), box(0, 0, 0.16, 0.16)],
+  },
+  // Scarlet & Violet and Mega, one frame (30th Celebration's too). The art
+  // sits within half a percent of the reference's --clip, which pokemon-
+  // cards-151 kept for these cards; an evolution's round picture and its
+  // "evolves from" band sit over the art's top-left, both much smaller than
+  // the reference's --clip-stage cut. The picture is cut as the circle its
+  // silver ring is (SV_RING), which 151's masks foil the art and the border
+  // right up to, where the box the picture had took the art in its corner,
+  // the band to its slanted end (SV_BAND) and the ring's rim where it flares
+  // into the band (SV_JUNCTION) (2026-09-26). A trainer's window is measured
+  // too, the reverse foils reaching the Items and Supporters of these sets.
+  sv: {
+    art: { top: 0.097, right: 0.075, bottom: 0.528, left: 0.078 },
+    regular: [],
+    stage: [SV_BAND, SV_RING, SV_JUNCTION],
+    trainer: { top: 0.138, right: 0.077, bottom: 0.48, left: 0.08 },
+  },
+  // Pokémon TCG Pocket: the same window, and an evolution's band
+  // (POCKET_BAND) and octagon (POCKET_PICTURE).
+  pocket: {
+    art: { top: 0.097, right: 0.075, bottom: 0.528, left: 0.078 },
+    regular: [],
+    stage: [POCKET_BAND, POCKET_PICTURE],
+  },
+  // The ex of Scarlet & Violet, Mega and Pocket, Tera and Mega ex included:
+  // the illustration runs border to border down to the silver bar over the
+  // text. ex-regular inverts it (select.ts): its reference foils the card but
+  // its Pokémon with a per-card mask, and the card less its art matched two
+  // thirds of those masks, where the art alone matched a fifth.
+  'modern-ex': {
+    art: { top: 0.028, right: 0.04, bottom: 0.505, left: 0.038 },
+    regular: [],
+    stage: [],
+  },
+  // An Illustration rare of Scarlet & Violet or Mega: the illustration fills
+  // the card inside its silver border, and the frame prints its stage tab
+  // over the top-left, an evolution's round picture below the tab and its
+  // "evolves from" band beside the picture. pokemon-cards-151 clips it to the
+  // border polygon, which leaves out the tab, and the per-card masks it draws
+  // 151's sixteen with, their foil layers, leave out the picture and the band
+  // as well, on every one of them (2026-09-25). On an evolution the tab's box
+  // reaches down to the band, where the masks leave out the ring's rim
+  // between the two, and the picture is its ring (SV_RING), not the box that
+  // took the art in its corner: 92.7% of the eight evolutions' masks agree
+  // over the card's top-left, where the box agreed on 88.0% (2026-09-26).
+  'sv-illustration': {
+    art: { top: 0.028, right: 0.04, bottom: 0.027, left: 0.038 },
+    regular: [box(0, 0, 0.17, 0.064)],
+    stage: [box(0, 0, 0.17, 0.095), SV_RING, SV_BAND, SV_JUNCTION],
+    ink: POKEMON_INK,
+  },
+  // A Pocket One Star, the same full art: its patterned border, its tab, an
+  // evolution's octagon and band, the regular frame's (POCKET_PICTURE,
+  // POCKET_BAND).
+  'pocket-illustration': {
+    art: { top: 0.033, right: 0.04, bottom: 0.03, left: 0.042 },
+    regular: [box(0, 0, 0.165, 0.083)],
+    stage: [box(0, 0, 0.165, 0.083), POCKET_PICTURE, POCKET_BAND],
+  },
+  // A Special illustration rare, ex or Supporter: the reference has no
+  // clip-path for it, only its per-card masks, and on all seven of 151's they
+  // foil the whole card, border, tab, band and rule box included, all but
+  // the figure and, on an evolution, the pre-evolution's picture inside its
+  // ring (2026-09-25): the one part a cut can take, as the disc it is
+  // (SV_PICTURE), where a box took the ring's corners and missed the disc's
+  // left edge (86.0% of the masks agreeing over the top-left, 91.7% now).
+  'sv-special-illustration': {
+    art: { top: 0, right: 0, bottom: 0, left: 0 },
+    regular: [],
+    stage: [SV_PICTURE],
+    trainer: { top: 0, right: 0, bottom: 0, left: 0 },
+    ink: POKEMON_INK,
+    trainerInk: TRAINER_TITLE_INK,
+  },
+  // A Scarlet & Violet Hyper rare, the gold card, trainer or energy: the whole
+  // card, but a trainer's rule box, the silver-blue one over its gold at the
+  // bottom (an Item's, a Tool's or a Stadium's, the tallest). The reference
+  // has no clip-path, only its per-card masks, and 151's three foil the
+  // border and nearly all the gold, but leave out the rule box: 3% of it on
+  // Switch took foil (2026-09-25).
+  'sv-hyper': {
+    art: { top: 0, right: 0, bottom: 0, left: 0 },
+    regular: [],
+    stage: [],
+    trainer: { top: 0, right: 0, bottom: 0, left: 0 },
+    trainerCuts: [box(0.335, 0.875, 0.975, 0.968)],
+    trainerInk: TRAINER_TITLE_INK,
+  },
+  // A Scarlet & Violet Hyper rare Pokémon, always an ex: the whole card but
+  // its silver "Pokémon ex rule" box (17% of it foiled on Mew ex's mask).
+  'sv-hyper-ex': {
+    art: { top: 0, right: 0, bottom: 0, left: 0 },
+    regular: [box(0.36, 0.892, 0.975, 0.958)],
+    stage: [box(0.36, 0.892, 0.975, 0.958)],
+    ink: POKEMON_INK,
+  },
+  // A Scarlet & Violet or Mega Ultra Rare, the full-art ex or trainer: the
+  // whole card, but a trainer's rule box, and on an evolution the
+  // pre-evolution's picture, where the special illustration rare's frame has
+  // it. The reference has no clip-path, only its per-card masks, and all
+  // sixteen of 151's (#182 to #197, 2026-09-25) foil the border, the tab and
+  // the band, but leave out the picture (SV_PICTURE, the disc inside the
+  // ring) and the rule box (4% of a Supporter's). A Mega's rule box is gold,
+  // where an SV one's is silver, and is cut the same, as the same frame's
+  // box: no mask shows it.
+  'sv-ultra': {
+    art: { top: 0, right: 0, bottom: 0, left: 0 },
+    regular: [],
+    stage: [SV_PICTURE],
+    trainer: { top: 0, right: 0, bottom: 0, left: 0 },
+    trainerCuts: [box(0.335, 0.875, 0.975, 0.968)],
+    trainerInk: TRAINER_TITLE_INK,
+  },
+  // An Ultra Rare Pokémon, always an ex: the same, but its "Pokémon ex rule"
+  // box (27% of it foiled on the masks), where a Hyper rare ex has its own.
+  'sv-ultra-ex': {
+    art: { top: 0, right: 0, bottom: 0, left: 0 },
+    regular: [box(0.36, 0.892, 0.975, 0.958)],
+    stage: [box(0.36, 0.892, 0.975, 0.958), SV_PICTURE],
+    ink: POKEMON_INK,
+  },
+  // A Sword & Shield Ultra Rare, the full-art V or Supporter. The older
+  // reference has no clip-path for either, only its per-card masks, which
+  // keep their foil in alpha, and its six V full arts' (Mew, Scizor, Unown,
+  // Celebi, Giratina and Origin Forme Dialga V) foil the whole card, the
+  // border included, but leave out the frame's dark bars (2026-09-25), as
+  // `swsh-ultra-v` cuts. A Supporter's leave out its silver TRAINER header
+  // and its orange rule box instead: 94% and 92.5% of them bare on all 81
+  // Sword & Shield full-art Supporters' masks, where a foiled part is about
+  // half bare, its etching's lines (2026-09-26). So do the Trainer Gallery's
+  // (95% and 93% on its 16 Ultra Rare Supporters and its six Full Art
+  // Trainers), which take this frame too; the Galarian Gallery's foil the
+  // header (`swsh-galarian-trainer`). The black V drawn over a V's top-left
+  // is left out as well, but it is a triangle whose silver outlines take
+  // foil, and a color-dodged shine leaves black black.
+  'swsh-ultra': {
+    art: { top: 0, right: 0, bottom: 0, left: 0 },
+    regular: [],
+    stage: [],
+    trainer: { top: 0, right: 0, bottom: 0, left: 0 },
+    trainerCuts: [box(0.025, 0.023, 0.975, 0.068), SWSH_SUPPORTER_RULE],
+  },
+  // A V's: its bars (89% and 86% bare). A Galarian Gallery V, whose silver
+  // border its masks foil too, takes this frame as well (87% and 85% bare on
+  // all nine, 2026-09-26).
+  'swsh-ultra-v': {
+    art: { top: 0, right: 0, bottom: 0, left: 0 },
+    regular: SWSH_V_BARS,
+    stage: SWSH_V_BARS,
+  },
+  // A Trainer Gallery V (swsh9tg to swsh12tg), a full-art V inside a black
+  // border: the card inside that border, less the same bars. The masks of all
+  // 29 (2026-09-26) leave out the border (96% to 100% of it bare), the
+  // weakness bar and the V rule box (96% and 98%); the border's inner edge,
+  // measured off TCGdex's scans, is the reference's --clip-borders inset
+  // (2.8% 4%) to 0.15%. The border is not quite black (about 6 in 255), which
+  // a color-dodged shine would lift towards grey. The black strip its HP and
+  // type are printed on, beside the name, is left out too (100% bare), and
+  // cut from the name bar's round end (70.5% across, on TCGdex's scans) down
+  // to the art's top edge (9.5%). The black V over the top-left is left out
+  // as well, but it is a triangle, and stays.
+  'swsh-gallery-v': {
+    art: { top: 0.028, right: 0.04, bottom: 0.028, left: 0.04 },
+    regular: [...SWSH_V_BARS, box(0.705, 0, 1, 0.095)],
+    stage: [...SWSH_V_BARS, box(0.705, 0, 1, 0.095)],
+  },
+  // A Sword & Shield VMAX, a Holo Rare VMAX or a gallery's, a Trainer
+  // Gallery's (swsh9tg to swsh12tg) or the Galarian Gallery's: the whole
+  // card, less its header and the same bars. The masks of all 18 gallery VMAX
+  // (2026-09-26) foil the border, which on a VMAX is no black one, but leave
+  // out the header's silver panels, the VMAX mark over the picture of the V
+  // it evolves from (97% bare on the 15 Trainer Gallery masks) and the bands
+  // that name that V and its Dynamax (92%), and the weakness bar and the VMAX
+  // rule box, silver where a V's is black (96% and 98%); those of 82 Holo Rare
+  // VMAX the same (96%, 83%, 94% and 97%). The header's box takes those panels
+  // whole, as TCGdex's scans have them (the bands' slanted ends at 58%, the
+  // picture's frame down to 16%), with the corner above them and the start of
+  // the name beside them, which the masks leave out too, and suits the Holo
+  // Rare VMAX's best of those tried as well. The Galarian Gallery's three
+  // masks foil its bands, but the box still suits them best too.
+  'swsh-vmax': {
+    art: { top: 0, right: 0, bottom: 0, left: 0 },
+    regular: [box(0, 0, 0.58, 0.16), ...SWSH_V_BARS],
+    stage: [box(0, 0, 0.58, 0.16), ...SWSH_V_BARS],
+  },
+  // A Galarian Gallery Supporter (swsh12.5gg's ten, all Ultra Rare): the
+  // whole card less its rule box. Its header is the same silver TRAINER bar
+  // as every Sword & Shield full-art Supporter's, but its masks foil it (46%
+  // bare on all ten, 2026-09-26, the etched half of a foiled part and its
+  // letters) where theirs leave it out, and leave out the rule box as theirs
+  // do (93.5%): cutting the header too matched them on 69.3% of the frame,
+  // the rule box alone on 71.8%.
+  'swsh-galarian-trainer': {
+    art: { top: 0, right: 0, bottom: 0, left: 0 },
+    regular: [],
+    stage: [],
+    trainer: { top: 0, right: 0, bottom: 0, left: 0 },
+    trainerCuts: [SWSH_SUPPORTER_RULE],
+  },
+  // A gallery holo, a Trainer Gallery or Galarian Gallery Pokémon that is no
+  // V: the reference clips its shine to --clip-borders and masks it with the
+  // card's own mask besides, and all 80 masks (2026-09-26), solid where they
+  // foil, leave out the border that clip does and the weakness bar (90% and
+  // 91% bare), a Basic's BASIC tab, and an evolution's picture of what it
+  // evolves from (99%) and the band beside it that names it. So the window is
+  // --clip-borders' rect, less the tab on a Basic and the picture and band on
+  // an evolution, measured off the masks' average (the tab's round end at 17%,
+  // the picture's frame to 16% across and 15.8% down, the band's slanted end
+  // at 57%), and the weakness bar either way.
+  'swsh-gallery-holo': {
+    art: { top: 0.028, right: 0.04, bottom: 0.028, left: 0.04 },
+    regular: [box(0, 0.043, 0.17, 0.073), SWSH_WEAKNESS_BAR],
+    stage: [box(0, 0.043, 0.16, 0.158), box(0.15, 0.093, 0.57, 0.12), SWSH_WEAKNESS_BAR],
+  },
+  // A Holo Rare VSTAR, all 32 of them Sword & Shield's: the card between its
+  // header and its weakness bar, inside its pastel border, less the header's
+  // reach below that (the band naming the V it evolves from, and the column of
+  // the VSTAR mark and its picture). The reference masks its shine with the
+  // card's own mask and a radial about the pointer, added, which lends the
+  // parts the mask leaves bare some foil away from the pointer (0.48 there,
+  // 4.79 where it foils, on poke-holo.simey.me's Charizard VSTAR); all 32
+  // masks (2026-09-26) leave out the border, the header, and everything from
+  // the weakness bar down, the rule box and the illustrator's corner included,
+  // and foil the art and the VSTAR Power between. Measured off the masks'
+  // average: the art's top edge at 9.7%, its sides at 3.9% and 95.9%, the
+  // weakness bar's top at 85.8%, the band to its slanted end at 57% and 12%
+  // down, the column to 15.5% across and 16% down. The gold VSTAR Power bar is
+  // left out too, but sits at one of two heights by the text above it (59.6%
+  // to 62.6%, or 65.6% to 68.8%), which no one box follows.
+  'swsh-vstar': {
+    art: { top: 0.097, right: 0.041, bottom: 0.142, left: 0.039 },
+    regular: [box(0, 0, 0.155, 0.16), box(0.155, 0, 0.57, 0.12)],
+    stage: [box(0, 0, 0.155, 0.16), box(0.155, 0, 0.57, 0.12)],
+  },
+  // The whole card, whatever it is: a Mega Hyper Rare, whose rule box is
+  // gold like the rest of it, Pocket's Crown and Two Star, and an Ultra Rare
+  // of the frames before Sword & Shield, none with a mask to measure against.
+  'full-card': {
+    art: { top: 0, right: 0, bottom: 0, left: 0 },
+    regular: [],
+    stage: [],
+    trainer: { top: 0, right: 0, bottom: 0, left: 0 },
+  },
+  other: {
+    art: REFERENCE_ART,
+    regular: [],
+    stage: [box(0, 0, 0.57, 0.16)],
+  },
+};
+
+/** Whether a shape's region is the art window, and so its layout's. */
+function isArtWindow(shape: ClipShape): shape is 'regular' | 'stage' {
+  return shape === 'regular' || shape === 'stage';
+}
+
+/**
+ * The inset rect a shape confines the foil to. `regular` and `stage` are the
+ * art window of the card's layout, and `trainer` its trainer's window where
+ * the layout measured one; the border and the whole card are the same on
+ * every card.
+ */
+export function regionFor(shape: ClipShape, layout: CardLayout = 'other'): RegionRect {
+  if (isArtWindow(shape)) return LAYOUTS[layout].art;
+  if (shape === 'trainer') return LAYOUTS[layout].trainer ?? REGIONS.trainer;
+  return REGIONS[shape];
+}
+
+/**
+ * The boxes cut out of that rect: what the layout's frame prints over the
+ * art, or over a trainer's window where the layout measured it.
+ */
+export function cutsFor(shape: ClipShape, layout: CardLayout = 'other'): readonly CutBox[] {
+  if (isArtWindow(shape)) return LAYOUTS[layout][shape];
+  if (shape === 'trainer') return LAYOUTS[layout].trainerCuts ?? [];
+  return [];
+}
+
+/**
+ * Where a card's printed ink is read and cut: a full art Pokémon's title and
+ * tab on its art window's shapes (LayoutClip.ink), a full art trainer's name
+ * on its own (LayoutClip.trainerInk); none elsewhere.
+ */
+export function inkReadsFor(shape: ClipShape, layout: CardLayout = 'other'): readonly InkRead[] {
+  if (isArtWindow(shape)) return LAYOUTS[layout].ink ?? [];
+  if (shape === 'trainer') return LAYOUTS[layout].trainerInk ?? [];
+  return [];
+}
+
+/**
+ * The strip those reads span, the one the scene's ink texture covers and
+ * coverage() places the ink in (uInkRect); none without reads.
+ */
+export function inkStripFor(shape: ClipShape, layout: CardLayout = 'other'): CutBox | undefined {
+  const reads = inkReadsFor(shape, layout);
+  if (!reads.length) return undefined;
+  return {
+    x0: Math.min(...reads.map((r) => r.box.x0)),
+    y0: Math.min(...reads.map((r) => r.box.y0)),
+    x1: Math.max(...reads.map((r) => r.box.x1)),
+    y1: Math.max(...reads.map((r) => r.box.y1)),
+  };
+}
+
+const insideRect = (r: RegionRect, x: number, y: number): boolean =>
+  x >= r.left && x <= 1 - r.right && y >= r.top && y <= 1 - r.bottom;
+
+/**
+ * The radii of the card face's rounded corners, where it meets the border, as
+ * fractions of the card's width (x) and height (y): measured off 151's masks
+ * (Raichu's and Beedrill's), whose border foil fills the wedge each corner of
+ * the face leaves inside the `borders` rect's square corner, from 1.1% and 1%
+ * short of the corner. The border a foil takes (`coversPoint`'s `border`,
+ * coverage()'s uBorder and uBorderRound) is everything outside that rect so
+ * rounded.
+ */
+export const BORDER_ROUND = { x: 0.011, y: 0.01 } as const;
+
+/** Whether x, y lies inside a rect whose corners are rounded by radii r (fractions of the card). */
+function insideRoundedRect(rect: RegionRect, r: { x: number; y: number }, x: number, y: number) {
+  if (!insideRect(rect, x, y)) return false;
+  const cx = Math.max(rect.left + r.x - x, x - (1 - rect.right - r.x), 0) / r.x;
+  const cy = Math.max(rect.top + r.y - y, y - (1 - rect.bottom - r.y), 0) / r.y;
+  return cx * cx + cy * cy <= 1;
+}
+
+/**
+ * Whether a cut holds x, y: its box, its right edge leaned by its slant, its
+ * corners chamfered for an octagon, or the ellipse the box holds for an
+ * oval, whose inside is strictly under 1, the comparisons shader/base.ts's
+ * inBox() makes, in the same order.
+ */
+function inCut(c: CutBox, x: number, y: number): boolean {
+  const right = c.x1 + ((c.slant ?? 0) * (y - c.y0)) / (c.y1 - c.y0);
+  if (!(x >= c.x0 && x < right && y >= c.y0 && y < c.y1)) return false;
+  const ex = (x - (c.x0 + c.x1) * 0.5) / ((c.x1 - c.x0) * 0.5);
+  const ey = (y - (c.y0 + c.y1) * 0.5) / ((c.y1 - c.y0) * 0.5);
+  if (c.chamfer && Math.abs(ex) + Math.abs(ey) >= c.chamfer) return false;
+  if (!c.oval) return true;
+  return ex * ex + ey * ey < 1;
+}
+
+/**
+ * Whether the foil covers this point. `x` and `y` are fractions of the card
+ * from its top-left; `border` adds the card's border, all of it outside the
+ * `borders` rect with its corners rounded as the card face's
+ * (BORDER_ROUND), for an effect whose foil covers that too
+ * (HoloSelection.border), less any oval cut, a round picture the frame lays
+ * over the border too; `ink` says the card's scan is inked here, which its
+ * ink strip keeps the foil off (inkStripFor). The GLSL coverage() in
+ * shader/base.ts computes the same thing from the same numbers, which the
+ * scene hands it as uniforms, and the ink as a texture — this is its
+ * testable twin.
+ */
+export function coversPoint(
+  shape: ClipShape,
+  x: number,
+  y: number,
+  invert: boolean,
+  layout: CardLayout = 'other',
+  border = false,
+  ink = false,
+): boolean {
+  const cuts = cutsFor(shape, layout);
+  let inside = insideRect(regionFor(shape, layout), x, y);
+  if (inside && cuts.some((c) => inCut(c, x, y))) inside = false;
+  const strip = inkStripFor(shape, layout);
+  if (inside && ink && strip) {
+    // as coverage()'s inkAt() places a point in the strip, in its own terms
+    const sx = (x - strip.x0) / (strip.x1 - strip.x0);
+    const sy = (y - strip.y0) / (strip.y1 - strip.y0);
+    if (sx >= 0 && sx < 1 && sy >= 0 && sy < 1) inside = false;
+  }
+  if (
+    border &&
+    !insideRoundedRect(REGIONS.borders, BORDER_ROUND, x, y) &&
+    !cuts.some((c) => c.oval && inCut(c, x, y))
+  )
+    inside = true;
+  return invert ? !inside : inside;
+}

@@ -4,6 +4,8 @@ import { federation } from '@module-federation/vite';
 import { parse as parseDotenv } from 'dotenv';
 import { defineConfig, type PluginOption, type UserConfig } from 'vite';
 
+export type { MountConfig, MountHandle } from './contract';
+
 /** Walk up from `start` to the monorepo root (where pnpm-workspace.yaml lives). */
 function findMonorepoRoot(start = process.cwd()): string {
   let dir = start;
@@ -112,6 +114,10 @@ export function defineRemote({
       strictPort: true,
       cors: true,
       origin: `http://localhost:${resolvedPort}`,
+      // Vite leaves the client outDir (dist) out of the watcher by itself, but
+      // not the ssr environment's: without this, every file a build writes
+      // there is a change to every dev server watching the app.
+      watch: { ignored: ['**/dist-ssr/**'] },
     },
     preview: {
       port: resolvedPort,
@@ -164,6 +170,12 @@ export function defineRemote({
         exposes,
         // Self-contained: no shared singletons across the boundary.
         shared: {},
+        // No generated types: the host types its remotes by hand
+        // (apps/portfolio/src/types/remote) and consumes none. Left on, the
+        // plugin runs a full tsc for every file event a dev server sees, all
+        // at once and never debounced; a build's writes into dist-ssr, seen
+        // by two dev servers, spawned about 400 of them.
+        dts: false,
       }),
     ],
   }) as UserConfig;

@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as BlogIndexRouteImport } from './routes/blog/index'
 import { Route as ProjectsProjectIdRouteImport } from './routes/projects/$projectId'
 import { Route as BlogSlugRouteImport } from './routes/blog/$slug'
+import { Route as ProjectsProjectIdSplatRouteImport } from './routes/projects/$projectId_.$'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -34,18 +35,25 @@ const BlogSlugRoute = BlogSlugRouteImport.update({
   path: '/blog/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ProjectsProjectIdSplatRoute = ProjectsProjectIdSplatRouteImport.update({
+  id: '/projects/$projectId_/$',
+  path: '/projects/$projectId/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
   '/blog/': typeof BlogIndexRoute
+  '/projects/$projectId/$': typeof ProjectsProjectIdSplatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
   '/blog': typeof BlogIndexRoute
+  '/projects/$projectId/$': typeof ProjectsProjectIdSplatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -53,13 +61,30 @@ export interface FileRoutesById {
   '/blog/$slug': typeof BlogSlugRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
   '/blog/': typeof BlogIndexRoute
+  '/projects/$projectId_/$': typeof ProjectsProjectIdSplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/blog/$slug' | '/projects/$projectId' | '/blog/'
+  fullPaths:
+    | '/'
+    | '/blog/$slug'
+    | '/projects/$projectId'
+    | '/blog/'
+    | '/projects/$projectId/$'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/blog/$slug' | '/projects/$projectId' | '/blog'
-  id: '__root__' | '/' | '/blog/$slug' | '/projects/$projectId' | '/blog/'
+  to:
+    | '/'
+    | '/blog/$slug'
+    | '/projects/$projectId'
+    | '/blog'
+    | '/projects/$projectId/$'
+  id:
+    | '__root__'
+    | '/'
+    | '/blog/$slug'
+    | '/projects/$projectId'
+    | '/blog/'
+    | '/projects/$projectId_/$'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -67,6 +92,7 @@ export interface RootRouteChildren {
   BlogSlugRoute: typeof BlogSlugRoute
   ProjectsProjectIdRoute: typeof ProjectsProjectIdRoute
   BlogIndexRoute: typeof BlogIndexRoute
+  ProjectsProjectIdSplatRoute: typeof ProjectsProjectIdSplatRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -99,6 +125,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BlogSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/projects/$projectId_/$': {
+      id: '/projects/$projectId_/$'
+      path: '/projects/$projectId/$'
+      fullPath: '/projects/$projectId/$'
+      preLoaderRoute: typeof ProjectsProjectIdSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -107,6 +140,7 @@ const rootRouteChildren: RootRouteChildren = {
   BlogSlugRoute: BlogSlugRoute,
   ProjectsProjectIdRoute: ProjectsProjectIdRoute,
   BlogIndexRoute: BlogIndexRoute,
+  ProjectsProjectIdSplatRoute: ProjectsProjectIdSplatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

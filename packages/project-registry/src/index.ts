@@ -23,6 +23,18 @@ export interface ProjectEntry {
   /** Exposed module on that remote, e.g. './mount'. */
   module: string;
   status: 'live' | 'coming-soon';
+  /**
+   * Whether the remote owns URLs below its project path — i.e. it implements
+   * the route-aware half of the mount contract (`MountConfig.route` +
+   * `MountHandle.update`, see packages/mf-remote).
+   *
+   * Absent means no, which is right for every remote that renders a single
+   * page. The host's splat route answers 200 for any depth, so without this
+   * flag `/projects/<id>/anything/at/all` is an indexable duplicate of the
+   * project page for those remotes; `projectHead` reads it to send `noindex`
+   * and a canonical back to the project root instead.
+   */
+  routeAware?: boolean;
 }
 
 export const projects: ProjectEntry[] = [
@@ -88,6 +100,20 @@ export const projects: ProjectEntry[] = [
     remote: 'bali',
     module: './mount',
     status: 'live',
+  },
+  {
+    id: 'holodex',
+    name: 'Holodex',
+    tagline: 'Pokémon TCG explorer',
+    description:
+      'A Pokémon TCG database explorer built on the TCGdex API — browse every series, set and card, filter by type and rarity, track a collection, and inspect a card rendered with a WebGL holo foil keyed to its rarity.',
+    accent: '#7C5CFF',
+    thumbnail: '/thumbnails/holodex.jpg',
+    remote: 'holodex',
+    module: './mount',
+    status: 'live',
+    // Sets, cards, search and the collection are all real Holodex URLs.
+    routeAware: true,
   },
 ];
 

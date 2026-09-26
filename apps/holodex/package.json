@@ -1,0 +1,37 @@
+{
+  "name": "@ncam/holodex",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Holodex — a Pokémon TCG explorer on the TCGdex API with a WebGL holo card renderer, packaged as a self-contained React Module Federation remote.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build --app",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@fontsource-variable/outfit": "^5.3.0",
+    "@ncam/logger": "workspace:*",
+    "@tanstack/react-query": "^5.90.0",
+    "clsx": "^2.1.1",
+    "lucide-react": "^1.42.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "tailwind-merge": "^3.6.0",
+    "three": "^0.182.0"
+  },
+  "devDependencies": {
+    "@ncam/mf-remote": "workspace:*",
+    "@ncam/tsconfig": "workspace:*",
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/node": "^26.5.0",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@types/three": "^0.182.0",
+    "@vitejs/plugin-react": "^6.1.1",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^5.9.0",
+    "vite": "^8.3.0"
+  }
+}
