@@ -567,6 +567,28 @@ parts the masks now agree with the region on 89.9% of the card, from 77.4%
 (each Supporter 70% to 94.5%). A Pocket `Two Star`, with no mask, takes
 the whole card (`full-card`), as before.
 
+**A full art Pokémon's printed title is cut by its ink.** All of 151's
+masks for its 34 illustration rare, Ultra Rare, special illustration rare
+and Hyper rare Pokémon leave the title's letters out (the name, the HP and
+its number) and foil the art round them, and letters differ on every card,
+so no box can take them: the scene finds them on the card's own scan
+instead. `LayoutClip.ink` (`TITLE_INK`, from the stage tab to the border
+over the title, on `sv-illustration`, `sv-special-illustration`,
+`sv-ultra-ex` and `sv-hyper-ex`, for `regular` and `stage` alone: a
+trainer's title is laid out otherwise) is the strip; `ink.ts#findInk` reads
+it off the scan when the card or the selection changes (`scene.ts`), keeps
+each blob of dark pixels that is a letter's size, stays off the strip's
+edges and meets a white outline along most of its edge (a dark background
+runs off the edges, and meets the art rather than an outline), and grows it
+by its outline, as the masks do; `uInk` carries that mask and `uInkRect`
+the strip, and `coverage()`'s `inkAt()` keeps the foil off it. Over the
+strips the masks agree with it on 83.4%, from 64.3% with no cut, every card
+by 13 points or more; a plain luminance cut took the dark background behind
+Charmander's and Psyduck's titles with them, worse than no cut. A scan whose
+pixels cannot be read (a tainted canvas) keeps its title foiled. The type's
+symbol, which the illustration rares' masks leave out too, is no letter and
+keeps its foil but for its dark glyph.
+
 `v-full-art`, the older `Ultra Rare`'s, left `FULL_ART` as well, on the
 same evidence from the older reference: `v-full-art.css` has no clip-path,
 and poke-holo.simey.me draws its cards with per-card masks

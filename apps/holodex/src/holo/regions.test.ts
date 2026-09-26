@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { coversPoint, cutsFor, MAX_CUTS, regionFor, type CardLayout } from './regions';
+import { coversPoint, cutsFor, inkStripFor, MAX_CUTS, regionFor, type CardLayout } from './regions';
 import type { ClipShape } from './select';
 
 const LAYOUTS: CardLayout[] = [
@@ -532,6 +532,32 @@ describe('coversPoint', () => {
       expect(covers(0.1745, 0.13), layout).toBe(true);
       expect(covers(0.175, 0.14), layout).toBe(true);
     }
+  });
+
+  it('cuts a full art Pokémon’s printed title where its scan is inked, and nowhere else', () => {
+    // The title strip: the name, its HP and the number, after the stage tab.
+    for (const layout of [
+      'sv-illustration',
+      'sv-special-illustration',
+      'sv-ultra-ex',
+      'sv-hyper-ex',
+    ] as const) {
+      for (const shape of ['regular', 'stage'] as const) {
+        const strip = inkStripFor(shape, layout);
+        expect(strip, `${layout} ${shape}`).toBeDefined();
+        expect(coversPoint(shape, 0.4, 0.06, false, layout, false, true), layout).toBe(false);
+        expect(coversPoint(shape, 0.4, 0.06, false, layout, false, false), layout).toBe(true);
+        // ink anywhere else is the art's
+        expect(coversPoint(shape, 0.4, 0.3, false, layout, false, true), layout).toBe(true);
+      }
+    }
+    // A trainer's title is laid out otherwise, and the regular frame's sits
+    // above its art; the trainers' and energies' frames have none.
+    expect(inkStripFor('trainer', 'sv-special-illustration')).toBeUndefined();
+    expect(inkStripFor('regular', 'sv')).toBeUndefined();
+    expect(inkStripFor('regular', 'sv-ultra')).toBeUndefined();
+    expect(inkStripFor('regular', 'sv-hyper')).toBeUndefined();
+    expect(coversPoint('regular', 0.4, 0.06, false, 'sv-ultra', false, true)).toBe(true);
   });
 
   it('lays an evolution’s round picture over the border as well, where a banner’s box stops', () => {

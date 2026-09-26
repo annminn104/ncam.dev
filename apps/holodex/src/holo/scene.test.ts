@@ -1,13 +1,14 @@
 import { Texture } from 'three';
 import { describe, expect, it } from 'vitest';
 import { EFFECTS } from './effects';
-import { cutsFor } from './regions';
+import { cutsFor, inkStripFor } from './regions';
 import {
   borderRoundUniform,
   borderUniform,
   cutOvalUniform,
   cutSlantUniform,
   cutUniform,
+  inkRectUniform,
   orientTexture,
   pointerFromCenter,
   pointerToUV,
@@ -164,6 +165,23 @@ describe('cutSlantUniform', () => {
   it('leans none on a layout whose cuts are all upright, nor for a cut it lacks', () => {
     expect(cutSlantUniform(cutsFor('stage', 'dp'))).toEqual([0, 0, 0, 0]);
     expect(cutSlantUniform(cutsFor('regular', 'swsh'))).toEqual([0, 0, 0, 0]);
+  });
+});
+
+describe('inkRectUniform', () => {
+  it('hands coverage() the title strip where a card’s ink is cut, x0, y0, x1, y1', () => {
+    const strip = inkStripFor('stage', 'sv-illustration')!;
+    expect(inkRectUniform('stage', 'sv-illustration')).toEqual([
+      strip.x0,
+      strip.y0,
+      strip.x1,
+      strip.y1,
+    ]);
+  });
+
+  it('sends zeros, a strip holding nothing, where no ink is cut', () => {
+    expect(inkRectUniform('regular', 'sv')).toEqual([0, 0, 0, 0]);
+    expect(inkRectUniform('trainer', 'sv-special-illustration')).toEqual([0, 0, 0, 0]);
   });
 });
 

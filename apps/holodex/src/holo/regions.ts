@@ -104,6 +104,14 @@ interface LayoutClip {
   trainer?: RegionRect;
   /** What the frame lays over a trainer's window, where measured. */
   trainerCuts?: readonly CutBox[];
+  /**
+   * Where a Pokémon's printed title (its name, HP and number, black letters
+   * in a white outline) lies over the foiled art, whose ink is cut too: the
+   * scene finds it on the card's own scan (ink.ts) and coverage() keeps the
+   * foil off it. Only the full arts' frames, whose title is printed over the
+   * illustration, have one.
+   */
+  ink?: CutBox;
 }
 
 const box = (x0: number, y0: number, x1: number, y1: number): CutBox => ({ x0, y0, x1, y1 });
@@ -178,6 +186,16 @@ const SV_BAND = slanted(0, 0.093, 0.685, 0.1155, -0.031);
  * leaves no corner of its own in the art.
  */
 const SV_JUNCTION = slanted(0.16, 0.1155, 0.1785, 0.131, -0.0085);
+
+/**
+ * A Scarlet & Violet full art Pokémon's title strip, from the stage tab to
+ * the border, over the name, HP, number and type: every one of 151's masks
+ * for its 34 illustration rare, Ultra Rare, special illustration rare and
+ * Hyper rare Pokémon leaves the title's letters out, and foils the art round
+ * them (2026-09-26). A trainer's title is laid out otherwise, so trainers
+ * keep theirs.
+ */
+const TITLE_INK = box(0.17, 0.025, 0.955, 0.092);
 
 /**
  * Each frame's art window and what it prints over it. Measured 2026-09-25 off
@@ -324,6 +342,7 @@ const LAYOUTS: Readonly<Record<CardLayout, LayoutClip>> = {
     art: { top: 0.028, right: 0.04, bottom: 0.027, left: 0.038 },
     regular: [box(0, 0, 0.17, 0.064)],
     stage: [box(0, 0, 0.17, 0.095), SV_RING, SV_BAND, SV_JUNCTION],
+    ink: TITLE_INK,
   },
   // A Pocket One Star, the same full art: its patterned border, its tab, an
   // evolution's octagon and band.
@@ -344,6 +363,7 @@ const LAYOUTS: Readonly<Record<CardLayout, LayoutClip>> = {
     regular: [],
     stage: [SV_PICTURE],
     trainer: { top: 0, right: 0, bottom: 0, left: 0 },
+    ink: TITLE_INK,
   },
   // A Scarlet & Violet Hyper rare, the gold card, trainer or energy: the whole
   // card, but a trainer's rule box, the silver-blue one over its gold at the
@@ -364,6 +384,7 @@ const LAYOUTS: Readonly<Record<CardLayout, LayoutClip>> = {
     art: { top: 0, right: 0, bottom: 0, left: 0 },
     regular: [box(0.36, 0.892, 0.975, 0.958)],
     stage: [box(0.36, 0.892, 0.975, 0.958)],
+    ink: TITLE_INK,
   },
   // A Scarlet & Violet or Mega Ultra Rare, the full-art ex or trainer: the
   // whole card, but a trainer's rule box, and on an evolution the
@@ -387,6 +408,7 @@ const LAYOUTS: Readonly<Record<CardLayout, LayoutClip>> = {
     art: { top: 0, right: 0, bottom: 0, left: 0 },
     regular: [box(0.36, 0.892, 0.975, 0.958)],
     stage: [box(0.36, 0.892, 0.975, 0.958), SV_PICTURE],
+    ink: TITLE_INK,
   },
   // A Sword & Shield Ultra Rare, the full-art V or Supporter. The older
   // reference has no clip-path for either, only its per-card masks, which
@@ -544,6 +566,14 @@ export function cutsFor(shape: ClipShape, layout: CardLayout = 'other'): readonl
   return [];
 }
 
+/**
+ * The strip whose printed ink is cut (LayoutClip.ink): a full art Pokémon's
+ * title, on its art window's shapes alone.
+ */
+export function inkStripFor(shape: ClipShape, layout: CardLayout = 'other'): CutBox | undefined {
+  return isArtWindow(shape) ? LAYOUTS[layout].ink : undefined;
+}
+
 const insideRect = (r: RegionRect, x: number, y: number): boolean =>
   x >= r.left && x <= 1 - r.right && y >= r.top && y <= 1 - r.bottom;
 
@@ -586,9 +616,11 @@ function inCut(c: CutBox, x: number, y: number): boolean {
  * `borders` rect with its corners rounded as the card face's
  * (BORDER_ROUND), for an effect whose foil covers that too
  * (HoloSelection.border), less any oval cut, a round picture the frame lays
- * over the border too. The GLSL coverage() in shader/base.ts computes the
- * same thing from the same numbers, which the scene hands it as uniforms —
- * this is its testable twin.
+ * over the border too; `ink` says the card's scan is inked here, which its
+ * ink strip keeps the foil off (inkStripFor). The GLSL coverage() in
+ * shader/base.ts computes the same thing from the same numbers, which the
+ * scene hands it as uniforms, and the ink as a texture — this is its
+ * testable twin.
  */
 export function coversPoint(
   shape: ClipShape,
@@ -597,10 +629,18 @@ export function coversPoint(
   invert: boolean,
   layout: CardLayout = 'other',
   border = false,
+  ink = false,
 ): boolean {
   const cuts = cutsFor(shape, layout);
   let inside = insideRect(regionFor(shape, layout), x, y);
   if (inside && cuts.some((c) => inCut(c, x, y))) inside = false;
+  const strip = inkStripFor(shape, layout);
+  if (inside && ink && strip) {
+    // as coverage()'s inkAt() places a point in the strip, in its own terms
+    const sx = (x - strip.x0) / (strip.x1 - strip.x0);
+    const sy = (y - strip.y0) / (strip.y1 - strip.y0);
+    if (sx >= 0 && sx < 1 && sy >= 0 && sy < 1) inside = false;
+  }
   if (
     border &&
     !insideRoundedRect(REGIONS.borders, BORDER_ROUND, x, y) &&

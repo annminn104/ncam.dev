@@ -6,6 +6,7 @@ import {
   BORDER_ROUND,
   coversPoint,
   cutsFor,
+  inkStripFor,
   MAX_CUTS,
   regionFor,
   type CardLayout,
@@ -492,8 +493,9 @@ function transpileCoverage(glsl: string) {
   const inBox = /float inBox\(vec2 uv, vec4 box, float oval, float slant\) \{\n([\s\S]*?)\n\}/.exec(
     glsl,
   )?.[1];
+  const inkAt = /float inkAt\(vec2 uv\) \{\n([\s\S]*?)\n\}/.exec(glsl)?.[1];
   const body = /float coverage\(vec2 uv\) \{\n([\s\S]*?)\n\}/.exec(glsl)?.[1];
-  if (!inBox || !body) {
+  if (!inBox || !inkAt || !body) {
     throw new Error('coverage() no longer has the shape this translation assumes');
   }
 
@@ -515,6 +517,11 @@ function transpileCoverage(glsl: string) {
       .replace(/\buCutD\b/g, 'cutD')
       .replace(/\buCutOval\b/g, 'cutOval')
       .replace(/\buCutSlant\b/g, 'cutSlant')
+      .replace(/texture\(uInk, vec2\((\w+), (\w+)\)\)\.r/g, 'inkTex($1, $2)')
+      .replace(/uInkRect\.x/g, 'inkRect.x0')
+      .replace(/uInkRect\.y/g, 'inkRect.y0')
+      .replace(/uInkRect\.z/g, 'inkRect.x1')
+      .replace(/uInkRect\.w/g, 'inkRect.y1')
       .replace(/uBorderRound\.x/g, 'ringRound.x')
       .replace(/uBorderRound\.y/g, 'ringRound.y')
       .replace(/uBorder\.x/g, 'ring.top')
@@ -522,7 +529,11 @@ function transpileCoverage(glsl: string) {
       .replace(/uBorder\.z/g, 'ring.bottom')
       .replace(/uBorder\.w/g, 'ring.left')
       .replace(/uInvert/g, 'invert');
-  const js = `const inBox = (uv, box, oval, slant) => {\n${toJS(inBox)}\n};\n${toJS(body)}`;
+  const js = [
+    `const inBox = (uv, box, oval, slant) => {\n${toJS(inBox)}\n};`,
+    `const inkAt = (uv) => {\n${toJS(inkAt)}\n};`,
+    toJS(body),
+  ].join('\n');
 
   // A translation that quietly left GLSL behind would be a twin all over
   // again, so fail loudly rather than evaluate something half-converted.
@@ -540,6 +551,8 @@ function transpileCoverage(glsl: string) {
     'cutD',
     'cutOval',
     'cutSlant',
+    'inkRect',
+    'inkTex',
     'ring',
     'ringRound',
     'invert',
@@ -556,6 +569,8 @@ function transpileCoverage(glsl: string) {
     cutD: CutBox,
     cutOval: { x: number; y: number; z: number; w: number },
     cutSlant: { x: number; y: number; z: number; w: number },
+    inkRect: CutBox,
+    inkTex: (sx: number, sy: number) => number,
     ring: RegionRect,
     ringRound: { x: number; y: number },
     invert: number,
@@ -577,6 +592,8 @@ function transpileCoverage(glsl: string) {
     invert: boolean,
     layout?: CardLayout,
     border = false,
+    // ink over the strip, in its own terms, as the scene's mask of it reads
+    ink?: (sx: number, sy: number) => boolean,
   ) => {
     const [cutA = none, cutB = none, cutC = none, cutD = none] = cutsFor(shape, layout);
     // 1 where a cut is the ellipse its box holds (scene.ts's cutOvalUniform)
@@ -595,6 +612,8 @@ function transpileCoverage(glsl: string) {
       cutD,
       cutOval,
       cutSlant,
+      inkStripFor(shape, layout) ?? none,
+      (sx: number, sy: number) => (ink?.(sx, sy) ? 1 : 0),
       ring,
       border ? BORDER_ROUND : noRound,
       invert ? 1 : 0,
@@ -804,6 +823,47 @@ describe('coverage() in GLSL agrees with coversPoint() in JS', () => {
     expect(slanted).toBeGreaterThan(0);
     expect(disagreements).toEqual([]);
     expect(leaned).toBeGreaterThan(40);
+  });
+
+  it('keeps the foil off a card’s ink as coversPoint() does, within its strip alone', () => {
+    // Ink a checkerboard over each strip, in the strip's own terms, as the
+    // scene's mask of it is read, and walk a little past the strip all round.
+    const pattern = (sx: number, sy: number) =>
+      (Math.floor(sx * 41) + Math.floor(sy * 9)) % 2 === 0;
+    const disagreements: string[] = [];
+    let strips = 0;
+    let kept = 0;
+    for (const layout of layouts) {
+      for (const shape of ['regular', 'stage'] as const) {
+        const strip = inkStripFor(shape, layout);
+        if (!strip) continue;
+        strips++;
+        const [w, h] = [strip.x1 - strip.x0, strip.y1 - strip.y0];
+        for (let i = -10; i <= 110; i++) {
+          for (let j = -8; j <= 28; j++) {
+            const x = strip.x0 + ((i + 0.37) / 100) * w;
+            const y = strip.y0 + ((j + 0.37) / 20) * h;
+            if (x < 0 || x > 1 || y < 0 || y > 1) continue;
+            const inked = pattern((x - strip.x0) / w, (y - strip.y0) / h);
+            for (const invert of [false, true]) {
+              for (const border of [false, true]) {
+                const gpu = coverage(shape, x, y, invert, layout, border, pattern) > 0.5;
+                const cpu = coversPoint(shape, x, y, invert, layout, border, inked);
+                if (gpu !== cpu) {
+                  disagreements.push(`${layout} ${shape} (${x.toFixed(4)}, ${y.toFixed(4)})`);
+                }
+              }
+            }
+            // foil the art would take but for the ink
+            const art = coversPoint(shape, x, y, false, layout);
+            if (art && inked && !coversPoint(shape, x, y, false, layout, false, true)) kept++;
+          }
+        }
+      }
+    }
+    expect(strips).toBeGreaterThan(0);
+    expect(disagreements).toEqual([]);
+    expect(kept).toBeGreaterThan(500);
   });
 
   it('actually exercises both verdicts, so agreement is not vacuous', () => {

@@ -1,8 +1,11 @@
 import {
   CanvasTexture,
+  DataTexture,
+  LinearFilter,
   Mesh,
   OrthographicCamera,
   PlaneGeometry,
+  RedFormat,
   RepeatWrapping,
   Scene,
   ShaderMaterial,
@@ -13,9 +16,17 @@ import {
 } from 'three';
 import { firstLoaded, textureUrls } from '../lib/asset-proxy';
 import { EFFECTS } from './effects';
-import { createMaterial } from './material';
-import { BORDER_ROUND, cutsFor, regionFor, type CutBox } from './regions';
-import type { HoloSelection } from './select';
+import { findInk } from './ink';
+import { createMaterial, NO_INK } from './material';
+import {
+  BORDER_ROUND,
+  cutsFor,
+  inkStripFor,
+  regionFor,
+  type CardLayout,
+  type CutBox,
+} from './regions';
+import type { ClipShape, HoloSelection } from './select';
 import type { Effect } from './shader/types';
 import { makeTexture, type TextureName } from './textures';
 
@@ -187,6 +198,52 @@ export function borderRoundUniform(border: boolean): [number, number] {
   return border ? [BORDER_ROUND.x, BORDER_ROUND.y] : [0, 0];
 }
 
+/**
+ * uInkRect for a selection: the strip whose printed ink coverage() keeps the
+ * foil off (regions.ts's inkStripFor), x0, y0, x1, y1, or zeros, a strip
+ * holding nothing. Pure for the same reason as pointerToUV.
+ */
+export function inkRectUniform(
+  shape: ClipShape,
+  layout: CardLayout,
+): [number, number, number, number] {
+  const strip = inkStripFor(shape, layout);
+  return strip ? [strip.x0, strip.y0, strip.x1, strip.y1] : [0, 0, 0, 0];
+}
+
+/**
+ * The card's printed ink over a strip of it, found on its own scan (ink.ts),
+ * as the texture coverage() reads it in: the strip's rows from the top, one
+ * byte a texel. Null where the scan's pixels cannot be read, a tainted
+ * canvas or none at all, which leaves the ink with its foil.
+ */
+function inkTexture(card: Texture, strip: CutBox): DataTexture | null {
+  const image = card.image as (CanvasImageSource & { width: number; height: number }) | null;
+  if (!image?.width || !image.height) return null;
+  const x0 = Math.round(strip.x0 * image.width);
+  const y0 = Math.round(strip.y0 * image.height);
+  const width = Math.round(strip.x1 * image.width) - x0;
+  const height = Math.round(strip.y1 * image.height) - y0;
+  try {
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext('2d', { willReadFrequently: true });
+    if (!context) return null;
+    context.drawImage(image, x0, y0, width, height, 0, 0, width, height);
+    const ink = findInk(context.getImageData(0, 0, width, height), image.width / 600);
+    const texture = new DataTexture(ink, width, height, RedFormat);
+    // rows of one byte, as wide as the strip happens to be
+    texture.unpackAlignment = 1;
+    texture.minFilter = LinearFilter;
+    texture.magFilter = LinearFilter;
+    texture.needsUpdate = true;
+    return texture;
+  } catch {
+    return null;
+  }
+}
+
 export function createHoloScene(canvas: HTMLCanvasElement): HoloScene {
   const renderer = new WebGLRenderer({ canvas, alpha: true, antialias: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -235,6 +292,26 @@ export function createHoloScene(canvas: HTMLCanvasElement): HoloScene {
   // The card art, owned here: setSelection binds it onto each material it
   // creates, and dispose() frees it.
   let cardTexture: Texture | null = null;
+  // The current selection, whose ink strip, with the card, says what ink
+  // there is to cut; and that ink, found once per card and strip.
+  let selection: HoloSelection | null = null;
+  let ink: { card: Texture; strip: CutBox; texture: DataTexture | null } | null = null;
+
+  // Binds the card's ink over the selection's strip onto a material, finding
+  // it first if the card or the strip is new; none, where either is missing.
+  const bindInk = (material: ShaderMaterial) => {
+    if (!('uInk' in material.uniforms)) return;
+    const strip = selection && inkStripFor(selection.shape, selection.layout);
+    if (strip && cardTexture && (ink?.card !== cardTexture || ink.strip !== strip)) {
+      ink?.texture?.dispose();
+      ink = { card: cardTexture, strip, texture: inkTexture(cardTexture, strip) };
+    }
+    const texture = strip && ink?.card === cardTexture ? ink.texture : null;
+    material.uniforms.uInk.value = texture ?? NO_INK;
+    material.uniforms.uInkRect.value.set(
+      ...(texture && selection ? inkRectUniform(selection.shape, selection.layout) : [0, 0, 0, 0]),
+    );
+  };
 
   const frame = () => {
     current.x += (target.x - current.x) * 0.12;
@@ -282,12 +359,14 @@ export function createHoloScene(canvas: HTMLCanvasElement): HoloScene {
       // re-assign onto whichever material is current right now.
       const material = mesh.material;
       material.uniforms.uCard.value = texture;
+      bindInk(material);
     },
-    setSelection(selection) {
-      const material = createMaterial(selection.effect);
+    setSelection(next) {
+      const material = createMaterial(next.effect);
       // basic itself failed to compile; leave the current mesh material
       // alone and let the React layer fall back to the plain image.
       if (!material) return;
+      selection = next;
 
       material.uniforms.uCard.value = cardTexture;
       // If this effect failed to compile, `material` is basic's, which samples
@@ -314,6 +393,7 @@ export function createHoloScene(canvas: HTMLCanvasElement): HoloScene {
       material.uniforms.uInvert.value = selection.invert ? 1 : 0;
       material.uniforms.uCardGlow.value.set(...selection.glow);
       material.uniforms.uFoilBrightness.value = selection.foilBrightness;
+      bindInk(material);
 
       // This scene's own, so the one it replaces (the placeholder, or an
       // earlier selection's) has no other user.
@@ -344,6 +424,7 @@ export function createHoloScene(canvas: HTMLCanvasElement): HoloScene {
       disposed = true;
       cancelAnimationFrame(raf);
       cardTexture?.dispose();
+      ink?.texture?.dispose();
       // The current material, the placeholder or the selection's, is this
       // scene's own. The generated textures are shared by every scene, so
       // none is touched here.

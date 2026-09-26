@@ -1,4 +1,4 @@
-import { ShaderMaterial, Vector2, Vector3, Vector4 } from 'three';
+import { DataTexture, RedFormat, ShaderMaterial, Vector2, Vector3, Vector4 } from 'three';
 import { createLogger } from '@ncam/logger';
 import { compileEffect, VERTEX_SHADER } from './shader/compile';
 import type { Effect } from './shader/types';
@@ -6,6 +6,13 @@ import { EFFECTS } from './effects';
 import { DEFAULT_FOIL_BRIGHTNESS, DEFAULT_GLOW, type EffectId } from './select';
 
 const log = createLogger({ scope: 'holodex' });
+
+/**
+ * uInk until the scene finds a card's own (ink.ts): one texel of no ink,
+ * shared by every material, which never frees it.
+ */
+export const NO_INK = new DataTexture(new Uint8Array([0]), 1, 1, RedFormat);
+NO_INK.needsUpdate = true;
 
 /**
  * A fresh material for one effect. Callers want `createMaterial`; this is
@@ -52,6 +59,9 @@ export function buildMaterial(effect: Effect): ShaderMaterial {
       // all zeros: no border foiled until setSelection says otherwise
       uBorder: { value: new Vector4(0, 0, 0, 0) },
       uBorderRound: { value: new Vector2(0, 0) },
+      // no ink cut until setSelection finds the card's (scene.ts)
+      uInk: { value: NO_INK },
+      uInkRect: { value: new Vector4(0, 0, 0, 0) },
       uInvert: { value: 0 },
       uCardOpacity: { value: 1 },
       // :root's --card-glow until setSelection sets the card's own

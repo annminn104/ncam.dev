@@ -35,6 +35,8 @@ uniform vec4 uBorder;     // the border's inner edge, as uClipRect, when the
                           // foil covers the border too; all zeros for none
 uniform vec2 uBorderRound; // its corners' radii, x of the card's width and y
                           // of its height (regions.ts's BORDER_ROUND); zeros for none
+uniform sampler2D uInk;   // the card's printed ink over its ink strip (ink.ts), 1 where inked
+uniform vec4 uInkRect;    // that strip, x0, y0, x1, y1 (regions.ts's inkStripFor); zeros for none
 uniform float uInvert;    // 1.0 for reverse holo
 uniform float uCardOpacity;
 
@@ -55,6 +57,18 @@ float inBox(vec2 uv, vec4 box, float oval, float slant) {
 }
 
 /**
+ * Whether the card's scan is inked at uv within its ink strip, which keeps
+ * the foil off it: the scene's mask of the strip (ink.ts), read in the
+ * strip's own terms; 0 outside it, and everywhere for a strip of zeros.
+ */
+float inkAt(vec2 uv) {
+  float sx = (uv.x - uInkRect.x) / max(uInkRect.z - uInkRect.x, 1e-6);
+  float sy = (uv.y - uInkRect.y) / max(uInkRect.w - uInkRect.y, 1e-6);
+  float inStrip = step(0.0, sx) * (1.0 - step(1.0, sx)) * step(0.0, sy) * (1.0 - step(1.0, sy));
+  return inStrip * step(0.5, texture(uInk, vec2(sx, sy)).r);
+}
+
+/**
  * Whether the foil reaches this fragment. uv.y runs down the card — true
  * because the vertex shader above flips three.js's y-up uv before vUv ever
  * reaches here.
@@ -69,6 +83,7 @@ float coverage(vec2 uv) {
   float inC = inBox(uv, uCutC, uCutOval.z, uCutSlant.z);
   float inD = inBox(uv, uCutD, uCutOval.w, uCutSlant.w);
   inside *= (1.0 - inA) * (1.0 - inB) * (1.0 - inC) * (1.0 - inD);
+  inside *= 1.0 - inkAt(uv);
   // The card's border, everything outside uBorder's rect with its corners
   // rounded by uBorderRound: none when both are all zeros, a plain rect that
   // holds the whole card. How far into a corner's radii uv lies, each 0
