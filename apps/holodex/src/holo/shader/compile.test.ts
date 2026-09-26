@@ -490,9 +490,10 @@ describe('compileEffect', () => {
  * shader mutates what runs here.
  */
 function transpileCoverage(glsl: string) {
-  const inBox = /float inBox\(vec2 uv, vec4 box, float oval, float slant\) \{\n([\s\S]*?)\n\}/.exec(
-    glsl,
-  )?.[1];
+  const inBox =
+    /float inBox\(vec2 uv, vec4 box, float oval, float slant, float chamfer\) \{\n([\s\S]*?)\n\}/.exec(
+      glsl,
+    )?.[1];
   const inkAt = /float inkAt\(vec2 uv\) \{\n([\s\S]*?)\n\}/.exec(glsl)?.[1];
   const body = /float coverage\(vec2 uv\) \{\n([\s\S]*?)\n\}/.exec(glsl)?.[1];
   if (!inBox || !inkAt || !body) {
@@ -517,6 +518,7 @@ function transpileCoverage(glsl: string) {
       .replace(/\buCutD\b/g, 'cutD')
       .replace(/\buCutOval\b/g, 'cutOval')
       .replace(/\buCutSlant\b/g, 'cutSlant')
+      .replace(/\buCutChamfer\b/g, 'cutChamfer')
       .replace(/texture\(uInk, vec2\((\w+), (\w+)\)\)\.r/g, 'inkTex($1, $2)')
       .replace(/uInkRect\.x/g, 'inkRect.x0')
       .replace(/uInkRect\.y/g, 'inkRect.y0')
@@ -530,7 +532,7 @@ function transpileCoverage(glsl: string) {
       .replace(/uBorder\.w/g, 'ring.left')
       .replace(/uInvert/g, 'invert');
   const js = [
-    `const inBox = (uv, box, oval, slant) => {\n${toJS(inBox)}\n};`,
+    `const inBox = (uv, box, oval, slant, chamfer) => {\n${toJS(inBox)}\n};`,
     `const inkAt = (uv) => {\n${toJS(inkAt)}\n};`,
     toJS(body),
   ].join('\n');
@@ -551,6 +553,7 @@ function transpileCoverage(glsl: string) {
     'cutD',
     'cutOval',
     'cutSlant',
+    'cutChamfer',
     'inkRect',
     'inkTex',
     'ring',
@@ -559,6 +562,7 @@ function transpileCoverage(glsl: string) {
     'step',
     'mix',
     'max',
+    'abs',
     js,
   ) as (
     uv: { x: number; y: number },
@@ -569,6 +573,7 @@ function transpileCoverage(glsl: string) {
     cutD: CutBox,
     cutOval: { x: number; y: number; z: number; w: number },
     cutSlant: { x: number; y: number; z: number; w: number },
+    cutChamfer: { x: number; y: number; z: number; w: number },
     inkRect: CutBox,
     inkTex: (sx: number, sy: number) => number,
     ring: RegionRect,
@@ -577,6 +582,7 @@ function transpileCoverage(glsl: string) {
     step: (edge: number, v: number) => number,
     mix: (a: number, b: number, t: number) => number,
     max: (a: number, b: number) => number,
+    abs: (v: number) => number,
   ) => number;
 
   // A box the region lacks reaches the shader as all zeros (scene.ts's
@@ -602,6 +608,11 @@ function transpileCoverage(glsl: string) {
     // how far each cut's right edge leans by its bottom (scene.ts's cutSlantUniform)
     const [slantA, slantB, slantC, slantD] = [cutA, cutB, cutC, cutD].map((c) => c.slant ?? 0);
     const cutSlant = { x: slantA, y: slantB, z: slantC, w: slantD };
+    // where each cut's corners are chamfered (scene.ts's cutChamferUniform)
+    const [chamferA, chamferB, chamferC, chamferD] = [cutA, cutB, cutC, cutD].map(
+      (c) => c.chamfer ?? 0,
+    );
+    const cutChamfer = { x: chamferA, y: chamferB, z: chamferC, w: chamferD };
     const ring = border ? regionFor('borders') : noBorder;
     return compiled(
       { x, y },
@@ -612,6 +623,7 @@ function transpileCoverage(glsl: string) {
       cutD,
       cutOval,
       cutSlant,
+      cutChamfer,
       inkStripFor(shape, layout) ?? none,
       (sx: number, sy: number) => (ink?.(sx, sy) ? 1 : 0),
       ring,
@@ -620,6 +632,7 @@ function transpileCoverage(glsl: string) {
       step,
       mix,
       Math.max,
+      Math.abs,
     );
   };
 }
@@ -823,6 +836,44 @@ describe('coverage() in GLSL agrees with coversPoint() in JS', () => {
     expect(slanted).toBeGreaterThan(0);
     expect(disagreements).toEqual([]);
     expect(leaned).toBeGreaterThan(40);
+  });
+
+  it('cuts a chamfered box as coversPoint() does, finely enough to see its chamfers', () => {
+    // An octagon's chamfers give back corners of its box too small for the
+    // card-wide grid to be sure of, so walk each chamfered box on its own grid.
+    const disagreements: string[] = [];
+    let chamfered = 0;
+    let givenBack = 0;
+    for (const layout of layouts) {
+      for (const shape of ['regular', 'stage'] as const) {
+        for (const c of cutsFor(shape, layout)) {
+          if (!c.chamfer) continue;
+          chamfered++;
+          for (let i = -6; i <= 46; i++) {
+            for (let j = -6; j <= 46; j++) {
+              const x = c.x0 + ((i + 0.37) / 40) * (c.x1 - c.x0);
+              const y = c.y0 + ((j + 0.37) / 40) * (c.y1 - c.y0);
+              if (x < 0 || x > 1 || y < 0 || y > 1) continue;
+              for (const invert of [false, true]) {
+                for (const border of [false, true]) {
+                  const gpu = coverage(shape, x, y, invert, layout, border) > 0.5;
+                  const cpu = coversPoint(shape, x, y, invert, layout, border);
+                  if (gpu !== cpu) {
+                    disagreements.push(`${layout} ${shape} (${x.toFixed(4)}, ${y.toFixed(4)})`);
+                  }
+                }
+              }
+              const inBoxOf = x >= c.x0 && x < c.x1 && y >= c.y0 && y < c.y1;
+              if (inBoxOf && coversPoint(shape, x, y, false, layout)) givenBack++;
+            }
+          }
+        }
+      }
+    }
+    expect(chamfered).toBeGreaterThan(0);
+    expect(disagreements).toEqual([]);
+    // the art inside a chamfered box but past its chamfers: a box would cut it
+    expect(givenBack).toBeGreaterThan(20);
   });
 
   it('keeps the foil off a card’s ink as coversPoint() does, within its strip alone', () => {

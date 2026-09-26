@@ -179,6 +179,16 @@ export function cutSlantUniform(cuts: readonly CutBox[]): [number, number, numbe
 }
 
 /**
+ * uCutChamfer for a region's cuts, in the same order: where each cut's
+ * corners are chamfered (CutBox.chamfer), 0 for a square one or a cut the
+ * region lacks. Pure for the same reason as pointerToUV.
+ */
+export function cutChamferUniform(cuts: readonly CutBox[]): [number, number, number, number] {
+  const [a, b, c, d] = cuts;
+  return [a?.chamfer ?? 0, b?.chamfer ?? 0, c?.chamfer ?? 0, d?.chamfer ?? 0];
+}
+
+/**
  * uBorder for a selection (HoloSelection.border): the `borders` rect, top,
  * right, bottom, left, whose outside coverage() adds to the region, or all
  * zeros, a rect holding the whole card, which adds nothing. Pure for the same
@@ -421,6 +431,7 @@ export function createHoloScene(canvas: HTMLCanvasElement): HoloScene {
       material.uniforms.uCutD.value.set(...cutUniform(cutD));
       material.uniforms.uCutOval.value.set(...cutOvalUniform(cuts));
       material.uniforms.uCutSlant.value.set(...cutSlantUniform(cuts));
+      material.uniforms.uCutChamfer.value.set(...cutChamferUniform(cuts));
       material.uniforms.uBorder.value.set(...borderUniform(selection.border));
       material.uniforms.uBorderRound.value.set(...borderRoundUniform(selection.border));
       material.uniforms.uInvert.value = selection.invert ? 1 : 0;

@@ -30,6 +30,13 @@ export interface CutBox {
    * only, never an oval's.
    */
   slant?: number;
+  /**
+   * Cut the octagon the box holds: its corners chamfered where |ex| + |ey|,
+   * each measured from the box's middle in its own half size, reaches this
+   * (√2 for a regular octagon, 2 for the box itself). A Pocket evolution's
+   * picture. A box's only, never an oval's or a slanted one's.
+   */
+  chamfer?: number;
 }
 
 /**
@@ -141,6 +148,10 @@ const slanted = (x0: number, y0: number, x1: number, y1: number, slant: number):
   ...box(x0, y0, x1, y1),
   slant,
 });
+const octagon = (x0: number, y0: number, x1: number, y1: number, chamfer: number): CutBox => ({
+  ...box(x0, y0, x1, y1),
+  chamfer,
+});
 
 /**
  * A Sword & Shield Pokémon's weakness, resistance and retreat bar, in the
@@ -217,6 +228,18 @@ const SV_JUNCTION = slanted(0.16, 0.1155, 0.1785, 0.131, -0.0085);
  * for a pixel or two.
  */
 const POCKET_BAND = slanted(0, 0.0915, 0.5796, 0.1115, -0.0276);
+
+/**
+ * Its pre-evolution's picture, the octagon of its silver frame, the regular
+ * frame's and the One Star's alike: 34.9 px across the half by 34.5 px down
+ * on a 600 by 825 scan, round (0.0984, 0.117), its chamfers 38.8 px out along
+ * the diagonals (1.58 of the half sizes, less chamfered than a regular
+ * octagon's √2), off the same averaged scans, and half a pixel wide of them.
+ * The boxes before it (2026-09-26) took the art past the chamfers, and 1.6%
+ * of the card below the octagon on the regular frame, 1.1% on the One Star's
+ * along with 1.6% right of it.
+ */
+const POCKET_PICTURE = octagon(0.0394, 0.0746, 0.1574, 0.1594, 1.58);
 
 /**
  * A Scarlet & Violet full art Pokémon's title strip, from the stage tab to
@@ -381,11 +404,11 @@ const LAYOUTS: Readonly<Record<CardLayout, LayoutClip>> = {
     trainer: { top: 0.138, right: 0.077, bottom: 0.48, left: 0.08 },
   },
   // Pokémon TCG Pocket: the same window, and an evolution's band
-  // (POCKET_BAND) and octagon.
+  // (POCKET_BAND) and octagon (POCKET_PICTURE).
   pocket: {
     art: { top: 0.097, right: 0.075, bottom: 0.528, left: 0.078 },
     regular: [],
-    stage: [POCKET_BAND, box(0, 0, 0.16, 0.175)],
+    stage: [POCKET_BAND, POCKET_PICTURE],
   },
   // The ex of Scarlet & Violet, Mega and Pocket, Tera and Mega ex included:
   // the illustration runs border to border down to the silver bar over the
@@ -415,11 +438,12 @@ const LAYOUTS: Readonly<Record<CardLayout, LayoutClip>> = {
     ink: POKEMON_INK,
   },
   // A Pocket One Star, the same full art: its patterned border, its tab, an
-  // evolution's octagon and band, the regular frame's (POCKET_BAND).
+  // evolution's octagon and band, the regular frame's (POCKET_PICTURE,
+  // POCKET_BAND).
   'pocket-illustration': {
     art: { top: 0.033, right: 0.04, bottom: 0.03, left: 0.042 },
     regular: [box(0, 0, 0.165, 0.083)],
-    stage: [box(0, 0, 0.17, 0.17), POCKET_BAND],
+    stage: [box(0, 0, 0.165, 0.083), POCKET_PICTURE, POCKET_BAND],
   },
   // A Special illustration rare, ex or Supporter: the reference has no
   // clip-path for it, only its per-card masks, and on all seven of 151's they
@@ -688,16 +712,18 @@ function insideRoundedRect(rect: RegionRect, r: { x: number; y: number }, x: num
 }
 
 /**
- * Whether a cut holds x, y: its box, its right edge leaned by its slant, or
- * the ellipse the box holds for an oval, whose inside is strictly under 1,
- * the comparisons shader/base.ts's inBox() makes, in the same order.
+ * Whether a cut holds x, y: its box, its right edge leaned by its slant, its
+ * corners chamfered for an octagon, or the ellipse the box holds for an
+ * oval, whose inside is strictly under 1, the comparisons shader/base.ts's
+ * inBox() makes, in the same order.
  */
 function inCut(c: CutBox, x: number, y: number): boolean {
   const right = c.x1 + ((c.slant ?? 0) * (y - c.y0)) / (c.y1 - c.y0);
   if (!(x >= c.x0 && x < right && y >= c.y0 && y < c.y1)) return false;
-  if (!c.oval) return true;
   const ex = (x - (c.x0 + c.x1) * 0.5) / ((c.x1 - c.x0) * 0.5);
   const ey = (y - (c.y0 + c.y1) * 0.5) / ((c.y1 - c.y0) * 0.5);
+  if (c.chamfer && Math.abs(ex) + Math.abs(ey) >= c.chamfer) return false;
+  if (!c.oval) return true;
   return ex * ex + ey * ey < 1;
 }
 

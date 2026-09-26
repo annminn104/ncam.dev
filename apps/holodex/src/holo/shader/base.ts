@@ -31,6 +31,8 @@ uniform vec4 uCutOval;    // 1.0 where that cut is the ellipse its box holds,
                           // an evolution's round picture (CutBox.oval)
 uniform vec4 uCutSlant;   // how far each cut's right edge leans by its
                           // bottom, a banner's slanted end (CutBox.slant)
+uniform vec4 uCutChamfer; // where each cut's corners are chamfered, an
+                          // octagon's (CutBox.chamfer); 0 for none
 uniform vec4 uBorder;     // the border's inner edge, as uClipRect, when the
                           // foil covers the border too; all zeros for none
 uniform vec2 uBorderRound; // its corners' radii, x of the card's width and y
@@ -43,17 +45,19 @@ uniform float uCardOpacity;
 /**
  * Whether uv lies in a cut: its box, x0 <= x < x1 and y0 <= y < y1, matching
  * coversPoint's comparisons, x1 leaning by slant from the box's top to its
- * bottom, and with oval 1.0 the ellipse that box holds as well, whose inside
- * is strictly under 1. step(edge, v) is v >= edge, so 1.0 - step(edge, v) is
+ * bottom, its corners chamfered where |ex| + |ey| reaches chamfer (none for
+ * 0), and with oval 1.0 the ellipse that box holds as well, whose inside is
+ * strictly under 1. step(edge, v) is v >= edge, so 1.0 - step(edge, v) is
  * v < edge. A box of zeros holds no point.
  */
-float inBox(vec2 uv, vec4 box, float oval, float slant) {
+float inBox(vec2 uv, vec4 box, float oval, float slant, float chamfer) {
   float right = box.z + slant * (uv.y - box.y) / max(box.w - box.y, 1e-6);
   float ex = (uv.x - (box.x + box.z) * 0.5) / max((box.z - box.x) * 0.5, 1e-6);
   float ey = (uv.y - (box.y + box.w) * 0.5) / max((box.w - box.y) * 0.5, 1e-6);
   float ellipse = 1.0 - step(1.0, ex * ex + ey * ey);
+  float octagon = 1.0 - step(chamfer, abs(ex) + abs(ey));
   return step(box.x, uv.x) * (1.0 - step(right, uv.x)) * step(box.y, uv.y) * (1.0 - step(box.w, uv.y))
-       * mix(1.0, ellipse, oval);
+       * mix(1.0, ellipse, oval) * mix(1.0, octagon, step(1e-6, chamfer));
 }
 
 /**
@@ -78,10 +82,10 @@ float coverage(vec2 uv) {
                * step(uv.x, 1.0 - uClipRect.y)
                * step(uClipRect.x, uv.y)
                * step(uv.y, 1.0 - uClipRect.z);
-  float inA = inBox(uv, uCutA, uCutOval.x, uCutSlant.x);
-  float inB = inBox(uv, uCutB, uCutOval.y, uCutSlant.y);
-  float inC = inBox(uv, uCutC, uCutOval.z, uCutSlant.z);
-  float inD = inBox(uv, uCutD, uCutOval.w, uCutSlant.w);
+  float inA = inBox(uv, uCutA, uCutOval.x, uCutSlant.x, uCutChamfer.x);
+  float inB = inBox(uv, uCutB, uCutOval.y, uCutSlant.y, uCutChamfer.y);
+  float inC = inBox(uv, uCutC, uCutOval.z, uCutSlant.z, uCutChamfer.z);
+  float inD = inBox(uv, uCutD, uCutOval.w, uCutSlant.w, uCutChamfer.w);
   inside *= (1.0 - inA) * (1.0 - inB) * (1.0 - inC) * (1.0 - inD);
   inside *= 1.0 - inkAt(uv);
   // The card's border, everything outside uBorder's rect with its corners

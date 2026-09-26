@@ -5,6 +5,7 @@ import { cutsFor, inkStripFor } from './regions';
 import {
   borderRoundUniform,
   borderUniform,
+  cutChamferUniform,
   cutOvalUniform,
   cutSlantUniform,
   cutUniform,
@@ -147,6 +148,18 @@ describe('cutOvalUniform', () => {
   it('flags none on a layout whose cuts are all boxes, nor for a cut it lacks', () => {
     expect(cutOvalUniform(cutsFor('stage', 'dp'))).toEqual([0, 0, 0, 0]);
     expect(cutOvalUniform(cutsFor('regular', 'swsh'))).toEqual([0, 0, 0, 0]);
+  });
+});
+
+describe('cutChamferUniform', () => {
+  it('hands each cut’s chamfer, the octagon its box holds, in coverage()’s order', () => {
+    const [, octagon] = cutsFor('stage', 'pocket');
+    expect(cutChamferUniform(cutsFor('stage', 'pocket'))).toEqual([0, octagon.chamfer, 0, 0]);
+  });
+
+  it('chamfers none on a layout whose cuts are all square, nor for a cut it lacks', () => {
+    expect(cutChamferUniform(cutsFor('stage', 'sv'))).toEqual([0, 0, 0, 0]);
+    expect(cutChamferUniform(cutsFor('regular', 'swsh'))).toEqual([0, 0, 0, 0]);
   });
 });
 

@@ -436,12 +436,15 @@ Pocket's (`pocket`) is the same window with an octagon, and its band, the
 One Star's too, is cut to its own slanted end and underside (`POCKET_BAND`,
 off the averaged edges of 24 Genetic Apex evolutions' scans, no mask showing
 a Pocket card), where the square boxes took the art past the slant and
-under the band (2026-09-26). `other` (Pokémon
+under the band; its picture is cut as the octagon it is (`POCKET_PICTURE`,
+`CutBox.chamfer`: the box's corners chamfered where |ex| + |ey| reaches 1.58
+of its half sizes; `uCutChamfer`), where the boxes took the art past its
+chamfers, and below and right of it (2026-09-26). `other` (Pokémon
 Rumble, the energies, the sets without art) keeps the reference's clip and
 the one step-cut every evolution had before. A LEGEND half, all art, keeps
 its foil to the border. `coversPoint(shape, x, y, invert, layout)` is the tested twin
 of the GLSL `coverage()` in `shader/base.ts`, which reads the same numbers
-as uniforms (`uClipRect`, `uCutA` to `uCutD`, `uCutOval`, `uCutSlant`, set by `scene.ts`, all zeros for
+as uniforms (`uClipRect`, `uCutA` to `uCutD`, `uCutOval`, `uCutSlant`, `uCutChamfer`, set by `scene.ts`, all zeros for
 a box the region lacks): `compile.test.ts` runs the emitted GLSL itself
 against it on every layout. The layout rides on `HoloSelection`, so
 `holoCanvasKey` reads it. Measure a new frame the same way — averaged edge

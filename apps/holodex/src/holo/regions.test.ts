@@ -641,8 +641,30 @@ describe('coversPoint', () => {
       expect(covers(0.56, 0.108), layout).toBe(true);
     }
     // one band for both frames, whose ends lean alike
-    expect(cutsFor('stage', 'pocket')[0]).toEqual(cutsFor('stage', 'pocket-illustration')[1]);
+    expect(cutsFor('stage', 'pocket-illustration')).toContainEqual(cutsFor('stage', 'pocket')[0]);
     expect(cutsFor('stage', 'pocket')[0].slant).toBeLessThan(0);
+  });
+
+  it('cuts a Pocket evolution’s picture as the octagon it is, not its box', () => {
+    const regular = (x: number, y: number) => coversPoint('stage', x, y, false, 'pocket');
+    const oneStar = (x: number, y: number) =>
+      coversPoint('stage', x, y, false, 'pocket-illustration');
+    for (const covers of [regular, oneStar]) {
+      // the octagon, to its sides
+      expect(covers(0.1, 0.13)).toBe(false);
+      expect(covers(0.155, 0.12)).toBe(false);
+      // past its lower right chamfer, and under it, art the boxes took
+      expect(covers(0.15, 0.155)).toBe(true);
+      expect(covers(0.1, 0.165)).toBe(true);
+    }
+    // a One Star's art reaches past the lower left chamfer, and right of it
+    expect(oneStar(0.05, 0.155)).toBe(true);
+    expect(oneStar(0.165, 0.13)).toBe(true);
+    // one octagon for both frames
+    const picture = cutsFor('stage', 'pocket')[1];
+    expect(picture.chamfer).toBeGreaterThan(1);
+    expect(picture.chamfer).toBeLessThan(2);
+    expect(cutsFor('stage', 'pocket-illustration')).toContainEqual(picture);
   });
 
   it('lays an evolution’s round picture over the border as well, where a banner’s box stops', () => {
