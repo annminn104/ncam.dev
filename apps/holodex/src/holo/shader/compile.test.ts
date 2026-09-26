@@ -489,7 +489,9 @@ describe('compileEffect', () => {
  * shader mutates what runs here.
  */
 function transpileCoverage(glsl: string) {
-  const inBox = /float inBox\(vec2 uv, vec4 box, float oval\) \{\n([\s\S]*?)\n\}/.exec(glsl)?.[1];
+  const inBox = /float inBox\(vec2 uv, vec4 box, float oval, float slant\) \{\n([\s\S]*?)\n\}/.exec(
+    glsl,
+  )?.[1];
   const body = /float coverage\(vec2 uv\) \{\n([\s\S]*?)\n\}/.exec(glsl)?.[1];
   if (!inBox || !body) {
     throw new Error('coverage() no longer has the shape this translation assumes');
@@ -511,6 +513,7 @@ function transpileCoverage(glsl: string) {
       .replace(/\buCutB\b/g, 'cutB')
       .replace(/\buCutC\b/g, 'cutC')
       .replace(/\buCutOval\b/g, 'cutOval')
+      .replace(/\buCutSlant\b/g, 'cutSlant')
       .replace(/uBorderRound\.x/g, 'ringRound.x')
       .replace(/uBorderRound\.y/g, 'ringRound.y')
       .replace(/uBorder\.x/g, 'ring.top')
@@ -518,7 +521,7 @@ function transpileCoverage(glsl: string) {
       .replace(/uBorder\.z/g, 'ring.bottom')
       .replace(/uBorder\.w/g, 'ring.left')
       .replace(/uInvert/g, 'invert');
-  const js = `const inBox = (uv, box, oval) => {\n${toJS(inBox)}\n};\n${toJS(body)}`;
+  const js = `const inBox = (uv, box, oval, slant) => {\n${toJS(inBox)}\n};\n${toJS(body)}`;
 
   // A translation that quietly left GLSL behind would be a twin all over
   // again, so fail loudly rather than evaluate something half-converted.
@@ -534,6 +537,7 @@ function transpileCoverage(glsl: string) {
     'cutB',
     'cutC',
     'cutOval',
+    'cutSlant',
     'ring',
     'ringRound',
     'invert',
@@ -548,6 +552,7 @@ function transpileCoverage(glsl: string) {
     cutB: CutBox,
     cutC: CutBox,
     cutOval: { x: number; y: number; z: number },
+    cutSlant: { x: number; y: number; z: number },
     ring: RegionRect,
     ringRound: { x: number; y: number },
     invert: number,
@@ -573,6 +578,8 @@ function transpileCoverage(glsl: string) {
     const [cutA = none, cutB = none, cutC = none] = cutsFor(shape, layout);
     // 1 where a cut is the ellipse its box holds (scene.ts's cutOvalUniform)
     const cutOval = { x: cutA.oval ? 1 : 0, y: cutB.oval ? 1 : 0, z: cutC.oval ? 1 : 0 };
+    // how far each cut's right edge leans by its bottom (scene.ts's cutSlantUniform)
+    const cutSlant = { x: cutA.slant ?? 0, y: cutB.slant ?? 0, z: cutC.slant ?? 0 };
     const ring = border ? regionFor('borders') : noBorder;
     return compiled(
       { x, y },
@@ -581,6 +588,7 @@ function transpileCoverage(glsl: string) {
       cutB,
       cutC,
       cutOval,
+      cutSlant,
       ring,
       border ? BORDER_ROUND : noRound,
       invert ? 1 : 0,
@@ -748,6 +756,48 @@ describe('coverage() in GLSL agrees with coversPoint() in JS', () => {
     // The art inside an oval's box but outside the oval: a box would have cut
     // it, so none found here means the curve went untested.
     expect(givenBack).toBeGreaterThan(40);
+  });
+
+  it('cuts a slanted box as coversPoint() does, finely enough to see its slant', () => {
+    // A slant moves a box's right edge by under half a percent of the card
+    // at most rows, too little for the card-wide grid, so walk each slanted
+    // box's end on its own grid, from its square corner to past its lean.
+    const disagreements: string[] = [];
+    let slanted = 0;
+    let leaned = 0;
+    for (const layout of layouts) {
+      for (const shape of ['regular', 'stage'] as const) {
+        for (const c of cutsFor(shape, layout)) {
+          if (!c.slant) continue;
+          slanted++;
+          const lo = Math.min(c.x1, c.x1 + c.slant) - 0.01;
+          const hi = Math.max(c.x1, c.x1 + c.slant) + 0.01;
+          for (let i = 0; i <= 60; i++) {
+            for (let j = -4; j <= 44; j++) {
+              const x = lo + ((i + 0.37) / 60) * (hi - lo);
+              const y = c.y0 + ((j + 0.37) / 40) * (c.y1 - c.y0);
+              for (const invert of [false, true]) {
+                for (const border of [false, true]) {
+                  const gpu = coverage(shape, x, y, invert, layout, border) > 0.5;
+                  const cpu = coversPoint(shape, x, y, invert, layout, border);
+                  if (gpu !== cpu) {
+                    disagreements.push(
+                      `${layout} ${shape}${invert ? '/inv' : ''}${border ? '/border' : ''} (${x.toFixed(4)}, ${y.toFixed(4)})`,
+                    );
+                  }
+                }
+              }
+              // inside the box's square corner but past its lean: the slant's own
+              const square = x >= c.x0 && x < c.x1 && y >= c.y0 && y < c.y1;
+              if (square && coversPoint(shape, x, y, false, layout)) leaned++;
+            }
+          }
+        }
+      }
+    }
+    expect(slanted).toBeGreaterThan(0);
+    expect(disagreements).toEqual([]);
+    expect(leaned).toBeGreaterThan(40);
   });
 
   it('actually exercises both verdicts, so agreement is not vacuous', () => {

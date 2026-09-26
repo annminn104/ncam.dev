@@ -156,6 +156,16 @@ export function cutOvalUniform(cuts: readonly CutBox[]): [number, number, number
 }
 
 /**
+ * uCutSlant for a region's cuts, in the same order: how far each cut's right
+ * edge leans by its bottom (CutBox.slant), 0 for an upright one or a cut the
+ * region lacks. Pure for the same reason as pointerToUV.
+ */
+export function cutSlantUniform(cuts: readonly CutBox[]): [number, number, number] {
+  const [a, b, c] = cuts;
+  return [a?.slant ?? 0, b?.slant ?? 0, c?.slant ?? 0];
+}
+
+/**
  * uBorder for a selection (HoloSelection.border): the `borders` rect, top,
  * right, bottom, left, whose outside coverage() adds to the region, or all
  * zeros, a rect holding the whole card, which adds nothing. Pure for the same
@@ -297,6 +307,7 @@ export function createHoloScene(canvas: HTMLCanvasElement): HoloScene {
       material.uniforms.uCutB.value.set(...cutUniform(cutB));
       material.uniforms.uCutC.value.set(...cutUniform(cutC));
       material.uniforms.uCutOval.value.set(...cutOvalUniform(cuts));
+      material.uniforms.uCutSlant.value.set(...cutSlantUniform(cuts));
       material.uniforms.uBorder.value.set(...borderUniform(selection.border));
       material.uniforms.uBorderRound.value.set(...borderRoundUniform(selection.border));
       material.uniforms.uInvert.value = selection.invert ? 1 : 0;

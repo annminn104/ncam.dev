@@ -502,6 +502,25 @@ describe('coversPoint', () => {
     ]);
   });
 
+  it('cuts the “evolves from” band to its slanted end and its underside, no art past them', () => {
+    for (const layout of ['sv', 'sv-illustration'] as const) {
+      const covers = (x: number, y: number) => coversPoint('stage', x, y, false, layout);
+      // The band itself, and its top-right tip, which the square boxes missed.
+      expect(covers(0.4, 0.105), layout).toBe(false);
+      expect(covers(0.675, 0.0975), layout).toBe(false);
+      // Under the band: art the boxes took, 0.5% to 0.75% of the card's height.
+      expect(covers(0.4, 0.118), layout).toBe(true);
+      // Past its slant, near the bottom, where the boxes' square ends reached.
+      expect(covers(0.659, 0.113), layout).toBe(true);
+      expect(covers(0.67, 0.112), layout).toBe(true);
+    }
+    // An illustration rare's band from its top, which its box began below.
+    expect(coversPoint('stage', 0.4, 0.094, false, 'sv-illustration')).toBe(false);
+    const band = cutsFor('stage', 'sv')[0];
+    expect(band.slant).toBeLessThan(0);
+    expect(cutsFor('stage', 'sv-illustration')[2]).toEqual(band);
+  });
+
   it('lays an evolution’s round picture over the border as well, where a banner’s box stops', () => {
     const covers = (x: number, y: number) => coversPoint('stage', x, y, false, 'sv', true);
     // The ring where it overlaps the silver border: bare, as on the masks.

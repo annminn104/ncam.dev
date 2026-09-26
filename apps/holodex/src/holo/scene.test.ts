@@ -6,6 +6,7 @@ import {
   borderRoundUniform,
   borderUniform,
   cutOvalUniform,
+  cutSlantUniform,
   cutUniform,
   orientTexture,
   pointerFromCenter,
@@ -145,6 +146,19 @@ describe('cutOvalUniform', () => {
   it('flags none on a layout whose cuts are all boxes, nor for a cut it lacks', () => {
     expect(cutOvalUniform(cutsFor('stage', 'dp'))).toEqual([0, 0, 0]);
     expect(cutOvalUniform(cutsFor('regular', 'swsh'))).toEqual([0, 0, 0]);
+  });
+});
+
+describe('cutSlantUniform', () => {
+  it('hands each cut’s slant, how far its right edge leans by its bottom, in coverage()’s order', () => {
+    const [band] = cutsFor('stage', 'sv');
+    expect(cutSlantUniform(cutsFor('stage', 'sv'))).toEqual([band.slant, 0, 0]);
+    expect(cutSlantUniform(cutsFor('stage', 'sv-illustration'))).toEqual([0, 0, band.slant]);
+  });
+
+  it('leans none on a layout whose cuts are all upright, nor for a cut it lacks', () => {
+    expect(cutSlantUniform(cutsFor('stage', 'dp'))).toEqual([0, 0, 0]);
+    expect(cutSlantUniform(cutsFor('regular', 'swsh'))).toEqual([0, 0, 0]);
   });
 });
 

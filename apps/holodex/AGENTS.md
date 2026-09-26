@@ -415,12 +415,22 @@ overlaps the silver border, which the masks leave bare there too, so an
 oval takes a bordered foil's border off as well, where a box, a banner,
 stops at the art. `compile.test.ts` walks each oval's box on a fine grid,
 border and all; the card-wide one is too coarse to be sure of its curve.
+Its "evolves from" band is cut to its **slanted end** (`CutBox.slant`, the
+box's right edge leaning from x1 at its top to x1 + slant at its bottom;
+`uCutSlant`) and no lower than its underside (`SV_BAND`: 9.3% to 11.55% of
+the card down, its end leaning from 68.5% to 65.4% across, off the averaged
+edges of both frames' scans and the masks). The square box before it missed
+the band's top-right tip, took the art past its slant, and a strip of art
+0.75% of the card tall under all of it: over the band's surroundings the
+masks now agree on 92.7%, from 83.1% (96.4% from 87.9% on the illustration
+rares, which share the band). Where the ring meets the band's underside its
+rim flares 2 to 5 px past `SV_RING` for 6 px, which now takes foil.
 Pocket's (`pocket`) is the same window with an octagon. `other` (Pokémon
 Rumble, the energies, the sets without art) keeps the reference's clip and
 the one step-cut every evolution had before. A LEGEND half, all art, keeps
 its foil to the border. `coversPoint(shape, x, y, invert, layout)` is the tested twin
 of the GLSL `coverage()` in `shader/base.ts`, which reads the same numbers
-as uniforms (`uClipRect`, `uCutA`, `uCutB`, `uCutC`, `uCutOval`, set by `scene.ts`, all zeros for
+as uniforms (`uClipRect`, `uCutA`, `uCutB`, `uCutC`, `uCutOval`, `uCutSlant`, set by `scene.ts`, all zeros for
 a box the region lacks): `compile.test.ts` runs the emitted GLSL itself
 against it on every layout. The layout rides on `HoloSelection`, so
 `holoCanvasKey` reads it. Measure a new frame the same way — averaged edge
@@ -500,7 +510,7 @@ scans), not the box that took the art in its corner; the tab's box reaches
 down to the band on an evolution, where the masks leave out the ring's rim
 between the two (a slant a box edge can only split: x 0.17 scored best).
 Over the card's top-left, 92.7% of the eight masks agree, from 88.0%
-(2026-09-26).
+(2026-09-26). Its band is the regular frame's too (`SV_BAND`).
 
 A `Special illustration rare` (232: 167 Pokémon ex and 65 Supporters)
 takes its rarity's frame too (`sv-special-illustration`), but that frame

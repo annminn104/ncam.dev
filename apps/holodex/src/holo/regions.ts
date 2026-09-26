@@ -24,6 +24,12 @@ export interface CutBox {
    * the region.
    */
   oval?: true;
+  /**
+   * Lean the box's right edge: it runs from x1 at y0 to x1 + slant at y1, a
+   * banner's slanted end (negative, leaning left at the bottom). A box's
+   * only, never an oval's.
+   */
+  slant?: number;
 }
 
 /**
@@ -105,6 +111,10 @@ const oval = (x0: number, y0: number, x1: number, y1: number): CutBox => ({
   ...box(x0, y0, x1, y1),
   oval: true,
 });
+const slanted = (x0: number, y0: number, x1: number, y1: number, slant: number): CutBox => ({
+  ...box(x0, y0, x1, y1),
+  slant,
+});
 
 /**
  * A Sword & Shield Pokémon's weakness, resistance and retreat bar, in the
@@ -144,6 +154,20 @@ const SV_RING = oval(0.009, 0.071, 0.17, 0.187);
  * and to the left.
  */
 const SV_PICTURE = oval(0.029, 0.072, 0.159, 0.172);
+
+/**
+ * A Scarlet & Violet evolution's "evolves from" band, from the ring to its
+ * slanted end: 9.3% to 11.55% of the card down, on the regular frame and the
+ * illustration rare's alike, where 151's masks leave it out (Raichu's and
+ * Beedrill's, the eight illustration rare evolutions') and foil the art
+ * right under it and past its end. The end leans from 68.5% across at the
+ * top to 65.4% at the bottom: the slant through the averaged edges of both
+ * frames' scans and the masks, within half a percent all down it, and wide
+ * of the band's corners so no foil reaches the band. The boxes before it
+ * (2026-09-26) ended square, missing the band's top-right tip and taking the
+ * art past its slant, and reached 0.5% to 0.75% of the card below it.
+ */
+const SV_BAND = slanted(0, 0.093, 0.685, 0.1155, -0.031);
 
 /**
  * Each frame's art window and what it prints over it. Measured 2026-09-25 off
@@ -249,13 +273,14 @@ const LAYOUTS: Readonly<Record<CardLayout, LayoutClip>> = {
   // "evolves from" band sit over the art's top-left, both much smaller than
   // the reference's --clip-stage cut. The picture is cut as the circle its
   // silver ring is (SV_RING), which 151's masks foil the art and the border
-  // right up to, where the box the picture had took the art in its corner
-  // (2026-09-26). A trainer's window is measured too, the reverse foils
-  // reaching the Items and Supporters of these sets.
+  // right up to, where the box the picture had took the art in its corner,
+  // and the band to its slanted end (SV_BAND) (2026-09-26). A trainer's
+  // window is measured too, the reverse foils reaching the Items and
+  // Supporters of these sets.
   sv: {
     art: { top: 0.097, right: 0.075, bottom: 0.528, left: 0.078 },
     regular: [],
-    stage: [box(0, 0, 0.66, 0.123), SV_RING],
+    stage: [SV_BAND, SV_RING],
     trainer: { top: 0.138, right: 0.077, bottom: 0.48, left: 0.08 },
   },
   // Pokémon TCG Pocket: the same window, and an evolution's octagon.
@@ -288,7 +313,7 @@ const LAYOUTS: Readonly<Record<CardLayout, LayoutClip>> = {
   'sv-illustration': {
     art: { top: 0.028, right: 0.04, bottom: 0.027, left: 0.038 },
     regular: [box(0, 0, 0.17, 0.064)],
-    stage: [box(0, 0, 0.17, 0.095), SV_RING, box(0.15, 0.095, 0.675, 0.12)],
+    stage: [box(0, 0, 0.17, 0.095), SV_RING, SV_BAND],
   },
   // A Pocket One Star, the same full art: its patterned border, its tab, an
   // evolution's octagon and band.
@@ -532,12 +557,13 @@ function insideRoundedRect(rect: RegionRect, r: { x: number; y: number }, x: num
 }
 
 /**
- * Whether a cut holds x, y: its box, or the ellipse the box holds for an
- * oval, whose inside is strictly under 1, the comparisons shader/base.ts's
- * inBox() makes, in the same order.
+ * Whether a cut holds x, y: its box, its right edge leaned by its slant, or
+ * the ellipse the box holds for an oval, whose inside is strictly under 1,
+ * the comparisons shader/base.ts's inBox() makes, in the same order.
  */
 function inCut(c: CutBox, x: number, y: number): boolean {
-  if (!(x >= c.x0 && x < c.x1 && y >= c.y0 && y < c.y1)) return false;
+  const right = c.x1 + ((c.slant ?? 0) * (y - c.y0)) / (c.y1 - c.y0);
+  if (!(x >= c.x0 && x < right && y >= c.y0 && y < c.y1)) return false;
   if (!c.oval) return true;
   const ex = (x - (c.x0 + c.x1) * 0.5) / ((c.x1 - c.x0) * 0.5);
   const ey = (y - (c.y0 + c.y1) * 0.5) / ((c.y1 - c.y0) * 0.5);
