@@ -121,7 +121,10 @@ const circularDistance = (a: number, b: number) => {
 
 /**
  * Where two long number sequences first differ, or -1. A plain toEqual on
- * 360,000 bytes spends a minute building a diff whenever it fails.
+ * 360,000 bytes spends a minute building a diff whenever it fails, and even
+ * passing it walks a texture's bytes a thousand times slower than this loop:
+ * three seconds for a cosmos layer's three million, past CI's five-second
+ * test timeout on a slower runner.
  */
 function firstDifference(a: ArrayLike<number>, b: ArrayLike<number>): number {
   const length = Math.max(a.length, b.length);
@@ -380,7 +383,9 @@ describe('glitter, drawn to stand in for the reference’s sheet', () => {
   it('is the reference’s size, opaque, and the same on every load', () => {
     expect(TEXTURE_SIZE.glitter).toEqual([630, 540]);
     expect(px.length).toBe(630 * 540 * 4);
-    expect(glitterPixels(GLITTER_WIDTH, GLITTER_HEIGHT, GLITTER_SEED)).toEqual(px);
+    expect(firstDifference(glitterPixels(GLITTER_WIDTH, GLITTER_HEIGHT, GLITTER_SEED), px)).toBe(
+      -1,
+    );
     expect(mean(px, 3)).toBe(255);
   });
 
@@ -429,7 +434,7 @@ describe('geometric, a diagonal line maze', () => {
 
   it('is the reference’s size, the same on every load, about a quarter white', () => {
     expect(TEXTURE_SIZE.geometric).toEqual([300, 300]);
-    expect(geometricPixels(GEOMETRIC_SIZE, GEOMETRIC_SEED)).toEqual(px);
+    expect(firstDifference(geometricPixels(GEOMETRIC_SIZE, GEOMETRIC_SEED), px)).toBe(-1);
     // measured off geometric.png: about a quarter of it white
     expect(mean(px, 0) / 255).toBeGreaterThan(0.22);
     expect(mean(px, 0) / 255).toBeLessThan(0.34);
@@ -475,7 +480,7 @@ describe('illusion, warped black and white bands', () => {
 
   it('is the reference’s size, opaque, and the same on every load', () => {
     expect(TEXTURE_SIZE.illusion).toEqual([600, 600]);
-    expect(illusionPixels(ILLUSION_SIZE)).toEqual(px);
+    expect(firstDifference(illusionPixels(ILLUSION_SIZE), px)).toBe(-1);
     expect(mean(px, 3)).toBe(255);
   });
 
@@ -551,7 +556,7 @@ describe('grain, dark monochrome noise', () => {
 
   it('is the reference’s size, grey, and the same on every load', () => {
     expect(TEXTURE_SIZE.grain).toEqual([500, 500]);
-    expect(grainPixels(GRAIN_SIZE, GRAIN_SEED)).toEqual(px);
+    expect(firstDifference(grainPixels(GRAIN_SIZE, GRAIN_SEED), px)).toBe(-1);
     for (let i = 0; i < px.length; i += 4 * 1009)
       expect([px[i + 1], px[i + 2]]).toEqual([px[i], px[i]]);
   });
@@ -570,7 +575,7 @@ describe('ancient, stepped zig-zag stripes', () => {
 
   it('is the reference’s size, the same on every load, about a third white', () => {
     expect(TEXTURE_SIZE.ancient).toEqual([300, 300]);
-    expect(ancientPixels(ANCIENT_SIZE, ANCIENT_SEED)).toEqual(px);
+    expect(firstDifference(ancientPixels(ANCIENT_SIZE, ANCIENT_SEED), px)).toBe(-1);
     // measured off ancient.png: mean grey 84 of 255
     expect(mean(px, 0) / 255).toBeGreaterThan(0.26);
     expect(mean(px, 0) / 255).toBeLessThan(0.38);
@@ -596,7 +601,7 @@ describe('vmaxbg, overlapping ringed discs', () => {
 
   it('is the reference’s size, opaque, and the same on every load', () => {
     expect(TEXTURE_SIZE.vmaxbg).toEqual([600, 400]);
-    expect(vmaxbgPixels(VMAXBG_WIDTH, VMAXBG_HEIGHT, VMAXBG_SEED)).toEqual(px);
+    expect(firstDifference(vmaxbgPixels(VMAXBG_WIDTH, VMAXBG_HEIGHT, VMAXBG_SEED), px)).toBe(-1);
     expect(mean(px, 3)).toBe(255);
   });
 
@@ -635,7 +640,9 @@ describe('the cosmos layers, one starfield in three', () => {
     for (const kind of ['cosmos-bottom', 'cosmos-middle', 'cosmos-top'] as const) {
       expect(TEXTURE_SIZE[kind]).toEqual([734, 1024]);
     }
-    expect(cosmosPixels(COSMOS_WIDTH, COSMOS_HEIGHT, COSMOS_SEED, 1)).toEqual(middle);
+    expect(firstDifference(cosmosPixels(COSMOS_WIDTH, COSMOS_HEIGHT, COSMOS_SEED, 1), middle)).toBe(
+      -1,
+    );
   });
 
   it('keep the reference’s shares: the bottom opaque and dark, the middle a sixth, the top a few percent', () => {
