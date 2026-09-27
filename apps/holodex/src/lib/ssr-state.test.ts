@@ -16,6 +16,25 @@ describe('serialiseState', () => {
     expect(serialised).not.toContain('</script>');
     expect(JSON.parse(serialised).evil).toBe('</script><script>alert(1)</script>');
   });
+
+  it('re-serialises what it serialised to the identical string, so hydrate matches the server', () => {
+    // hydrate renders serialiseState(readState(doc)) back over the server's
+    // serialiseState(state); the two must be byte-identical.
+    const state = {
+      queries: [
+        {
+          queryKey: ['card', 'swsh3-1'],
+          state: {
+            data: { name: 'Pokémon <ex>', text: '</script> "q"\\n', hp: 120, ratio: 0.1 },
+            dataUpdatedAt: 1790000000000,
+            error: null,
+          },
+        },
+      ],
+    };
+    const server = serialiseState(state);
+    expect(serialiseState(readState(docWith(server)))).toBe(server);
+  });
 });
 
 describe('readState', () => {
@@ -37,9 +56,7 @@ describe('readState', () => {
 });
 
 describe('readStateJson', () => {
-  it('returns the raw text, so hydrate can render it back byte-identically', () => {
-    // The client re-renders this exact string into the React tree; anything
-    // re-serialised could differ from what the server wrote.
+  it('returns the raw text, exactly as the server wrote it', () => {
     const raw = '{"queries":[{"queryKey":["sets"],"state":{"data":[1,2]}}]}';
     expect(readStateJson(docWith(raw))).toBe(raw);
   });
