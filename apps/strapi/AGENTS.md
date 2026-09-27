@@ -64,9 +64,11 @@ instead, via `autoOpen: false` in `config/admin.ts`.
   Strapi would otherwise honour `?status=draft` from anonymous callers.
 - `src/api/health/` — `GET /api/health`, public through `auth: false` (no
   role permission): 200 `{ status, database, uptime }` when a `select 1`
-  answers, 503 when it does not, never the error itself; `Cache-Control:
-no-store`. The keep-awake workflow pings it. Strapi's `/_health` stays for
-  Render's deploy health check (`render.yaml`).
+  answers, 503 when it does not, never the error itself, and always
+  `Cache-Control: no-store`. An external uptime monitor requests it every 5
+  minutes to keep the free service awake, and the keep-awake workflow is the
+  backstop (`docs/deployment.md`). Strapi's `/_health` stays for Render's
+  deploy health check (`render.yaml`).
 - Unit tests sit next to the code (`*.test.ts`, run by the root Vitest); they
   use a fake `strapi` object, never a database.
 

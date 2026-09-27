@@ -155,24 +155,34 @@ shows placeholders. That is by design: the site degrades rather than failing.
 
 ### Keeping the free service awake
 
-`.github/workflows/keep-cms-awake.yml` is scheduled every 10 minutes, inside
-the 15 minutes a free Render service may sit idle before it sleeps, and pings
-`<CMS_URL>/api/health` (the `CMS_URL` repository variable, default
-`https://ncam-cms.onrender.com`). That route answers 200 when the CMS's
-database answers too, and 503 when it does not (see [cms.md](cms.md#health-check)).
-Two caveats:
+A free Render service sleeps after 15 minutes without a request. An **uptime
+monitor** keeps it awake by requesting
+`https://ncam-cms.onrender.com/api/health` every 5 minutes. The route answers
+200 when the CMS's database answers too, and 503 when it does not (see
+[cms.md](cms.md#health-check)), so the monitor doubles as an alert. Either of
+these free services works:
 
-- GitHub runs scheduled workflows on a best-effort basis, and here the runs
-  have landed hours apart (every 3–6 hours on 2026-09-26/27), so the CMS still
-  sleeps between them; each run pings three times, about four minutes apart.
-  For a real 10-minute cadence, point an uptime monitor (UptimeRobot and the
-  like) at the same `/api/health` URL. GitHub also disables scheduled workflows
-  after 60 days without repository activity; re-enable it in the Actions tab.
-- Render grants 750 free instance hours per workspace per month, and one service
-  kept awake around the clock uses about 744 of them. A second always-on free
-  service would exhaust the quota, and Render then suspends **every** free
-  service until the next month. If more free services appear, narrow the
-  schedule to waking hours.
+- **UptimeRobot:** add a monitor of type HTTP(s) for that URL, with a 5-minute
+  interval and an email alert contact.
+- **cron-job.org:** create a cron job for that URL, every 5 minutes, with
+  notifications on failure.
+
+The first request after a sleep takes about a minute, so the monitor may log one
+failed check while the CMS wakes; from then on it stays up.
+
+`.github/workflows/keep-cms-awake.yml` is the backstop. It is scheduled every 10
+minutes, makes one health check per run (the `CMS_URL` repository variable,
+default `https://ncam-cms.onrender.com`), and fails when the check fails, so
+GitHub emails a failure even if the monitor lapses. It cannot keep the CMS awake
+on its own: GitHub runs scheduled workflows on a best-effort basis, and here the
+runs have landed hours apart (every 3–6 hours on 2026-09-26/27). GitHub also
+disables scheduled workflows after 60 days without repository activity;
+re-enable it in the Actions tab.
+
+Render grants 750 free instance hours per workspace per month, and one service
+kept awake around the clock uses about 744 of them. A second always-on free
+service would exhaust the quota, and Render then suspends **every** free service
+until the next month. If more free services appear, keep only one of them awake.
 
 ### Free-plan limits
 

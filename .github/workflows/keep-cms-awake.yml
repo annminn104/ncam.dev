@@ -1,4 +1,7 @@
-# Keeps the Render-hosted Strapi CMS from spinning down.
+# Backstop for keeping the Render-hosted Strapi CMS awake, and an alarm when it
+# is unhealthy. The CMS is kept awake by an external uptime monitor that
+# requests /api/health every 5 minutes (docs/deployment.md, "Keeping the free
+# service awake"); this workflow covers that monitor lapsing.
 #
 # A free Render web service sleeps after 15 minutes without inbound traffic and
 # needs ~60 s to wake. The portfolio host allows the CMS 2.5 s on the home page
@@ -10,14 +13,13 @@
 # the clock costs ~744 h in a 31-day month, which leaves ~6 h of headroom for
 # everything else. Adding a second always-on free web service would blow the
 # quota and Render suspends *every* free service until the next month. If more
-# free services appear, narrow the schedule below to waking hours instead.
+# free services appear, keep only one of them awake.
 #
-# RELIABILITY. GitHub's scheduled workflows are best-effort and can be delayed
-# well past their cron interval on busy runners. A delay beyond 15 minutes lets
-# the service sleep anyway, so this job pings several times across its run
-# rather than once. In practice the runs here have landed hours apart (every
-# 3-6 h on 2026-09-26/27), so for a real 10-minute cadence point a dedicated
-# uptime service (UptimeRobot and friends) at the same /api/health URL.
+# RELIABILITY. GitHub's scheduled workflows are best-effort: the */10 schedule
+# below was delivered every 3-6 h here on 2026-09-26/27, which is why it cannot
+# be the keep-awake on its own. Each run makes one health check, with retries
+# long enough to ride out a cold start, and fails when the CMS does not pass it,
+# so GitHub's failure email flags a sick CMS even if nobody watches the monitor.
 #
 # WHAT IS PINGED. /api/health is the CMS's own route (apps/strapi/src/api/health):
 # 200 when the database answers a `select 1`, 503 when it does not. Strapi's
@@ -46,43 +48,30 @@ concurrency:
 
 jobs:
   ping:
-    name: Ping the CMS health endpoint
+    name: Check the CMS health endpoint
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       # No actions are used on purpose: nothing needs checking out, and a plain
       # `run` step keeps this free of third-party SHAs to pin and review.
-      - name: Ping /api/health
+      - name: Check /api/health
         env:
           # Override with a repository variable if the CMS moves.
           CMS_URL: ${{ vars.CMS_URL || 'https://ncam-cms.onrender.com' }}
         run: |
           set -uo pipefail
-          # Three pings ~4 minutes apart. One run therefore covers ~8 minutes,
-          # so two consecutive runs keep the service inside its idle window even
-          # when GitHub delivers the schedule late.
-          ok=0
-          for attempt in 1 2 3; do
-            code=$(curl -s -o /dev/null -w '%{http_code}' \
-                     --max-time 90 --retry 2 --retry-delay 5 --retry-all-errors \
-                     "${CMS_URL}/api/health" || echo "000")
-            echo "ping ${attempt}: HTTP ${code}"
-            # 200 means the CMS is awake and its database answers; a 503 still
-            # woke the service but its database did not answer, so it fails.
-            case "$code" in
-              2*|3*) ok=$((ok + 1)) ;;
-            esac
-            [ "$attempt" -lt 3 ] && sleep 240
-          done
-
-          echo "successful pings: ${ok}/3"
-          if [ "$ok" -eq 0 ]; then
-            echo "::error::CMS did not pass any health check — it may be suspended, redeploying, out of Render free instance hours, or unable to reach its database."
-            exit 1
-          fi
-          # A partial failure is normal while the service is waking, so it is a
-          # warning rather than a failed run: a red cron every ten minutes is
-          # noise nobody reads.
-          if [ "$ok" -lt 3 ]; then
-            echo "::warning::Only ${ok}/3 pings succeeded; the service was probably still spinning up."
-          fi
+          # One request. --max-time and the retries cover a ~60 s cold start,
+          # which Render answers by holding the request until the service is up.
+          code=$(curl -s -o /dev/null -w '%{http_code}' \
+                   --max-time 90 --retry 2 --retry-delay 5 --retry-all-errors \
+                   "${CMS_URL}/api/health" || echo "000")
+          echo "GET ${CMS_URL}/api/health: HTTP ${code}"
+          # 200 means the CMS is awake and its database answers; a 503 woke the
+          # service, but its database did not answer.
+          case "$code" in
+            2*|3*) ;;
+            *)
+              echo "::error::CMS failed its health check (HTTP ${code}) — it may be suspended, redeploying, out of Render free instance hours, or unable to reach its database."
+              exit 1
+              ;;
+          esac
