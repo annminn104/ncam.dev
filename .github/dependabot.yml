@@ -67,6 +67,12 @@ updates:
     schedule:
       interval: weekly
       day: monday
+    groups:
+      # codeql-action/init and codeql-action/analyze must run the same version;
+      # bumped one at a time, Analyze (JS/TS) fails (#63, #64, #94).
+      codeql-action:
+        patterns:
+          - 'github/codeql-action*'
     commit-message:
       prefix: 'ci'
 
