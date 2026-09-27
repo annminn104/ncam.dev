@@ -87,10 +87,19 @@ docker compose up --build                     # host http://localhost:9000, remo
 docker compose --profile gateway up --build   # + nginx on :80 → http://ncam.localhost
 ```
 
-Remote entry URLs use `*.localhost` hostnames, so the **same URL** resolves in
-the browser (loopback) and inside the host container (compose network aliases);
-that is what lets the host load remotes on the server. They are build arguments,
-not runtime environment, because the host bakes them in at build time.
+Every remote runs in the host container's network namespace
+(`network_mode: service:portfolio`), and the host bakes `http://localhost:<port>`
+entry URLs, so the **same URL** reaches a remote from the host's server and, by
+the ports the portfolio service publishes, from the browser. That is what lets
+the host render remotes on the server: `@module-federation/vite` fetches SSR
+entries over plain http from loopback hosts only. The URLs are build arguments,
+not runtime environment, because the host bakes them in at build time. The
+portfolio service also sets `NODE_OPTIONS=--experimental-vm-modules`, as the
+Vercel host does.
+
+The gateway proxies each remote on its `*.localhost` subdomain. A host rebuilt
+with those port-80 URLs loads its remotes through the gateway, but on the client
+only, since the server will not fetch their SSR entries over plain http.
 
 The host caches `/`, `/blog` and `/blog/*` for 60 s through Nitro's `swr`. On
 the node-server image that cache lives in process memory and is keyed by path
