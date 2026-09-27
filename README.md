@@ -4,330 +4,279 @@
 [![CodeQL](https://github.com/annminn104/ncam.dev/actions/workflows/codeql.yml/badge.svg)](https://github.com/annminn104/ncam.dev/actions/workflows/codeql.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-Personal portfolio built as a **micro-frontend showcase**. A server-rendered
-**TanStack Start** host renders a gallery of projects and mounts each one at
-runtime through **Module Federation**. Every project is its own Vite app: built,
-tested and deployable on its own, yet rendered inside the host at
-`https://ncam.dev/projects/<id>`.
+A personal portfolio built as a **micro-frontend showcase**. A server-rendered
+**TanStack Start** host mounts each project at runtime through **Module
+Federation**, and every project stays its own Vite app: built, tested and
+deployed on its own.
 
-Turborepo + pnpm workspaces, TypeScript everywhere.
+**Live:** [ncam-profile.vercel.app](https://ncam-profile.vercel.app)
 
-## Layout
+<table>
+  <tr>
+    <td align="center" width="33%">
+      <a href="https://ncam-profile.vercel.app/projects/toonhub"><img src="apps/portfolio/public/thumbnails/toonhub.jpg" alt="TOONHUB"></a>
+      <br><sub><b>TOONHUB</b> · Collectible figurines</sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="https://ncam-profile.vercel.app/projects/mindloop"><img src="apps/portfolio/public/thumbnails/mindloop.jpg" alt="Mindloop"></a>
+      <br><sub><b>Mindloop</b> · Newsletter / content platform</sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="https://ncam-profile.vercel.app/projects/immersive-ocean"><img src="apps/portfolio/public/thumbnails/immersive-ocean.jpg" alt="Immersive Ocean"></a>
+      <br><sub><b>Immersive Ocean</b> · Creative studio hero</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="33%">
+      <a href="https://ncam-profile.vercel.app/projects/viktor"><img src="apps/portfolio/public/thumbnails/viktor.jpg" alt="Viktor."></a>
+      <br><sub><b>Viktor.</b> · Creative portfolio hero</sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="https://ncam-profile.vercel.app/projects/bali"><img src="apps/portfolio/public/thumbnails/bali.jpg" alt="Bali Adventure"></a>
+      <br><sub><b>Bali Adventure</b> · Luxury travel landing page</sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="https://ncam-profile.vercel.app/projects/holodex"><img src="apps/portfolio/public/thumbnails/holodex.jpg" alt="Holodex"></a>
+      <br><sub><b>Holodex</b> · Pokémon TCG explorer</sub>
+    </td>
+  </tr>
+</table>
 
-| Path                   | What it is                                                                                                                     | Dev URL                 |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------ | ----------------------- |
-| `apps/portfolio`       | **Host.** TanStack Start (SSR, Nitro) + TanStack Router, React 19. Home shell + `/projects/$projectId` stage.                  | `http://localhost:9000` |
-| `apps/profile`         | The home page's six sections (hero, stacks, experience, projects, blog, contact), one federated module each.                   | `http://localhost:9006` |
-| `apps/toonhub`         | TOONHUB — collectible-figurine carousel hero. Framework-free TypeScript remote.                                                | `http://localhost:9001` |
-| `apps/mindloop`        | Mindloop — dark newsletter landing page. React 19, Tailwind v4, framer-motion, hls.js.                                         | `http://localhost:9002` |
-| `apps/immersive-ocean` | Immersive Ocean — creative-studio hero with looping video background. React 19, Tailwind v4.                                   | `http://localhost:9003` |
-| `apps/viktor`          | Viktor. — portfolio hero with crossfade video switcher. React 19, Tailwind v4.                                                 | `http://localhost:9004` |
-| `apps/bali`            | Bali Adventure — cinematic luxury-travel landing page. React 19, Tailwind v4, GSAP ScrollTrigger, framer-motion.               | `http://localhost:9005` |
-| `apps/holodex`         | Holodex — Pokémon TCG database explorer on the TCGdex API. React 19, Tailwind v4, TanStack Query, three.js WebGL holo cards.   | `http://localhost:9007` |
-| `apps/strapi`          | Strapi 5 headless CMS for the blog — Blocks editor, public read-only REST API. Backend service, not a remote.                  | `http://localhost:1337` |
-| `packages/*`           | `project-registry` (typed project list), `mf-remote` (`defineRemote()` + `.env` reader), `design-tokens`, `logger`, `tsconfig` | —                       |
+## Contents
 
-Each app and package carries its own `AGENTS.md` with the rules for that unit;
-the root [`AGENTS.md`](AGENTS.md) covers cross-cutting concerns.
+- [What's inside](#whats-inside)
+- [Architecture](#architecture)
+- [Tech stack](#tech-stack)
+- [Getting started](#getting-started)
+- [Scripts](#scripts)
+- [Configuration](#configuration)
+- [Adding a project](#adding-a-project)
+- [Quality gates and contributing](#quality-gates-and-contributing)
+- [Deployment](#deployment)
+- [Troubleshooting](#troubleshooting)
+- [License](#license)
 
-## How a project renders
+## What's inside
 
-1. `@ncam/project-registry` is the single source of truth: id, copy, accent,
-   thumbnail, remote name. The host's gallery is server-rendered from it.
-2. Opening `/projects/<id>` runs the route loader on the server, which imports
-   the remote's **`./ssr`** module and inlines the returned `{ html, css }`.
-3. In the browser the host imports **`./hydrate`** to attach interactivity
-   (falls back to **`./mount`** for pure client rendering).
-4. Remotes are **self-contained**: each bundles its own runtime (including React
-   where used) and exposes `mount` / `ssr` / `hydrate`. Nothing is shared across
-   the host↔remote boundary, so a remote behaves identically standalone and
-   mounted. `packages/mf-remote` encapsulates that Vite config.
-5. The home page eats its own dog food: its six sections are modules of the
-   `profile` remote (`profile/hero` … `profile/contact`, each `{ ssr, hydrate,
-mount }`). The host server-renders them in parallel, hydrates each into a
-   slot, and the manifest rail shows every module's real lifecycle.
+A Turborepo monorepo on pnpm workspaces, TypeScript everywhere.
 
-## Prerequisites
+| Path                   | What it is                                                                                                                                          | Dev port |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| `apps/portfolio`       | **Host.** TanStack Start (SSR on Nitro) and TanStack Router, React 19: the home page, the project gallery, the `/projects/<id>` stage and the blog. | 9000     |
+| `apps/toonhub`         | TOONHUB: a collectible-figurine carousel hero. Framework-free TypeScript.                                                                           | 9001     |
+| `apps/mindloop`        | Mindloop: a dark newsletter landing page. React 19, Tailwind v4, framer-motion, hls.js.                                                             | 9002     |
+| `apps/immersive-ocean` | Immersive Ocean: a creative-studio hero over a looping video. React 19, Tailwind v4.                                                                | 9003     |
+| `apps/viktor`          | Viktor.: a portfolio hero with a crossfading video switcher. React 19, Tailwind v4.                                                                 | 9004     |
+| `apps/bali`            | Bali Adventure: a cinematic luxury-travel landing page. React 19, Tailwind v4, GSAP ScrollTrigger, framer-motion.                                   | 9005     |
+| `apps/profile`         | The home page's six sections (hero, stacks, experience, projects, blog, contact), one federated module each.                                        | 9006     |
+| `apps/holodex`         | Holodex: a Pokémon TCG explorer on the TCGdex API, with nested URLs of its own and three.js holo foil cards. React 19, Tailwind v4, TanStack Query. | 9007     |
+| `apps/strapi`          | Strapi 5 headless CMS for the blog, with a public read-only REST API. A backend service, not a remote.                                              | 1337     |
 
-- **Node 22** (see `.nvmrc`; `pnpm thumbnails` needs ≥ 22.18).
-- **pnpm** — required (`workspace:*` protocol + pnpm lockfile). Easiest:
+| Package                  | What it is                                                                                                   |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------ |
+| `@ncam/project-registry` | The typed list of projects that the gallery, the project routes and the sitemap read.                        |
+| `@ncam/mf-remote`        | `defineRemote()`, every remote's Vite config; the `.env` reader; the `MountConfig` / `MountHandle` contract. |
+| `@ncam/cms`              | A typed Strapi client and the `BlogPost` view model, for server-side use.                                    |
+| `@ncam/design-tokens`    | CSS custom properties shared by the host and the profile remote.                                             |
+| `@ncam/logger`           | An isomorphic logger for the apps.                                                                           |
+| `@ncam/tsconfig`         | The shared base TypeScript config.                                                                           |
 
-  ```bash
-  corepack enable
-  ```
+Every app, and most packages, carry an `AGENTS.md` with the rules for that
+unit; the root [`AGENTS.md`](AGENTS.md) covers cross-cutting concerns.
 
-  This picks up the version pinned in `package.json` (`packageManager`).
+## Architecture
 
-## Quick start
+```mermaid
+flowchart LR
+  browser([Browser])
+  subgraph vercel [Vercel]
+    host["Host · apps/portfolio<br/>TanStack Start SSR on Nitro"]
+    remotes["7 remotes · apps/*<br/>static Vite builds"]
+  end
+  cms[("Strapi · apps/strapi<br/>Render + Postgres")]
+  tcgdex[("TCGdex API")]
+
+  browser -->|"page request"| host
+  host -->|"./ssr, on the server"| remotes
+  browser -->|"./hydrate or ./mount"| remotes
+  host -->|"REST, on the server"| cms
+  remotes -.->|"Holodex only"| tcgdex
+```
+
+1. **One registry.** `@ncam/project-registry` holds each project's id, copy,
+   accent, thumbnail and remote name, and the gallery, the project routes and
+   the sitemap all read it.
+2. **Server render.** Opening `/projects/<id>` runs a route loader that loads
+   the remote's `./ssr` module from its deployed `remoteEntry.ssr.js` and
+   inlines the `{ html, css }` it returns. Federated SSR runs in production
+   builds only; under `vite dev` every remote mounts on the client.
+3. **Hydrate or mount.** In the browser the host imports `./hydrate`, or
+   `./mount` when there is no server HTML. Every entry takes a `MountConfig`
+   (`route`, `onNavigate`, `assetBase`) and returns a `MountHandle`, a
+   disposer.
+4. **Route-aware remotes.** A remote can own nested URLs:
+   `/projects/holodex/sets/swsh3` hands Holodex its own path, `/sets/swsh3`.
+   When that path changes, the host calls `MountHandle.update(route)` instead
+   of remounting, so a WebGL context, a query cache or a scroll position
+   survives in-app navigation. Holodex is the first remote to do this.
+5. **Self-contained remotes.** Each remote bundles its own runtime, React
+   included where it uses React. With `shared: {}` nothing crosses the
+   host↔remote boundary, so a remote behaves the same standalone and mounted.
+   `packages/mf-remote` holds that Vite config.
+6. **A federated home page.** The home page's six sections are modules of the
+   `profile` remote (`profile/hero` … `profile/contact`). The host
+   server-renders them one after another within a 4 s budget; a module that
+   fails or runs out of time mounts on the client instead, and the manifest
+   rail shows each module's real lifecycle.
+7. **Blog.** The host reads Strapi on the server only, through TanStack Start
+   server functions. See [docs/cms.md](docs/cms.md).
+
+## Tech stack
+
+| Area       | Tools                                                                                                          |
+| ---------- | -------------------------------------------------------------------------------------------------------------- |
+| Host       | TanStack Start and TanStack Router, React 19, Nitro                                                            |
+| Federation | `@module-federation/vite`, with server-side remote entries                                                     |
+| Remotes    | Vite 8, React 19 or plain TypeScript, Tailwind CSS v4, GSAP, framer-motion, hls.js, three.js, TanStack Query   |
+| CMS        | Strapi 5: SQLite in development, Postgres in Docker and on Render                                              |
+| Tooling    | pnpm workspaces, Turborepo, TypeScript, Vitest, ESLint (flat config), Prettier, Husky, lint-staged, commitlint |
+| Hosting    | Vercel (the host and the remotes), Render (the CMS), Docker Compose (the whole stack)                          |
+
+## Getting started
+
+**Prerequisites:** Node 22 (see `.nvmrc`; `pnpm thumbnails` needs 22.18 or
+later) and pnpm, which `corepack enable` installs at the version pinned in
+`package.json`.
 
 ```bash
+corepack enable
 pnpm install
-pnpm dev          # host :9000 + every remote :9001–:9007 via Turbo
+pnpm dev        # host :9000, remotes :9001–:9007, Strapi :1337
 ```
 
-Open http://localhost:9000 and click a project — the host loads that remote at
-runtime, so the remote's dev server must be up (that is what `pnpm dev` does).
+Open http://localhost:9000 and pick a project. The host loads that remote at
+runtime, so the remote's dev server must be running, which `pnpm dev` takes care
+of. Strapi's first run writes `apps/strapi/.env` with generated secrets; then
+register the first admin user at http://localhost:1337/admin
+([docs/cms.md](docs/cms.md)).
 
-Run a single workspace when iterating on one app:
+To work on one app:
 
 ```bash
-pnpm --filter @ncam/viktor dev        # remote alone, standalone dev page on :9004
-pnpm --filter @ncam/portfolio dev     # host alone (projects fail to load until their remote runs)
+pnpm --filter @ncam/holodex dev     # a remote alone, on its standalone page at :9007
+pnpm --filter @ncam/portfolio dev   # the host alone; projects fail to load until their remote runs
 ```
 
-## Scripts (repo root)
+## Scripts
 
-| Command                   | Does                                                                                                                  |
-| ------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| `pnpm dev`                | All dev servers (Turbo, persistent).                                                                                  |
-| `pnpm build`              | Build every workspace. Host → `.output/` (Nitro server), remotes → `dist/`.                                           |
-| `pnpm preview`            | Serve the production builds locally.                                                                                  |
-| `pnpm typecheck`          | `tsc --noEmit` everywhere.                                                                                            |
-| `pnpm lint` / `lint:fix`  | ESLint (flat config).                                                                                                 |
-| `pnpm format` / `:check`  | Prettier.                                                                                                             |
-| `pnpm test` / `:watch`    | Vitest (shared packages).                                                                                             |
-| `pnpm run ci`             | lint + format check + typecheck + test + build — same as GitHub Actions; `pnpm ci` alone is pnpm's own clean-install. |
-| `pnpm assets`             | Download self-hosted assets where an app defines it (currently toonhub figurines).                                    |
-| `pnpm thumbnails [id...]` | Regenerate gallery thumbnails (see below).                                                                            |
-| `pnpm skills:add`         | Install the agent skills listed in `scripts/add-agent-skills.sh`.                                                     |
+Run from the repo root.
+
+| Command                        | Does                                                                                                     |
+| ------------------------------ | -------------------------------------------------------------------------------------------------------- |
+| `pnpm dev`                     | Every dev server, through Turbo.                                                                         |
+| `pnpm build`                   | Builds every workspace: the host to `.output/` (a Nitro server), the remotes to `dist/`.                 |
+| `pnpm preview`                 | Serves the production builds locally.                                                                    |
+| `pnpm typecheck`               | `tsc --noEmit` in every workspace.                                                                       |
+| `pnpm lint` / `lint:fix`       | ESLint (flat config).                                                                                    |
+| `pnpm format` / `format:check` | Prettier.                                                                                                |
+| `pnpm test` / `test:watch`     | Vitest over the shared packages, Strapi, Holodex, the host's `src/lib` and the apps' scripts.            |
+| `pnpm run ci`                  | Lint, format check, typecheck, test and build, as CI runs them. (`pnpm ci` is pnpm's own clean install.) |
+| `pnpm assets`                  | Downloads self-hosted assets where an app defines them (currently TOONHUB's figurines).                  |
+| `pnpm thumbnails [id...]`      | Regenerates gallery thumbnails; see [Adding a project](#adding-a-project).                               |
+| `pnpm skills:add`              | Installs the agent skills listed in `scripts/add-agent-skills.sh`.                                       |
 
 ## Configuration
 
-Non-secret defaults live in the committed **`.env`**; machine-specific overrides
-go in **`.env.local`** (gitignored). Precedence, highest first: the real
-environment, then `.env.local`, then `.env`. The runtime-only `STRAPI_*`
-variables are the exception: the built server reads them from the real
-environment only (see the table). Never put secrets in `.env`.
+Non-secret defaults live in the committed `.env`, and machine-specific
+overrides go in `.env.local` (gitignored). The real environment wins over
+`.env.local`, which wins over `.env`. The runtime `STRAPI_*` variables are the
+exception: the built server reads them from the real environment only. Never
+put secrets in `.env`.
 
-| Variable                                                                                                                                                      | Purpose                                                                                                                                                                                      |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `PORTFOLIO_PORT`, `TOONHUB_PORT`, `MINDLOOP_PORT`, `IMMERSIVE_OCEAN_PORT`, `VIKTOR_PORT`, `BALI_PORT`, `PROFILE_PORT`                                         | Dev / preview ports.                                                                                                                                                                         |
-| `TOONHUB_REMOTE_URL`, `MINDLOOP_REMOTE_URL`, `IMMERSIVE_OCEAN_REMOTE_URL`, `VIKTOR_REMOTE_URL`, `BALI_REMOTE_URL`, `PROFILE_REMOTE_URL`, `HOLODEX_REMOTE_URL` | `remoteEntry.js` URL the host loads for each remote. **Baked at build.**                                                                                                                     |
-| `TOONHUB_BASE`, `MINDLOOP_BASE`, `IMMERSIVE_OCEAN_BASE`, `VIKTOR_BASE`, `BALI_BASE`, `PROFILE_BASE`                                                           | Public base path per remote (default `/`).                                                                                                                                                   |
-| `SITE_URL`                                                                                                                                                    | The site's public origin: canonical / OG / JSON-LD plus the generated `robots.txt` and `sitemap.xml`. **Baked at build.** Falls back to Vercel's production domain, then `https://ncam.dev`. |
-| `STRAPI_URL`, `STRAPI_PUBLIC_URL`                                                                                                                             | Blog CMS origin the **portfolio server** fetches from, and the origin browsers reach for media (defaults to `STRAPI_URL`). **Runtime** env — not baked; default `http://localhost:1337`.     |
+Below, `<NAME>` stands for `TOONHUB`, `MINDLOOP`, `IMMERSIVE_OCEAN`, `VIKTOR`,
+`BALI`, `PROFILE` or `HOLODEX`.
 
-## Thumbnails
-
-Gallery cards and each project's `og:image` are **generated**, not designed:
-1200×630 Playwright captures of `/projects/<id>` on the running host with the
-host's back button hidden (`apps/portfolio/scripts/capture-thumbnails.mjs`).
-
-```bash
-pnpm --filter @ncam/portfolio exec playwright install chromium   # once
-pnpm dev                                                         # host + remotes up
-pnpm thumbnails                                                  # or: pnpm thumbnails viktor
-```
-
-Output: `apps/portfolio/public/thumbnails/<id>.jpg`, paths declared in the
-registry. Re-run whenever a remote's hero changes.
+| Variable                          | Purpose                                                                                                                                                                                           |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PORTFOLIO_PORT`, `<NAME>_PORT`   | Dev and preview ports.                                                                                                                                                                            |
+| `<NAME>_REMOTE_URL`               | The `remoteEntry.js` URL the host loads for each remote. **Baked in at build time.**                                                                                                              |
+| `<NAME>_BASE`                     | Each remote's public base path (default `/`).                                                                                                                                                     |
+| `SITE_URL`                        | The site's public origin, for canonical URLs, Open Graph, JSON-LD, `robots.txt` and `sitemap.xml`. **Baked in at build time.** Falls back to Vercel's production domain, then `https://ncam.dev`. |
+| `STRAPI_URL`, `STRAPI_PUBLIC_URL` | The CMS origin the host's server fetches from, and the origin browsers load media from (defaults to `STRAPI_URL`). **Read at runtime**; default `http://localhost:1337`.                          |
 
 ## Adding a project
 
-1. `apps/<project>/` — a Vite app exposing `./mount`, `./ssr`, `./hydrate`
-   through `defineRemote()` from `@ncam/mf-remote` (copy `apps/viktor`).
-2. Give it an `AGENTS.md`, a `vercel.json` (see any remote) and add its
-   `<NAME>_PORT` / `<NAME>_REMOTE_URL` / `<NAME>_BASE` to `.env`.
-3. Host: add the remote in `apps/portfolio/vite.config.ts` and one static
-   `import('<remote>/ssr' | '/hydrate' | '/mount')` per loader map in
-   `apps/portfolio/src/routes/projects/$projectId.tsx`, plus a `.d.ts` in
-   `src/types/remote/`.
-4. Register it in `packages/project-registry` (the tests there enforce the shape).
-5. `pnpm thumbnails <id>` with `pnpm dev` running.
+1. Create `apps/<id>/`, a Vite app whose `vite.config.ts` calls
+   `defineRemote()` from `@ncam/mf-remote` and exposes `./mount`, `./ssr` and
+   `./hydrate` (copy `apps/viktor`). Its `build` script is `vite build --app`,
+   which also emits the server entry.
+2. Give it an `AGENTS.md` and a `vercel.json` (copy any remote's), and add its
+   `<NAME>_PORT` and `<NAME>_REMOTE_URL` to `.env`.
+3. In the host, add the remote to `remotes` in `apps/portfolio/vite.config.ts`;
+   add one static `import('<remote>/ssr')`, `'/hydrate'` and `'/mount'` to the
+   loader maps in `apps/portfolio/src/components/ProjectStage.tsx`; and type the
+   modules in `apps/portfolio/src/types/remote/<id>.d.ts`.
+4. Register it in `packages/project-registry`, whose tests enforce the shape.
+   Set `routeAware: true` if it owns nested URLs; otherwise the host sends
+   deeper paths a `noindex` and a canonical back to the project page.
+5. For Docker, add a service to `docker-compose.yml`, an
+   `ARG <NAME>_REMOTE_URL` to the `Dockerfile` and a server block to
+   `nginx/nginx.conf`.
+6. With `pnpm dev` running, generate its thumbnail: `pnpm thumbnails <id>`.
 
-Details and rules: root `AGENTS.md` → "Adding a new project".
+**Thumbnails** are generated, not designed. Each gallery card and each project
+page's `og:image` is a 1200×630 Playwright capture of `/projects/<id>` on the
+running host, with the host's back button hidden
+(`apps/portfolio/scripts/capture-thumbnails.mjs`), saved to
+`apps/portfolio/public/thumbnails/<id>.jpg`. The script needs Playwright's
+Chromium once (`pnpm --filter @ncam/portfolio exec playwright install chromium`).
+Re-run it whenever a remote's first screen changes rather than editing an image.
 
-## Blog CMS (Strapi)
+## Quality gates and contributing
 
-`apps/strapi` is a Strapi 5 headless CMS (TypeScript, Blocks editor). Posts are
-written in its admin and served through a **public, read-only REST API**; the
-portfolio host will consume it (separate spec). It is a backend service, not a
-federated remote — Vercel cannot host it, Docker can (see Deploy → Docker).
+- Commits follow **Conventional Commits** (`feat(portfolio): …`,
+  `fix(holodex): …`), checked by commitlint.
+- **Husky** runs lint-staged (ESLint `--fix` and Prettier) before each commit,
+  commitlint on each message, and `turbo run typecheck build` before each push.
+  Skip the push check in a pinch with `git push --no-verify`.
+- **CI** (`.github/workflows/ci.yml`) runs lint, format check, typecheck, test
+  and build on every push to `main` and on every pull request, keeping the Turbo
+  cache between runs. It also audits dependencies
+  (`pnpm audit --audit-level high`) and lints a pull request's commit messages.
+- **CodeQL** scans on push, on pull requests and weekly. **Dependabot** opens
+  weekly update pull requests for npm (grouped), GitHub Actions and Docker.
+- Open pull requests against `main`, and run `pnpm run ci` first. Read the
+  `AGENTS.md` of any app you change.
+- Report vulnerabilities as described in [`SECURITY.md`](SECURITY.md).
 
-```bash
-pnpm --filter @ncam/strapi setup:env   # once: apps/strapi/.env with generated secrets (gitignored)
-pnpm --filter @ncam/strapi dev         # creates .env on first run, then http://localhost:1337/admin — register the first admin user
-```
+## Deployment
 
-`pnpm dev` at the root starts it too. Content model: `article` (title, slug,
-excerpt, cover, `body` as Blocks, `readingTime` computed on save, tags, seo) and
-`tag`. Drafts stay invisible to the API until published (`?status=draft` is ignored
-by the public routes).
+- **Vercel** serves the host (a Nitro server) and the seven remotes (static
+  builds), one project per app, each configured by its own `vercel.json`. The
+  host bakes each `<NAME>_REMOTE_URL` in at build time.
+- **Render** runs Strapi and its Postgres from [`render.yaml`](render.yaml),
+  and a scheduled workflow keeps the free service awake.
+- **Docker Compose** runs the whole stack from one image:
+  `docker compose up --build`.
 
-```bash
-curl 'http://localhost:1337/api/articles?sort=publishedAt:desc&populate[cover]=true&populate[tags]=true'
-curl 'http://localhost:1337/api/articles?filters[slug][$eq]=my-post&populate=*'
-curl 'http://localhost:1337/api/tags'
-```
-
-Anonymous read access is granted on every boot (`apps/strapi/src/lib/public-permissions.ts`),
-so nothing has to be clicked in Settings → Roles; writes stay admin-only. After
-changing a schema run `pnpm --filter @ncam/strapi strapi ts:generate-types` and
-commit `apps/strapi/types/generated/`. Details: [`apps/strapi/AGENTS.md`](apps/strapi/AGENTS.md).
-
-The portfolio renders the blog at **`/blog`** and **`/blog/<slug>`** and shows
-the latest posts in the home page's blog section. All reads happen server-side
-through TanStack Start server functions (`apps/portfolio/src/functions/blog.functions.ts`)
-using `@ncam/cms`; pages are cached for 60 s (`swr`), so a publish is live within
-a minute. With the CMS unreachable the home section shows its placeholders and
-`/blog` an empty state.
-
-## Quality gates
-
-- **Husky**: `pre-commit` runs lint-staged (ESLint `--fix` + Prettier),
-  `commit-msg` runs commitlint (**Conventional Commits**, e.g.
-  `feat(portfolio): …`), `pre-push` runs `turbo run typecheck build`.
-  Bypass in a pinch with `git push --no-verify`.
-- **CI** (`.github/workflows/ci.yml`): lint, format check, typecheck, test and
-  build on every push to `main` and every PR, with the Turbo cache persisted
-  between runs; PR commit messages are validated with commitlint.
-- **CodeQL** weekly + on push/PR; **Dependabot** opens grouped update PRs.
-- Vulnerability reports: see [`SECURITY.md`](SECURITY.md).
-
-## Deploy
-
-### Vercel (one project per app — works on the free Hobby plan)
-
-Remotes are static Vite builds; the host is a Nitro server. Each app has its
-own `vercel.json` (build command, output dir, CORS header for the remotes, and
-`ignoreCommand: npx turbo-ignore` so a push only rebuilds the apps it touched),
-so create **one Vercel project per app** from this repo with the matching
-**Root Directory**. Suggested project names (all free on `*.vercel.app` as of
-Sep 2026; `ncam.vercel.app` itself is taken):
-
-| Project                | Root Directory         | Production URL                             |
-| ---------------------- | ---------------------- | ------------------------------------------ |
-| `ncam-dev`             | `apps/portfolio`       | `https://ncam-dev.vercel.app` (→ ncam.dev) |
-| `ncam-toonhub`         | `apps/toonhub`         | `https://ncam-toonhub.vercel.app`          |
-| `ncam-mindloop`        | `apps/mindloop`        | `https://ncam-mindloop.vercel.app`         |
-| `ncam-immersive-ocean` | `apps/immersive-ocean` | `https://ncam-immersive-ocean.vercel.app`  |
-| `ncam-viktor`          | `apps/viktor`          | `https://ncam-viktor.vercel.app`           |
-| `ncam-bali`            | `apps/bali`            | `https://ncam-bali.vercel.app`             |
-| `ncam-profile`         | `apps/profile`         | `https://ncam-profile.vercel.app`          |
-
-1. **Remotes first** (the six `ncam-*` projects): framework Vite, everything else
-   comes from `vercel.json`. Deploy and note each production URL.
-2. **Host** (`ncam-dev`, root `apps/portfolio`): add these Production environment
-   variables — they are baked into the build, so redeploy the host after changing
-   one:
-
-   ```
-   TOONHUB_REMOTE_URL=https://ncam-toonhub.vercel.app/remoteEntry.js
-   MINDLOOP_REMOTE_URL=https://ncam-mindloop.vercel.app/remoteEntry.js
-   IMMERSIVE_OCEAN_REMOTE_URL=https://ncam-immersive-ocean.vercel.app/remoteEntry.js
-   VIKTOR_REMOTE_URL=https://ncam-viktor.vercel.app/remoteEntry.js
-   BALI_REMOTE_URL=https://ncam-bali.vercel.app/remoteEntry.js
-   PROFILE_REMOTE_URL=https://ncam-profile.vercel.app/remoteEntry.js
-   ```
-
-   The host project also needs `STRAPI_URL` and `STRAPI_PUBLIC_URL` (both
-   `https://cms.<domain>`).
-
-   Nitro detects Vercel and emits the Build Output; SSR runs in a serverless
-   function (Hobby: 10 s max). The home loader keeps a 4 s total budget for the
-   six profile modules and each federated load times out individually, so a slow
-   or missing remote costs its section SSR, never the response.
-
-3. Own domain? Point it at the host project and set `SITE_URL` on that project
-   (e.g. `https://ncam.dev`), then redeploy — it is baked at build time and
-   drives canonical / OG / JSON-LD as well as the generated `robots.txt` and
-   `sitemap.xml`. Without it the build falls back to Vercel's production domain
-   for that project, so a fresh `*.vercel.app` deploy is already self-consistent.
-   Remotes can stay on `*.vercel.app`.
-
-Hobby notes: one concurrent build (a push touching everything builds the seven
-projects one after another, ~10 min; `turbo-ignore` skips the untouched ones),
-non-commercial use only, share the Turbo cache with
-`npx turbo login && npx turbo link`.
-
-### Docker
-
-One multi-stage image builds the whole monorepo; `docker-compose.yml` runs the
-SSR host and each remote (static preview) from that same image:
-
-```bash
-docker compose up --build            # host http://localhost:9000, remotes :9001–:9007
-docker compose --profile gateway up --build   # + nginx on :80 → http://ncam.localhost
-```
-
-Remote entry URLs use `*.localhost` hostnames so the **same URL** resolves in
-the browser (loopback) and inside the host container (compose network aliases)
-— that is what lets the host resolve remotes server-side. They are build args,
-not runtime env, because the host bakes them in at build time.
-
-The host caches `/`, `/blog` and `/blog/*` for 60 s via Nitro `swr`; on the
-node-server image that cache is in process memory and keyed by path + query
-string, so before exposing the stack publicly strip query strings for those
-routes at the gateway or mount a bounded cache storage.
-
-The CMS has its own image and a Postgres container behind the `cms` compose
-profile, so the default stack never needs it (SQLite is dev-only):
-
-```bash
-pnpm --filter @ncam/strapi setup:env                        # secrets + DB password in apps/strapi/.env
-docker compose up --build strapi                             # http://localhost:1337/admin, API under /api/*
-docker compose --profile gateway --profile cms up --build    # + http://cms.localhost/api/articles
-```
-
-Set `PUBLIC_URL` in `apps/strapi/.env` to the origin the CMS is reached at — `http://localhost:1337` when you hit the container directly, `http://cms.localhost` behind the gateway, `https://cms.<domain>` in production — so admin links and media URLs are absolute and correct. Uploads live in the
-`strapi-uploads` volume, data in `strapi-db-data`.
-
-The `portfolio` container reads the CMS through `STRAPI_URL=http://strapi:1337`
-and serves media from `STRAPI_PUBLIC_URL=http://cms.localhost:1337`; start the
-`cms` profile too (`docker compose --profile cms up`) or the blog renders empty.
-
-### Render (the CMS — Vercel cannot host it)
-
-Strapi needs a long-lived process, a real database and somewhere durable for
-uploads, so it goes on Render while the seven frontends stay on Vercel.
-[`render.yaml`](render.yaml) at the repo root is the Blueprint: the `ncam-cms`
-Docker web service plus its `ncam-cms-db` Postgres.
-
-1. Render Dashboard → **New → Blueprint**, pick this repo. Render reads
-   `render.yaml` and creates both resources. Leave the Docker context at the
-   repo root — the Dockerfile copies `pnpm-workspace.yaml` and `pnpm-lock.yaml`
-   from there, so a narrower context cannot install.
-2. Apply. The six Strapi secrets are generated once by the Blueprint and kept
-   across syncs; `DATABASE_URL` is wired from the database over the private
-   network. Nothing to paste.
-3. Open `<service-url>/admin` and register the first admin user. This database
-   starts empty — posts written against the local SQLite do not come along.
-4. On the Vercel host project set `STRAPI_URL` and `STRAPI_PUBLIC_URL` to the
-   service URL. Both are read at runtime, so no rebuild is needed.
-
-`PUBLIC_URL` is deliberately unset: `config/server.ts` falls back to
-`RENDER_EXTERNAL_URL`, which Render injects. Set it explicitly only for a custom
-domain. Render injects `PORT` too, and the server already binds it.
-
-Until step 4, `/blog` renders its empty state and the home page's blog section
-shows placeholders — by design, the site degrades rather than failing.
-
-**Three free-plan limits hit a CMS specifically**, so read these before treating
-it as production:
-
-- A free web service **sleeps after 15 minutes idle** and takes about a minute
-  to wake. The host allows the CMS 2.5 s on the home page and 5 s in
-  `@ncam/cms`, so the first request after a sleep always shows placeholders.
-- Free web services **cannot attach a persistent disk**, so uploaded media is
-  lost on every deploy, restart and spin-down. The `disk` block in `render.yaml`
-  is commented out for that reason — uncomment it on a paid plan. The fix that
-  keeps the free plan is an external upload provider (S3, Cloudinary).
-- A **free Postgres expires 30 days after creation**, with a 14-day grace period
-  before deletion.
+Step-by-step setup, the environment each project needs and the free-plan
+limits: [docs/deployment.md](docs/deployment.md).
 
 ## Troubleshooting
 
-- **`cannot find binary path`** on `pnpm dev` — Turbo can't find pnpm. Install
-  pnpm (see Prerequisites); don't use `npm run dev`.
-- **"Couldn't load <project>"** in the host — that remote's dev server isn't
-  running, or its `*_REMOTE_URL` points elsewhere. Run `pnpm dev` at the root.
-- **`pnpm thumbnails` fails** — needs the dev servers up, Node ≥ 22.18 and a
-  Playwright Chromium (`pnpm --filter @ncam/portfolio exec playwright install chromium`).
-- **Strapi: `App keys are required` / `Missing auth.secret` on start** —
-  `apps/strapi/.env` is missing. `pnpm --filter @ncam/strapi dev` creates it
-  (or run `pnpm --filter @ncam/strapi setup:env`).
-- **Strapi: `EADDRINUSE :1337`** — another Strapi (or the Docker container) already
-  owns 1337. `docker compose stop strapi`, or set `PORT` in `apps/strapi/.env`.
+- **`cannot find binary path` on `pnpm dev`:** Turbo cannot find pnpm. Install
+  it (see [Getting started](#getting-started)) and don't use `npm run dev`.
+- **"Couldn't load <project>" in the host:** that remote's dev server is not
+  running, or its `<NAME>_REMOTE_URL` points elsewhere. Run `pnpm dev` at the
+  root.
+- **`pnpm thumbnails` fails:** it needs the dev servers up, Node 22.18 or later
+  and Playwright's Chromium.
+- **Strapi says `App keys are required` or `Missing auth.secret`:**
+  `apps/strapi/.env` is missing. `pnpm --filter @ncam/strapi dev` creates it, as
+  does `pnpm --filter @ncam/strapi setup:env`.
+- **Strapi fails with `EADDRINUSE :1337`:** another Strapi, or the Docker
+  container, already holds port 1337. Run `docker compose stop strapi`, or set
+  `PORT` in `apps/strapi/.env`.
 
 ## License
 
