@@ -30,7 +30,16 @@ updates:
       # Stay on 6.x until Strapi moves to 7.
       - dependency-name: 'react-router-dom'
         update-types: ['version-update:semver-major']
+      # The host's @module-federation/runtime must be the exact version that
+      # @module-federation/vite itself depends on, or the host's server bundle
+      # carries two federation runtimes and federation.ts's getInstance() resets
+      # the wrong one. Bump it by hand alongside @module-federation/vite.
+      - dependency-name: '@module-federation/runtime'
     groups:
+      # Strapi's packages version in lockstep (one 5.x release line).
+      strapi:
+        patterns:
+          - '@strapi/*'
       # The TanStack Start family versions in lockstep and MUST move together —
       # a partial bump broke the SSR build (h3 / start-server-core incident).
       tanstack:

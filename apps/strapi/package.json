@@ -21,9 +21,9 @@
     "upgrade:dry": "pnpm dlx @strapi/upgrade latest --dry"
   },
   "dependencies": {
-    "@strapi/database": "5.53.0",
-    "@strapi/plugin-users-permissions": "5.53.0",
-    "@strapi/strapi": "5.53.0",
+    "@strapi/database": "5.54.0",
+    "@strapi/plugin-users-permissions": "5.54.0",
+    "@strapi/strapi": "5.54.0",
     "better-sqlite3": "13.0.3",
     "pg": "^8.23.0",
     "react": "^19.3.0",
@@ -32,7 +32,7 @@
     "styled-components": "^6.0.0"
   },
   "devDependencies": {
-    "@types/node": "^26",
+    "@types/node": "^26.6.2",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "typescript": "^5"
