@@ -19,9 +19,15 @@ export async function getHostRuntime(): Promise<ModuleFederation> {
  * never expire on their own — runtime-core keeps the rejected entry-load
  * promise, and the vite plugin's SSR loader caches its (null) SSR-entry
  * resolution — so without this the remote stays un-renderable until restart.
+ *
+ * The federation plugin registers each remote under a scoped runtime name
+ * (`<scope>__holodex`) and keeps the configured name as its alias, so the
+ * remote is looked up by either.
  */
 export async function forgetFailedRemote(runtime: ModuleFederation, name: string): Promise<void> {
-  const remote = runtime.options.remotes.find((candidate) => candidate.name === name);
+  const remote = runtime.options.remotes.find(
+    (candidate) => candidate.name === name || candidate.alias === name,
+  );
   if (!remote) {
     log.warn('federation.forget-skipped', {
       remote: name,
