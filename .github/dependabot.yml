@@ -25,6 +25,11 @@ updates:
       # typescript-eslint supports TS 7, then drop this ignore.
       - dependency-name: 'typescript'
         update-types: ['version-update:semver-major']
+      # Only apps/strapi depends on react-router-dom, and Strapi 5's admin
+      # (@strapi/strapi, @strapi/admin) declares peer `react-router-dom ^6.30.3`.
+      # Stay on 6.x until Strapi moves to 7.
+      - dependency-name: 'react-router-dom'
+        update-types: ['version-update:semver-major']
     groups:
       # The TanStack Start family versions in lockstep and MUST move together —
       # a partial bump broke the SSR build (h3 / start-server-core incident).
