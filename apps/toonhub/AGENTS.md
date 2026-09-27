@@ -9,13 +9,19 @@ the shell can mount it as a micro-frontend.)
 `vite.config.ts` exposes three federated modules:
 
 ```ts
-// ./mount  — CSR: render + init in one go (used by the standalone dev page)
-mount(target, config?): () => void            // + unmount(target)
+// ./mount  — CSR: render + init in one go (also used by the standalone dev page)
+mount(target, config?: MountConfig): MountHandle          // + unmount(target)
 // ./ssr    — SSR-safe: build initial HTML (+ inlined scoped CSS), NO DOM/window
-renderHeroSSR({ config?, assetBase? }): { html: string; css: string }
+renderHeroSSR({ config?: MountConfig, assetBase? }): { html: string; css: string }
 // ./hydrate — client: attach the controller to already-rendered SSR markup
-hydrate(target, config?): () => void           // + dispose(target)
+hydrate(target): MountHandle                               // + dispose(target)
 ```
+
+`config` is the host's `MountConfig` (`packages/mf-remote/src/contract.ts`),
+the object the host passes every remote, never TOONHUB's own data. TOONHUB has
+no routes, so it reads only `assetBase`, and the hero always renders
+`toonHubConfig`. Treating `config` as a `ToonHubConfig` broke all three entries
+once the host started passing `{ route, onNavigate }`.
 
 Two consumption modes:
 

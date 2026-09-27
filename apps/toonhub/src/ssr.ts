@@ -1,9 +1,12 @@
+import type { MountConfig } from '@ncam/mf-remote';
 import heroCss from './styles/hero.css?inline';
 import { toonHubConfig, type ToonHubConfig } from './data/toonhub';
 import { renderHeroHTML } from './hero-template';
 
 export interface RenderHeroSSROptions {
-  config?: ToonHubConfig;
+  /** The host's mount config, as every remote gets it. TOONHUB has no routes of
+   *  its own, so only its `assetBase` is read. */
+  config?: MountConfig;
   /** Absolute origin to resolve root-relative asset paths against (the remote's
    *  own origin), since the server can't infer it. */
   assetBase?: string;
@@ -21,8 +24,8 @@ export interface RenderHeroSSRResult {
  * later on the client via `./hydrate`.
  */
 export function renderHeroSSR(options: RenderHeroSSROptions = {}): RenderHeroSSRResult {
-  const config = options.config ?? toonHubConfig;
-  const base = options.assetBase ?? '';
+  const config = toonHubConfig;
+  const base = options.assetBase ?? options.config?.assetBase ?? '';
   const resolved: ToonHubConfig = base
     ? {
         ...config,
