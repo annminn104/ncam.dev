@@ -22,7 +22,7 @@
   },
   "dependencies": {
     "@strapi/database": "5.53.0",
-    "@strapi/plugin-users-permissions": "5.53.0",
+    "@strapi/plugin-users-permissions": "5.54.0",
     "@strapi/strapi": "5.53.0",
     "better-sqlite3": "13.0.3",
     "pg": "^8.23.0",
