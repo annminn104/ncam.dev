@@ -219,9 +219,12 @@ Below, `<NAME>` stands for `TOONHUB`, `MINDLOOP`, `IMMERSIVE_OCEAN`, `VIKTOR`,
 4. Register it in `packages/project-registry`, whose tests enforce the shape.
    Set `routeAware: true` if it owns nested URLs; otherwise the host sends
    deeper paths a `noindex` and a canonical back to the project page.
-5. For Docker, add a service to `docker-compose.yml`, an
-   `ARG <NAME>_REMOTE_URL` to the `Dockerfile` and a server block to
-   `nginx/nginx.conf`.
+5. For Docker, copy a remote's service in `docker-compose.yml`: it runs the
+   remote's `preview` with `network_mode: service:portfolio`, so publish its
+   port on the `portfolio` service instead of its own. Add an
+   `ARG <NAME>_REMOTE_URL` defaulting to `http://localhost:<port>/remoteEntry.js`
+   to the `Dockerfile`, and an upstream at `portfolio:<port>` plus a server
+   block to `nginx/nginx.conf`. The comments in those three files say why.
 6. With `pnpm dev` running, generate its thumbnail: `pnpm thumbnails <id>`.
 
 **Thumbnails** are generated, not designed. Each gallery card and each project
