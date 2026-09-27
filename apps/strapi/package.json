@@ -21,7 +21,7 @@
     "upgrade:dry": "pnpm dlx @strapi/upgrade latest --dry"
   },
   "dependencies": {
-    "@strapi/database": "5.53.0",
+    "@strapi/database": "5.54.0",
     "@strapi/plugin-users-permissions": "5.53.0",
     "@strapi/strapi": "5.53.0",
     "better-sqlite3": "13.0.3",
