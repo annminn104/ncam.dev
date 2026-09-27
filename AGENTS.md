@@ -36,9 +36,9 @@ packages/
 turbo.json, pnpm-workspace.yaml, package.json  (workspace root)
 ```
 
-Every app and every package but `packages/tsconfig` has its **own AGENTS.md**.
-When working inside an app, read that app's AGENTS.md first — it owns the rules
-for that unit. This root file only covers cross-cutting monorepo concerns.
+Every app and every package has its **own AGENTS.md**. When working inside an
+app, read that app's AGENTS.md first — it owns the rules for that unit. This
+root file only covers cross-cutting monorepo concerns.
 
 ## Tooling
 
