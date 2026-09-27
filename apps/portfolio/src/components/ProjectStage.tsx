@@ -92,7 +92,11 @@ export function ProjectStage({ projectId, html, css, route }: ProjectStageProps)
   const router = useRouter();
   const mountRef = useRef<HTMLDivElement>(null);
   const handleRef = useRef<MountHandle | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  // One stage serves every project (the route component is shared), so a
+  // failure is kept with the project it belongs to: no other project shows it,
+  // and it clears once that project attaches.
+  const [failure, setFailure] = useState<{ projectId: string; message: string } | null>(null);
+  const error = project && failure?.projectId === project.id ? failure.message : null;
 
   // How this stage was entered, captured once.
   //
@@ -142,12 +146,14 @@ export function ProjectStage({ projectId, html, css, route }: ProjectStageProps)
           route: routeRef.current,
           onNavigate,
         });
+        setFailure(null);
         log.info('project.open', { id: project.id, mode: ssr ? 'ssr-hydrate' : 'csr-mount' });
       })
       .catch((err) => {
         const message = err instanceof Error ? err.message : String(err);
         log.error('project.mount-failed', { id: project.id, error: message });
-        setError(message);
+        // A load that fails after the stage moved on belongs to nobody on screen.
+        if (!cancelled) setFailure({ projectId: project.id, message });
       });
     return () => {
       cancelled = true;
