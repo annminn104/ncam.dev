@@ -15,8 +15,14 @@
 # RELIABILITY. GitHub's scheduled workflows are best-effort and can be delayed
 # well past their cron interval on busy runners. A delay beyond 15 minutes lets
 # the service sleep anyway, so this job pings several times across its run
-# rather than once. A dedicated uptime service (UptimeRobot and friends) keeps
-# stricter intervals if the occasional cold start turns out to matter.
+# rather than once. In practice the runs here have landed hours apart (every
+# 3-6 h on 2026-09-26/27), so for a real 10-minute cadence point a dedicated
+# uptime service (UptimeRobot and friends) at the same /api/health URL.
+#
+# WHAT IS PINGED. /api/health is the CMS's own route (apps/strapi/src/api/health):
+# 200 when the database answers a `select 1`, 503 when it does not. Strapi's
+# built-in /_health only proves the process is up; Render's deploy health check
+# (render.yaml) still uses that one.
 #
 # GitHub also disables scheduled workflows after 60 days without repository
 # activity; re-enable it in the Actions tab if the repo goes quiet.
@@ -46,7 +52,7 @@ jobs:
     steps:
       # No actions are used on purpose: nothing needs checking out, and a plain
       # `run` step keeps this free of third-party SHAs to pin and review.
-      - name: Ping /_health
+      - name: Ping /api/health
         env:
           # Override with a repository variable if the CMS moves.
           CMS_URL: ${{ vars.CMS_URL || 'https://ncam-cms.onrender.com' }}
@@ -59,9 +65,10 @@ jobs:
           for attempt in 1 2 3; do
             code=$(curl -s -o /dev/null -w '%{http_code}' \
                      --max-time 90 --retry 2 --retry-delay 5 --retry-all-errors \
-                     "${CMS_URL}/_health" || echo "000")
+                     "${CMS_URL}/api/health" || echo "000")
             echo "ping ${attempt}: HTTP ${code}"
-            # Strapi answers 204 when ready; anything 2xx/3xx means it is awake.
+            # 200 means the CMS is awake and its database answers; a 503 still
+            # woke the service but its database did not answer, so it fails.
             case "$code" in
               2*|3*) ok=$((ok + 1)) ;;
             esac
@@ -70,7 +77,7 @@ jobs:
 
           echo "successful pings: ${ok}/3"
           if [ "$ok" -eq 0 ]; then
-            echo "::error::CMS did not respond to any ping — it may be suspended, redeploying, or out of Render free instance hours."
+            echo "::error::CMS did not pass any health check — it may be suspended, redeploying, out of Render free instance hours, or unable to reach its database."
             exit 1
           fi
           # A partial failure is normal while the service is waking, so it is a

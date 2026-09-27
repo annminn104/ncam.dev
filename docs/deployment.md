@@ -155,14 +155,18 @@ shows placeholders. That is by design: the site degrades rather than failing.
 
 ### Keeping the free service awake
 
-`.github/workflows/keep-cms-awake.yml` pings `<CMS_URL>/_health` every 10
-minutes (the `CMS_URL` repository variable, default
-`https://ncam-cms.onrender.com`), inside the 15 minutes a free Render service
-may sit idle before it sleeps. Two caveats:
+`.github/workflows/keep-cms-awake.yml` is scheduled every 10 minutes, inside
+the 15 minutes a free Render service may sit idle before it sleeps, and pings
+`<CMS_URL>/api/health` (the `CMS_URL` repository variable, default
+`https://ncam-cms.onrender.com`). That route answers 200 when the CMS's
+database answers too, and 503 when it does not (see [cms.md](cms.md#health-check)).
+Two caveats:
 
-- GitHub runs scheduled workflows on a best-effort basis and can delay them past
-  15 minutes, so an occasional cold start still happens; each run pings three
-  times, about four minutes apart, to narrow the gap. GitHub also disables scheduled workflows
+- GitHub runs scheduled workflows on a best-effort basis, and here the runs
+  have landed hours apart (every 3–6 hours on 2026-09-26/27), so the CMS still
+  sleeps between them; each run pings three times, about four minutes apart.
+  For a real 10-minute cadence, point an uptime monitor (UptimeRobot and the
+  like) at the same `/api/health` URL. GitHub also disables scheduled workflows
   after 60 days without repository activity; re-enable it in the Actions tab.
 - Render grants 750 free instance hours per workspace per month, and one service
   kept awake around the clock uses about 744 of them. A second always-on free

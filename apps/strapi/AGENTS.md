@@ -62,6 +62,11 @@ instead, via `autoOpen: false` in `config/admin.ts`.
 - `src/api/article/middlewares/force-published.ts` — route middleware on the
   public `find`/`findOne` article routes that forces `status=published`;
   Strapi would otherwise honour `?status=draft` from anonymous callers.
+- `src/api/health/` — `GET /api/health`, public through `auth: false` (no
+  role permission): 200 `{ status, database, uptime }` when a `select 1`
+  answers, 503 when it does not, never the error itself; `Cache-Control:
+no-store`. The keep-awake workflow pings it. Strapi's `/_health` stays for
+  Render's deploy health check (`render.yaml`).
 - Unit tests sit next to the code (`*.test.ts`, run by the root Vitest); they
   use a fake `strapi` object, never a database.
 
@@ -71,6 +76,7 @@ instead, via `autoOpen: false` in `config/admin.ts`.
 GET /api/articles?sort=publishedAt:desc&populate[cover]=true&populate[tags]=true
 GET /api/articles?filters[slug][$eq]=<slug>&populate=*
 GET /api/tags
+GET /api/health   # uptime and keep-awake checks, not the frontend
 ```
 
 Drafts are invisible to these calls (the routes force `status=published`, so

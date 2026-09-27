@@ -42,6 +42,18 @@ Settings → Roles, and writes stay admin-only. After changing a schema, run
 `pnpm --filter @ncam/strapi strapi ts:generate-types` and commit
 `apps/strapi/types/generated/`.
 
+## Health check
+
+```bash
+curl -i 'http://localhost:1337/api/health'   # 200 {"status":"ok","database":"ok","uptime":…}
+```
+
+`GET /api/health` (HEAD works too) is public and uncached. It answers 200 when
+the database answers a `select 1`, and 503 with `"database":"unreachable"` when
+it does not, without saying why. Strapi's built-in `/_health` (204) only proves
+the process is up; Render's deploy health check uses that one, and the
+keep-awake workflow and any uptime monitor use `/api/health`.
+
 ## How the portfolio reads it
 
 The host renders the blog at `/blog` and `/blog/<slug>` and shows the latest
