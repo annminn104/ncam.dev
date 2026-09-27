@@ -17,10 +17,11 @@ interface StateDocument {
 /**
  * The payload's raw JSON text, exactly as the server wrote it.
  *
- * `hydrate` reads this before `hydrateRoot` (react-query needs the state to
- * build its client) and then renders the very same text back into the React
- * tree, so the script element the server emitted has an identical counterpart
- * on the client and hydration has nothing to reconcile.
+ * `hydrate` reads the state (through `readState`) before `hydrateRoot`, since
+ * react-query needs it to build its client. It renders the script element
+ * back from `serialiseState(state)`, never from this raw text: page text
+ * written back as HTML is how DOM XSS happens, and re-serialising what the
+ * server serialised yields the same string anyway.
  */
 export function readStateJson(doc: StateDocument): string | null {
   return doc.getElementById(SSR_STATE_ID)?.textContent || null;
