@@ -73,7 +73,9 @@ pnpm thumbnails <id>  # regenerates a gallery thumbnail (needs `pnpm dev` runnin
   `apps/portfolio/src/components/ProjectStage.tsx`.
 - Each project remote exposes three entries through `defineRemote()`:
   - `./mount`: `mount(target, config?: MountConfig): MountHandle`, a client render;
-  - `./ssr`: `renderHeroSSR({ config?, assetBase? }): { html, css }`, browser-free;
+  - `./ssr`: `renderHeroSSR({ config?, assetBase? }): SsrResult`, browser-free:
+    `{ html, css }`, plus an optional `head` (`title`, `description`) that names
+    the page it rendered, for the host's deep-link head;
   - `./hydrate`: `hydrate(target, config?: MountConfig): MountHandle`, over the SSR markup.
 
   The `profile` remote instead exposes one `{ ssr, hydrate, mount }` module per

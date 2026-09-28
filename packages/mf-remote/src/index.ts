@@ -4,7 +4,7 @@ import { federation } from '@module-federation/vite';
 import { parse as parseDotenv } from 'dotenv';
 import { defineConfig, type Plugin, type PluginOption, type UserConfig } from 'vite';
 
-export type { MountConfig, MountHandle } from './contract';
+export type { MountConfig, MountHandle, SsrHead, SsrResult } from './contract';
 
 /** Walk up from `start` to the monorepo root (where pnpm-workspace.yaml lives). */
 function findMonorepoRoot(start = process.cwd()): string {

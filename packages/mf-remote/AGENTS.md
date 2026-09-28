@@ -50,7 +50,11 @@ env('HOLODEX_REMOTE_URL', 'http://localhost:9007/remoteEntry.js');
   `dts: false`.
 
 `src/contract.ts` holds `MountConfig` (`route`, `onNavigate`, `assetBase`) and
-`MountHandle` (a disposer with an optional `update(route)`).
+`MountHandle` (a disposer with an optional `update(route)`), and `SsrResult`,
+what `renderHeroSSR` resolves to: `{ html, css, head? }`, where `head` is an
+`SsrHead` (`title`, `description`) naming the page the remote rendered, in its
+own words and without the host's branding. The host folds it into a deep
+link's head; a remote that sends none keeps the host's own.
 
 ## Rules
 
