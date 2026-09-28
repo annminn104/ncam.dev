@@ -6,22 +6,12 @@ import type { ReactNode } from 'react';
 // app.css @imports the self-hosted fonts, styles.css (base + stage) and home.css.
 import appCss from '../app.css?url';
 import { NOT_FOUND_META } from '../lib/not-found';
-import { SITE_URL } from '../lib/site';
+import { SITE_IMAGE, socialImageMeta } from '../lib/site';
 import { THEME_COLOR_META, THEME_SCRIPT } from '../lib/theme';
 
 const TITLE = 'Matthew (Minh Nguyen) — Frontend Developer · ncam.dev';
 const DESCRIPTION =
   'Detail-oriented Frontend Developer with 5 years of experience building responsive, high-performance web apps in React, Next.js, Remix and Angular. Every project on this site is an independent app mounted at runtime via Module Federation.';
-
-/**
- * public/og.png, 1200×630. Absolute, as Open Graph requires: scrapers resolve
- * no relative URL. A route that sends its own `og:image` must send its own
- * size and alt text too — tags merge by name, so these would otherwise
- * describe the wrong picture (projectHead does).
- */
-const OG_IMAGE = `${SITE_URL}/og.png`;
-const OG_IMAGE_ALT =
-  'Project Showcase: micro-frontends with Module Federation — independent project apps, mounted at runtime.';
 
 export const Route = createRootRoute({
   // `match._notFound` is how router-core marks the root match when a 404
@@ -41,15 +31,14 @@ export const Route = createRootRoute({
       { property: 'og:site_name', content: 'ncam.dev' },
       { property: 'og:title', content: TITLE },
       { property: 'og:description', content: DESCRIPTION },
-      { property: 'og:image', content: OG_IMAGE },
-      { property: 'og:image:width', content: '1200' },
-      { property: 'og:image:height', content: '630' },
-      { property: 'og:image:alt', content: OG_IMAGE_ALT },
+      // og.png for any page without an image of its own, deliberately unsized:
+      // a child route cannot drop a tag sent here, so a size would stick to a
+      // page whose own image has none known (see socialImageMeta). Pages that
+      // use og.png themselves send it again with its size.
+      ...socialImageMeta({ url: SITE_IMAGE.url, alt: SITE_IMAGE.alt }),
       { name: 'twitter:card', content: 'summary_large_image' },
       { name: 'twitter:title', content: TITLE },
       { name: 'twitter:description', content: DESCRIPTION },
-      { name: 'twitter:image', content: OG_IMAGE },
-      { name: 'twitter:image:alt', content: OG_IMAGE_ALT },
     ],
     links: [
       { rel: 'stylesheet', href: appCss },

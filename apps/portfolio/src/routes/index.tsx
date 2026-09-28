@@ -9,7 +9,7 @@ import { getBlogPosts } from '../functions/blog.functions';
 import { loadRemoteModuleSSR, SSR_LOAD_TIMEOUT_MS, withTimeout } from '../lib/federation';
 import { ScrollTrigger } from '../lib/gsap';
 import { homeJsonLd, serialiseJsonLd } from '../lib/json-ld';
-import { SITE_URL } from '../lib/site';
+import { SITE_IMAGE, SITE_URL, socialImageMeta } from '../lib/site';
 import { useSectionTracker } from '../lib/use-section-tracker';
 
 const log = createLogger({ scope: 'portfolio' });
@@ -125,6 +125,8 @@ export const Route = createFileRoute('/')({
     meta: [
       { name: 'robots', content: 'index,follow' },
       { property: 'og:url', content: `${SITE_URL}/` },
+      // og.png again, now with its size, which the root leaves out.
+      ...socialImageMeta(SITE_IMAGE),
     ],
     links: [{ rel: 'canonical', href: `${SITE_URL}/` }],
   }),

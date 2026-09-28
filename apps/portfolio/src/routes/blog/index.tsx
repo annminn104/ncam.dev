@@ -3,7 +3,8 @@ import type { BlogPost } from '@ncam/cms';
 import { createLogger } from '@ncam/logger';
 import { getBlogPosts } from '../../functions/blog.functions';
 import { ThemeToggle } from '../../components/theme-toggle';
-import { BLOG_DESCRIPTION, blogIndexHead, blogIndexJsonLd, jsonLdScript } from '../../lib/blog-seo';
+import { BLOG_DESCRIPTION, blogIndexHead, blogIndexJsonLd } from '../../lib/blog-seo';
+import { serialiseJsonLd } from '../../lib/json-ld';
 
 const log = createLogger({ scope: 'portfolio' });
 
@@ -35,7 +36,7 @@ function BlogIndexPage() {
     <div className="stage blogpage">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: jsonLdScript(blogIndexJsonLd(posts)) }}
+        dangerouslySetInnerHTML={{ __html: serialiseJsonLd(blogIndexJsonLd(posts)) }}
       />
       <Link to="/" className="stage__back">
         <span aria-hidden="true">←</span> Home

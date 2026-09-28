@@ -93,12 +93,19 @@ own six sections (the `profile` remote) on `/`. React 19.
     tested): a post's canonical and robots meta follow the CMS overrides
     (`seo.canonicalUrl`, relative ones resolved against the site, and
     `seo.robots`) when set, and it carries `article:published_time` /
-    `article:modified_time` and a sized `og:image` (the site's `og.png` when
-    the post has none). The BlogPosting (`@id` `<post url>#article`) credits
+    `article:modified_time` and an `og:image` with its own alt text (the
+    title when the upload has none) and its size when known (the site's
+    `og.png` when the post has none). Every social image goes through
+    `socialImageMeta()` in `src/lib/site.ts`: head tags merge by name and a
+    child route cannot drop a parent's, so the root sends `og.png` with alt
+    text but no size, and a page with its own image always names its own alt.
+    Both JSON-LD blocks are serialised by `serialiseJsonLd()`
+    (`src/lib/json-ld.ts`). The BlogPosting (`@id` `<post url>#article`) credits
     `author` and `publisher` to the Person `/` describes, by
     `PERSON_ID` / `AUTHOR_NAME` from `src/lib/site.ts` — any page that names
     the author uses those two, so there is one Person across the site. `/blog`
-    is a CollectionPage whose Blog (`@id` `/blog#blog`) lists the same posts.
+    is a CollectionPage (part of the WebSite `/` declares) whose Blog (`@id`
+    `/blog#blog`) lists the same posts.
     Styles in `src/blog.css`. Nitro `routeRules` cache `/`, `/blog`, `/blog/**`
     with `swr: 60`, so a publish shows up within a minute. The swr layer buffers
     the SSR response (`res.text()`), so `/`, `/blog` and `/blog/**` do not

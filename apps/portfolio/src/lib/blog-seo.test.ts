@@ -133,14 +133,6 @@ describe('site author constants', () => {
   });
 });
 
-describe('jsonLdScript', () => {
-  it('cannot close the script element it is inlined in', () => {
-    const script = seo.jsonLdScript({ headline: '</script><script>alert(1)</script>' });
-    expect(script).not.toContain('<');
-    expect(JSON.parse(script)).toEqual({ headline: '</script><script>alert(1)</script>' });
-  });
-});
-
 describe('blogPostHead', () => {
   it('describes the post, with both dates and a sized social image', () => {
     const head = seo.blogPostHead(fullPost());
@@ -155,10 +147,19 @@ describe('blogPostHead', () => {
     expect(meta(head, 'og:image:width')).toBe('1200');
     expect(meta(head, 'og:image:height')).toBe('630');
     expect(meta(head, 'twitter:image')).toBe(IMAGE.url);
+    // Its own alt text, never the one the root sends for og.png.
+    expect(meta(head, 'og:image:alt')).toBe('Cover');
+    expect(meta(head, 'twitter:image:alt')).toBe('Cover');
     expect(head.links).toEqual([
       { rel: 'canonical', href: 'https://ncam.dev/blog/hello-world' },
       FEED_LINK,
     ]);
+  });
+
+  it('describes an image uploaded without alt text by the post title', () => {
+    const head = seo.blogPostHead(fullPost({}, { image: { ...IMAGE, alt: '' } }));
+    expect(meta(head, 'og:image:alt')).toBe('Hello, world');
+    expect(meta(head, 'twitter:image:alt')).toBe('Hello, world');
   });
 
   it("honours the CMS's canonical and robots overrides", () => {
@@ -178,6 +179,7 @@ describe('blogPostHead', () => {
     const none = seo.blogPostHead(fullPost({ cover: null }, { image: null }));
     expect(meta(none, 'og:image')).toBe('https://ncam.dev/og.png');
     expect(meta(none, 'og:image:width')).toBe('1200');
+    expect(meta(none, 'og:image:alt')).toBe(site.SITE_IMAGE.alt);
   });
 });
 
@@ -225,8 +227,26 @@ describe('blogIndexHead', () => {
     const head = seo.blogIndexHead();
     expect(meta(head, 'og:image')).toBe('https://ncam.dev/og.png');
     expect(meta(head, 'og:image:width')).toBe('1200');
+    expect(meta(head, 'og:image:alt')).toBe(site.SITE_IMAGE.alt);
     expect(meta(head, 'og:url')).toBe('https://ncam.dev/blog');
     expect(head.links).toEqual([{ rel: 'canonical', href: 'https://ncam.dev/blog' }, FEED_LINK]);
+  });
+});
+
+describe('socialImageMeta', () => {
+  it('always names alt text and sizes only a fully sized image', () => {
+    // The root sends og.png unsized through this, so no page inherits a size
+    // it cannot override; a page with its own image names its own alt.
+    expect(site.socialImageMeta({ url: `${SITE}/og.png`, alt: 'Card' })).toEqual([
+      { property: 'og:image', content: `${SITE}/og.png` },
+      { property: 'og:image:alt', content: 'Card' },
+      { name: 'twitter:image', content: `${SITE}/og.png` },
+      { name: 'twitter:image:alt', content: 'Card' },
+    ]);
+    const sized = site.socialImageMeta({ url: 'x', alt: '', width: 800, height: 400 }, 'Fallback');
+    expect(sized).toContainEqual({ property: 'og:image:width', content: '800' });
+    expect(sized).toContainEqual({ property: 'og:image:height', content: '400' });
+    expect(sized).toContainEqual({ property: 'og:image:alt', content: 'Fallback' });
   });
 });
 
@@ -237,6 +257,8 @@ describe('blogIndexJsonLd', () => {
     expect(page).toMatchObject({
       '@type': 'CollectionPage',
       url: 'https://ncam.dev/blog',
+      // The WebSite node `/` declares, so the blog joins the site's graph.
+      isPartOf: { '@id': 'https://ncam.dev/#website' },
       mainEntity: { '@id': 'https://ncam.dev/blog#blog' },
     });
     expect(blog).toMatchObject({

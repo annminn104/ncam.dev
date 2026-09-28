@@ -3,7 +3,8 @@ import { BlocksRenderer, type BlocksContent } from '@strapi/blocks-react-rendere
 import type { ComponentProps } from 'react';
 import type { BlogPost } from '@ncam/cms';
 import { getBlogPost } from '../../functions/blog.functions';
-import { blogPostHead, blogPostJsonLd, jsonLdScript } from '../../lib/blog-seo';
+import { blogPostHead, blogPostJsonLd } from '../../lib/blog-seo';
+import { serialiseJsonLd } from '../../lib/json-ld';
 import { highlightCode } from '../../lib/highlight';
 import { ThemeToggle } from '../../components/theme-toggle';
 
@@ -91,7 +92,7 @@ function BlogPostPage() {
     <div className="stage blogpage blogpage--article">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: jsonLdScript(blogPostJsonLd(post)) }}
+        dangerouslySetInnerHTML={{ __html: serialiseJsonLd(blogPostJsonLd(post)) }}
       />
       <Link to="/blog" className="stage__back">
         <span aria-hidden="true">←</span> Blog

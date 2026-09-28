@@ -28,3 +28,43 @@ export const AUTHOR_NAME = 'Minh Nguyen';
  * engines see one author across the site instead of one per page.
  */
 export const PERSON_ID = `${SITE_URL}/#person`;
+
+/** A page's Open Graph / Twitter image. Absolute: scrapers resolve no relative URL. */
+export interface SocialImage {
+  url: string;
+  alt: string;
+  width?: number | null;
+  height?: number | null;
+}
+
+/** public/og.png: the site's own social image, for pages without one of their own. */
+export const SITE_IMAGE: SocialImage = {
+  url: `${SITE_URL}/og.png`,
+  alt: 'Project Showcase: micro-frontends with Module Federation — independent project apps, mounted at runtime.',
+  width: 1200,
+  height: 630,
+};
+
+/**
+ * Open Graph and Twitter tags for a page's image: its alt text always (falling
+ * back to `fallbackAlt` when the image has none), its size only when both sides
+ * are known. Head tags merge by name and a child route's win, but a child
+ * cannot drop a tag its parents send. So the root sends og.png without a size,
+ * and a page that names its own image names its own alt, or it would describe
+ * its picture with og.png's text and, unsized, with og.png's 1200×630.
+ */
+export function socialImageMeta(image: SocialImage, fallbackAlt = '') {
+  const alt = image.alt || fallbackAlt;
+  return [
+    { property: 'og:image', content: image.url },
+    ...(image.width && image.height
+      ? [
+          { property: 'og:image:width', content: String(image.width) },
+          { property: 'og:image:height', content: String(image.height) },
+        ]
+      : []),
+    ...(alt ? [{ property: 'og:image:alt', content: alt }] : []),
+    { name: 'twitter:image', content: image.url },
+    ...(alt ? [{ name: 'twitter:image:alt', content: alt }] : []),
+  ];
+}

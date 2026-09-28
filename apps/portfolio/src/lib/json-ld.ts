@@ -1,5 +1,5 @@
 import type { ProjectEntry } from '@ncam/project-registry';
-import { AUTHOR_NAME, PERSON_ID, SITE_URL } from './site';
+import { AUTHOR_NAME, PERSON_ID, SITE_IMAGE, SITE_URL } from './site';
 
 /**
  * The home page's WebSite node. `/` declares it once, with the Person as its
@@ -53,7 +53,7 @@ export function homeJsonLd() {
         alternateName: PERSON.alternateName,
         url: `${SITE_URL}/`,
         // The site's own card: there is no portrait to point at.
-        image: `${SITE_URL}/og.png`,
+        image: SITE_IMAGE.url,
         jobTitle: PERSON.jobTitle,
         worksFor: { '@type': 'Organization', name: PERSON.worksFor },
         knowsAbout: PERSON.knowsAbout,
