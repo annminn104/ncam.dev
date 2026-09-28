@@ -22,7 +22,9 @@ and Render use Postgres.
 ## Content model
 
 - `article`: title, slug, excerpt, cover, `body` (Blocks), `readingTime`
-  (computed on save), tags and seo.
+  (computed on save), tags and seo: meta title, description and image, plus
+  an optional canonical URL and robots value (`noindex, nofollow`, say) for
+  posts that should not be indexed as they are.
 - `tag`.
 
 Drafts stay invisible to the API until they are published; the public routes
