@@ -122,8 +122,11 @@ export const projects: ProjectEntry[] = [
     // Sets, cards, search and the collection are all real Holodex URLs.
     routeAware: true,
     // apps/holodex/src/routes.ts. Not `effects`: that is the root page again
-    // under a second name, and the remote itself links it as `/`.
-    sitemapPaths: ['sets', 'search', 'collection'],
+    // under a second name, and the remote itself links it as `/`. Not
+    // `search` or `collection` either: a crawler gets an empty search form
+    // and an empty collection (it lives in the visitor's browser), thin pages
+    // a sitemap should not ask to have indexed.
+    sitemapPaths: ['sets'],
   },
 ];
 

@@ -11,6 +11,8 @@ Shared, typed source of truth for the projects the shell showcases.
   can import it cheaply.
 - A remote that owns URLs below its project path sets `routeAware`, and lists
   its static top-level pages (no per-item ones) in `sitemapPaths` for the
-  host's sitemap. Keep that list in step with the remote's own routes.
+  host's sitemap. Keep that list in step with the remote's own routes, and
+  leave out pages that are empty to a crawler (a bare search form, anything
+  kept in the visitor's browser).
 - When adding a project: append a `ProjectEntry`. Wiring the actual remote is
   done in the shell (see root AGENTS.md → "Adding a new project").

@@ -110,7 +110,8 @@ own six sections (the `profile` remote) on `/`. React 19.
     (`src/server/blog-index.ts`: `fetchArticleIndex`, 4 s for every page), so a
     publish reaches the sitemap without a deploy. The sitemap lists `/`,
     `/blog`, each live project plus its registry `sitemapPaths` (Holodex:
-    sets, search, collection) and every post that `isIndexable()`
+    sets; its search form and visitor-local collection are thin pages to a
+    crawler, so they stay out) and every post that `isIndexable()`
     (`src/lib/blog-seo.ts`: not noindexed, not canonicalised elsewhere) with
     `updatedAt` as `<lastmod>`; nothing else gets a date, and there is no
     `changefreq`/`priority`. If the CMS fails, the static entries still render

@@ -50,7 +50,7 @@ describe('project-registry', () => {
       expect(p.routeAware).toBe(true);
       for (const path of p.sitemapPaths ?? []) expect(path).toMatch(/^[a-z0-9-]+(\/[a-z0-9-]+)*$/);
     }
-    expect(getProject('holodex')?.sitemapPaths).toEqual(['sets', 'search', 'collection']);
+    expect(getProject('holodex')?.sitemapPaths).toEqual(['sets']);
   });
 
   it('ids are unique', () => {

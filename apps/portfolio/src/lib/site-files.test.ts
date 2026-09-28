@@ -94,8 +94,6 @@ describe('sitemapXml', () => {
       'https://ncam.dev/projects/bali',
       'https://ncam.dev/projects/holodex',
       'https://ncam.dev/projects/holodex/sets',
-      'https://ncam.dev/projects/holodex/search',
-      'https://ncam.dev/projects/holodex/collection',
     ]);
     expect(xml).not.toContain('<lastmod>');
     expect(xml).not.toMatch(/changefreq|priority/);
