@@ -4,8 +4,8 @@ import { getProject, type ProjectEntry } from '@ncam/project-registry';
 import { createLogger } from '@ncam/logger';
 import type { MountConfig, MountHandle } from '@ncam/mf-remote';
 import { loadRemoteModuleSSR } from '../lib/federation';
+import { projectJsonLd, serialiseJsonLd } from '../lib/json-ld';
 import { fromRemoteRoute, toRemoteRoute } from '../lib/remote-route';
-import { SITE_URL } from '../lib/site';
 
 const log = createLogger({ scope: 'portfolio' });
 
@@ -66,17 +66,6 @@ export async function loadSsrExports(
     throw new Error(`${project.remote}/ssr does not export renderHeroSSR`);
   }
   return { renderHeroSSR };
-}
-
-/**
- * JSON destined for a `<script>` block. Same treatment the remotes give their
- * SSR payload (see holodex's `serialiseState`): `<` becomes its unicode escape,
- * so no value can open or close a tag, and `JSON.parse` reads the original
- * character back. Registry-controlled today — escaped anyway, because this is
- * the same sink and the registry will not always be the only source.
- */
-function serialiseJsonLd(value: unknown): string {
-  return JSON.stringify(value).replace(/</g, '\\u003c');
 }
 
 export interface ProjectStageProps {
@@ -187,33 +176,11 @@ export function ProjectStage({ projectId, html, css, route }: ProjectStageProps)
     );
   }
 
-  const projectUrl = `${SITE_URL}/projects/${project.id}`;
-  const jsonLd = {
-    '@context': 'https://schema.org',
-    '@graph': [
-      {
-        '@type': 'BreadcrumbList',
-        itemListElement: [
-          { '@type': 'ListItem', position: 1, name: 'Projects', item: `${SITE_URL}/` },
-          { '@type': 'ListItem', position: 2, name: project.name, item: projectUrl },
-        ],
-      },
-      {
-        '@type': 'CreativeWork',
-        name: project.name,
-        headline: project.tagline,
-        description: project.description,
-        url: projectUrl,
-        author: { '@type': 'Person', name: 'Nguyen Cao Anh Minh' },
-      },
-    ],
-  };
-
   return (
     <div className="stage">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: serialiseJsonLd(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: serialiseJsonLd(projectJsonLd(project)) }}
       />
       <Link to="/" className="stage__back">
         <span aria-hidden="true">←</span> Projects
