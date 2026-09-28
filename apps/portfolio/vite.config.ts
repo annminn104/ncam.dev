@@ -109,6 +109,34 @@ export default defineConfig({
       '/blog': { swr: 60 },
       '/blog/**': { swr: 60 },
     },
+    // Security headers on every Vercel response, as a Build Output route of our
+    // own: Nitro prepends `vercel.config.routes` to the routes it generates.
+    // Not a `'/**'` route rule — Nitro emits a rule's headers as a route
+    // without `continue`, and a catch-all that stops routing would keep every
+    // page from reaching the server function. Not vercel.json `headers`
+    // either, which a framework-written Build Output need not pick up. No
+    // Content-Security-Policy: every project page loads its remote's scripts
+    // and styles from another origin, so a policy has to list each deployed
+    // remote, and a wrong one blanks the page.
+    vercel: {
+      config: {
+        // Required by the type; the same Build Output version Nitro writes.
+        version: 3,
+        routes: [
+          {
+            src: '/(.*)',
+            headers: {
+              'strict-transport-security': 'max-age=63072000; includeSubDomains; preload',
+              'x-content-type-options': 'nosniff',
+              'referrer-policy': 'strict-origin-when-cross-origin',
+              'permissions-policy': 'camera=(), microphone=(), geolocation=()',
+              'x-frame-options': 'SAMEORIGIN',
+            },
+            continue: true,
+          },
+        ],
+      },
+    },
   },
   plugins: [
     federation({

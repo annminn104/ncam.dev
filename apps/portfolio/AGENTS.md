@@ -260,14 +260,22 @@ Don't hand-edit the images; change the remote (or the script) and re-run.
 ## Deploy
 
 SSR — deploys as a **server** (Nitro), not static. On Vercel, Nitro auto-detects
-the platform and emits the Build Output; `vercel.json` runs `pnpm build` and
-sends security headers on every path: HSTS (two years, subdomains, preload),
-`nosniff`, `strict-origin-when-cross-origin`, a Permissions-Policy that denies
-camera, microphone and geolocation, and `X-Frame-Options: SAMEORIGIN`. There is
-deliberately no Content-Security-Policy yet: every project page loads its
-remote's scripts and styles from another origin, so a policy has to list each
-remote's deployed origin, and a wrong one blanks the page. The node server and
-the Docker gateway send none of these.
+the platform and emits the Build Output; `vercel.json` runs `pnpm build`.
+Security headers go on every Vercel response through `nitro.vercel.config.routes`
+in vite.config.ts, a `{ src: '/(.*)', headers, continue: true }` route that Nitro
+puts first in the Build Output's `config.json`: HSTS (two years, subdomains,
+preload), `nosniff`, `strict-origin-when-cross-origin`, a Permissions-Policy
+that denies camera, microphone and geolocation, and `X-Frame-Options:
+SAMEORIGIN`. Not a `'/**'` route rule: Nitro emits a rule's headers as a route
+without `continue`, and a catch-all that stops routing would keep every page
+from reaching the server function. Not vercel.json `headers` either, which a
+framework-written Build Output need not pick up. Check with
+`NITRO_PRESET=vercel pnpm exec vite build` and `.vercel/output/config.json`
+(delete `.vercel/` afterwards). The node server and the Docker gateway send
+none of these. There is deliberately no Content-Security-Policy yet: every
+project page loads its remote's scripts and styles from another origin, so a
+policy has to list each remote's deployed origin, and a wrong one blanks the
+page.
 Locally: `pnpm build` → `.output/`, run with `node .output/server/index.mjs`. Set
 `STRAPI_URL` and `STRAPI_PUBLIC_URL` on the Vercel project (both
 `https://cms.<domain>`); docker-compose sets them on the `portfolio` service.
