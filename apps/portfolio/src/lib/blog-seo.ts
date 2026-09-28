@@ -7,9 +7,21 @@ type PostRef = Pick<BlogPostSummary, 'slug' | 'seo'>;
 export const BLOG_URL = `${SITE_URL}/blog`;
 /** JSON-LD `@id` of the Blog that `/blog` describes and every post is part of. */
 export const BLOG_ID = `${BLOG_URL}#blog`;
+/** The blog's own name: its JSON-LD, its feed's title. `BLOG_TITLE` is the page's. */
+export const BLOG_NAME = 'ncam.dev blog';
 export const BLOG_TITLE = 'Blog — ncam.dev';
 export const BLOG_DESCRIPTION =
   'Long-form write-ups on micro-frontends, SSR and motion — the things this site is made of.';
+/** The RSS feed (`src/routes/blog/rss[.]xml.ts`). */
+export const BLOG_FEED_URL = `${BLOG_URL}/rss.xml`;
+
+/** Lets feed readers find the feed from the blog's pages. */
+const FEED_LINK = {
+  rel: 'alternate',
+  type: 'application/rss+xml',
+  title: BLOG_NAME,
+  href: BLOG_FEED_URL,
+};
 
 /** The site-wide social image (`public/og.png`), for pages without one of their own. */
 const SITE_IMAGE: BlogImage = {
@@ -104,7 +116,7 @@ export function blogPostHead(post: BlogPost) {
       { name: 'twitter:title', content: title },
       { name: 'twitter:description', content: post.seo.description },
     ],
-    links: [{ rel: 'canonical', href: canonical }],
+    links: [{ rel: 'canonical', href: canonical }, FEED_LINK],
   };
 }
 
@@ -153,7 +165,7 @@ export function blogIndexHead() {
       { name: 'twitter:title', content: BLOG_TITLE },
       { name: 'twitter:description', content: BLOG_DESCRIPTION },
     ],
-    links: [{ rel: 'canonical', href: BLOG_URL }],
+    links: [{ rel: 'canonical', href: BLOG_URL }, FEED_LINK],
   };
 }
 
@@ -178,7 +190,7 @@ export function blogIndexJsonLd(posts: readonly BlogPost[]) {
         '@type': 'Blog',
         '@id': BLOG_ID,
         url: BLOG_URL,
-        name: 'ncam.dev blog',
+        name: BLOG_NAME,
         description: BLOG_DESCRIPTION,
         inLanguage: 'en',
         author: author(),

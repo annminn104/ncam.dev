@@ -132,3 +132,98 @@ describe('sitemapXml', () => {
     expect(xml.match(/<\/url>/g)).toHaveLength(locs(xml).length);
   });
 });
+
+describe('rssXml', () => {
+  const items = (xml: string) => xml.match(/<item>[\s\S]*?<\/item>/g) ?? [];
+
+  it('describes the blog and links itself with atom:link rel=self', () => {
+    const xml = files.rssXml([post('a')]);
+    expect(xml.startsWith('<?xml version="1.0" encoding="UTF-8"?>\n<rss version="2.0" ')).toBe(
+      true,
+    );
+    expect(xml).toContain('xmlns:atom="http://www.w3.org/2005/Atom"');
+    expect(xml).toContain('<title>ncam.dev blog</title>');
+    expect(xml).toContain('<link>https://ncam.dev/blog</link>');
+    expect(xml).toContain(
+      '<atom:link href="https://ncam.dev/blog/rss.xml" rel="self" type="application/rss+xml"/>',
+    );
+    expect(xml.trimEnd().endsWith('</channel>\n</rss>')).toBe(true);
+  });
+
+  it('gives each post a permalink guid, its excerpt, its author and an RFC 822 date', () => {
+    const [item] = items(files.rssXml([post('a')]));
+    expect(item).toContain('<title>Post a</title>');
+    expect(item).toContain('<link>https://ncam.dev/blog/a</link>');
+    expect(item).toContain('<guid isPermaLink="true">https://ncam.dev/blog/a</guid>');
+    expect(item).toContain('<description>About a.</description>');
+    expect(item).toContain('<dc:creator>Minh Nguyen</dc:creator>');
+    expect(item).toContain('<pubDate>Tue, 15 Sep 2026 08:30:00 GMT</pubDate>');
+  });
+
+  it('escapes CMS text, keeps noindexed posts and caps the feed at the 20 newest', () => {
+    const tricky = post('tricky', {
+      title: 'Ship <it> & "go"',
+      excerpt: 'a < b\u0000',
+      seo: { canonicalUrl: null, robots: 'noindex' },
+    });
+    const many = Array.from({ length: 25 }, (_, i) => post(`p${i}`));
+    const xml = files.rssXml([tricky, ...many]);
+    expect(xml).toContain('<title>Ship &lt;it&gt; &amp; &quot;go&quot;</title>');
+    expect(xml).toContain('<description>a &lt; b</description>');
+    expect(items(xml)).toHaveLength(20);
+  });
+
+  it('dates the build by the newest change, and is a valid empty feed without posts', () => {
+    const xml = files.rssXml([
+      post('a', { updatedAt: '2026-09-18T00:00:00.000Z' }),
+      post('b', { updatedAt: '2026-09-21T06:00:00.000Z' }),
+    ]);
+    expect(xml).toContain('<lastBuildDate>Mon, 21 Sep 2026 06:00:00 GMT</lastBuildDate>');
+    const empty = files.rssXml([]);
+    expect(items(empty)).toHaveLength(0);
+    expect(empty).not.toContain('lastBuildDate');
+    expect(empty).toContain('<channel>');
+  });
+});
+
+describe('llmsTxt', () => {
+  it('opens with the H1 and a one-line blockquote summary', () => {
+    const [h1, blank, summary] = files.llmsTxt([]).split('\n');
+    expect(h1).toBe('# ncam.dev');
+    expect(blank).toBe('');
+    expect(summary).toMatch(/^> The portfolio of Minh Nguyen \(Matthew\), a frontend developer: /);
+  });
+
+  it('links home, the blog and every live project with its tagline', () => {
+    const text = files.llmsTxt([]);
+    expect(text).toContain('## Pages');
+    expect(text).toMatch(/^- \[Home\]\(https:\/\/ncam\.dev\/\): Minh Nguyen's stacks/m);
+    expect(text).toMatch(/^- \[Blog\]\(https:\/\/ncam\.dev\/blog\): Long-form write-ups/m);
+    expect(text).toContain('- [TOONHUB](https://ncam.dev/projects/toonhub): Collectible figurines');
+    expect(text).toContain('- [Holodex](https://ncam.dev/projects/holodex): Pokémon TCG explorer');
+    expect(text.match(/^- \[.+\]\(https:\/\/ncam\.dev\/projects\//gm)).toHaveLength(6);
+  });
+
+  it('lists the newest indexable posts on one line each, and omits the section with none', () => {
+    const text = files.llmsTxt([
+      post('first', { title: 'Arrays [and] more', excerpt: 'Line one.\nLine   two.' }),
+      post('hidden', { seo: { canonicalUrl: null, robots: 'noindex' } }),
+      ...Array.from({ length: 12 }, (_, i) => post(`p${i}`)),
+    ]);
+    expect(text).toContain('## Blog posts');
+    expect(text).toContain(
+      '- [Arrays \\[and\\] more](https://ncam.dev/blog/first): Line one. Line two.',
+    );
+    expect(text).not.toContain('/blog/hidden');
+    const section = text.slice(text.indexOf('## Blog posts'), text.indexOf('## Optional'));
+    expect(section.match(/^- /gm)).toHaveLength(10);
+    expect(files.llmsTxt([])).not.toContain('## Blog posts');
+  });
+
+  it('ends with the optional feed and sitemap links', () => {
+    const text = files.llmsTxt([]);
+    const optional = text.slice(text.indexOf('## Optional'));
+    expect(optional).toContain('- [RSS feed](https://ncam.dev/blog/rss.xml): ');
+    expect(optional).toContain('- [Sitemap](https://ncam.dev/sitemap.xml): ');
+  });
+});

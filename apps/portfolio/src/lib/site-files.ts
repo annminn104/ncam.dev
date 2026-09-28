@@ -1,14 +1,27 @@
 import type { BlogPostSummary } from '@ncam/cms';
 import { projects } from '@ncam/project-registry';
-import { isIndexable, postUrl } from './blog-seo';
-import { SITE_URL } from './site';
+import {
+  BLOG_DESCRIPTION,
+  BLOG_FEED_URL,
+  BLOG_NAME,
+  BLOG_URL,
+  isIndexable,
+  postUrl,
+} from './blog-seo';
+import { AUTHOR_NAME, SITE_URL } from './site';
 
 /**
- * The plain-text and XML files crawlers read, built per request by the server
- * routes in `src/routes/` (`robots[.]txt.ts`, `sitemap[.]xml.ts`). Nothing here
+ * The plain-text and XML files crawlers, feed readers and agents read, built
+ * per request by the server routes in `src/routes/` (`robots[.]txt.ts`,
+ * `sitemap[.]xml.ts`, `llms[.]txt.ts`, `blog/rss[.]xml.ts`). Nothing here
  * touches the network: the routes fetch the posts and pass them in, so a post
  * published in the CMS is listed without a deploy.
  */
+
+/** Posts in the feed: the newest, which is what a reader polls it for. */
+const FEED_POSTS = 20;
+/** Posts in llms.txt: enough to show what the blog covers, not an archive. */
+const LLMS_POSTS = 10;
 
 /**
  * How long a CDN may keep each kind of file. `fresh` is a file built with the
@@ -127,6 +140,121 @@ export function sitemapXml(posts: readonly BlogPostSummary[]): string {
     '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
     ...entries,
     '</urlset>',
+    '',
+  ].join('\n');
+}
+
+/** An RFC 822 date, as RSS wants it, or undefined for a date that does not parse. */
+function rfc822(iso: string): string | undefined {
+  const time = Date.parse(iso);
+  return Number.isNaN(time) ? undefined : new Date(time).toUTCString();
+}
+
+/**
+ * `/blog/rss.xml`: RSS 2.0 with the newest posts, each described by its
+ * excerpt. Every published post qualifies, a noindexed one included: a feed
+ * serves the people who subscribed, not a search index. `lastBuildDate` is the
+ * newest change among the items, so an unchanged feed stays byte-identical.
+ */
+export function rssXml(posts: readonly BlogPostSummary[]): string {
+  const newest = posts.slice(0, FEED_POSTS);
+  const changed = newest.map((post) => Date.parse(post.updatedAt)).filter((t) => !Number.isNaN(t));
+  const lastBuild = changed.length > 0 ? new Date(Math.max(...changed)).toUTCString() : undefined;
+  const items = newest.map((post) => {
+    const url = escapeXml(postUrl(post.slug));
+    const published = rfc822(post.publishedAt);
+    return [
+      '    <item>',
+      `      <title>${escapeXml(post.title)}</title>`,
+      `      <link>${url}</link>`,
+      `      <guid isPermaLink="true">${url}</guid>`,
+      `      <description>${escapeXml(post.excerpt)}</description>`,
+      `      <dc:creator>${escapeXml(AUTHOR_NAME)}</dc:creator>`,
+      ...(published ? [`      <pubDate>${published}</pubDate>`] : []),
+      '    </item>',
+    ].join('\n');
+  });
+  return [
+    '<?xml version="1.0" encoding="UTF-8"?>',
+    '<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:dc="http://purl.org/dc/elements/1.1/">',
+    '  <channel>',
+    `    <title>${escapeXml(BLOG_NAME)}</title>`,
+    `    <link>${escapeXml(BLOG_URL)}</link>`,
+    `    <description>${escapeXml(BLOG_DESCRIPTION)}</description>`,
+    '    <language>en</language>',
+    `    <atom:link href="${escapeXml(BLOG_FEED_URL)}" rel="self" type="application/rss+xml"/>`,
+    ...(lastBuild ? [`    <lastBuildDate>${lastBuild}</lastBuildDate>`] : []),
+    ...items,
+    '  </channel>',
+    '</rss>',
+    '',
+  ].join('\n');
+}
+
+/** Link text that cannot end the link early: backslash, `[` and `]` escaped. */
+function markdownLinkText(text: string): string {
+  return text.replace(/[\\[\]]/g, (char) => `\\${char}`);
+}
+
+/** CMS text as one Markdown line: whitespace runs (newlines included) become one space. */
+function oneLine(text: string): string {
+  return text.replace(/\s+/g, ' ').trim();
+}
+
+/** llms.txt's blockquote, on one line: some readers take only its first line. */
+const LLMS_SUMMARY =
+  `The portfolio of ${AUTHOR_NAME} (Matthew), a frontend developer: a gallery of projects, ` +
+  'each an independent web app mounted into the site at runtime through Module Federation, ' +
+  'and a blog about micro-frontends, server-side rendering and motion.';
+
+/** A llms.txt list entry: `- [title](url): note`. */
+function llmsLink(title: string, url: string, note: string): string {
+  return `- [${markdownLinkText(title)}](${url}): ${oneLine(note)}`;
+}
+
+/**
+ * `/llms.txt`, in the llmstxt.org format: an H1 with the site's name, a
+ * blockquote saying what it is, then sections of links, each with a line on
+ * what the page holds. Blog posts are the newest indexable ones, so this lists
+ * nothing the sitemap would leave out; without the CMS that section is left
+ * out and the rest still renders.
+ */
+export function llmsTxt(posts: readonly BlogPostSummary[]): string {
+  const recent = posts.filter(isIndexable).slice(0, LLMS_POSTS);
+  return [
+    '# ncam.dev',
+    '',
+    `> ${LLMS_SUMMARY}`,
+    '',
+    '## Pages',
+    '',
+    llmsLink(
+      'Home',
+      `${SITE_URL}/`,
+      `${AUTHOR_NAME}'s stacks, experience, projects, recent posts and contact details.`,
+    ),
+    llmsLink('Blog', BLOG_URL, BLOG_DESCRIPTION),
+    '',
+    '## Projects',
+    '',
+    ...projects
+      .filter((project) => project.status === 'live')
+      .map((project) =>
+        llmsLink(project.name, `${SITE_URL}/projects/${project.id}`, project.tagline),
+      ),
+    ...(recent.length > 0
+      ? [
+          '',
+          '## Blog posts',
+          '',
+          ...recent.map((post) => llmsLink(post.title, postUrl(post.slug), post.excerpt)),
+        ]
+      : []),
+    '',
+    '## Optional',
+    '',
+    llmsLink('RSS feed', BLOG_FEED_URL, 'Every post, newest first.'),
+    llmsLink('Sitemap', `${SITE_URL}/sitemap.xml`, 'Every indexable page.'),
     '',
   ].join('\n');
 }

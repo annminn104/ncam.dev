@@ -67,6 +67,9 @@ that call `@ncam/cms` with `STRAPI_URL`; browsers only load media, from
 within a minute. `/sitemap.xml` is built per request too and lists every post
 with its last change as `lastmod`, except one whose robots value says
 `noindex` or whose canonical URL points elsewhere; CDNs keep it for an hour.
+`/llms.txt` lists the newest of those posts, and the RSS feed at
+`/blog/rss.xml` the 20 newest published posts, refreshed within a minute like
+the blog pages.
 
 The CMS gets 2.5 s on the home page and 5 s per `@ncam/cms` request. When it is
 unreachable or slow, the home page's blog section shows placeholders and

@@ -117,6 +117,14 @@ own six sections (the `profile` remote) on `/`. React 19.
     and the response is cached 60 s instead of an hour (`siteFileResponse`
     cache kinds). Nothing may sit at these paths in `public/`: a static file is
     served before the route.
+  - `llms[.]txt.ts` and `blog/rss[.]xml.ts` — the same kind of server route
+    for `/llms.txt` (llmstxt.org Markdown: H1, one-line summary, links to home,
+    the blog, each live project with its tagline and the 10 newest indexable
+    posts) and `/blog/rss.xml` (RSS 2.0 with `atom:link rel="self"`, the 20
+    newest posts, noindexed ones included, since a feed is for subscribers).
+    Without the CMS the posts are left out, not the file. The feed sits under
+    the `/blog/**` swr rule, so it is cached 60 s like the blog. Both blog
+    pages link it with `<link rel="alternate" type="application/rss+xml">`.
 - `src/lib/federation.ts` — `getHostRuntime`, `forgetFailedRemote`,
   `loadRemoteModuleSSR`. In the production server bundle the plugin's import
   wrapper rejects forever after one failed attempt and never carries the remote's
@@ -210,8 +218,9 @@ loader)` for the six modules **sequentially** → `mod.ssr()` →
   rendered (GSAP/DOM only inside effects — `lib/gsap.ts` is import-safe in Node).
   The public origin is `src/lib/site.ts` (`SITE_URL` / `SITE_ORIGIN`), baked
   from the `SITE_URL` env var — never hardcode the domain in a route. The
-  crawler files (`robots.txt`, `sitemap.xml`) are server routes built from that
-  same value, `@ncam/project-registry` and the CMS (see the routes above).
+  crawler files (`robots.txt`, `sitemap.xml`, `llms.txt`, `blog/rss.xml`) are
+  server routes built from that same value, `@ncam/project-registry` and the
+  CMS (see the routes above).
 - Keep `react`/`react-dom` as MF singletons and Nitro `traceDeps` externals, or
   hooks/context break across the host↔remote boundary.
 - Pinned TanStack/nitro/vinxi versions matter (MF + TanStack Router had version

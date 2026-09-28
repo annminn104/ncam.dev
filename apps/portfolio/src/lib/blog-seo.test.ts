@@ -29,6 +29,14 @@ function post(overrides: Partial<BlogPostSummary['seo']> = {}): BlogPostSummary 
 
 const IMAGE = { url: 'https://cms.example/uploads/og.png', alt: 'Cover', width: 1200, height: 630 };
 
+/** How both blog pages point feed readers at the feed. */
+const FEED_LINK = {
+  rel: 'alternate',
+  type: 'application/rss+xml',
+  title: 'ncam.dev blog',
+  href: 'https://ncam.dev/blog/rss.xml',
+};
+
 function fullPost(overrides: Partial<BlogPost> = {}, seoOverrides: Partial<BlogPost['seo']> = {}) {
   const base: BlogPost = {
     id: 'doc-1',
@@ -147,7 +155,10 @@ describe('blogPostHead', () => {
     expect(meta(head, 'og:image:width')).toBe('1200');
     expect(meta(head, 'og:image:height')).toBe('630');
     expect(meta(head, 'twitter:image')).toBe(IMAGE.url);
-    expect(head.links).toEqual([{ rel: 'canonical', href: 'https://ncam.dev/blog/hello-world' }]);
+    expect(head.links).toEqual([
+      { rel: 'canonical', href: 'https://ncam.dev/blog/hello-world' },
+      FEED_LINK,
+    ]);
   });
 
   it("honours the CMS's canonical and robots overrides", () => {
@@ -156,7 +167,7 @@ describe('blogPostHead', () => {
     );
     expect(meta(head, 'robots')).toBe('noindex, nofollow');
     expect(meta(head, 'og:url')).toBe('https://dev.example/hello');
-    expect(head.links).toEqual([{ rel: 'canonical', href: 'https://dev.example/hello' }]);
+    expect(head.links[0]).toEqual({ rel: 'canonical', href: 'https://dev.example/hello' });
   });
 
   it('gives an unsized image no size, and a post with none the site image', () => {
@@ -215,7 +226,7 @@ describe('blogIndexHead', () => {
     expect(meta(head, 'og:image')).toBe('https://ncam.dev/og.png');
     expect(meta(head, 'og:image:width')).toBe('1200');
     expect(meta(head, 'og:url')).toBe('https://ncam.dev/blog');
-    expect(head.links).toEqual([{ rel: 'canonical', href: 'https://ncam.dev/blog' }]);
+    expect(head.links).toEqual([{ rel: 'canonical', href: 'https://ncam.dev/blog' }, FEED_LINK]);
   });
 });
 
