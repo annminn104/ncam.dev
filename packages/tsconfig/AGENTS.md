@@ -36,7 +36,9 @@ the shape Strapi's server build expects; don't point it at `base.json`.
   framework- or runtime-specific (`jsx`, `types`, extra `lib` entries) belongs
   in the consumer's own `tsconfig.json`.
 - A change here re-types twelve workspaces, so run `pnpm typecheck` at the root.
-  Turbo hashes `base.json` into every consumer's `typecheck` task (checked
-  2026-09-27), so a changed base never replays a cached pass.
+  Turbo hashes every file of this package, not only `base.json`, into every
+  consumer's tasks (checked 2026-09-27), so a changed base never replays a
+  cached pass. It also means a docs-only change here reruns the consumers'
+  `typecheck` and `build` once: adding this file reran 21 of 23 tasks.
 - `noEmit` stays on: nothing in the repo consumes `tsc` output.
 - `files` in `package.json` must list every config file that consumers extend.
