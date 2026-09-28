@@ -89,11 +89,22 @@ export const SITE_URL_PLACEHOLDER = '%SITE_URL%';
  * it would ship a relative canonical that resolves against the remote.
  */
 export function resolveSiteUrl(configured = env('SITE_URL')): string {
-  const origin = (configured.trim() || 'https://ncam.dev').replace(/\/+$/, '');
+  const origin = withoutTrailingSlashes(configured.trim() || 'https://ncam.dev');
   if (!/^https?:\/\/[^/]/i.test(origin)) {
     throw new Error(`SITE_URL must be an absolute http(s) URL, got "${configured}"`);
   }
   return origin;
+}
+
+/**
+ * `value` without its trailing slashes. A loop, not `/\/+$/`: that regex is
+ * retried from every run of slashes, quadratic on a string of many that are
+ * not at the end (CodeQL js/polynomial-redos).
+ */
+function withoutTrailingSlashes(value: string): string {
+  let end = value.length;
+  while (end > 0 && value[end - 1] === '/') end -= 1;
+  return value.slice(0, end);
 }
 
 /**

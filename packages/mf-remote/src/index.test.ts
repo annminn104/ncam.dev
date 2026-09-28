@@ -117,6 +117,15 @@ describe('resolveSiteUrl()', () => {
     expect(resolveSiteUrl('https://example.test//')).toBe('https://example.test');
   });
 
+  it('strips slashes in linear time, however many there are', () => {
+    // A run of slashes that is not at the end is where `/\/+$/` goes quadratic.
+    const slashes = '/'.repeat(100_000);
+    expect(resolveSiteUrl(`https://example.test${slashes}`)).toBe('https://example.test');
+    expect(resolveSiteUrl(`https://example.test${slashes}x`)).toBe(
+      `https://example.test${slashes}x`,
+    );
+  });
+
   it('refuses a value that would make the canonical relative', () => {
     for (const value of ['example.test', '/projects', 'https://', 'ftp://example.test']) {
       expect(() => resolveSiteUrl(value)).toThrow(/SITE_URL/);
