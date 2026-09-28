@@ -10,7 +10,8 @@
     />
     <meta name="robots" content="index,follow" />
     <meta name="theme-color" content="#05161f" />
-    <link rel="canonical" href="https://immersive-ocean.ncam.dev/" />
+    <!-- The host's project page is the canonical copy; defineRemote() fills in its origin. -->
+    <link rel="canonical" href="%SITE_URL%/projects/immersive-ocean" />
 
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/favicon.svg" />
@@ -20,15 +21,15 @@
     <meta property="og:site_name" content="Immersive Ocean" />
     <meta property="og:title" content="Immersive Ocean — Shaping visual narratives" />
     <meta property="og:description" content="Brand & visual storytelling — one pixel at a time." />
-    <meta property="og:url" content="https://immersive-ocean.ncam.dev/" />
-    <meta property="og:image" content="https://immersive-ocean.ncam.dev/og.png" />
+    <meta property="og:url" content="%SITE_URL%/projects/immersive-ocean" />
+    <meta property="og:image" content="%SITE_URL%/thumbnails/immersive-ocean.jpg" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
 
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Immersive Ocean — Shaping visual narratives" />
     <meta name="twitter:description" content="Brand & visual storytelling — one pixel at a time." />
-    <meta name="twitter:image" content="https://immersive-ocean.ncam.dev/og.png" />
+    <meta name="twitter:image" content="%SITE_URL%/thumbnails/immersive-ocean.jpg" />
 
     <script type="application/ld+json">
       {
@@ -37,14 +38,13 @@
           {
             "@type": "WebSite",
             "name": "Immersive Ocean",
-            "url": "https://immersive-ocean.ncam.dev/",
+            "url": "%SITE_URL%/projects/immersive-ocean",
             "description": "A creative studio for brand & visual storytelling."
           },
           {
             "@type": "Organization",
             "name": "Immersive Ocean",
-            "url": "https://immersive-ocean.ncam.dev/",
-            "logo": "https://immersive-ocean.ncam.dev/favicon.svg"
+            "url": "%SITE_URL%/projects/immersive-ocean"
           }
         ]
       }
