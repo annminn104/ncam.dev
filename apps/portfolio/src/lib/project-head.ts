@@ -1,4 +1,5 @@
 import { getProject } from '@ncam/project-registry';
+import { NOT_FOUND_META } from './not-found';
 import { SITE_URL } from './site';
 
 /**
@@ -28,11 +29,9 @@ export function isRealProjectPath(projectId: string, splat?: string): boolean {
  */
 export function projectHead(projectId: string, splat?: string) {
   const project = getProject(projectId);
-  if (!project) {
-    return {
-      meta: [{ title: 'Project not found — ncam.dev' }, { name: 'robots', content: 'noindex' }],
-    };
-  }
+  // Both project loaders throw notFound() for such an id, which renders the
+  // root's 404 head instead; this is the same head, should one ever get here.
+  if (!project) return { meta: NOT_FOUND_META };
   const real = isRealProjectPath(projectId, splat);
   const title = `${project.name} — ${project.tagline} · ncam.dev`;
   const description = project.description;

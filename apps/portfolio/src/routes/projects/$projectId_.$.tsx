@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router';
+import { createFileRoute, notFound } from '@tanstack/react-router';
 import { getProject } from '@ncam/project-registry';
 import { createLogger } from '@ncam/logger';
 import { ProjectStagePage, loadSsrExports, ssrLoaders } from '../../components/ProjectStage';
@@ -19,7 +19,9 @@ export const Route = createFileRoute('/projects/$projectId_/$')({
   loaderDeps: ({ search }) => search,
   loader: async ({ params, deps }): Promise<LoaderData> => {
     const project = getProject(params.projectId);
-    if (!project || project.status !== 'live') return NO_SSR;
+    // A real 404, as on the bare project route.
+    if (!project) throw notFound();
+    if (project.status !== 'live') return NO_SSR;
     const load = ssrLoaders[project.remote];
     if (!load || !import.meta.env.PROD || !import.meta.env.SSR) return NO_SSR;
     const route = toRemoteRoute(

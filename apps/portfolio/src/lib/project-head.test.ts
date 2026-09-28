@@ -75,9 +75,12 @@ describe('projectHead', () => {
     expect(og?.content).toBe(`${SITE}/projects/bali`);
   });
 
-  it('still noindexes an unknown project', () => {
+  it('still noindexes an unknown project, under the 404 title', () => {
     const head = projectHead('does-not-exist');
     expect(metaValue(head, 'robots')?.content).toBe('noindex');
+    expect(head.meta.find((entry) => 'title' in entry)).toEqual({
+      title: 'Page not found · ncam.dev',
+    });
   });
 
   it('describes its own thumbnail, absolutely, rather than inherit the site image alt', () => {

@@ -5,6 +5,7 @@ import type { ReactNode } from 'react';
 // would only attach the CSS once the client bundle runs (flash of unstyled page).
 // app.css @imports the self-hosted fonts, styles.css (base + stage) and home.css.
 import appCss from '../app.css?url';
+import { NOT_FOUND_META } from '../lib/not-found';
 import { SITE_URL } from '../lib/site';
 import { THEME_COLOR_META, THEME_SCRIPT } from '../lib/theme';
 
@@ -23,11 +24,15 @@ const OG_IMAGE_ALT =
   'Project Showcase: micro-frontends with Module Federation — independent project apps, mounted at runtime.';
 
 export const Route = createRootRoute({
-  head: () => ({
+  // `match._notFound` is how router-core marks the root match when a 404
+  // settles here: a path no route matches, or a notFound() thrown by a route
+  // with no notFoundComponent of its own (an unknown project id). The response
+  // is then a 404 and no child's head() runs, so this is those pages' head.
+  head: ({ match }) => ({
     meta: [
       { charSet: 'utf-8' },
       { name: 'viewport', content: 'width=device-width, initial-scale=1, viewport-fit=cover' },
-      { title: TITLE },
+      ...(match._notFound ? NOT_FOUND_META : [{ title: TITLE }]),
       { name: 'description', content: DESCRIPTION },
       // The no-JS default; the theme script in RootDocument retints it before
       // first paint to track the resolved theme (see THEME_COLOR_META).
