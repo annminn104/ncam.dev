@@ -64,7 +64,9 @@ posts in the home page's blog section. All reads happen on the server, through
 TanStack Start server functions (`apps/portfolio/src/functions/blog.functions.ts`)
 that call `@ncam/cms` with `STRAPI_URL`; browsers only load media, from
 `STRAPI_PUBLIC_URL`. Pages are cached for 60 s (`swr`), so a publish goes live
-within a minute.
+within a minute. `/sitemap.xml` is built per request too and lists every post
+with its last change as `lastmod`, except one whose robots value says
+`noindex` or whose canonical URL points elsewhere; CDNs keep it for an hour.
 
 The CMS gets 2.5 s on the home page and 5 s per `@ncam/cms` request. When it is
 unreachable or slow, the home page's blog section shows placeholders and

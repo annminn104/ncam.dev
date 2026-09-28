@@ -92,6 +92,21 @@ own six sections (the `profile` remote) on `/`. React 19.
     `/` also sets `staleTime` and `preloadStaleTime` to 60 s, and article links
     are limited to `http(s):`/`mailto:`/`tel:` schemes (other schemes render as
     plain text).
+  - `robots[.]txt.ts` and `sitemap[.]xml.ts` — **server routes**
+    (`createFileRoute` with `server.handlers.GET` and no component; HEAD falls
+    back to GET) that build `/robots.txt` and `/sitemap.xml` per request, with
+    the same code in `vite dev` and production. The builders are pure, in
+    `src/lib/site-files.ts`; the posts come from `getBlogIndex()`
+    (`src/server/blog-index.ts`: `fetchArticleIndex`, 4 s for every page), so a
+    publish reaches the sitemap without a deploy. The sitemap lists `/`,
+    `/blog`, each live project plus its registry `sitemapPaths` (Holodex:
+    sets, search, collection) and every post that `isIndexable()`
+    (`src/lib/blog-seo.ts`: not noindexed, not canonicalised elsewhere) with
+    `updatedAt` as `<lastmod>`; nothing else gets a date, and there is no
+    `changefreq`/`priority`. If the CMS fails, the static entries still render
+    and the response is cached 60 s instead of an hour (`siteFileResponse`
+    cache kinds). Nothing may sit at these paths in `public/`: a static file is
+    served before the route.
 - `src/lib/federation.ts` — `getHostRuntime`, `forgetFailedRemote`,
   `loadRemoteModuleSSR`. In the production server bundle the plugin's import
   wrapper rejects forever after one failed attempt and never carries the remote's
@@ -176,16 +191,17 @@ loader)` for the six modules **sequentially** → `mod.ssr()` →
   Adding a home section = component + module in `apps/profile` + `exposes` +
   `data/sections.ts` + `loaders` in `index.tsx` + `src/types/remote/profile.d.ts`.
 - **CMS access is server-only.** Fetch Strapi inside `createServerFn` handlers
-  only (`src/functions/*.functions.ts`); read `STRAPI_URL`/`STRAPI_PUBLIC_URL`
-  through `getCmsEnv()` at request time — never via `import.meta.env`/`define`.
+  (`src/functions/*.functions.ts`) or server-route handlers (through
+  `src/server/`) only; read `STRAPI_URL`/`STRAPI_PUBLIC_URL` through
+  `getCmsEnv()` at request time — never via `import.meta.env`/`define`. The
+  start compiler strips `server.handlers` from the client build, and the
+  imports only they use go with them.
 - **SSR for SEO.** Page meta lives in route `head()`; the home page is server
   rendered (GSAP/DOM only inside effects — `lib/gsap.ts` is import-safe in Node).
   The public origin is `src/lib/site.ts` (`SITE_URL` / `SITE_ORIGIN`), baked
   from the `SITE_URL` env var — never hardcode the domain in a route. The
-  `site-files` plugin in `vite.config.ts` generates `robots.txt` and
-  `sitemap.xml` from that same value plus `@ncam/project-registry`, and serves
-  both from memory in `vite dev`; blog posts are not in the sitemap because they
-  change in the CMS without a deploy.
+  crawler files (`robots.txt`, `sitemap.xml`) are server routes built from that
+  same value, `@ncam/project-registry` and the CMS (see the routes above).
 - Keep `react`/`react-dom` as MF singletons and Nitro `traceDeps` externals, or
   hooks/context break across the host↔remote boundary.
 - Pinned TanStack/nitro/vinxi versions matter (MF + TanStack Router had version
