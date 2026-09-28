@@ -200,7 +200,15 @@ loader)` for the six modules **sequentially** → `mod.ssr()` →
   module's `hydrate(el)` (or `mount(el)` without SSR). Reports
   idle → loading → ready | error to the page; a failed module renders an inline
   error card that still carries the section id.
-- Shell UI: `components/home/nav.tsx` (links + scrubbed reading-progress bar) and
+- Shell UI: `components/home/nav.tsx` (links + scrubbed reading-progress bar;
+  below 900px the links move into a menu button's drawer, a modal `<dialog>`
+  rendered beside the `<header>`, not in it, since `.hnav`'s backdrop-filter
+  would contain it while it animates out. It slides in from the right, its
+  items staggering in via `--i`, and animates out through `display`/`overlay`
+  `allow-discrete` transitions (`@starting-style` for the way in). Opening
+  focuses the current section's link, or the first; a link, the backdrop,
+  Escape, the close button or widening to 900px closes it, and
+  `html:has(.hnav-drawer[open])` locks the page's scroll) and
   `components/home/manifest-rail.tsx` (≥1240px; shows each module's real state:
   idle / loading… / loaded / mounted (in view) / cached (seen) / failed).
 - `lib/use-section-tracker.ts` — the host's choreography **between** modules:
