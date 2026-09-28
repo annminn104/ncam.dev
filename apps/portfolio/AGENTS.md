@@ -39,7 +39,15 @@ own six sections (the `profile` remote) on `/`. React 19.
     loaders resolve `import('<remote>/ssr')` through `lib/federation.ts`
     (`loadRemoteModuleSSR`) → `renderHeroSSR({ config: { route }, assetBase })`;
     failures log `project.ssr-fallback` at warn level and fall back to a
-    client mount.
+    client mount. The splat loader also keeps the render's optional `head`
+    (the contract's `SsrHead`, checked by `remoteHead()`), and its head()
+    hands it to `projectHead()`, which titles and describes a route-aware
+    deep link from it (`Base Set card list · Holodex · ncam.dev`) so no two
+    share the project's title. Only a server render has one: after a client
+    navigation, and all through `vite dev`, the project's title stands. An id
+    the registry does not know throws `notFound()` in both loaders: a real
+    404, settled on the root route, whose head() answers every 404 there
+    with `lib/not-found.ts` (title + `noindex`).
   - **`components/ProjectStage.tsx`** is what actually mounts a remote and
     owns its lifecycle, shared by both routes above. SSR path: inline
     `{ html, css }` (`<style>` + `dangerouslySetInnerHTML`), then a

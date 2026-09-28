@@ -2,7 +2,7 @@ import { Link, useLoaderData, useParams, useRouter, useRouterState } from '@tans
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { getProject, type ProjectEntry } from '@ncam/project-registry';
 import { createLogger } from '@ncam/logger';
-import type { MountConfig, MountHandle } from '@ncam/mf-remote';
+import type { MountConfig, MountHandle, SsrResult } from '@ncam/mf-remote';
 import { loadRemoteModuleSSR } from '../lib/federation';
 import { projectJsonLd, serialiseJsonLd } from '../lib/json-ld';
 import { fromRemoteRoute, toRemoteRoute } from '../lib/remote-route';
@@ -11,7 +11,7 @@ const log = createLogger({ scope: 'portfolio' });
 
 // Static import specifiers so the Module Federation plugin can transform them.
 // `./ssr` is server-safe (loader); `./hydrate` / `./mount` are client-only.
-type SsrResult = { html: string; css: string };
+// A remote's `head` is only a type claim: the loader checks it (remoteHead).
 type RenderHeroSSR = (opts?: {
   config?: unknown;
   assetBase?: string;

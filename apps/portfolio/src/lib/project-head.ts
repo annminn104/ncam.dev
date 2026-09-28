@@ -1,3 +1,4 @@
+import type { SsrHead } from '@ncam/mf-remote';
 import { getProject } from '@ncam/project-registry';
 import { NOT_FOUND_META } from './not-found';
 import { SITE_URL } from './site';
@@ -18,6 +19,25 @@ export function isRealProjectPath(projectId: string, splat?: string): boolean {
 }
 
 /**
+ * A remote's `head` from its server render (`SsrHead`, @ncam/mf-remote), kept
+ * as far as it is usable: non-empty strings, whitespace collapsed. It is
+ * another deployment's code answering over the network, so the host checks
+ * the value rather than trust the type.
+ */
+export function remoteHead(value: unknown): SsrHead | undefined {
+  if (!value || typeof value !== 'object') return undefined;
+  const text = (field: unknown) =>
+    typeof field === 'string' ? field.replace(/\s+/g, ' ').trim() || undefined : undefined;
+  const { title, description } = value as Record<string, unknown>;
+  const head: SsrHead = {};
+  const cleanTitle = text(title);
+  const cleanDescription = text(description);
+  if (cleanTitle) head.title = cleanTitle;
+  if (cleanDescription) head.description = cleanDescription;
+  return cleanTitle || cleanDescription ? head : undefined;
+}
+
+/**
  * Per-project SEO. The route is SSR'd, so crawlers get a project-specific
  * title/description/canonical + Open Graph, even for client-mounted remotes.
  *
@@ -26,15 +46,25 @@ export function isRealProjectPath(projectId: string, splat?: string): boolean {
  * deep links get their own canonical instead of all pointing at the project
  * root. A deep link into a remote that is NOT route-aware is not a page of its
  * own — it gets `noindex` and a canonical back to the project root.
+ *
+ * `remote` is the `head` the remote's server render named the page with (the
+ * splat route's loader data). It titles and describes a route-aware remote's
+ * deep link — "Base Set card list · Holodex · ncam.dev" — so no two share the
+ * project's. Absent (the bare project page, a page the remote could not name,
+ * a client navigation or `vite dev`, where the loader renders nothing), the
+ * project's own title and description stand.
  */
-export function projectHead(projectId: string, splat?: string) {
+export function projectHead(projectId: string, splat?: string, remote?: SsrHead) {
   const project = getProject(projectId);
   // Both project loaders throw notFound() for such an id, which renders the
   // root's 404 head instead; this is the same head, should one ever get here.
   if (!project) return { meta: NOT_FOUND_META };
   const real = isRealProjectPath(projectId, splat);
-  const title = `${project.name} — ${project.tagline} · ncam.dev`;
-  const description = project.description;
+  const page = real && splat ? remote : undefined;
+  const title = page?.title
+    ? `${page.title} · ${project.name} · ncam.dev`
+    : `${project.name} — ${project.tagline} · ncam.dev`;
+  const description = page?.description ?? project.description;
   const url = `${SITE_URL}/projects/${project.id}${real && splat ? `/${splat}` : ''}`;
   const image = project.thumbnail ? `${SITE_URL}${project.thumbnail}` : undefined;
   // The root route's alt text describes the site's own og.png; tags merge by
