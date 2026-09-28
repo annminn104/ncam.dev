@@ -27,6 +27,23 @@ const LIGHT_QUERY = '(prefers-color-scheme: light)';
 const CHANGE_EVENT = 'ncam:themechange';
 
 /**
+ * The `theme-color` the server sends, from the root route's head(): the dark
+ * tint, scoped to a dark system. Without JS the page themes from the tokens
+ * alone — dark, or light on a light system — so a dark system gets the tint
+ * of the page it sees and a light one keeps the browser's own bar, never a
+ * dark bar over a light page.
+ *
+ * One tag, not the pair of scheme-scoped ones: the router's <HeadContent>
+ * de-duplicates `<meta>` by name, so a second `theme-color` would replace the
+ * first. Once JS runs the tag is THEME_SCRIPT's and syncThemeColor's to keep.
+ */
+export const THEME_COLOR_META = {
+  name: 'theme-color',
+  media: '(prefers-color-scheme: dark)',
+  content: THEME_COLOR.dark,
+};
+
+/**
  * Runs before first paint, inlined into <head> by routes/__root.tsx. A
  * synchronous script there executes while the document is still being parsed,
  * so both of its jobs land before anything is painted:
@@ -34,11 +51,13 @@ const CHANGE_EVENT = 'ncam:themechange';
  *     a theme never sees a frame of the other one;
  *  2. write the `theme-color` meta for the resolved theme.
  *
- * It owns that meta outright — creating it rather than editing one React
- * rendered — because React 19 hoists and de-duplicates `<meta>` by name, so the
- * usual pair of scheme-scoped tags collapses into whichever came last. The cost
- * is that a JS-less visitor gets no address-bar tint, which is a cosmetic
- * mobile-only detail; the page itself still themes from CSS alone.
+ * It takes over the server's tag (THEME_COLOR_META): drops its `media`, which
+ * would hide it on a light system whatever the theme, and writes the resolved
+ * colour, creating the tag only if there is none. React 19 claims a server-
+ * rendered `<meta>` on hydration by its `content`, so when the script changed
+ * that (a light theme) React appends a copy of its own after it. Browsers take
+ * the first `theme-color` in the document and syncThemeColor edits that same
+ * first tag, so the copy never shows.
  *
  * Dependency-free, tiny, and wrapped in try/catch because `localStorage` throws
  * outright in some privacy modes.
@@ -49,6 +68,7 @@ if(t==='light'||t==='dark'){document.documentElement.setAttribute('data-theme',t
 else{t=window.matchMedia('${LIGHT_QUERY}').matches?'light':'dark';}
 var m=document.querySelector('meta[name="theme-color"]');
 if(!m){m=document.createElement('meta');m.setAttribute('name','theme-color');document.head.appendChild(m);}
+m.removeAttribute('media');
 m.setAttribute('content',t==='light'?'${THEME_COLOR.light}':'${THEME_COLOR.dark}');
 }catch(e){}})();`;
 
@@ -72,7 +92,8 @@ export function resolveTheme(): Theme {
 /**
  * Keeps the address bar in step with the page. The tag has no `data-theme`
  * equivalent and cannot be driven from CSS, so it is written imperatively — by
- * THEME_SCRIPT before first paint, and by this from then on.
+ * THEME_SCRIPT before first paint, and by this from then on. Drops `media` as
+ * the script does, for the visit whose script threw before reaching the tag.
  */
 export function syncThemeColor(theme: Theme) {
   let meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
@@ -81,6 +102,7 @@ export function syncThemeColor(theme: Theme) {
     meta.name = 'theme-color';
     document.head.appendChild(meta);
   }
+  meta.removeAttribute('media');
   meta.content = THEME_COLOR[theme];
 }
 

@@ -18,6 +18,10 @@ const metaValue = (head: ReturnType<typeof projectHead>, name: string) =>
   head.meta.find((entry) => 'name' in entry && entry.name === name) as
     { name: string; content: string } | undefined;
 
+const propertyValue = (head: ReturnType<typeof projectHead>, property: string) =>
+  head.meta.find((entry) => 'property' in entry && entry.property === property) as
+    { property: string; content: string } | undefined;
+
 const canonical = (head: ReturnType<typeof projectHead>) =>
   ('links' in head ? head.links : [])?.[0]?.href;
 
@@ -74,5 +78,17 @@ describe('projectHead', () => {
   it('still noindexes an unknown project', () => {
     const head = projectHead('does-not-exist');
     expect(metaValue(head, 'robots')?.content).toBe('noindex');
+  });
+
+  it('describes its own thumbnail, absolutely, rather than inherit the site image alt', () => {
+    // The root route sends og.png with its own alt text; tags merge by name.
+    const head = projectHead('viktor');
+    expect(propertyValue(head, 'og:image')?.content).toBe(`${SITE}/thumbnails/viktor.jpg`);
+    expect(propertyValue(head, 'og:image:alt')?.content).toBe(
+      'Screenshot of Viktor. — Creative portfolio hero',
+    );
+    expect(metaValue(head, 'twitter:image:alt')?.content).toBe(
+      'Screenshot of Viktor. — Creative portfolio hero',
+    );
   });
 });

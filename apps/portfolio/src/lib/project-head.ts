@@ -38,6 +38,9 @@ export function projectHead(projectId: string, splat?: string) {
   const description = project.description;
   const url = `${SITE_URL}/projects/${project.id}${real && splat ? `/${splat}` : ''}`;
   const image = project.thumbnail ? `${SITE_URL}${project.thumbnail}` : undefined;
+  // The root route's alt text describes the site's own og.png; tags merge by
+  // name, so a thumbnail without an alt of its own would inherit that one.
+  const imageAlt = `Screenshot of ${project.name} — ${project.tagline}`;
   return {
     meta: [
       { title },
@@ -55,11 +58,17 @@ export function projectHead(projectId: string, splat?: string) {
             { property: 'og:image', content: image },
             { property: 'og:image:width', content: '1200' },
             { property: 'og:image:height', content: '630' },
+            { property: 'og:image:alt', content: imageAlt },
           ]
         : []),
       { name: 'twitter:title', content: title },
       { name: 'twitter:description', content: description },
-      ...(image ? [{ name: 'twitter:image', content: image }] : []),
+      ...(image
+        ? [
+            { name: 'twitter:image', content: image },
+            { name: 'twitter:image:alt', content: imageAlt },
+          ]
+        : []),
     ],
     links: [{ rel: 'canonical', href: url }],
   };
