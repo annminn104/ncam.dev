@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { absolutizeBlockImages, formatDateLabel, mapArticle, resolveMediaUrl } from './map';
+import {
+  absolutizeBlockImages,
+  formatDateLabel,
+  mapArticle,
+  mapIndexEntry,
+  resolveMediaUrl,
+} from './map';
 import type { StrapiArticle } from './types';
 
 const MEDIA_BASE = 'http://cms.test:1337';
@@ -11,6 +17,7 @@ const raw: StrapiArticle = {
   excerpt: 'Why every remote bundles its own React.',
   readingTime: 9,
   publishedAt: '2026-09-15T08:30:00.000Z',
+  updatedAt: '2026-09-20T10:00:00.000Z',
   cover: { url: '/uploads/cover.png', alternativeText: 'Cover art', width: 1200, height: 630 },
   tags: [
     { name: 'Module Federation', slug: 'module-federation' },
@@ -90,6 +97,7 @@ describe('mapArticle', () => {
       title: 'Federating React 19',
       excerpt: 'Why every remote bundles its own React.',
       publishedAt: '2026-09-15T08:30:00.000Z',
+      updatedAt: '2026-09-20T10:00:00.000Z',
       dateLabel: 'Sep 15, 2026',
       readingTime: 9,
       readingLabel: '9 min',
@@ -148,5 +156,18 @@ describe('mapArticle', () => {
     );
     expect(post.seo.image?.url).toBe('http://cms.test:1337/uploads/cover.png');
     expect(post.seo.title).toBe(raw.title);
+  });
+});
+
+describe('mapIndexEntry', () => {
+  it('keeps only what the sitemap, the feed and llms.txt read', () => {
+    const { slug, title, excerpt, publishedAt, updatedAt } = raw;
+    expect(mapIndexEntry({ slug, title, excerpt, publishedAt, updatedAt })).toEqual({
+      slug: 'federating-react-19',
+      title: 'Federating React 19',
+      excerpt: 'Why every remote bundles its own React.',
+      publishedAt: '2026-09-15T08:30:00.000Z',
+      updatedAt: '2026-09-20T10:00:00.000Z',
+    });
   });
 });

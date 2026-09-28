@@ -4,6 +4,7 @@ export type {
   BlocksImage,
   BlogImage,
   BlogPost,
+  BlogPostSummary,
   CodeNode,
   HeadingNode,
   ImageNode,
@@ -14,19 +15,27 @@ export type {
   ParagraphNode,
   QuoteNode,
   StrapiArticle,
+  StrapiArticleIndexEntry,
   StrapiList,
   StrapiMedia,
   StrapiSeo,
   StrapiTag,
   TextNode,
 } from './types';
-export { absolutizeBlockImages, formatDateLabel, mapArticle, resolveMediaUrl } from './map';
+export {
+  absolutizeBlockImages,
+  formatDateLabel,
+  mapArticle,
+  mapIndexEntry,
+  resolveMediaUrl,
+} from './map';
 export type { MapOptions } from './map';
-export { buildBySlugQuery, buildListQuery } from './query';
+export { buildBySlugQuery, buildIndexQuery, buildListQuery } from './query';
 export {
   CmsError,
   articlesUrl,
   fetchArticleBySlug,
+  fetchArticleIndex,
   fetchArticles,
   trimTrailingSlashes,
 } from './client';

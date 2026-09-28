@@ -24,12 +24,20 @@ export interface StrapiArticle {
   excerpt: string;
   readingTime: number | null;
   publishedAt: string;
+  /** Last change to the published entry (drafts have their own row, and their own date). */
+  updatedAt: string;
   cover: StrapiMedia | null;
   tags: StrapiTag[] | null;
   seo: StrapiSeo | null;
   /** Strapi Blocks JSON (structural node types) — only requested by the by-slug query. */
   body?: BlocksBody | null;
 }
+
+/** What `buildIndexQuery()` returns per article: no body, no media, no relations. */
+export type StrapiArticleIndexEntry = Pick<
+  StrapiArticle,
+  'slug' | 'title' | 'excerpt' | 'publishedAt' | 'updatedAt'
+>;
 
 export interface StrapiList<T> {
   data: T[];
@@ -55,6 +63,8 @@ export interface BlogPost {
   excerpt: string;
   /** ISO timestamp. */
   publishedAt: string;
+  /** ISO timestamp of the last change to the published post. */
+  updatedAt: string;
   /** "Sep 15, 2026" — computed server-side (en-US, UTC). */
   dateLabel: string;
   /** Minutes, ≥ 1. */
@@ -67,6 +77,15 @@ export interface BlogPost {
   body: BlocksBody | null;
   seo: { title: string; description: string; image: BlogImage | null };
 }
+
+/**
+ * A published post as the sitemap, the RSS feed and llms.txt list it: only the
+ * `BlogPost` fields they read, so every `BlogPost` is one too. Plain JSON.
+ */
+export type BlogPostSummary = Pick<
+  BlogPost,
+  'slug' | 'title' | 'excerpt' | 'publishedAt' | 'updatedAt'
+>;
 
 /** Strapi Blocks rich text — the node shapes the site reads (JSON-safe: TanStack can serialize them). */
 export interface TextNode {

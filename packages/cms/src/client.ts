@@ -1,6 +1,12 @@
-import { mapArticle } from './map';
-import { buildBySlugQuery, buildListQuery } from './query';
-import type { BlogPost, StrapiArticle, StrapiList } from './types';
+import { mapArticle, mapIndexEntry } from './map';
+import { buildBySlugQuery, buildIndexQuery, buildListQuery } from './query';
+import type {
+  BlogPost,
+  BlogPostSummary,
+  StrapiArticle,
+  StrapiArticleIndexEntry,
+  StrapiList,
+} from './types';
 
 /** A non-2xx answer from the CMS. `status` is the HTTP status code. */
 export class CmsError extends Error {
@@ -22,6 +28,9 @@ export interface CmsOptions {
 }
 
 const DEFAULT_TIMEOUT_MS = 5_000;
+
+/** Pages `fetchArticleIndex` reads at most: 1,000 posts, and a bound on a CMS that misreports. */
+const MAX_INDEX_PAGES = 10;
 
 function withTimeout(signal: AbortSignal | undefined, timeoutMs: number): AbortSignal {
   const timeout = AbortSignal.timeout(timeoutMs);
@@ -66,6 +75,29 @@ export async function fetchArticles(
     options,
   );
   return list.data.map((raw) => mapArticle(raw, { mediaBase }));
+}
+
+/**
+ * Every published article as a summary, newest first — all of them, page after
+ * page, unlike the ≤ 100 cards of `fetchArticles`: a sitemap or a feed that
+ * silently drops the oldest posts is wrong. Timeouts apply per page; pass a
+ * `signal` to bound the whole walk.
+ */
+export async function fetchArticleIndex(
+  baseUrl: string,
+  options: CmsOptions = {},
+): Promise<BlogPostSummary[]> {
+  const posts: BlogPostSummary[] = [];
+  for (let page = 1; page <= MAX_INDEX_PAGES; page += 1) {
+    const list = await getJson<StrapiList<StrapiArticleIndexEntry>>(
+      articlesUrl(baseUrl, buildIndexQuery(page)),
+      options,
+    );
+    posts.push(...list.data.map(mapIndexEntry));
+    // No page count (Strapi's `withCount` off) reads as a single page.
+    if (list.data.length === 0 || page >= (list.meta?.pagination?.pageCount ?? page)) break;
+  }
+  return posts;
 }
 
 /** One published article with its body, or null when the slug is unknown. */

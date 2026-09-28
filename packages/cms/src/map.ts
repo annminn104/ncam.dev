@@ -1,4 +1,11 @@
-import type { BlogImage, BlogPost, StrapiArticle, StrapiMedia } from './types';
+import type {
+  BlogImage,
+  BlogPost,
+  BlogPostSummary,
+  StrapiArticle,
+  StrapiArticleIndexEntry,
+  StrapiMedia,
+} from './types';
 
 export interface MapOptions {
   /** Origin the browser can reach for `/uploads/…` (Strapi returns relative URLs). */
@@ -71,6 +78,7 @@ export function mapArticle(raw: StrapiArticle, { mediaBase }: MapOptions): BlogP
     title: raw.title,
     excerpt: raw.excerpt,
     publishedAt: raw.publishedAt,
+    updatedAt: raw.updatedAt,
     dateLabel: formatDateLabel(raw.publishedAt),
     readingTime,
     readingLabel: `${readingTime} min`,
@@ -82,5 +90,16 @@ export function mapArticle(raw: StrapiArticle, { mediaBase }: MapOptions): BlogP
       description: raw.seo?.metaDescription ?? raw.excerpt,
       image: ogImage ?? cover,
     },
+  };
+}
+
+/** Strapi index entry → the summary the sitemap, the feed and llms.txt list. */
+export function mapIndexEntry(raw: StrapiArticleIndexEntry): BlogPostSummary {
+  return {
+    slug: raw.slug,
+    title: raw.title,
+    excerpt: raw.excerpt,
+    publishedAt: raw.publishedAt,
+    updatedAt: raw.updatedAt,
   };
 }

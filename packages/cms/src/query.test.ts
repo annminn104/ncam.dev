@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildBySlugQuery, buildListQuery } from './query';
+import { buildBySlugQuery, buildIndexQuery, buildListQuery } from './query';
 
 function params(query: string): Record<string, string> {
   return Object.fromEntries(new URLSearchParams(query));
@@ -15,6 +15,7 @@ describe('buildListQuery', () => {
       'fields[2]': 'excerpt',
       'fields[3]': 'readingTime',
       'fields[4]': 'publishedAt',
+      'fields[5]': 'updatedAt',
       'populate[cover][fields][0]': 'url',
       'populate[cover][fields][1]': 'alternativeText',
       'populate[cover][fields][2]': 'width',
@@ -27,6 +28,25 @@ describe('buildListQuery', () => {
   it('encodes brackets so the string is URL-safe', () => {
     expect(buildListQuery()).not.toContain('[');
     expect(buildListQuery()).toContain('pagination%5BpageSize%5D=100');
+  });
+});
+
+describe('buildIndexQuery', () => {
+  it('asks for one page of index fields, newest first, and populates nothing', () => {
+    expect(params(buildIndexQuery(1))).toEqual({
+      sort: 'publishedAt:desc',
+      'pagination[page]': '1',
+      'pagination[pageSize]': '100',
+      'fields[0]': 'title',
+      'fields[1]': 'slug',
+      'fields[2]': 'excerpt',
+      'fields[3]': 'publishedAt',
+      'fields[4]': 'updatedAt',
+    });
+  });
+
+  it('carries the requested page', () => {
+    expect(params(buildIndexQuery(3))['pagination[page]']).toBe('3');
   });
 });
 
