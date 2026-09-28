@@ -28,7 +28,7 @@ export interface StrapiArticle {
   excerpt: string;
   readingTime: number | null;
   publishedAt: string;
-  /** Last change to the published entry (drafts have their own row, and their own date). */
+  /** The draft's last edit, copied onto the published entry when it was published. */
   updatedAt: string;
   cover: StrapiMedia | null;
   tags: StrapiTag[] | null;
@@ -67,7 +67,7 @@ export interface BlogPost {
   excerpt: string;
   /** ISO timestamp. */
   publishedAt: string;
-  /** ISO timestamp of the last change to the published post. */
+  /** ISO timestamp of the last change to the published post; never before `publishedAt`. */
   updatedAt: string;
   /** "Sep 15, 2026" — computed server-side (en-US, UTC). */
   dateLabel: string;

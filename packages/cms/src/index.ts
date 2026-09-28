@@ -25,6 +25,7 @@ export type {
 export {
   absolutizeBlockImages,
   formatDateLabel,
+  lastChange,
   mapArticle,
   mapIndexEntry,
   resolveMediaUrl,

@@ -31,6 +31,17 @@ export function formatDateLabel(iso: string): string {
   return Number.isNaN(date.getTime()) ? '' : dateFormatter.format(date);
 }
 
+/**
+ * When the public post last changed. Strapi 5 publishes by copying the draft,
+ * `updatedAt` included, so the published entry's `updatedAt` is the last edit
+ * before its latest publish, and always earlier than its `publishedAt` (which
+ * moves on every publish). The later of the two is the change the public saw;
+ * a date that does not parse leaves `updatedAt` as it is.
+ */
+export function lastChange(updatedAt: string, publishedAt: string): string {
+  return Date.parse(updatedAt) < Date.parse(publishedAt) ? publishedAt : updatedAt;
+}
+
 /** A CMS string trimmed, or null when it is missing or blank (an emptied admin field). */
 function optionalText(value: string | null | undefined): string | null {
   const text = value?.trim();
@@ -92,7 +103,7 @@ export function mapArticle(raw: StrapiArticle, { mediaBase }: MapOptions): BlogP
     title: raw.title,
     excerpt: raw.excerpt,
     publishedAt: raw.publishedAt,
-    updatedAt: raw.updatedAt,
+    updatedAt: lastChange(raw.updatedAt, raw.publishedAt),
     dateLabel: formatDateLabel(raw.publishedAt),
     readingTime,
     readingLabel: `${readingTime} min`,
@@ -115,7 +126,7 @@ export function mapIndexEntry(raw: StrapiArticleIndexEntry): BlogPostSummary {
     title: raw.title,
     excerpt: raw.excerpt,
     publishedAt: raw.publishedAt,
-    updatedAt: raw.updatedAt,
+    updatedAt: lastChange(raw.updatedAt, raw.publishedAt),
     seo: mapSeoOverrides(raw.seo),
   };
 }

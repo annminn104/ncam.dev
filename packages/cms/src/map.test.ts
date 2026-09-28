@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   absolutizeBlockImages,
   formatDateLabel,
+  lastChange,
   mapArticle,
   mapIndexEntry,
   resolveMediaUrl,
@@ -71,6 +72,22 @@ describe('formatDateLabel', () => {
 
   it('returns an empty string for an unparseable date', () => {
     expect(formatDateLabel('not-a-date')).toBe('');
+  });
+});
+
+describe('lastChange', () => {
+  it("takes the publish time over the draft's earlier edit, as Strapi 5 dates a published entry", () => {
+    // Seen on Strapi 5.54: the published entry keeps the draft's updatedAt.
+    expect(lastChange('2026-09-28T14:28:51.843Z', '2026-09-28T14:28:51.846Z')).toBe(
+      '2026-09-28T14:28:51.846Z',
+    );
+  });
+
+  it('keeps an updatedAt that is later, or that does not parse', () => {
+    expect(lastChange('2026-09-30T00:00:00.000Z', '2026-09-28T00:00:00.000Z')).toBe(
+      '2026-09-30T00:00:00.000Z',
+    );
+    expect(lastChange('not-a-date', '2026-09-28T00:00:00.000Z')).toBe('not-a-date');
   });
 });
 
@@ -185,6 +202,14 @@ describe('mapArticle', () => {
     expect(post.seo.canonicalUrl).toBeNull();
     expect(post.seo.robots).toBeNull();
   });
+
+  it('never dates the last change before the publication', () => {
+    const post = mapArticle(
+      { ...raw, updatedAt: '2026-09-15T08:29:59.997Z' },
+      { mediaBase: MEDIA_BASE },
+    );
+    expect(post.updatedAt).toBe(raw.publishedAt);
+  });
 });
 
 describe('mapIndexEntry', () => {
@@ -210,5 +235,12 @@ describe('mapIndexEntry', () => {
       canonicalUrl: null,
       robots: null,
     });
+  });
+
+  it('never dates the last change before the publication', () => {
+    const entry = { slug, title, excerpt, publishedAt, seo: null };
+    expect(mapIndexEntry({ ...entry, updatedAt: '2026-09-15T08:29:59.997Z' }).updatedAt).toBe(
+      publishedAt,
+    );
   });
 });

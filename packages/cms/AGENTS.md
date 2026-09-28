@@ -20,7 +20,11 @@ const index = await fetchArticleIndex(apiBase); // BlogPostSummary[] — every p
   10 pages) instead of stopping at the first 100. `BlogPostSummary` is a
   `Pick` of `BlogPost`, so helpers that take a summary accept a full post too.
 - `publishedAt` is the post date, `updatedAt` the last change to the published
-  entry (the sitemap's `lastmod`, JSON-LD's `dateModified`).
+  entry (the sitemap's `lastmod`, JSON-LD's `dateModified`). Strapi 5 (seen on
+  5.54) publishes by copying the draft: `publishedAt` moves to the time of
+  every publish, and the published entry keeps the draft's `updatedAt`, a few
+  ms to days earlier. `lastChange()` takes the later of the two, so
+  `updatedAt` is never before `publishedAt`.
 - `seo.canonicalUrl` and `seo.robots` carry the SEO component's
   `canonicalURL` / `metaRobots` trimmed, or null when blank. The canonical is
   passed on as entered: only the host knows its origin, so it resolves a
