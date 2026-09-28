@@ -15,3 +15,16 @@ export const SITE_URL = import.meta.env.VITE_SITE_URL;
 
 /** Origin only, for deciding whether a link in CMS content leaves the site. */
 export const SITE_ORIGIN = new URL(SITE_URL).origin;
+
+/**
+ * The site's author, as the home page names its Person (`profile.name` in
+ * apps/profile/src/data/profile.ts; the full name is an `alternateName`).
+ */
+export const AUTHOR_NAME = 'Minh Nguyen';
+
+/**
+ * JSON-LD `@id` of that Person. `/` describes it in full; every other page's
+ * structured data (a post's author and publisher) points at this id, so search
+ * engines see one author across the site instead of one per page.
+ */
+export const PERSON_ID = `${SITE_URL}/#person`;

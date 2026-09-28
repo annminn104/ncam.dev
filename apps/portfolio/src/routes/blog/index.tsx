@@ -3,12 +3,9 @@ import type { BlogPost } from '@ncam/cms';
 import { createLogger } from '@ncam/logger';
 import { getBlogPosts } from '../../functions/blog.functions';
 import { ThemeToggle } from '../../components/theme-toggle';
+import { BLOG_DESCRIPTION, blogIndexHead, blogIndexJsonLd, jsonLdScript } from '../../lib/blog-seo';
 
 const log = createLogger({ scope: 'portfolio' });
-import { SITE_URL } from '../../lib/site';
-const TITLE = 'Blog — ncam.dev';
-const DESCRIPTION =
-  'Long-form write-ups on micro-frontends, SSR and motion — the things this site is made of.';
 
 interface LoaderData {
   posts: BlogPost[];
@@ -28,19 +25,7 @@ export const Route = createFileRoute('/blog/')({
     }
   },
   staleTime: 60_000,
-  head: () => ({
-    meta: [
-      { title: TITLE },
-      { name: 'description', content: DESCRIPTION },
-      { name: 'robots', content: 'index,follow' },
-      { property: 'og:title', content: TITLE },
-      { property: 'og:description', content: DESCRIPTION },
-      { property: 'og:url', content: `${SITE_URL}/blog` },
-      { name: 'twitter:title', content: TITLE },
-      { name: 'twitter:description', content: DESCRIPTION },
-    ],
-    links: [{ rel: 'canonical', href: `${SITE_URL}/blog` }],
-  }),
+  head: () => blogIndexHead(),
   component: BlogIndexPage,
 });
 
@@ -48,6 +33,10 @@ function BlogIndexPage() {
   const { posts, unavailable } = Route.useLoaderData();
   return (
     <div className="stage blogpage">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(blogIndexJsonLd(posts)) }}
+      />
       <Link to="/" className="stage__back">
         <span aria-hidden="true">←</span> Home
       </Link>
@@ -55,7 +44,7 @@ function BlogIndexPage() {
       <header className="blogpage__head">
         <p className="blogpage__label">Blog</p>
         <h1 className="blogpage__title">Notes from the build</h1>
-        <p className="blogpage__lead">{DESCRIPTION}</p>
+        <p className="blogpage__lead">{BLOG_DESCRIPTION}</p>
       </header>
       {posts.length === 0 ? (
         <p className="blogpage__empty" role="status">

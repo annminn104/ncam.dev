@@ -1,8 +1,23 @@
-import type { BlogPostSummary } from '@ncam/cms';
-import { SITE_URL } from './site';
+import type { BlogImage, BlogPost, BlogPostSummary } from '@ncam/cms';
+import { AUTHOR_NAME, PERSON_ID, SITE_URL } from './site';
 
 /** What the URL helpers read; a `BlogPost` and a `BlogPostSummary` both qualify. */
 type PostRef = Pick<BlogPostSummary, 'slug' | 'seo'>;
+
+export const BLOG_URL = `${SITE_URL}/blog`;
+/** JSON-LD `@id` of the Blog that `/blog` describes and every post is part of. */
+export const BLOG_ID = `${BLOG_URL}#blog`;
+export const BLOG_TITLE = 'Blog — ncam.dev';
+export const BLOG_DESCRIPTION =
+  'Long-form write-ups on micro-frontends, SSR and motion — the things this site is made of.';
+
+/** The site-wide social image (`public/og.png`), for pages without one of their own. */
+const SITE_IMAGE: BlogImage = {
+  url: `${SITE_URL}/og.png`,
+  alt: 'ncam.dev',
+  width: 1200,
+  height: 630,
+};
 
 /** A post's own URL on this site. */
 export function postUrl(slug: string): string {
@@ -40,4 +55,148 @@ export function isNoindex(robots: string | null): boolean {
  */
 export function isIndexable(post: PostRef): boolean {
   return !isNoindex(post.seo.robots) && canonicalUrl(post) === postUrl(post.slug);
+}
+
+/** JSON-LD is inlined in a <script>: escape `<` so CMS-authored text can never close the tag. */
+export function jsonLdScript(value: unknown): string {
+  return JSON.stringify(value).replace(/</g, '\\u003c');
+}
+
+/** Open Graph / Twitter tags for an image; its size only when both sides are known. */
+function imageMeta(image: BlogImage) {
+  return [
+    { property: 'og:image', content: image.url },
+    ...(image.width && image.height
+      ? [
+          { property: 'og:image:width', content: String(image.width) },
+          { property: 'og:image:height', content: String(image.height) },
+        ]
+      : []),
+    { name: 'twitter:image', content: image.url },
+  ];
+}
+
+/**
+ * The author of every post. `/` holds the full Person under the same `@id`;
+ * the name and URL are repeated here so a post's author reads on its own.
+ */
+function author() {
+  return { '@type': 'Person', '@id': PERSON_ID, name: AUTHOR_NAME, url: `${SITE_URL}/` };
+}
+
+/** `head()` of `/blog/<slug>`. The CMS's canonical and robots overrides win when set. */
+export function blogPostHead(post: BlogPost) {
+  const title = `${post.seo.title} · ncam.dev`;
+  const canonical = canonicalUrl(post);
+  return {
+    meta: [
+      { title },
+      { name: 'description', content: post.seo.description },
+      { name: 'robots', content: post.seo.robots ?? 'index,follow' },
+      { property: 'og:type', content: 'article' },
+      { property: 'og:title', content: title },
+      { property: 'og:description', content: post.seo.description },
+      { property: 'og:url', content: canonical },
+      { property: 'article:published_time', content: post.publishedAt },
+      { property: 'article:modified_time', content: post.updatedAt },
+      // `seo.image` is already the post's own og image or, failing that, its cover.
+      ...imageMeta(post.seo.image ?? SITE_IMAGE),
+      { name: 'twitter:title', content: title },
+      { name: 'twitter:description', content: post.seo.description },
+    ],
+    links: [{ rel: 'canonical', href: canonical }],
+  };
+}
+
+/** The post as a BlogPosting, by the `@id` the blog index lists it under. */
+export function blogPostJsonLd(post: BlogPost) {
+  const url = postUrl(post.slug);
+  const image = post.seo.image;
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BlogPosting',
+    '@id': `${url}#article`,
+    headline: post.title,
+    description: post.seo.description,
+    ...(image
+      ? {
+          image:
+            image.width && image.height
+              ? { '@type': 'ImageObject', url: image.url, width: image.width, height: image.height }
+              : image.url,
+        }
+      : {}),
+    datePublished: post.publishedAt,
+    dateModified: post.updatedAt,
+    author: author(),
+    publisher: { '@id': PERSON_ID },
+    mainEntityOfPage: url,
+    url,
+    isPartOf: { '@type': 'Blog', '@id': BLOG_ID, url: BLOG_URL },
+    inLanguage: 'en',
+    ...(post.tags.length > 0 ? { keywords: post.tags.join(', ') } : {}),
+  };
+}
+
+/** `head()` of `/blog`. */
+export function blogIndexHead() {
+  return {
+    meta: [
+      { title: BLOG_TITLE },
+      { name: 'description', content: BLOG_DESCRIPTION },
+      { name: 'robots', content: 'index,follow' },
+      { property: 'og:type', content: 'website' },
+      { property: 'og:title', content: BLOG_TITLE },
+      { property: 'og:description', content: BLOG_DESCRIPTION },
+      { property: 'og:url', content: BLOG_URL },
+      ...imageMeta(SITE_IMAGE),
+      { name: 'twitter:title', content: BLOG_TITLE },
+      { name: 'twitter:description', content: BLOG_DESCRIPTION },
+    ],
+    links: [{ rel: 'canonical', href: BLOG_URL }],
+  };
+}
+
+/**
+ * `/blog` as a CollectionPage whose main entity is the Blog, which lists the
+ * posts the page shows, each under the `@id` its own page gives it.
+ */
+export function blogIndexJsonLd(posts: readonly BlogPost[]) {
+  return {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'CollectionPage',
+        '@id': BLOG_URL,
+        url: BLOG_URL,
+        name: BLOG_TITLE,
+        description: BLOG_DESCRIPTION,
+        inLanguage: 'en',
+        mainEntity: { '@id': BLOG_ID },
+      },
+      {
+        '@type': 'Blog',
+        '@id': BLOG_ID,
+        url: BLOG_URL,
+        name: 'ncam.dev blog',
+        description: BLOG_DESCRIPTION,
+        inLanguage: 'en',
+        author: author(),
+        publisher: { '@id': PERSON_ID },
+        ...(posts.length > 0
+          ? {
+              blogPost: posts.map((post) => ({
+                '@type': 'BlogPosting',
+                '@id': `${postUrl(post.slug)}#article`,
+                headline: post.title,
+                url: postUrl(post.slug),
+                datePublished: post.publishedAt,
+                dateModified: post.updatedAt,
+                author: { '@id': PERSON_ID },
+              })),
+            }
+          : {}),
+      },
+    ],
+  };
 }

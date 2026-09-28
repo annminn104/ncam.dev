@@ -81,6 +81,16 @@ own six sections (the `profile` remote) on `/`. React 19.
     sets full SEO meta in `head()` and renders the Blocks body with
     `@strapi/blocks-react-renderer` (overrides: `image`, `link`), escapes `<` in
     the inlined BlogPosting JSON-LD and marks off-site links by parsed origin.
+    Both pages' `head()` and JSON-LD come from `src/lib/blog-seo.ts` (unit
+    tested): a post's canonical and robots meta follow the CMS overrides
+    (`seo.canonicalUrl`, relative ones resolved against the site, and
+    `seo.robots`) when set, and it carries `article:published_time` /
+    `article:modified_time` and a sized `og:image` (the site's `og.png` when
+    the post has none). The BlogPosting (`@id` `<post url>#article`) credits
+    `author` and `publisher` to the Person `/` describes, by
+    `PERSON_ID` / `AUTHOR_NAME` from `src/lib/site.ts` — any page that names
+    the author uses those two, so there is one Person across the site. `/blog`
+    is a CollectionPage whose Blog (`@id` `/blog#blog`) lists the same posts.
     Styles in `src/blog.css`. Nitro `routeRules` cache `/`, `/blog`, `/blog/**`
     with `swr: 60`, so a publish shows up within a minute. The swr layer buffers
     the SSR response (`res.text()`), so `/`, `/blog` and `/blog/**` do not
