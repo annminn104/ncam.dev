@@ -5,6 +5,7 @@ import type {
   StrapiArticle,
   StrapiArticleIndexEntry,
   StrapiMedia,
+  StrapiSeo,
 } from './types';
 
 export interface MapOptions {
@@ -28,6 +29,19 @@ export function resolveMediaUrl(url: string, mediaBase: string): string {
 export function formatDateLabel(iso: string): string {
   const date = new Date(iso);
   return Number.isNaN(date.getTime()) ? '' : dateFormatter.format(date);
+}
+
+/** A CMS string trimmed, or null when it is missing or blank (an emptied admin field). */
+function optionalText(value: string | null | undefined): string | null {
+  const text = value?.trim();
+  return text ? text : null;
+}
+
+/** The SEO component's per-post overrides; both are null when it has none. */
+function mapSeoOverrides(
+  seo: Pick<StrapiSeo, 'canonicalURL' | 'metaRobots'> | null | undefined,
+): Pick<BlogPost['seo'], 'canonicalUrl' | 'robots'> {
+  return { canonicalUrl: optionalText(seo?.canonicalURL), robots: optionalText(seo?.metaRobots) };
 }
 
 function mapImage(
@@ -89,6 +103,7 @@ export function mapArticle(raw: StrapiArticle, { mediaBase }: MapOptions): BlogP
       title: raw.seo?.metaTitle ?? raw.title,
       description: raw.seo?.metaDescription ?? raw.excerpt,
       image: ogImage ?? cover,
+      ...mapSeoOverrides(raw.seo),
     },
   };
 }
@@ -101,5 +116,6 @@ export function mapIndexEntry(raw: StrapiArticleIndexEntry): BlogPostSummary {
     excerpt: raw.excerpt,
     publishedAt: raw.publishedAt,
     updatedAt: raw.updatedAt,
+    seo: mapSeoOverrides(raw.seo),
   };
 }

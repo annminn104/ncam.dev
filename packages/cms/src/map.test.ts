@@ -6,9 +6,18 @@ import {
   mapIndexEntry,
   resolveMediaUrl,
 } from './map';
-import type { StrapiArticle } from './types';
+import type { StrapiArticle, StrapiSeo } from './types';
 
 const MEDIA_BASE = 'http://cms.test:1337';
+
+/** An SEO component with every field left empty in the admin. */
+const EMPTY_SEO: StrapiSeo = {
+  metaTitle: null,
+  metaDescription: null,
+  ogImage: null,
+  canonicalURL: null,
+  metaRobots: null,
+};
 
 const raw: StrapiArticle = {
   documentId: 'doc-1',
@@ -27,6 +36,8 @@ const raw: StrapiArticle = {
     metaTitle: 'Federating React 19 — notes',
     metaDescription: 'SEO description.',
     ogImage: { url: 'https://cdn.example/og.png', alternativeText: null, width: 1200, height: 630 },
+    canonicalURL: ' https://dev.example/federating-react-19 ',
+    metaRobots: 'noindex, follow',
   },
   body: [
     { type: 'paragraph', children: [{ type: 'text', text: 'Hello' }] },
@@ -130,6 +141,8 @@ describe('mapArticle', () => {
           width: 1200,
           height: 630,
         },
+        canonicalUrl: 'https://dev.example/federating-react-19',
+        robots: 'noindex, follow',
       },
     });
   });
@@ -144,12 +157,18 @@ describe('mapArticle', () => {
     expect(post.tags).toEqual([]);
     expect(post.cover).toBeNull();
     expect(post.body).toBeNull();
-    expect(post.seo).toEqual({ title: raw.title, description: raw.excerpt, image: null });
+    expect(post.seo).toEqual({
+      title: raw.title,
+      description: raw.excerpt,
+      image: null,
+      canonicalUrl: null,
+      robots: null,
+    });
   });
 
   it('uses the cover as the social image when seo has none', () => {
     const post = mapArticle(
-      { ...raw, seo: { metaTitle: null, metaDescription: null, ogImage: null } },
+      { ...raw, seo: { ...EMPTY_SEO } },
       {
         mediaBase: MEDIA_BASE,
       },
@@ -157,17 +176,39 @@ describe('mapArticle', () => {
     expect(post.seo.image?.url).toBe('http://cms.test:1337/uploads/cover.png');
     expect(post.seo.title).toBe(raw.title);
   });
+
+  it('treats blank overrides (an emptied admin field) as not set', () => {
+    const post = mapArticle(
+      { ...raw, seo: { ...EMPTY_SEO, canonicalURL: '   ', metaRobots: '' } },
+      { mediaBase: MEDIA_BASE },
+    );
+    expect(post.seo.canonicalUrl).toBeNull();
+    expect(post.seo.robots).toBeNull();
+  });
 });
 
 describe('mapIndexEntry', () => {
+  const { slug, title, excerpt, publishedAt, updatedAt } = raw;
+
   it('keeps only what the sitemap, the feed and llms.txt read', () => {
-    const { slug, title, excerpt, publishedAt, updatedAt } = raw;
-    expect(mapIndexEntry({ slug, title, excerpt, publishedAt, updatedAt })).toEqual({
+    const seo = {
+      canonicalURL: ' https://dev.example/federating-react-19 ',
+      metaRobots: 'noindex',
+    };
+    expect(mapIndexEntry({ slug, title, excerpt, publishedAt, updatedAt, seo })).toEqual({
       slug: 'federating-react-19',
       title: 'Federating React 19',
       excerpt: 'Why every remote bundles its own React.',
       publishedAt: '2026-09-15T08:30:00.000Z',
       updatedAt: '2026-09-20T10:00:00.000Z',
+      seo: { canonicalUrl: 'https://dev.example/federating-react-19', robots: 'noindex' },
+    });
+  });
+
+  it('reads a post without an SEO component as having no overrides', () => {
+    expect(mapIndexEntry({ slug, title, excerpt, publishedAt, updatedAt, seo: null }).seo).toEqual({
+      canonicalUrl: null,
+      robots: null,
     });
   });
 });

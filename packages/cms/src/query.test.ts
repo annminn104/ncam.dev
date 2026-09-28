@@ -32,7 +32,7 @@ describe('buildListQuery', () => {
 });
 
 describe('buildIndexQuery', () => {
-  it('asks for one page of index fields, newest first, and populates nothing', () => {
+  it('asks for one page of index fields and the SEO overrides, newest first', () => {
     expect(params(buildIndexQuery(1))).toEqual({
       sort: 'publishedAt:desc',
       'pagination[page]': '1',
@@ -42,6 +42,8 @@ describe('buildIndexQuery', () => {
       'fields[2]': 'excerpt',
       'fields[3]': 'publishedAt',
       'fields[4]': 'updatedAt',
+      'populate[seo][fields][0]': 'canonicalURL',
+      'populate[seo][fields][1]': 'metaRobots',
     });
   });
 

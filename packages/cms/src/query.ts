@@ -28,7 +28,8 @@ export function buildListQuery(): string {
 
 /**
  * One page (1-based) of the article index, newest first: the fields a sitemap,
- * a feed and llms.txt read, and nothing to populate.
+ * a feed and llms.txt read, plus the SEO overrides that decide whether a post
+ * belongs in them (no media, no other relations).
  */
 export function buildIndexQuery(page: number): string {
   const params = new URLSearchParams();
@@ -36,6 +37,8 @@ export function buildIndexQuery(page: number): string {
   params.set('pagination[page]', String(page));
   params.set('pagination[pageSize]', String(MAX_PAGE_SIZE));
   INDEX_FIELDS.forEach((field, index) => params.set(`fields[${index}]`, field));
+  params.set('populate[seo][fields][0]', 'canonicalURL');
+  params.set('populate[seo][fields][1]', 'metaRobots');
   return params.toString();
 }
 

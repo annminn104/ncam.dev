@@ -94,6 +94,7 @@ describe('fetchArticleIndex', () => {
     excerpt: '',
     publishedAt: '2026-09-15T00:00:00.000Z',
     updatedAt: '2026-09-16T00:00:00.000Z',
+    seo: { canonicalURL: null, metaRobots: 'noindex' },
   });
 
   /** A CMS that holds `pageCount` pages of one entry each (`pageCount` null: not reported). */
@@ -110,10 +111,14 @@ describe('fetchArticleIndex', () => {
     const posts = await fetchArticleIndex(BASE, { fetch });
     expect(fetch).toHaveBeenCalledTimes(3);
     expect(posts.map((post) => post.slug)).toEqual(['post-1', 'post-2', 'post-3']);
-    expect(posts[0]).toEqual(entry('post-1'));
+    expect(posts[0]).toEqual({
+      ...entry('post-1'),
+      seo: { canonicalUrl: null, robots: 'noindex' },
+    });
     const [url] = fetch.mock.calls[0] as [string];
     expect(url.startsWith('http://cms.test:1337/api/articles?')).toBe(true);
     expect(url).toContain('fields%5B4%5D=updatedAt');
+    expect(url).toContain('populate%5Bseo%5D%5Bfields%5D%5B1%5D=metaRobots');
   });
 
   it('stops after one page when Strapi reports no page count', async () => {

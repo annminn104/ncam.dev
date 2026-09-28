@@ -21,6 +21,10 @@ const index = await fetchArticleIndex(apiBase); // BlogPostSummary[] — every p
   `Pick` of `BlogPost`, so helpers that take a summary accept a full post too.
 - `publishedAt` is the post date, `updatedAt` the last change to the published
   entry (the sitemap's `lastmod`, JSON-LD's `dateModified`).
+- `seo.canonicalUrl` and `seo.robots` carry the SEO component's
+  `canonicalURL` / `metaRobots` trimmed, or null when blank. The canonical is
+  passed on as entered: only the host knows its origin, so it resolves a
+  relative one. Both are in the by-slug post and in the index, not in the cards.
 
 - `apiBase` = the Strapi origin the caller can reach (`STRAPI_URL`);
   `mediaBase` = the origin browsers can reach for `/uploads/…`
