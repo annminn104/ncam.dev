@@ -45,7 +45,7 @@ export function siteFileResponse(body: string, type: string, cache: SiteFileCach
 }
 
 /** Characters XML 1.0 forbids outright (most C0 controls, lone surrogates, U+FFFE/U+FFFF). */
-const XML_INVALID = /[^\t\n\r -퟿-�\u{10000}-\u{10FFFF}]/gu;
+const XML_INVALID = /[^\t\n\r\u0020-\uD7FF\uE000-\uFFFD\u{10000}-\u{10FFFF}]/gu;
 
 const XML_ENTITIES: Record<string, string> = {
   '&': '&amp;',
