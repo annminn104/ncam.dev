@@ -1,7 +1,9 @@
 import { dehydrate, HydrationBoundary } from '@tanstack/react-query';
 import { createLogger } from '@ncam/logger';
+import type { SsrHead, SsrResult } from '@ncam/mf-remote';
 import css from './styles/globals.css?inline';
 import App from './App';
+import { routeHead } from './head';
 import {
   cardQuery,
   createQueryClient,
@@ -11,18 +13,19 @@ import {
   setsQuery,
 } from './lib/queries';
 import { createRouteController } from './route-controller';
-import { parseRoute } from './routes';
+import { parseRoute, type Route } from './routes';
 import { serialiseState, SSR_STATE_ID } from './lib/ssr-state';
 import { DEFAULT_PER_PAGE } from './lib/tcgdex';
 import type { QueryClient } from '@tanstack/react-query';
 
 const log = createLogger({ scope: 'holodex' });
 
-export interface RenderHeroSSRResult {
-  html: string;
-  /** Compiled Tailwind CSS, for the host to inline so first paint is styled. */
-  css: string;
-}
+/**
+ * The contract's `SsrResult` (packages/mf-remote/src/contract.ts): the markup,
+ * the compiled Tailwind CSS for the host to inline so first paint is styled,
+ * and the page's own title and description from `routeHead`, when it has them.
+ */
+export type RenderHeroSSRResult = SsrResult;
 
 export interface RenderHeroSSROptions {
   config?: { route?: string };
@@ -38,7 +41,7 @@ export interface RenderHeroSSROptions {
  * client's. A hand-rolled or inline key would not error — it would just miss
  * on hydration and refetch silently, throwing away this whole task.
  */
-async function prefetch(client: QueryClient, route: ReturnType<typeof parseRoute>): Promise<void> {
+async function prefetch(client: QueryClient, route: Route): Promise<void> {
   const jobs: Promise<void>[] = [];
   if (route.view === 'sets') jobs.push(client.prefetchQuery(setsQuery()));
   if (route.view === 'set') {
@@ -81,9 +84,11 @@ export async function renderHeroSSR(
   // No retries here: a failed prefetch is the browser's to fetch again.
   const queryClient = createQueryClient({ server: true });
   const controller = createRouteController({ route: routeString });
+  let route: Route | undefined;
 
   try {
-    await prefetch(queryClient, parseRoute(routeString));
+    route = parseRoute(routeString);
+    await prefetch(queryClient, route);
   } catch (error) {
     // A prefetch failure must not fail the render. prefetch() already
     // isolates one bad query from the rest via Promise.allSettled; this
@@ -117,12 +122,23 @@ export async function renderHeroSSR(
       />
     </HydrationBoundary>,
   );
+  // Named off the same cache, before it is dropped. A head that cannot be
+  // built only costs the page its own title: the host keeps the project's.
+  let head: SsrHead | undefined;
+  try {
+    head = route ? routeHead(route, queryClient) : undefined;
+  } catch (error) {
+    log.warn('holodex.ssr-head-failed', {
+      route: routeString,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
   // Two concurrent SSR requests must never share a cache: this client was
   // built for this request alone, so drop it once the dehydrated snapshot
   // and the rendered markup have both been captured.
   queryClient.clear();
 
-  return { html: body, css };
+  return head ? { html: body, css, head } : { html: body, css };
 }
 
 export default renderHeroSSR;
