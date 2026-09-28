@@ -204,12 +204,19 @@ Below, `<NAME>` stands for `TOONHUB`, `MINDLOOP`, `IMMERSIVE_OCEAN`, `VIKTOR`,
 | `SITE_URL`                        | The site's public origin, for canonical URLs, Open Graph, JSON-LD, `robots.txt` and `sitemap.xml`. **Baked in at build time.** Falls back to Vercel's production domain, then `https://ncam.dev`. |
 | `STRAPI_URL`, `STRAPI_PUBLIC_URL` | The CMS origin the host's server fetches from, and the origin browsers load media from (defaults to `STRAPI_URL`). **Read at runtime**; default `http://localhost:1337`.                          |
 
+The remotes read `SITE_URL` too, as the host's origin: each remote's standalone
+page is a duplicate of its `/projects/<id>` page there and names that page as its
+canonical. They skip the Vercel fallback, which would name the remote itself, so
+set `SITE_URL` on every remote's project as well.
+
 ## Adding a project
 
 1. Create `apps/<id>/`, a Vite app whose `vite.config.ts` calls
    `defineRemote()` from `@ncam/mf-remote` and exposes `./mount`, `./ssr` and
    `./hydrate` (copy `apps/viktor`). Its `build` script is `vite build --app`,
-   which also emits the server entry.
+   which also emits the server entry. Its `index.html` builds its canonical,
+   `og:url`, `og:image` and JSON-LD `url` on `%SITE_URL%`: change `viktor` in
+   those to the new id.
 2. Give it an `AGENTS.md` and a `vercel.json` (copy any remote's), and add its
    `<NAME>_PORT` and `<NAME>_REMOTE_URL` to `.env`.
 3. In the host, add the remote to `remotes` in `apps/portfolio/vite.config.ts`;

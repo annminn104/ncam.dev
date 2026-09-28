@@ -30,7 +30,11 @@ the matching **Root Directory**. The live ones:
 
 1. **Remotes first.** Pick the Vite framework preset; everything else comes
    from `vercel.json`. Deploy each remote and note its production URL.
-   Holodex's project also deploys `apps/holodex/api/` as a Vercel Function,
+   Every remote except Profile also needs a `SITE_URL` Production variable,
+   the host's public origin (today `https://ncam-profile.vercel.app`): its
+   standalone page duplicates the host's `/projects/<id>`, so its canonical,
+   `og:url` and `og:image` are built on that origin. Unset, they name
+   `https://ncam.dev`. Holodex's project also deploys `apps/holodex/api/` as a Vercel Function,
    `/api/tcgdex-asset`: the proxy that Holodex's WebGL cards load TCGdex images
    through, because TCGdex's CDN sends `Access-Control-Allow-Origin` twice and
    browsers then refuse the images as textures.
@@ -70,7 +74,8 @@ the matching **Root Directory**. The live ones:
    and drives canonical URLs, Open Graph, JSON-LD, `robots.txt` and
    `sitemap.xml`. Without it the build uses the project's Vercel production
    domain, so a fresh `*.vercel.app` deploy is already consistent. The remotes
-   can stay on `*.vercel.app`.
+   can stay on `*.vercel.app`, but set the same `SITE_URL` on them and redeploy
+   them too, or their canonicals keep naming the old origin.
 
 Hobby plan notes: one build runs at a time, so a push that touches everything
 builds the eight projects one after another (`turbo-ignore` skips the untouched
