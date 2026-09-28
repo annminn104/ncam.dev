@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router';
+import { createFileRoute, notFound } from '@tanstack/react-router';
 import { getProject } from '@ncam/project-registry';
 import { createLogger } from '@ncam/logger';
 import { ProjectStagePage, loadSsrExports, ssrLoaders } from '../../components/ProjectStage';
@@ -18,7 +18,11 @@ export const Route = createFileRoute('/projects/$projectId')({
   // back to client-side mount (below). Either way the loader stays graceful.
   loader: async ({ params }): Promise<LoaderData> => {
     const project = getProject(params.projectId);
-    if (!project || project.status !== 'live') return NO_SSR;
+    // An id the registry does not know is a 404, not a 200 stage that says so.
+    // The route has no notFoundComponent, so this settles on the root route:
+    // the router's NotFound, the root head's 404 title and noindex, status 404.
+    if (!project) throw notFound();
+    if (project.status !== 'live') return NO_SSR;
     const load = ssrLoaders[project.remote];
     // Federated SSR is only wired up in the production *server* build: `vite dev`
     // can't resolve it (and may hang), and client-side navigations take the

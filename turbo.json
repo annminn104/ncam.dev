@@ -25,7 +25,7 @@
       "dependsOn": ["assets"],
       "cache": false,
       "persistent": true,
-      "passThroughEnv": ["STRAPI_URL", "STRAPI_PUBLIC_URL"]
+      "passThroughEnv": ["STRAPI_URL", "STRAPI_PUBLIC_URL", "SITE_URL"]
     },
     "preview": {
       "dependsOn": ["build"],

@@ -73,7 +73,9 @@ pnpm thumbnails <id>  # regenerates a gallery thumbnail (needs `pnpm dev` runnin
   `apps/portfolio/src/components/ProjectStage.tsx`.
 - Each project remote exposes three entries through `defineRemote()`:
   - `./mount`: `mount(target, config?: MountConfig): MountHandle`, a client render;
-  - `./ssr`: `renderHeroSSR({ config?, assetBase? }): { html, css }`, browser-free;
+  - `./ssr`: `renderHeroSSR({ config?, assetBase? }): SsrResult`, browser-free:
+    `{ html, css }`, plus an optional `head` (`title`, `description`) that names
+    the page it rendered, for the host's deep-link head;
   - `./hydrate`: `hydrate(target, config?: MountConfig): MountHandle`, over the SSR markup.
 
   The `profile` remote instead exposes one `{ ssr, hydrate, mount }` module per
@@ -122,6 +124,7 @@ pnpm thumbnails <id>  # regenerates a gallery thumbnail (needs `pnpm dev` runnin
 
 1. Create `apps/<id>/` with `defineRemote()` exposing `./mount`, `./ssr` and
    `./hydrate` (copy `apps/viktor`); its build script is `vite build --app`.
+   Change `viktor` to the new id in its `index.html`'s `%SITE_URL%/…` URLs.
 2. Give it its own `AGENTS.md`, a `vercel.json`, and its `<NAME>_PORT` and
    `<NAME>_REMOTE_URL` in `.env`.
 3. Host: `remotes` in `apps/portfolio/vite.config.ts`, the three loader maps in

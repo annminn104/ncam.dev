@@ -1,4 +1,12 @@
-import type { BlogImage, BlogPost, StrapiArticle, StrapiMedia } from './types';
+import type {
+  BlogImage,
+  BlogPost,
+  BlogPostSummary,
+  StrapiArticle,
+  StrapiArticleIndexEntry,
+  StrapiMedia,
+  StrapiSeo,
+} from './types';
 
 export interface MapOptions {
   /** Origin the browser can reach for `/uploads/…` (Strapi returns relative URLs). */
@@ -21,6 +29,30 @@ export function resolveMediaUrl(url: string, mediaBase: string): string {
 export function formatDateLabel(iso: string): string {
   const date = new Date(iso);
   return Number.isNaN(date.getTime()) ? '' : dateFormatter.format(date);
+}
+
+/**
+ * When the public post last changed. Strapi 5 publishes by copying the draft,
+ * `updatedAt` included, so the published entry's `updatedAt` is the last edit
+ * before its latest publish, and always earlier than its `publishedAt` (which
+ * moves on every publish). The later of the two is the change the public saw;
+ * a date that does not parse leaves `updatedAt` as it is.
+ */
+export function lastChange(updatedAt: string, publishedAt: string): string {
+  return Date.parse(updatedAt) < Date.parse(publishedAt) ? publishedAt : updatedAt;
+}
+
+/** A CMS string trimmed, or null when it is missing or blank (an emptied admin field). */
+function optionalText(value: string | null | undefined): string | null {
+  const text = value?.trim();
+  return text ? text : null;
+}
+
+/** The SEO component's per-post overrides; both are null when it has none. */
+function mapSeoOverrides(
+  seo: Pick<StrapiSeo, 'canonicalURL' | 'metaRobots'> | null | undefined,
+): Pick<BlogPost['seo'], 'canonicalUrl' | 'robots'> {
+  return { canonicalUrl: optionalText(seo?.canonicalURL), robots: optionalText(seo?.metaRobots) };
 }
 
 function mapImage(
@@ -71,6 +103,7 @@ export function mapArticle(raw: StrapiArticle, { mediaBase }: MapOptions): BlogP
     title: raw.title,
     excerpt: raw.excerpt,
     publishedAt: raw.publishedAt,
+    updatedAt: lastChange(raw.updatedAt, raw.publishedAt),
     dateLabel: formatDateLabel(raw.publishedAt),
     readingTime,
     readingLabel: `${readingTime} min`,
@@ -81,6 +114,19 @@ export function mapArticle(raw: StrapiArticle, { mediaBase }: MapOptions): BlogP
       title: raw.seo?.metaTitle ?? raw.title,
       description: raw.seo?.metaDescription ?? raw.excerpt,
       image: ogImage ?? cover,
+      ...mapSeoOverrides(raw.seo),
     },
+  };
+}
+
+/** Strapi index entry → the summary the sitemap, the feed and llms.txt list. */
+export function mapIndexEntry(raw: StrapiArticleIndexEntry): BlogPostSummary {
+  return {
+    slug: raw.slug,
+    title: raw.title,
+    excerpt: raw.excerpt,
+    publishedAt: raw.publishedAt,
+    updatedAt: lastChange(raw.updatedAt, raw.publishedAt),
+    seo: mapSeoOverrides(raw.seo),
   };
 }

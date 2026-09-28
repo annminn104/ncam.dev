@@ -22,7 +22,9 @@ and Render use Postgres.
 ## Content model
 
 - `article`: title, slug, excerpt, cover, `body` (Blocks), `readingTime`
-  (computed on save), tags and seo.
+  (computed on save), tags and seo: meta title, description and image, plus
+  an optional canonical URL and robots value (`noindex, nofollow`, say) for
+  posts that should not be indexed as they are.
 - `tag`.
 
 Drafts stay invisible to the API until they are published; the public routes
@@ -62,7 +64,12 @@ posts in the home page's blog section. All reads happen on the server, through
 TanStack Start server functions (`apps/portfolio/src/functions/blog.functions.ts`)
 that call `@ncam/cms` with `STRAPI_URL`; browsers only load media, from
 `STRAPI_PUBLIC_URL`. Pages are cached for 60 s (`swr`), so a publish goes live
-within a minute.
+within a minute. `/sitemap.xml` is built per request too and lists every post
+with its last change as `lastmod`, except one whose robots value says
+`noindex` or whose canonical URL points elsewhere; CDNs keep it for an hour.
+`/llms.txt` lists the newest of those posts, and the RSS feed at
+`/blog/rss.xml` the 20 newest published posts, refreshed within a minute like
+the blog pages.
 
 The CMS gets 2.5 s on the home page and 5 s per `@ncam/cms` request. When it is
 unreachable or slow, the home page's blog section shows placeholders and

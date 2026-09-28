@@ -39,7 +39,15 @@ own six sections (the `profile` remote) on `/`. React 19.
     loaders resolve `import('<remote>/ssr')` through `lib/federation.ts`
     (`loadRemoteModuleSSR`) → `renderHeroSSR({ config: { route }, assetBase })`;
     failures log `project.ssr-fallback` at warn level and fall back to a
-    client mount.
+    client mount. The splat loader also keeps the render's optional `head`
+    (the contract's `SsrHead`, checked by `remoteHead()`), and its head()
+    hands it to `projectHead()`, which titles and describes a route-aware
+    deep link from it (`Base Set card list · Holodex · ncam.dev`) so no two
+    share the project's title. Only a server render has one: after a client
+    navigation, and all through `vite dev`, the project's title stands. An id
+    the registry does not know throws `notFound()` in both loaders: a real
+    404, settled on the root route, whose head() answers every 404 there
+    with `lib/not-found.ts` (title + `noindex`).
   - **`components/ProjectStage.tsx`** is what actually mounts a remote and
     owns its lifecycle, shared by both routes above. SSR path: inline
     `{ html, css }` (`<style>` + `dangerouslySetInnerHTML`), then a
@@ -81,6 +89,23 @@ own six sections (the `profile` remote) on `/`. React 19.
     sets full SEO meta in `head()` and renders the Blocks body with
     `@strapi/blocks-react-renderer` (overrides: `image`, `link`), escapes `<` in
     the inlined BlogPosting JSON-LD and marks off-site links by parsed origin.
+    Both pages' `head()` and JSON-LD come from `src/lib/blog-seo.ts` (unit
+    tested): a post's canonical and robots meta follow the CMS overrides
+    (`seo.canonicalUrl`, relative ones resolved against the site, and
+    `seo.robots`) when set, and it carries `article:published_time` /
+    `article:modified_time` and an `og:image` with its own alt text (the
+    title when the upload has none) and its size when known (the site's
+    `og.png` when the post has none). Every social image goes through
+    `socialImageMeta()` in `src/lib/site.ts`: head tags merge by name and a
+    child route cannot drop a parent's, so the root sends `og.png` with alt
+    text but no size, and a page with its own image always names its own alt.
+    Both JSON-LD blocks are serialised by `serialiseJsonLd()`
+    (`src/lib/json-ld.ts`). The BlogPosting (`@id` `<post url>#article`) credits
+    `author` and `publisher` to the Person `/` describes, by
+    `PERSON_ID` / `AUTHOR_NAME` from `src/lib/site.ts` — any page that names
+    the author uses those two, so there is one Person across the site. `/blog`
+    is a CollectionPage (part of the WebSite `/` declares) whose Blog (`@id`
+    `/blog#blog`) lists the same posts.
     Styles in `src/blog.css`. Nitro `routeRules` cache `/`, `/blog`, `/blog/**`
     with `swr: 60`, so a publish shows up within a minute. The swr layer buffers
     the SSR response (`res.text()`), so `/`, `/blog` and `/blog/**` do not
@@ -92,6 +117,30 @@ own six sections (the `profile` remote) on `/`. React 19.
     `/` also sets `staleTime` and `preloadStaleTime` to 60 s, and article links
     are limited to `http(s):`/`mailto:`/`tel:` schemes (other schemes render as
     plain text).
+  - `robots[.]txt.ts` and `sitemap[.]xml.ts` — **server routes**
+    (`createFileRoute` with `server.handlers.GET` and no component; HEAD falls
+    back to GET) that build `/robots.txt` and `/sitemap.xml` per request, with
+    the same code in `vite dev` and production. The builders are pure, in
+    `src/lib/site-files.ts`; the posts come from `getBlogIndex()`
+    (`src/server/blog-index.ts`: `fetchArticleIndex`, 4 s for every page), so a
+    publish reaches the sitemap without a deploy. The sitemap lists `/`,
+    `/blog`, each live project plus its registry `sitemapPaths` (Holodex:
+    sets; its search form and visitor-local collection are thin pages to a
+    crawler, so they stay out) and every post that `isIndexable()`
+    (`src/lib/blog-seo.ts`: not noindexed, not canonicalised elsewhere) with
+    `updatedAt` as `<lastmod>`; nothing else gets a date, and there is no
+    `changefreq`/`priority`. If the CMS fails, the static entries still render
+    and the response is cached 60 s instead of an hour (`siteFileResponse`
+    cache kinds). Nothing may sit at these paths in `public/`: a static file is
+    served before the route.
+  - `llms[.]txt.ts` and `blog/rss[.]xml.ts` — the same kind of server route
+    for `/llms.txt` (llmstxt.org Markdown: H1, one-line summary, links to home,
+    the blog, each live project with its tagline and the 10 newest indexable
+    posts) and `/blog/rss.xml` (RSS 2.0 with `atom:link rel="self"`, the 20
+    newest posts, noindexed ones included, since a feed is for subscribers).
+    Without the CMS the posts are left out, not the file. The feed sits under
+    the `/blog/**` swr rule, so it is cached 60 s like the blog. Both blog
+    pages link it with `<link rel="alternate" type="application/rss+xml">`.
 - `src/lib/federation.ts` — `getHostRuntime`, `forgetFailedRemote`,
   `loadRemoteModuleSSR`. In the production server bundle the plugin's import
   wrapper rejects forever after one failed attempt and never carries the remote's
@@ -176,16 +225,18 @@ loader)` for the six modules **sequentially** → `mod.ssr()` →
   Adding a home section = component + module in `apps/profile` + `exposes` +
   `data/sections.ts` + `loaders` in `index.tsx` + `src/types/remote/profile.d.ts`.
 - **CMS access is server-only.** Fetch Strapi inside `createServerFn` handlers
-  only (`src/functions/*.functions.ts`); read `STRAPI_URL`/`STRAPI_PUBLIC_URL`
-  through `getCmsEnv()` at request time — never via `import.meta.env`/`define`.
+  (`src/functions/*.functions.ts`) or server-route handlers (through
+  `src/server/`) only; read `STRAPI_URL`/`STRAPI_PUBLIC_URL` through
+  `getCmsEnv()` at request time — never via `import.meta.env`/`define`. The
+  start compiler strips `server.handlers` from the client build, and the
+  imports only they use go with them.
 - **SSR for SEO.** Page meta lives in route `head()`; the home page is server
   rendered (GSAP/DOM only inside effects — `lib/gsap.ts` is import-safe in Node).
   The public origin is `src/lib/site.ts` (`SITE_URL` / `SITE_ORIGIN`), baked
   from the `SITE_URL` env var — never hardcode the domain in a route. The
-  `site-files` plugin in `vite.config.ts` generates `robots.txt` and
-  `sitemap.xml` from that same value plus `@ncam/project-registry`, and serves
-  both from memory in `vite dev`; blog posts are not in the sitemap because they
-  change in the CMS without a deploy.
+  crawler files (`robots.txt`, `sitemap.xml`, `llms.txt`, `blog/rss.xml`) are
+  server routes built from that same value, `@ncam/project-registry` and the
+  CMS (see the routes above).
 - Keep `react`/`react-dom` as MF singletons and Nitro `traceDeps` externals, or
   hooks/context break across the host↔remote boundary.
 - Pinned TanStack/nitro/vinxi versions matter (MF + TanStack Router had version
@@ -209,7 +260,22 @@ Don't hand-edit the images; change the remote (or the script) and re-run.
 ## Deploy
 
 SSR — deploys as a **server** (Nitro), not static. On Vercel, Nitro auto-detects
-the platform and emits the Build Output; `vercel.json` just runs `pnpm build`.
+the platform and emits the Build Output; `vercel.json` runs `pnpm build`.
+Security headers go on every Vercel response through `nitro.vercel.config.routes`
+in vite.config.ts, a `{ src: '/(.*)', headers, continue: true }` route that Nitro
+puts first in the Build Output's `config.json`: HSTS (two years, subdomains,
+preload), `nosniff`, `strict-origin-when-cross-origin`, a Permissions-Policy
+that denies camera, microphone and geolocation, and `X-Frame-Options:
+SAMEORIGIN`. Not a `'/**'` route rule: Nitro emits a rule's headers as a route
+without `continue`, and a catch-all that stops routing would keep every page
+from reaching the server function. Not vercel.json `headers` either, which a
+framework-written Build Output need not pick up. Check with
+`NITRO_PRESET=vercel pnpm exec vite build` and `.vercel/output/config.json`
+(delete `.vercel/` afterwards). The node server and the Docker gateway send
+none of these. There is deliberately no Content-Security-Policy yet: every
+project page loads its remote's scripts and styles from another origin, so a
+policy has to list each remote's deployed origin, and a wrong one blanks the
+page.
 Locally: `pnpm build` → `.output/`, run with `node .output/server/index.mjs`. Set
 `STRAPI_URL` and `STRAPI_PUBLIC_URL` on the Vercel project (both
 `https://cms.<domain>`); docker-compose sets them on the `portfolio` service.

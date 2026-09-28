@@ -1,5 +1,5 @@
 /**
- * The host ↔ remote mounting contract.
+ * The host ↔ remote mounting contract, and what a server render returns.
  *
  * Types only, on purpose: nothing here compiles to runtime code, so a remote
  * that imports it adds nothing to its bundle and the `shared: {}` model is
@@ -33,4 +33,29 @@ export interface MountConfig {
 export interface MountHandle {
   (): void;
   update?: (route: string) => void;
+}
+
+/**
+ * What the page a remote rendered is, in the remote's own words, for the
+ * host's `<head>`. The host decides what to do with it and adds its own
+ * branding, so a remote never learns the host's title scheme. Plain text:
+ * the host escapes it like any other value.
+ */
+export interface SsrHead {
+  /** The page's own title, with no site or project name: `Charizard — Base Set #4`. */
+  title?: string;
+  /** A sentence or two for the meta description. */
+  description?: string;
+}
+
+/**
+ * What `renderHeroSSR` resolves to. `head` is optional: a remote that renders
+ * one page sends none, nor does one whose data for the route did not load, and
+ * the host then keeps its own title and description.
+ */
+export interface SsrResult {
+  html: string;
+  /** The remote's CSS, which the host inlines so first paint is styled. */
+  css: string;
+  head?: SsrHead;
 }

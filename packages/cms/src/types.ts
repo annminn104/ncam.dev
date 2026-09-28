@@ -15,6 +15,10 @@ export interface StrapiSeo {
   metaTitle: string | null;
   metaDescription: string | null;
   ogImage: StrapiMedia | null;
+  /** Absolute, or relative to the site; empty = the post's own URL. */
+  canonicalURL: string | null;
+  /** A robots meta value such as "noindex, nofollow"; empty = the site's default. */
+  metaRobots: string | null;
 }
 
 export interface StrapiArticle {
@@ -24,12 +28,20 @@ export interface StrapiArticle {
   excerpt: string;
   readingTime: number | null;
   publishedAt: string;
+  /** The draft's last edit, copied onto the published entry when it was published. */
+  updatedAt: string;
   cover: StrapiMedia | null;
   tags: StrapiTag[] | null;
   seo: StrapiSeo | null;
   /** Strapi Blocks JSON (structural node types) — only requested by the by-slug query. */
   body?: BlocksBody | null;
 }
+
+/** What `buildIndexQuery()` returns per article: no body, no media, two SEO fields. */
+export type StrapiArticleIndexEntry = Pick<
+  StrapiArticle,
+  'slug' | 'title' | 'excerpt' | 'publishedAt' | 'updatedAt'
+> & { seo: Pick<StrapiSeo, 'canonicalURL' | 'metaRobots'> | null };
 
 export interface StrapiList<T> {
   data: T[];
@@ -55,6 +67,8 @@ export interface BlogPost {
   excerpt: string;
   /** ISO timestamp. */
   publishedAt: string;
+  /** ISO timestamp of the last change to the published post; never before `publishedAt`. */
+  updatedAt: string;
   /** "Sep 15, 2026" — computed server-side (en-US, UTC). */
   dateLabel: string;
   /** Minutes, ≥ 1. */
@@ -65,8 +79,25 @@ export interface BlogPost {
   cover: BlogImage | null;
   /** Blocks JSON (structural node types) with absolute image URLs, or null when not fetched. */
   body: BlocksBody | null;
-  seo: { title: string; description: string; image: BlogImage | null };
+  seo: {
+    title: string;
+    description: string;
+    image: BlogImage | null;
+    /** The CMS's canonical URL, trimmed, as entered; null = the post's own URL. */
+    canonicalUrl: string | null;
+    /** The CMS's robots value, trimmed; null = the site's default. */
+    robots: string | null;
+  };
 }
+
+/**
+ * A published post as the sitemap, the RSS feed and llms.txt list it: only the
+ * `BlogPost` fields they read, so every `BlogPost` is one too. Plain JSON.
+ */
+export type BlogPostSummary = Pick<
+  BlogPost,
+  'slug' | 'title' | 'excerpt' | 'publishedAt' | 'updatedAt'
+> & { seo: Pick<BlogPost['seo'], 'canonicalUrl' | 'robots'> };
 
 /** Strapi Blocks rich text — the node shapes the site reads (JSON-safe: TanStack can serialize them). */
 export interface TextNode {

@@ -18,8 +18,9 @@ fourth entry used only for standalone dev — **the four entries**:
 
 ```ts
 // ./mount      — CSR: createRoot(target).render(<App/>); returns a MountHandle
-// ./ssr        — renderHeroSSR({ config, assetBase }) → { html, css }
-//                (renderToString inside a HydrationBoundary + dehydrated query cache)
+// ./ssr        — renderHeroSSR({ config, assetBase }) → { html, css, head? }
+//                (renderToString inside a HydrationBoundary + dehydrated query cache;
+//                head = the page's own title + description, see src/head.ts)
 // ./hydrate    — hydrateRoot(target, <App/>) onto the SSR markup; returns a MountHandle
 // standalone.tsx — not federation-exposed. Drives #app in index.html on :9007,
 //                  wires window.history / popstate so the app behaves like a
@@ -63,6 +64,12 @@ return a `MountHandle`: a disposer that also carries an optional
   filter (`q`, `type`, `rarity`, `page`) parsing. The root is the effects
   page, the default (the logo goes there, `Shell`'s `HOME`), and the sets
   list is `/sets`.
+- `src/head.ts` — `routeHead`: each route's own title and description, the
+  `head` that `renderHeroSSR` hands the host (`SsrHead` in the contract),
+  read off the cache the SSR prefetch filled. A set or card whose data did
+  not load gets none, and the host keeps the project's title. Titles carry
+  no "Holodex": the host adds its own branding. Only the host's server render
+  sees it; after an in-app navigation the tab shows the project's title.
 - `src/route-controller.ts` — route store outside React (see above).
 - `src/App.tsx` — one `switch` over `Route` into a view; wraps everything in
   `QueryClientProvider` + an error boundary keyed by route so a bad view can't

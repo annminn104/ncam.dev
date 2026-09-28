@@ -1,12 +1,11 @@
 import { federation } from '@module-federation/vite';
 import { env } from '@ncam/mf-remote';
-import { projects } from '@ncam/project-registry';
 import { tanstackStart } from '@tanstack/react-start/plugin/vite';
 import react from '@vitejs/plugin-react';
 import { existsSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { nitro } from 'nitro/vite';
-import { defineConfig, type PluginOption } from 'vite';
+import { defineConfig } from 'vite';
 
 // Config resolved from the root .env / .env.local (overridable by real env).
 const TOONHUB_REMOTE = env('TOONHUB_REMOTE_URL', 'http://localhost:9001/remoteEntry.js');
@@ -29,6 +28,11 @@ const PORTFOLIO_PORT = Number(env('PORTFOLIO_PORT', '9000'));
  * the sitemap. `SITE_URL` wins; otherwise Vercel's production domain, which it
  * exposes to preview builds too — a preview's canonical should point at
  * production, not at itself. Falls back to the live domain for local builds.
+ *
+ * `robots.txt` and `sitemap.xml` are server routes (`src/routes/`), not files
+ * emitted here: the sitemap lists blog posts, which change in the CMS without
+ * a deploy. Nothing may be added at their paths in `public/`, which would be
+ * served instead of the route.
  */
 function resolveSiteUrl(): string {
   const configured = env('SITE_URL').trim();
@@ -39,67 +43,6 @@ function resolveSiteUrl(): string {
 }
 
 const SITE_URL = resolveSiteUrl();
-
-/**
- * Emit `robots.txt` and `sitemap.xml` from the resolved origin instead of
- * shipping them as `public/` files with the domain typed into them — those went
- * stale the moment the site moved, and listed one of the five live projects.
- *
- * Blog posts are deliberately absent: they live in the CMS and change without a
- * deploy, so a build-time sitemap cannot know them. Article pages are still
- * crawlable through `/blog`, which is listed here and server-rendered.
- */
-function siteFiles(): PluginOption {
-  const robots = () => `User-agent: *\nAllow: /\n\nSitemap: ${SITE_URL}/sitemap.xml\n`;
-
-  const sitemap = () => {
-    const entries = [
-      { loc: `${SITE_URL}/`, changefreq: 'weekly', priority: '1.0' },
-      { loc: `${SITE_URL}/blog`, changefreq: 'weekly', priority: '0.8' },
-      ...projects
-        .filter((project) => project.status === 'live')
-        .map((project) => ({
-          loc: `${SITE_URL}/projects/${project.id}`,
-          changefreq: 'monthly',
-          priority: '0.8',
-        })),
-    ];
-    const urls = entries
-      .map(
-        ({ loc, changefreq, priority }) =>
-          `  <url><loc>${loc}</loc><changefreq>${changefreq}</changefreq><priority>${priority}</priority></url>`,
-      )
-      .join('\n');
-    return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`;
-  };
-
-  return {
-    name: 'site-files',
-    // `vite dev` produces no bundle, so serve the same strings from memory.
-    configureServer(server) {
-      server.middlewares.use((req, res, next) => {
-        const path = req.url?.split('?')[0];
-        if (path === '/robots.txt') {
-          res.setHeader('content-type', 'text/plain; charset=utf-8');
-          res.end(robots());
-          return;
-        }
-        if (path === '/sitemap.xml') {
-          res.setHeader('content-type', 'application/xml; charset=utf-8');
-          res.end(sitemap());
-          return;
-        }
-        next();
-      });
-    },
-    generateBundle() {
-      // Client bundle only: these are static files, not server assets.
-      if (this.environment?.name && this.environment.name !== 'client') return;
-      this.emitFile({ type: 'asset', fileName: 'robots.txt', source: robots() });
-      this.emitFile({ type: 'asset', fileName: 'sitemap.xml', source: sitemap() });
-    },
-  };
-}
 
 // Nitro leaves a handle open after its build, so `vite build` never exits on its
 // own. Exiting on a fixed delay after `writeBundle` raced the SSR + Nitro server
@@ -165,6 +108,34 @@ export default defineConfig({
       '/': { swr: 60 },
       '/blog': { swr: 60 },
       '/blog/**': { swr: 60 },
+    },
+    // Security headers on every Vercel response, as a Build Output route of our
+    // own: Nitro prepends `vercel.config.routes` to the routes it generates.
+    // Not a `'/**'` route rule — Nitro emits a rule's headers as a route
+    // without `continue`, and a catch-all that stops routing would keep every
+    // page from reaching the server function. Not vercel.json `headers`
+    // either, which a framework-written Build Output need not pick up. No
+    // Content-Security-Policy: every project page loads its remote's scripts
+    // and styles from another origin, so a policy has to list each deployed
+    // remote, and a wrong one blanks the page.
+    vercel: {
+      config: {
+        // Required by the type; the same Build Output version Nitro writes.
+        version: 3,
+        routes: [
+          {
+            src: '/(.*)',
+            headers: {
+              'strict-transport-security': 'max-age=63072000; includeSubDomains; preload',
+              'x-content-type-options': 'nosniff',
+              'referrer-policy': 'strict-origin-when-cross-origin',
+              'permissions-policy': 'camera=(), microphone=(), geolocation=()',
+              'x-frame-options': 'SAMEORIGIN',
+            },
+            continue: true,
+          },
+        ],
+      },
     },
   },
   plugins: [
@@ -242,7 +213,6 @@ export default defineConfig({
     tanstackStart(),
     react(),
     nitro(),
-    siteFiles(),
     {
       // See exitWhenNitroHasWritten(): exit once Nitro's server bundle is on disk.
       name: 'tanstack-build-exit',

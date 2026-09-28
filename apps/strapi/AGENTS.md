@@ -42,7 +42,9 @@ instead, via `autoOpen: false` in `config/admin.ts`.
 - `article` (draft & publish): `title`, `slug` (uid ← title), `excerpt` (≤ 300),
   `cover` (image), `body` (**blocks**), `readingTime` (int, auto), `tags`
   (many-to-many → `tag`), `seo` (component `shared.seo`: `metaTitle`,
-  `metaDescription`, `ogImage`). `publishedAt` is the post date.
+  `metaDescription`, `ogImage`, and two optional overrides for the post's
+  page: `canonicalURL`, absolute or site-relative, and `metaRobots`, e.g.
+  `noindex, nofollow`). `publishedAt` is the post date.
 - `tag`: `name` (unique), `slug` (uid ← name), `articles` (inverse).
 - Schemas are the source of truth. After editing one (or using the admin's
   Content-Type Builder in dev, which rewrites these files), run

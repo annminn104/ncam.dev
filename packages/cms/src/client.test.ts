@@ -3,10 +3,11 @@ import {
   CmsError,
   articlesUrl,
   fetchArticleBySlug,
+  fetchArticleIndex,
   fetchArticles,
   trimTrailingSlashes,
 } from './client';
-import type { StrapiArticle } from './types';
+import type { StrapiArticle, StrapiArticleIndexEntry } from './types';
 
 const BASE = 'http://cms.test:1337/';
 const MEDIA = 'http://media.test';
@@ -18,6 +19,7 @@ const article: StrapiArticle = {
   excerpt: 'Hi.',
   readingTime: 3,
   publishedAt: '2026-09-15T00:00:00.000Z',
+  updatedAt: '2026-09-16T00:00:00.000Z',
   cover: null,
   tags: [{ name: 'React', slug: 'react' }],
   seo: null,
@@ -82,6 +84,62 @@ describe('fetchArticles', () => {
     ).rejects.toMatchObject({ name: 'AbortError' });
     const [, init] = fetch.mock.calls[0] as [string, RequestInit];
     expect(init.signal?.aborted).toBe(true);
+  });
+});
+
+describe('fetchArticleIndex', () => {
+  const entry = (slug: string): StrapiArticleIndexEntry => ({
+    slug,
+    title: slug,
+    excerpt: '',
+    publishedAt: '2026-09-15T00:00:00.000Z',
+    updatedAt: '2026-09-16T00:00:00.000Z',
+    seo: { canonicalURL: null, metaRobots: 'noindex' },
+  });
+
+  /** A CMS that holds `pageCount` pages of one entry each (`pageCount` null: not reported). */
+  function pagedFetch(pageCount: number | null) {
+    return vi.fn(async (input: RequestInfo | URL) => {
+      const page = Number(new URL(String(input)).searchParams.get('pagination[page]'));
+      const pagination = pageCount === null ? {} : { page, pageSize: 100, pageCount, total: 0 };
+      return new Response(JSON.stringify({ data: [entry(`post-${page}`)], meta: { pagination } }));
+    }) as unknown as typeof fetch & ReturnType<typeof vi.fn>;
+  }
+
+  it('reads every page, in order, and maps the entries', async () => {
+    const fetch = pagedFetch(3);
+    const posts = await fetchArticleIndex(BASE, { fetch });
+    expect(fetch).toHaveBeenCalledTimes(3);
+    expect(posts.map((post) => post.slug)).toEqual(['post-1', 'post-2', 'post-3']);
+    expect(posts[0]).toEqual({
+      ...entry('post-1'),
+      seo: { canonicalUrl: null, robots: 'noindex' },
+    });
+    const [url] = fetch.mock.calls[0] as [string];
+    expect(url.startsWith('http://cms.test:1337/api/articles?')).toBe(true);
+    expect(url).toContain('fields%5B4%5D=updatedAt');
+    expect(url).toContain('populate%5Bseo%5D%5Bfields%5D%5B1%5D=metaRobots');
+  });
+
+  it('stops after one page when Strapi reports no page count', async () => {
+    const fetch = pagedFetch(null);
+    expect(await fetchArticleIndex(BASE, { fetch })).toHaveLength(1);
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('never reads more than ten pages', async () => {
+    const fetch = pagedFetch(1_000);
+    expect(await fetchArticleIndex(BASE, { fetch })).toHaveLength(10);
+    expect(fetch).toHaveBeenCalledTimes(10);
+  });
+
+  it('stops at an empty page and throws CmsError on a non-2xx one', async () => {
+    const empty = fakeFetch(200, { data: [], meta: { pagination: { pageCount: 5 } } });
+    expect(await fetchArticleIndex(BASE, { fetch: empty })).toEqual([]);
+    expect(empty).toHaveBeenCalledTimes(1);
+    await expect(
+      fetchArticleIndex(BASE, { fetch: fakeFetch(502, { error: 'bad gateway' }) }),
+    ).rejects.toMatchObject({ status: 502 });
   });
 });
 

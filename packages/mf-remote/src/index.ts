@@ -2,9 +2,9 @@ import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { federation } from '@module-federation/vite';
 import { parse as parseDotenv } from 'dotenv';
-import { defineConfig, type PluginOption, type UserConfig } from 'vite';
+import { defineConfig, type Plugin, type PluginOption, type UserConfig } from 'vite';
 
-export type { MountConfig, MountHandle } from './contract';
+export type { MountConfig, MountHandle, SsrHead, SsrResult } from './contract';
 
 /** Walk up from `start` to the monorepo root (where pnpm-workspace.yaml lives). */
 function findMonorepoRoot(start = process.cwd()): string {
@@ -69,6 +69,59 @@ function ssrRemoteEntryInput(name: string, filename = REMOTE_ENTRY_FILENAME): st
   return `virtual:mf-REMOTE_ENTRY_SSR_ID:${scopeKey}`;
 }
 
+/**
+ * Where a remote's `index.html` writes the host's public origin.
+ *
+ * Each remote is also deployed on its own, and its standalone page duplicates
+ * the host's `/projects/<id>`, so that page is its canonical:
+ * `<link rel="canonical" href="%SITE_URL%/projects/<id>" />`, and the same for
+ * `og:url`, `og:image` (the host's thumbnail) and any JSON-LD `url`.
+ */
+export const SITE_URL_PLACEHOLDER = '%SITE_URL%';
+
+/**
+ * The host's public origin, without a trailing slash (callers append a path).
+ *
+ * Same variable and last resort as the host (`apps/portfolio/vite.config.ts`),
+ * minus the host's middle step, Vercel's production domain: on a remote's own
+ * Vercel project that is the remote's domain, and the canonical would point
+ * back at the duplicate. A value that is not an absolute http(s) URL throws, as
+ * it would ship a relative canonical that resolves against the remote.
+ */
+export function resolveSiteUrl(configured = env('SITE_URL')): string {
+  const origin = withoutTrailingSlashes(configured.trim() || 'https://ncam.dev');
+  if (!/^https?:\/\/[^/]/i.test(origin)) {
+    throw new Error(`SITE_URL must be an absolute http(s) URL, got "${configured}"`);
+  }
+  return origin;
+}
+
+/**
+ * `value` without its trailing slashes. A loop, not `/\/+$/`: that regex is
+ * retried from every run of slashes, quadratic on a string of many that are
+ * not at the end (CodeQL js/polynomial-redos).
+ */
+function withoutTrailingSlashes(value: string): string {
+  let end = value.length;
+  while (end > 0 && value[end - 1] === '/') end -= 1;
+  return value.slice(0, end);
+}
+
+/**
+ * Fills in {@link SITE_URL_PLACEHOLDER} in `index.html`, in dev and in the
+ * build. `pre`: everything after it, Vite's own asset-URL pass included, sees
+ * the finished URLs.
+ */
+export function siteUrlPlugin(siteUrl: string): Plugin {
+  return {
+    name: 'ncam:site-url',
+    transformIndexHtml: {
+      order: 'pre',
+      handler: (html) => html.replaceAll(SITE_URL_PLACEHOLDER, siteUrl),
+    },
+  };
+}
+
 export interface RemoteOptions {
   /** Module Federation remote name, e.g. 'mindloop'. Must be a valid identifier. */
   name: string;
@@ -93,7 +146,8 @@ export interface RemoteOptions {
  * makes `toonhub` robust.
  *
  * Port and base come from the root `.env` (`<NAME>_PORT`, `<NAME>_BASE`), so
- * hosts/ports are configured in one place.
+ * hosts/ports are configured in one place; `SITE_URL` fills in the standalone
+ * page's canonical (see {@link SITE_URL_PLACEHOLDER}).
  */
 export function defineRemote({
   name,
@@ -105,6 +159,7 @@ export function defineRemote({
   const key = name.toUpperCase(); // mindloop → MINDLOOP, immersive_ocean → IMMERSIVE_OCEAN
   const resolvedPort = Number(env(`${key}_PORT`, String(port)));
   const base = env(baseEnv ?? `${key}_BASE`, '/') || '/';
+  const siteUrl = resolveSiteUrl();
 
   return defineConfig({
     // Absolute base so federated asset URLs resolve to this remote's origin.
@@ -164,6 +219,7 @@ export function defineRemote({
     },
     plugins: [
       ...plugins,
+      siteUrlPlugin(siteUrl),
       federation({
         name,
         filename: REMOTE_ENTRY_FILENAME,

@@ -3,11 +3,13 @@
 // Unlike the pre-Task-2 remotes' .d.ts siblings in this directory, holodex's
 // mount/hydrate are built against the route-aware host contract from
 // `@ncam/mf-remote` (MountConfig / MountHandle) — see apps/holodex/src/mount.tsx
-// and hydrate.tsx. Referenced via inline `import()` type queries, not a
-// top-level `import`, so this file stays a script: a top-level import/export
-// would turn each `declare module` below into an augmentation of an existing
-// module instead of a fresh ambient declaration, and 'holodex/mount' etc. have
-// no real module to augment.
+// and hydrate.tsx — and its ssr resolves to the contract's SsrResult, whose
+// optional `head` names the page it rendered (apps/holodex/src/head.ts). All
+// referenced via inline `import()` type queries, not a top-level `import`, so
+// this file stays a script: a top-level import/export would turn each
+// `declare module` below into an augmentation of an existing module instead of
+// a fresh ambient declaration, and 'holodex/mount' etc. have no real module to
+// augment.
 
 declare module 'holodex/mount' {
   export function mount(
@@ -34,10 +36,7 @@ declare module 'holodex/hydrate' {
 }
 
 declare module 'holodex/ssr' {
-  export interface RenderHeroSSRResult {
-    html: string;
-    css: string;
-  }
+  export type RenderHeroSSRResult = import('@ncam/mf-remote').SsrResult;
   export function renderHeroSSR(options?: {
     config?: { route?: string };
     assetBase?: string;

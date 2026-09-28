@@ -35,6 +35,13 @@ export interface ProjectEntry {
    * and a canonical back to the project root instead.
    */
   routeAware?: boolean;
+  /**
+   * The static top-level pages a route-aware remote owns below its project
+   * path, relative to it (`'sets'` is `/projects/holodex/sets`). The host's
+   * sitemap lists them after the project page. Pages per item (one set, one
+   * card) stay out: there are thousands, and links reach them anyway.
+   */
+  sitemapPaths?: readonly string[];
 }
 
 export const projects: ProjectEntry[] = [
@@ -114,6 +121,12 @@ export const projects: ProjectEntry[] = [
     status: 'live',
     // Sets, cards, search and the collection are all real Holodex URLs.
     routeAware: true,
+    // apps/holodex/src/routes.ts. Not `effects`: that is the root page again
+    // under a second name, and the remote itself links it as `/`. Not
+    // `search` or `collection` either: a crawler gets an empty search form
+    // and an empty collection (it lives in the visitor's browser), thin pages
+    // a sitemap should not ask to have indexed.
+    sitemapPaths: ['sets'],
   },
 ];
 

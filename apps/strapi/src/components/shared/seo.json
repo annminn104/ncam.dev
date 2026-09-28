@@ -19,6 +19,12 @@
       "type": "media",
       "multiple": false,
       "allowedTypes": ["images"]
+    },
+    "canonicalURL": {
+      "type": "string"
+    },
+    "metaRobots": {
+      "type": "string"
     }
   }
 }

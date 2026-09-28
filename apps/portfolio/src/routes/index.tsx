@@ -8,7 +8,8 @@ import { sections, type SectionMeta } from '../data/sections';
 import { getBlogPosts } from '../functions/blog.functions';
 import { loadRemoteModuleSSR, SSR_LOAD_TIMEOUT_MS, withTimeout } from '../lib/federation';
 import { ScrollTrigger } from '../lib/gsap';
-import { SITE_URL } from '../lib/site';
+import { homeJsonLd, serialiseJsonLd } from '../lib/json-ld';
+import { SITE_IMAGE, SITE_URL, socialImageMeta } from '../lib/site';
 import { useSectionTracker } from '../lib/use-section-tracker';
 
 const log = createLogger({ scope: 'portfolio' });
@@ -22,39 +23,8 @@ const BLOG_MODULE = 'blog';
 /** Slice of the request the CMS may take on the home page (@ncam/cms itself aborts at 5 s; the SSR loop still needs its 4 s). */
 const BLOG_POSTS_TIMEOUT_MS = 2_500;
 
-// Public facts for SEO (the full content lives in the remote's data file).
-const PERSON = {
-  name: 'Minh Nguyen',
-  alternateName: ['Matthew', 'Nguyen Cao Anh Minh'],
-  jobTitle: 'Frontend Developer',
-  worksFor: 'NAVER Vietnam',
-  sameAs: [
-    'https://www.linkedin.com/in/nguyencaoanhminh',
-    'https://github.com/annminn104',
-    'https://www.facebook.com/Minhmin0507',
-  ],
-};
-
-const jsonLd = {
-  '@context': 'https://schema.org',
-  '@graph': [
-    {
-      '@type': 'WebSite',
-      name: 'ncam.dev',
-      url: `${SITE_URL}/`,
-      description: `Portfolio of ${PERSON.alternateName[0]} (${PERSON.name}), ${PERSON.jobTitle} — micro-frontends, motion and high-performance web apps.`,
-    },
-    {
-      '@type': 'Person',
-      name: PERSON.name,
-      alternateName: PERSON.alternateName,
-      url: `${SITE_URL}/`,
-      jobTitle: PERSON.jobTitle,
-      worksFor: { '@type': 'Organization', name: PERSON.worksFor },
-      sameAs: PERSON.sameAs,
-    },
-  ],
-};
+/** The WebSite and the Person, declared here once; other pages point at them by @id. */
+const jsonLd = homeJsonLd();
 
 /** Props the host hands to a section module (only the blog section takes any). */
 type SectionProps = { posts: BlogPost[] } | undefined;
@@ -155,6 +125,8 @@ export const Route = createFileRoute('/')({
     meta: [
       { name: 'robots', content: 'index,follow' },
       { property: 'og:url', content: `${SITE_URL}/` },
+      // og.png again, now with its size, which the root leaves out.
+      ...socialImageMeta(SITE_IMAGE),
     ],
     links: [{ rel: 'canonical', href: `${SITE_URL}/` }],
   }),
@@ -317,7 +289,7 @@ function HomePage() {
     <div ref={homeRef} className="home">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: serialiseJsonLd(jsonLd) }}
       />
       {/* Remote CSS from the SSR pass; on the client-mount path the module injects it itself. */}
       {css ? <style dangerouslySetInnerHTML={{ __html: css }} /> : null}

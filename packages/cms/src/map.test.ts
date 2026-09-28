@@ -1,8 +1,24 @@
 import { describe, expect, it } from 'vitest';
-import { absolutizeBlockImages, formatDateLabel, mapArticle, resolveMediaUrl } from './map';
-import type { StrapiArticle } from './types';
+import {
+  absolutizeBlockImages,
+  formatDateLabel,
+  lastChange,
+  mapArticle,
+  mapIndexEntry,
+  resolveMediaUrl,
+} from './map';
+import type { StrapiArticle, StrapiSeo } from './types';
 
 const MEDIA_BASE = 'http://cms.test:1337';
+
+/** An SEO component with every field left empty in the admin. */
+const EMPTY_SEO: StrapiSeo = {
+  metaTitle: null,
+  metaDescription: null,
+  ogImage: null,
+  canonicalURL: null,
+  metaRobots: null,
+};
 
 const raw: StrapiArticle = {
   documentId: 'doc-1',
@@ -11,6 +27,7 @@ const raw: StrapiArticle = {
   excerpt: 'Why every remote bundles its own React.',
   readingTime: 9,
   publishedAt: '2026-09-15T08:30:00.000Z',
+  updatedAt: '2026-09-20T10:00:00.000Z',
   cover: { url: '/uploads/cover.png', alternativeText: 'Cover art', width: 1200, height: 630 },
   tags: [
     { name: 'Module Federation', slug: 'module-federation' },
@@ -20,6 +37,8 @@ const raw: StrapiArticle = {
     metaTitle: 'Federating React 19 — notes',
     metaDescription: 'SEO description.',
     ogImage: { url: 'https://cdn.example/og.png', alternativeText: null, width: 1200, height: 630 },
+    canonicalURL: ' https://dev.example/federating-react-19 ',
+    metaRobots: 'noindex, follow',
   },
   body: [
     { type: 'paragraph', children: [{ type: 'text', text: 'Hello' }] },
@@ -53,6 +72,22 @@ describe('formatDateLabel', () => {
 
   it('returns an empty string for an unparseable date', () => {
     expect(formatDateLabel('not-a-date')).toBe('');
+  });
+});
+
+describe('lastChange', () => {
+  it("takes the publish time over the draft's earlier edit, as Strapi 5 dates a published entry", () => {
+    // Seen on Strapi 5.54: the published entry keeps the draft's updatedAt.
+    expect(lastChange('2026-09-28T14:28:51.843Z', '2026-09-28T14:28:51.846Z')).toBe(
+      '2026-09-28T14:28:51.846Z',
+    );
+  });
+
+  it('keeps an updatedAt that is later, or that does not parse', () => {
+    expect(lastChange('2026-09-30T00:00:00.000Z', '2026-09-28T00:00:00.000Z')).toBe(
+      '2026-09-30T00:00:00.000Z',
+    );
+    expect(lastChange('not-a-date', '2026-09-28T00:00:00.000Z')).toBe('not-a-date');
   });
 });
 
@@ -90,6 +125,7 @@ describe('mapArticle', () => {
       title: 'Federating React 19',
       excerpt: 'Why every remote bundles its own React.',
       publishedAt: '2026-09-15T08:30:00.000Z',
+      updatedAt: '2026-09-20T10:00:00.000Z',
       dateLabel: 'Sep 15, 2026',
       readingTime: 9,
       readingLabel: '9 min',
@@ -122,6 +158,8 @@ describe('mapArticle', () => {
           width: 1200,
           height: 630,
         },
+        canonicalUrl: 'https://dev.example/federating-react-19',
+        robots: 'noindex, follow',
       },
     });
   });
@@ -136,17 +174,73 @@ describe('mapArticle', () => {
     expect(post.tags).toEqual([]);
     expect(post.cover).toBeNull();
     expect(post.body).toBeNull();
-    expect(post.seo).toEqual({ title: raw.title, description: raw.excerpt, image: null });
+    expect(post.seo).toEqual({
+      title: raw.title,
+      description: raw.excerpt,
+      image: null,
+      canonicalUrl: null,
+      robots: null,
+    });
   });
 
   it('uses the cover as the social image when seo has none', () => {
     const post = mapArticle(
-      { ...raw, seo: { metaTitle: null, metaDescription: null, ogImage: null } },
+      { ...raw, seo: { ...EMPTY_SEO } },
       {
         mediaBase: MEDIA_BASE,
       },
     );
     expect(post.seo.image?.url).toBe('http://cms.test:1337/uploads/cover.png');
     expect(post.seo.title).toBe(raw.title);
+  });
+
+  it('treats blank overrides (an emptied admin field) as not set', () => {
+    const post = mapArticle(
+      { ...raw, seo: { ...EMPTY_SEO, canonicalURL: '   ', metaRobots: '' } },
+      { mediaBase: MEDIA_BASE },
+    );
+    expect(post.seo.canonicalUrl).toBeNull();
+    expect(post.seo.robots).toBeNull();
+  });
+
+  it('never dates the last change before the publication', () => {
+    const post = mapArticle(
+      { ...raw, updatedAt: '2026-09-15T08:29:59.997Z' },
+      { mediaBase: MEDIA_BASE },
+    );
+    expect(post.updatedAt).toBe(raw.publishedAt);
+  });
+});
+
+describe('mapIndexEntry', () => {
+  const { slug, title, excerpt, publishedAt, updatedAt } = raw;
+
+  it('keeps only what the sitemap, the feed and llms.txt read', () => {
+    const seo = {
+      canonicalURL: ' https://dev.example/federating-react-19 ',
+      metaRobots: 'noindex',
+    };
+    expect(mapIndexEntry({ slug, title, excerpt, publishedAt, updatedAt, seo })).toEqual({
+      slug: 'federating-react-19',
+      title: 'Federating React 19',
+      excerpt: 'Why every remote bundles its own React.',
+      publishedAt: '2026-09-15T08:30:00.000Z',
+      updatedAt: '2026-09-20T10:00:00.000Z',
+      seo: { canonicalUrl: 'https://dev.example/federating-react-19', robots: 'noindex' },
+    });
+  });
+
+  it('reads a post without an SEO component as having no overrides', () => {
+    expect(mapIndexEntry({ slug, title, excerpt, publishedAt, updatedAt, seo: null }).seo).toEqual({
+      canonicalUrl: null,
+      robots: null,
+    });
+  });
+
+  it('never dates the last change before the publication', () => {
+    const entry = { slug, title, excerpt, publishedAt, seo: null };
+    expect(mapIndexEntry({ ...entry, updatedAt: '2026-09-15T08:29:59.997Z' }).updatedAt).toBe(
+      publishedAt,
+    );
   });
 });

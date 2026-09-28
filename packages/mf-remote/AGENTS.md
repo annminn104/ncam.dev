@@ -40,11 +40,21 @@ env('HOLODEX_REMOTE_URL', 'http://localhost:9007/remoteEntry.js');
 - an `ssr` build environment that emits `remoteEntry.ssr.js` and a Node copy of
   every exposed module into `dist-ssr`, which the plugin then publishes next to
   the browser entry;
+- an `ncam:site-url` plugin that replaces `%SITE_URL%` in `index.html`, in dev
+  and in the build, with `resolveSiteUrl()`: `SITE_URL`, else
+  `https://ncam.dev`, without a trailing slash. That is the host's own
+  resolution minus its middle step, Vercel's production domain, which on a
+  remote's project names the remote itself. A value that is not an absolute
+  http(s) URL fails the config;
 - the federation plugin with `filename: 'remoteEntry.js'`, `shared: {}` and
   `dts: false`.
 
 `src/contract.ts` holds `MountConfig` (`route`, `onNavigate`, `assetBase`) and
-`MountHandle` (a disposer with an optional `update(route)`).
+`MountHandle` (a disposer with an optional `update(route)`), and `SsrResult`,
+what `renderHeroSSR` resolves to: `{ html, css, head? }`, where `head` is an
+`SsrHead` (`title`, `description`) naming the page the remote rendered, in its
+own words and without the host's branding. The host folds it into a deep
+link's head; a remote that sends none keeps the host's own.
 
 ## Rules
 
@@ -67,14 +77,24 @@ env('HOLODEX_REMOTE_URL', 'http://localhost:9007/remoteEntry.js');
   the SSR entry (verified against `@module-federation/vite` 1.21.5). A release
   that renames it makes the `ssr` build fail with an unresolved input: update
   the id then, and don't drop the environment.
+- **A remote's standalone page canonicalises to the host.** Every remote is
+  also deployed on its own, and its `index.html` duplicates the host's
+  `/projects/<id>` (the registry id: `immersive-ocean`, not the federation
+  name). So its canonical, `og:url` and JSON-LD `url` are
+  `%SITE_URL%/projects/<id>`, and `og:image` / `twitter:image` the host's
+  `%SITE_URL%/thumbnails/<id>.jpg` (1200×630): never the remote's own domain.
+  Robots stays `index,follow`, since the cross-domain canonical is the signal
+  and `noindex` would contradict it. `profile` has no project page and stays
+  `noindex`. Set `SITE_URL` to the host's origin on every remote's Vercel
+  project, or those URLs fall back to `https://ncam.dev`.
 - `contract.ts` stays types-only, so importing it adds nothing to a bundle.
 - A change here reaches all seven remotes: rebuild them, and check that the host
   still mounts and server-renders them.
 
 ## Verify
 
-`src/index.test.ts` stubs the federation plugin and checks what `defineRemote()`
-and `env()` decide.
+`src/index.test.ts` stubs the federation plugin and checks what `defineRemote()`,
+`env()` and `resolveSiteUrl()` decide, `%SITE_URL%` in `index.html` included.
 
 ```bash
 pnpm --filter @ncam/mf-remote typecheck

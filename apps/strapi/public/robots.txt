@@ -1,3 +1,8 @@
-# To prevent search engines from seeing the site altogether, uncomment the next two lines:
-# User-Agent: *
-# Disallow: /
+# The CMS is an API and an admin panel, not a website: the blog is indexed on
+# the portfolio host, so nothing here should be. Uploaded media stays
+# crawlable because posts use it as their og:image, which social crawlers
+# only fetch when robots.txt allows it. `Allow` comes first for crawlers that
+# take the first matching rule; the rest take the longest match.
+User-agent: *
+Allow: /uploads/
+Disallow: /

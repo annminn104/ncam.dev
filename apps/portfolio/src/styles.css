@@ -102,6 +102,7 @@ body {
   padding: 2rem;
   text-align: center;
 }
+.stage__error h1,
 .stage__error h2 {
   margin: 0;
   font-size: 1.4rem;
