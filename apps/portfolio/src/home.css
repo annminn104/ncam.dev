@@ -144,15 +144,21 @@ html {
 .hnav__links li {
   flex: 0 0 auto;
 }
+/* Below 900px the section links move into the drawer (below): five labels do
+   not fit beside the brand and the toggle, and the clipped scrolling row they
+   used to be hid most of them behind a fade. */
+.hnav__menu {
+  display: none;
+}
 @media (max-width: 899px) {
   .hnav__inner {
     gap: 1rem;
   }
-  /* Fade the right edge so a horizontally scrollable row reads as scrollable. */
-  .hnav__links {
-    padding-right: 1.5rem;
-    -webkit-mask-image: linear-gradient(90deg, #000 88%, transparent);
-    mask-image: linear-gradient(90deg, #000 88%, transparent);
+  .hnav__end > .hnav__nav {
+    display: none;
+  }
+  .hnav__menu {
+    display: inline-flex;
   }
 }
 .hnav__link {
@@ -192,6 +198,178 @@ html {
 .hnav__link:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+
+/* ---------------- Mobile drawer ----------------
+   A modal <dialog> beside the header (nav.tsx). It animates both ways: in from
+   @starting-style, out because `display` and `overlay` transition discretely,
+   which keeps it rendered (and, where supported, in the top layer) until the
+   slide ends. The page underneath is inert while it is open, and locked. */
+.hnav__menu,
+.hnav-drawer__close {
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--tint) 6%, transparent);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition:
+    color 0.3s var(--ease-out),
+    border-color 0.3s var(--ease-out),
+    background-color 0.3s var(--ease-out);
+}
+.hnav-drawer__close {
+  display: inline-flex;
+}
+.hnav__menu:hover,
+.hnav-drawer__close:hover {
+  color: var(--text);
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.hnav__menu:focus-visible,
+.hnav-drawer__close:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+html:has(.hnav-drawer[open]) {
+  overflow: hidden;
+}
+.hnav-drawer {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  overflow: hidden;
+  transition:
+    display 0.42s allow-discrete,
+    overlay 0.42s allow-discrete;
+}
+.hnav-drawer::backdrop {
+  background: color-mix(in srgb, #0a0a12 55%, transparent);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  opacity: 0;
+  transition:
+    opacity 0.35s var(--ease-out),
+    display 0.42s allow-discrete,
+    overlay 0.42s allow-discrete;
+}
+.hnav-drawer[open]::backdrop {
+  opacity: 1;
+}
+.hnav-drawer__panel {
+  position: absolute;
+  inset: 0 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  width: min(86vw, 380px);
+  padding: 0 var(--gutter) max(2rem, env(safe-area-inset-bottom));
+  overflow-y: auto;
+  background: var(--surface);
+  border-left: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  transform: translateX(100%);
+  transition: transform 0.42s var(--ease-out);
+}
+.hnav-drawer[open] .hnav-drawer__panel {
+  transform: none;
+}
+.hnav-drawer__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: 0 0 auto;
+  height: var(--nav-h);
+  margin-bottom: 1.25rem;
+  border-bottom: 1px solid var(--line);
+}
+.hnav-drawer__title {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.hnav-drawer__links {
+  display: grid;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+/* Closing, the items fade together and fast; opening, they follow the panel in
+   one after another (`--i`, set per item in nav.tsx). */
+.hnav-drawer__links li {
+  opacity: 0;
+  transform: translateX(1.5rem);
+  transition:
+    opacity 0.2s var(--ease-out),
+    transform 0.2s var(--ease-out);
+}
+.hnav-drawer[open] .hnav-drawer__links li {
+  opacity: 1;
+  transform: none;
+  transition-duration: 0.4s, 0.5s;
+  transition-delay: calc(120ms + var(--i, 0) * 45ms);
+}
+@starting-style {
+  .hnav-drawer[open]::backdrop {
+    opacity: 0;
+  }
+  .hnav-drawer[open] .hnav-drawer__panel {
+    transform: translateX(100%);
+  }
+  .hnav-drawer[open] .hnav-drawer__links li {
+    opacity: 0;
+    transform: translateX(1.5rem);
+  }
+}
+.hnav-drawer__link {
+  display: flex;
+  align-items: baseline;
+  gap: 0.9rem;
+  padding: 0.7rem 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.6rem, 7vw, 2rem);
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--text-muted);
+  text-decoration: none;
+  transition: color 0.3s var(--ease-out);
+}
+.hnav-drawer__link:hover,
+.hnav-drawer__link[data-active] {
+  color: var(--text);
+}
+.hnav-drawer__link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+.hnav-drawer__index {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+}
+.hnav-drawer__link[data-active] .hnav-drawer__index {
+  color: var(--accent);
 }
 
 /* ---------------- Manifest rail (signature) ----------------
@@ -309,9 +487,14 @@ html {
   }
   .home *,
   .home *::before,
-  .home *::after {
+  .home *::after,
+  .hnav-drawer::backdrop {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+  /* The drawer opens at once: no slide, and no items trailing in after it. */
+  .hnav-drawer[open] .hnav-drawer__links li {
+    transition-delay: 0s !important;
   }
 }
