@@ -253,7 +253,14 @@ Don't hand-edit the images; change the remote (or the script) and re-run.
 ## Deploy
 
 SSR — deploys as a **server** (Nitro), not static. On Vercel, Nitro auto-detects
-the platform and emits the Build Output; `vercel.json` just runs `pnpm build`.
+the platform and emits the Build Output; `vercel.json` runs `pnpm build` and
+sends security headers on every path: HSTS (two years, subdomains, preload),
+`nosniff`, `strict-origin-when-cross-origin`, a Permissions-Policy that denies
+camera, microphone and geolocation, and `X-Frame-Options: SAMEORIGIN`. There is
+deliberately no Content-Security-Policy yet: every project page loads its
+remote's scripts and styles from another origin, so a policy has to list each
+remote's deployed origin, and a wrong one blanks the page. The node server and
+the Docker gateway send none of these.
 Locally: `pnpm build` → `.output/`, run with `node .output/server/index.mjs`. Set
 `STRAPI_URL` and `STRAPI_PUBLIC_URL` on the Vercel project (both
 `https://cms.<domain>`); docker-compose sets them on the `portfolio` service.
