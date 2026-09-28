@@ -97,9 +97,17 @@ Pagination defaults: 25 per page, max 100 (`config/api.ts`).
   what `pnpm deploy --legacy` copies into the Docker runtime — `tsconfig.json`
   must stay listed or `strapi start` ignores `dist/`.
 - Root ESLint/Prettier ignore `types/generated`, `.strapi`, `.tmp`; root
-  `pnpm-workspace.yaml` carries the native `allowBuilds` (`better-sqlite3`,
-  `sharp`, `@swc/core`, `core-js-pure`) and the audit ignore for Strapi's
-  vite 5 dev-server advisory.
+  `pnpm-workspace.yaml` carries the native `allowBuilds` (`sharp`,
+  `@swc/core`, `core-js-pure`) and the audit ignore for Strapi's vite 5
+  dev-server advisory.
+- `better-sqlite3` is `allowBuilds: false` on purpose. Since 13 it ships its
+  binaries in `prebuilds/` (linux/darwin/win32, x64/arm64, glibc and musl)
+  and loads those first; pnpm would otherwise run the implicit
+  `node-gyp rebuild` (despite the package's `gypfile: false`), which needs
+  Python and a C++ toolchain. `node:22-slim` has neither, so every Render
+  deploy failed at `pnpm fetch` from the 13.0.3 bump (#93) until this was
+  set. Before re-allowing its build or bumping it, build the image:
+  `docker build -f apps/strapi/Dockerfile .`.
 
 ## Docker
 

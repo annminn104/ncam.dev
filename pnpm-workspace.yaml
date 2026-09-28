@@ -6,7 +6,12 @@ allowBuilds:
   esbuild: true
   # Strapi (apps/strapi): native bindings + postinstall scripts of its dependency tree.
   '@swc/core': true
-  better-sqlite3: true
+  # Not built: better-sqlite3 >= 13 ships its binaries in prebuilds/ and loads
+  # them first (lib/binding.js), and sets `gypfile: false` so it is never
+  # compiled. pnpm runs the implicit `node-gyp rebuild` anyway, which needs
+  # Python and a C++ toolchain that node:22-slim lacks, so the CMS image
+  # (apps/strapi/Dockerfile, deployed by Render) failed at `pnpm fetch`.
+  better-sqlite3: false
   core-js-pure: true
   sharp: true
 # Security overrides: pin patched transitive versions (GitHub Dependabot / pnpm audit).
