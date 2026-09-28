@@ -52,7 +52,13 @@ own six sections (the `profile` remote) on `/`. React 19.
     owns its lifecycle, shared by both routes above. SSR path: inline
     `{ html, css }` (`<style>` + `dangerouslySetInnerHTML`), then a
     `useEffect` calls `import('<remote>/hydrate')` → `hydrate(el, config)`.
-    No-SSR path: `import('<remote>/mount')` → `mount(el, config)`. `config` is
+    No-SSR path: `import('<remote>/mount')` → `mount(el, config)`, and until
+    it attaches the stage shows `components/StageLoading.tsx`: the project's
+    registry thumbnail, blurred under a scrim, with "Loading <name>…" and its
+    tagline (`role="status"`, the mount node `aria-busy`). It renders on the
+    server too, so an SSR that fell back never paints a blank page, and it
+    fades out (CSS, `data-state="done"`) once the remote attaches; an error
+    replaces it. The SSR path never shows it. `config` is
     the **`MountConfig`** from `@ncam/mf-remote`
     (`packages/mf-remote/src/contract.ts`) — `{ route?, onNavigate?, assetBase? }`
     — and every entry returns a **`MountHandle`**: a disposer that may also

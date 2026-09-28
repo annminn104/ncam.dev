@@ -6,6 +6,7 @@ import type { MountConfig, MountHandle, SsrResult } from '@ncam/mf-remote';
 import { loadRemoteModuleSSR } from '../lib/federation';
 import { projectJsonLd, serialiseJsonLd } from '../lib/json-ld';
 import { fromRemoteRoute, toRemoteRoute } from '../lib/remote-route';
+import { StageLoading } from './StageLoading';
 
 const log = createLogger({ scope: 'portfolio' });
 
@@ -86,6 +87,9 @@ export function ProjectStage({ projectId, html, css, route }: ProjectStageProps)
   // and it clears once that project attaches.
   const [failure, setFailure] = useState<{ projectId: string; message: string } | null>(null);
   const error = project && failure?.projectId === project.id ? failure.message : null;
+  // Which project's remote has attached, kept by id for the same reason: the
+  // loading screen belongs to the project on screen and ends when it attaches.
+  const [attached, setAttached] = useState<string | null>(null);
 
   // How this stage was entered, captured once.
   //
@@ -136,6 +140,7 @@ export function ProjectStage({ projectId, html, css, route }: ProjectStageProps)
           onNavigate,
         });
         setFailure(null);
+        setAttached(project.id);
         log.info('project.open', { id: project.id, mode: ssr ? 'ssr-hydrate' : 'csr-mount' });
       })
       .catch((err) => {
@@ -176,6 +181,14 @@ export function ProjectStage({ projectId, html, css, route }: ProjectStageProps)
     );
   }
 
+  // A client-mounted entry (client navigation, or an SSR that fell back) starts
+  // with an empty stage while the remote downloads, so it shows the project's
+  // screenshot and name until the remote attaches. The server renders the same
+  // screen, so hydration matches and a fallback's first paint is never blank.
+  // An SSR entry already has the remote's markup and skips it.
+  const clientMounted = !entry.html && project.status === 'live' && !error;
+  const loading = clientMounted && attached !== project.id;
+
   return (
     <div className="stage">
       <script
@@ -190,11 +203,18 @@ export function ProjectStage({ projectId, html, css, route }: ProjectStageProps)
           <h2>Couldn't load {project.name}</h2>
           <p>{error}</p>
           <p className="stage__hint">
-            Make sure the <code>{project.remote}</code> remote is running (run <code>pnpm dev</code>{' '}
-            at the repo root), then reload.
+            {import.meta.env.DEV ? (
+              <>
+                Make sure the <code>{project.remote}</code> remote is running (run{' '}
+                <code>pnpm dev</code> at the repo root), then reload.
+              </>
+            ) : (
+              'Reload the page to try again.'
+            )}
           </p>
         </div>
       ) : null}
+      {clientMounted ? <StageLoading project={project} done={!loading} /> : null}
       {/* SSR path fills this via dangerouslySetInnerHTML; CSR path via mount().
           Both read the captured entry, never the live loader data, so a later
           client navigation cannot pull the markup or the styles out from under
@@ -207,6 +227,7 @@ export function ProjectStage({ projectId, html, css, route }: ProjectStageProps)
         className="stage__mount"
         ref={mountRef}
         aria-label={project.name}
+        aria-busy={loading}
         {...(entry.html ? { dangerouslySetInnerHTML: { __html: entry.html } } : {})}
       />
     </div>
