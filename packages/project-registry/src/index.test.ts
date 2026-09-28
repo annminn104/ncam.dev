@@ -43,6 +43,16 @@ describe('project-registry', () => {
     }
   });
 
+  it('lists sitemap paths only for route-aware remotes, as plain relative paths', () => {
+    // Anything below the project path of a remote that is not route-aware is
+    // noindexed (see routeAware), so the sitemap must never list it.
+    for (const p of projects.filter((p) => p.sitemapPaths)) {
+      expect(p.routeAware).toBe(true);
+      for (const path of p.sitemapPaths ?? []) expect(path).toMatch(/^[a-z0-9-]+(\/[a-z0-9-]+)*$/);
+    }
+    expect(getProject('holodex')?.sitemapPaths).toEqual(['sets', 'search', 'collection']);
+  });
+
   it('ids are unique', () => {
     const ids = projects.map((p) => p.id);
     expect(new Set(ids).size).toBe(ids.length);
