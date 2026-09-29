@@ -5,6 +5,7 @@ import { createLogger } from '@ncam/logger';
 import type { MountConfig, MountHandle, SsrResult } from '@ncam/mf-remote';
 import { loadRemoteModuleSSR } from '../lib/federation';
 import { projectJsonLd, serialiseJsonLd } from '../lib/json-ld';
+import { STAGE_END_ID } from '../lib/project-head';
 import { fromRemoteRoute, toRemoteRoute } from '../lib/remote-route';
 import { StageLoading } from './StageLoading';
 
@@ -170,8 +171,8 @@ export function ProjectStage({ projectId, html, css, route }: ProjectStageProps)
   if (!project) {
     return (
       <div className="stage">
-        <Link to="/" className="stage__back">
-          <span aria-hidden="true">←</span> Projects
+        <Link to="/" className="stage__back stage__back--over">
+          <span aria-hidden="true">←</span> <span className="stage__back-label">Projects</span>
         </Link>
         <div className="stage__error">
           <h2>Project not found</h2>
@@ -195,8 +196,8 @@ export function ProjectStage({ projectId, html, css, route }: ProjectStageProps)
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: serialiseJsonLd(projectJsonLd(project)) }}
       />
-      <Link to="/" className="stage__back">
-        <span aria-hidden="true">←</span> Projects
+      <Link to="/" className="stage__back stage__back--over">
+        <span aria-hidden="true">←</span> <span className="stage__back-label">Projects</span>
       </Link>
       {error ? (
         <div className="stage__error">
@@ -230,6 +231,9 @@ export function ProjectStage({ projectId, html, css, route }: ProjectStageProps)
         aria-busy={loading}
         {...(entry.html ? { dangerouslySetInnerHTML: { __html: entry.html } } : {})}
       />
+      {/* The end of the server markup, which the head's rel=expect waits for
+          before the first paint (see STAGE_END_ID). */}
+      {entry.html ? <span id={STAGE_END_ID} hidden /> : null}
     </div>
   );
 }

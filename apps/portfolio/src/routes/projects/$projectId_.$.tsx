@@ -4,7 +4,7 @@ import { createLogger } from '@ncam/logger';
 import type { SsrHead } from '@ncam/mf-remote';
 import { ProjectStagePage, loadSsrExports, ssrLoaders } from '../../components/ProjectStage';
 import { toRemoteRoute } from '../../lib/remote-route';
-import { projectHead, remoteHead } from '../../lib/project-head';
+import { projectHead, remoteHead, withStageExpect } from '../../lib/project-head';
 
 const log = createLogger({ scope: 'portfolio' });
 
@@ -55,7 +55,11 @@ export const Route = createFileRoute('/projects/$projectId_/$')({
       return NO_SSR;
     }
   },
-  head: ({ params, loaderData }) => projectHead(params.projectId, params._splat, loaderData?.head),
+  head: ({ params, loaderData }) =>
+    withStageExpect(
+      projectHead(params.projectId, params._splat, loaderData?.head),
+      Boolean(loaderData?.html),
+    ),
   // Same component function as the bare project route, so crossing between the
   // two reconciles the stage in place rather than tearing the remote down.
   // See ProjectStagePage.

@@ -102,3 +102,24 @@ export function projectHead(projectId: string, splat?: string, remote?: SsrHead)
     links: [{ rel: 'canonical', href: url }],
   };
 }
+
+/**
+ * The marker ProjectStage renders right after a server-rendered remote, which
+ * {@link withStageExpect}'s `<link rel="expect" blocking="render">` names: the
+ * browser paints nothing until the parser has read past the remote's whole
+ * markup. A remote's first screen is often laid out from the bottom or the
+ * middle (Viktor's stacks up from the bottom), so a paint of it half-streamed,
+ * then another once whole, moved everything already on screen: a 0.17 layout
+ * shift, on the runs a slow network split the markup. Chromium only; other
+ * browsers ignore the link.
+ */
+export const STAGE_END_ID = 'stage-end';
+
+/** `head` with the render-blocking expectation of the stage's end, when the stage has server markup. */
+export function withStageExpect<H extends { links?: object[] }>(head: H, ssr: boolean): H {
+  if (!ssr) return head;
+  return {
+    ...head,
+    links: [...(head.links ?? []), { rel: 'expect', href: `#${STAGE_END_ID}`, blocking: 'render' }],
+  };
+}

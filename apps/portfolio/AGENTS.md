@@ -257,6 +257,30 @@ loader)` for the six modules **sequentially** → `mod.ssr()` →
 - Pinned TanStack/nitro/vinxi versions matter (MF + TanStack Router had version
   breaks). Change deliberately and re-verify.
 
+## Performance (Lighthouse)
+
+Every page is held at 100 in all four Lighthouse categories, mobile and
+desktop, by `.github/workflows/lighthouse.yml` (root `lighthouserc.cjs`,
+`scripts/lighthouse/`). What keeps the host there:
+
+- **One inline stylesheet.** `app.css` is inlined into the server-rendered
+  `<head>` (`?inline` in `__root.tsx`), so the first paint waits for no request.
+- **Fonts swap without moving text.** The type stacks end in metric-matched
+  fallbacks (`@ncam/design-tokens`).
+- **Preloads never compete with the first screen** (`src/server.ts`,
+  `lib/low-priority-preloads.ts`): TanStack Start's modulepreload links go to
+  `fetchpriority="low"`, and on a project page, whose first screen is the
+  remote's, they are dropped (the entry script still loads every chunk).
+- **A project page paints once, whole.** While the stage has server markup its
+  head holds `<link rel="expect" href="#stage-end" blocking="render">`
+  (`lib/project-head.ts`), so a remote laid out from the bottom or the middle
+  never paints half-streamed and then moves.
+- **The back pill over a remote** is set in the system face (it is the host's
+  only text there, and Inter would be 47 KB for one word) and shrinks to its
+  arrow on a phone, where remotes' headers reach the middle.
+- No text that could be the LCP may enter at opacity 0 (see `apps/profile`):
+  Chrome counts it only at its next repaint.
+
 ## Thumbnails
 
 `public/thumbnails/<id>.jpg` are **generated, not designed**: each is a 1200×630

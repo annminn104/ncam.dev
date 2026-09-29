@@ -5,6 +5,8 @@ type ProjectHeadModule = typeof import('./project-head');
 let projectHead: ProjectHeadModule['projectHead'];
 let isRealProjectPath: ProjectHeadModule['isRealProjectPath'];
 let remoteHead: ProjectHeadModule['remoteHead'];
+let withStageExpect: ProjectHeadModule['withStageExpect'];
+let STAGE_END_ID: ProjectHeadModule['STAGE_END_ID'];
 
 const SITE = 'https://ncam.dev';
 
@@ -12,7 +14,8 @@ beforeAll(async () => {
   // lib/site.ts bakes this in at build time from the Vite env; nothing defines
   // it under vitest, so stub it before the module graph is evaluated.
   vi.stubEnv('VITE_SITE_URL', SITE);
-  ({ projectHead, isRealProjectPath, remoteHead } = await import('./project-head'));
+  ({ projectHead, isRealProjectPath, remoteHead, withStageExpect, STAGE_END_ID } =
+    await import('./project-head'));
 });
 
 const metaValue = (head: ReturnType<typeof projectHead>, name: string) =>
@@ -160,5 +163,23 @@ describe('projectHead', () => {
     expect(metaValue(head, 'twitter:image:alt')?.content).toBe(
       'Screenshot of Viktor. — Creative portfolio hero',
     );
+  });
+});
+
+describe('withStageExpect', () => {
+  it('holds the first paint for the end of a server-rendered stage', () => {
+    const head = withStageExpect(projectHead('viktor'), true);
+    expect(head.links?.at(-1)).toEqual({
+      rel: 'expect',
+      href: `#${STAGE_END_ID}`,
+      blocking: 'render',
+    });
+    // The canonical keeps its place.
+    expect(canonical(head)).toBe(`${SITE}/projects/viktor`);
+  });
+
+  it('leaves the head alone when the stage has no server markup to wait for', () => {
+    const head = projectHead('viktor');
+    expect(withStageExpect(head, false)).toBe(head);
   });
 });
