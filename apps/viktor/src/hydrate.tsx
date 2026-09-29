@@ -1,7 +1,9 @@
 import { StrictMode } from 'react';
 import { hydrateRoot, type Root } from 'react-dom/client';
-import './fonts';
 import App from './App';
+
+// No fonts import here: when hydrating, the host already inlined the @font-face
+// rules from `./ssr`. (The CSR path in `./mount` imports them itself.)
 
 const roots = new WeakMap<HTMLElement, Root>();
 

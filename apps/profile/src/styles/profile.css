@@ -25,21 +25,33 @@
   display: contents;
 }
 
-/* Initial hidden state for the hero intro: only when scripts run and motion is
-   allowed (without JS or with reduced motion everything is simply visible). The
-   delayed keyframe is a safety net — if hydration is slow the copy still fades in
-   on its own; CSS animations outrank GSAP's inline styles, so it never fights
-   the timeline once that has finished. */
-@media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
-  .intro,
+/* The hero's entrance, from the first paint: the name assembles glyph by glyph
+   (`--i` its place in the name, `--side` the side it slots in from) while the
+   copy rises into place block by block (`--n`), all set by hero.tsx. Keyframes
+   rather than a script timeline, so a slow network or a late hydration never
+   holds the copy back: it is the largest thing on the first screen, the page's
+   LCP. So it rises but never fades: Chrome does not count text first painted at
+   opacity 0 until something repaints it (a web font arriving, seconds later).
+   `translate` rather than `transform`, which the scroll cue already uses to
+   centre itself. With reduced motion everything is simply there. */
+@media (prefers-reduced-motion: no-preference) {
   .hero__char {
-    opacity: 0;
-    animation: introFallback 0.6s var(--ease-out) 2.2s forwards;
+    animation: heroChar 1s var(--ease-out) calc(0.1s + var(--i, 0) * 0.024s) both;
+  }
+  .hero .intro {
+    animation: heroIntro 0.9s var(--ease-out) calc(0.15s + var(--n, 0) * 0.08s) both;
   }
 }
-@keyframes introFallback {
-  to {
-    opacity: 1;
+@keyframes heroChar {
+  from {
+    opacity: 0;
+    translate: calc(var(--side, 1) * 48px) 110%;
+    transform: skewX(calc(var(--side, 1) * -10deg));
+  }
+}
+@keyframes heroIntro {
+  from {
+    translate: 0 28px;
   }
 }
 
@@ -153,6 +165,15 @@
   color: var(--text);
   font-family: var(--font-body);
 }
+/* On a phone the hero is taller than the screen anyway, so its copy starts at
+   the top. Centred, a hero still streaming in (a slow network paints the page
+   as it arrives) re-centres with every block that lands and moves everything
+   already on screen: a 0.25 layout shift at first paint. */
+@media (max-width: 899px) {
+  .hero {
+    align-items: flex-start;
+  }
+}
 /* The "cover" transition (next section slides over a pinned hero) only when the
    hero fits the viewport — a sticky block taller than the screen would hide its
    own bottom. Smaller screens scroll it away like any other section. */
@@ -218,11 +239,13 @@
   margin: 0;
   font-family: var(--font-display);
   font-weight: 800;
-  /* The longer line ("MINH NGUYEN") is ~11em wide in Syne 800; 8.8cqw × 11 ≈ 97%
-     of the column, so it fills the width without overflowing it. If a name ever
-     is wider, words wrap instead of clipping. */
-  font-size: clamp(2rem, 7.4vw, 9rem);
-  font-size: clamp(2rem, 8.8cqw, 9rem);
+  /* The longer line ("MINH NGUYEN") measures 11.8em in Syne 800; 8.2cqw × 11.8 ≈
+     97% of the column, so it fills the width on one line at any width. No
+     floor: a 2rem minimum (and the 8.8cqw this once assumed 11em for) wrapped
+     it, and only once Syne arrived, wider than its fallback, so everything
+     below jumped a line. A longer name would still wrap rather than clip. */
+  font-size: min(6.9vw, 9rem);
+  font-size: min(8.2cqw, 9rem);
   line-height: 0.88;
   letter-spacing: -0.045em;
   text-transform: uppercase;
@@ -423,9 +446,12 @@
   background: var(--accent);
   opacity: 0.85;
 }
+/* The stroke is the text's only colour, so it must reach 3:1 (large text) even
+   though the band is aria-hidden: axe checks contrast for sighted readers.
+   Half the text colour clears it in both themes; --line-strong read 1.5:1. */
 .marquee--outline .marquee__item {
   color: transparent;
-  -webkit-text-stroke: 1px var(--line-strong);
+  -webkit-text-stroke: 1px color-mix(in srgb, var(--text) 50%, transparent);
 }
 .marquee--outline .marquee__item::after {
   background: var(--amber);
@@ -440,6 +466,9 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr));
   gap: 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
   /* Room for the 3D tilt to breathe. */
   perspective: 1200px;
 }
@@ -688,6 +717,11 @@
 }
 .pcard {
   --accent-p: var(--accent);
+  /* The accent as text: several brand accents (TOONHUB's orange, Viktor's pink,
+     Bali's lime) read at under 2.3:1 on a light card, so text takes it 45%
+     into the text colour, which clears 4.5:1 for every project in both themes.
+     Shapes (the status dot, borders, glows) keep the pure accent. */
+  --accent-p-text: color-mix(in srgb, var(--accent-p) 45%, var(--text));
   --mx: 50%;
   --my: 50%;
   position: relative;
@@ -806,15 +840,15 @@
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
-  color: var(--accent-p);
+  color: var(--accent-p-text);
 }
 .pcard__status::before {
   content: '';
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: currentColor;
-  box-shadow: 0 0 8px currentColor;
+  background: var(--accent-p);
+  box-shadow: 0 0 8px var(--accent-p);
 }
 .pcard__name {
   margin: 0;
@@ -847,7 +881,7 @@
   padding-top: 1rem;
   font-size: 0.85rem;
   font-weight: 600;
-  color: var(--accent-p);
+  color: var(--accent-p-text);
 }
 .pcard__cta svg {
   transition: transform 0.45s var(--ease-out);

@@ -1,6 +1,7 @@
 import { useRef } from 'react';
 import { motion, useScroll, useTransform, type MotionValue } from 'framer-motion';
 import { useMotionEnabled } from '../../lib/motion';
+import { play, useWhenNear } from '../../lib/video';
 import { mindloopConfig as config } from '../../data/mindloop';
 
 function Word({
@@ -85,13 +86,17 @@ function RevealParagraph({
 }
 
 export function Mission() {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  // Below the fold: it loads only once the visitor scrolls near it (lib/video.ts).
+  useWhenNear(videoRef, play);
   return (
     <section className="px-6 pb-32 pt-0 md:pb-44">
       <div className="mx-auto flex max-w-4xl flex-col items-center">
         <video
+          ref={videoRef}
           className="mb-16 aspect-square w-full max-w-[800px] object-cover"
           src={config.videos.mission}
-          autoPlay
+          preload="none"
           loop
           muted
           playsInline

@@ -1,5 +1,6 @@
 import { ArrowRight, ChevronDown } from 'lucide-react';
 import { useRef } from 'react';
+import { heroLayers } from '../../assets/hero';
 import { hero } from '../../data/bali';
 import { gsap, useGsap } from '../../lib/gsap';
 
@@ -50,25 +51,31 @@ export function Hero() {
       className="relative h-screen min-h-[640px] w-full overflow-hidden bg-jungle-black"
     >
       {/* Layer 1 — back */}
-      <img
-        ref={backRef}
-        src={hero.layers.back}
-        alt=""
-        aria-hidden="true"
-        fetchPriority="high"
-        decoding="async"
-        className="absolute inset-0 z-[1] h-full w-full object-cover object-bottom will-change-transform"
-      />
+      <picture>
+        <source type="image/avif" srcSet={heroLayers.back.avif} sizes="100vw" />
+        <img
+          ref={backRef}
+          src={heroLayers.back.fallback}
+          alt=""
+          aria-hidden="true"
+          fetchPriority="high"
+          decoding="async"
+          className="absolute inset-0 z-[1] h-full w-full object-cover object-bottom will-change-transform"
+        />
+      </picture>
       {/* Layer 2 — mid */}
-      <img
-        ref={midRef}
-        src={hero.layers.mid}
-        alt=""
-        aria-hidden="true"
-        fetchPriority="high"
-        decoding="async"
-        className="absolute inset-0 z-[2] h-full w-full object-cover object-bottom will-change-transform"
-      />
+      <picture>
+        <source type="image/avif" srcSet={heroLayers.mid.avif} sizes="100vw" />
+        <img
+          ref={midRef}
+          src={heroLayers.mid.fallback}
+          alt=""
+          aria-hidden="true"
+          fetchPriority="high"
+          decoding="async"
+          className="absolute inset-0 z-[2] h-full w-full object-cover object-bottom will-change-transform"
+        />
+      </picture>
 
       {/* Giant wordmark — behind the front layer */}
       <div
@@ -82,15 +89,18 @@ export function Hero() {
       </div>
 
       {/* Layer 3 — front foliage */}
-      <img
-        ref={frontRef}
-        src={hero.layers.front}
-        alt=""
-        aria-hidden="true"
-        fetchPriority="high"
-        decoding="async"
-        className="absolute inset-0 z-[4] h-full w-full object-cover object-bottom will-change-transform"
-      />
+      <picture>
+        <source type="image/avif" srcSet={heroLayers.front.avif} sizes="100vw" />
+        <img
+          ref={frontRef}
+          src={heroLayers.front.fallback}
+          alt=""
+          aria-hidden="true"
+          fetchPriority="high"
+          decoding="async"
+          className="absolute inset-0 z-[4] h-full w-full object-cover object-bottom will-change-transform"
+        />
+      </picture>
 
       {/* Cinematic vignette + fade into the page */}
       <div

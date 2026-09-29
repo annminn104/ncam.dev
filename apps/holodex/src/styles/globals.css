@@ -6,7 +6,8 @@
   --color-holo-line: #2a1f45;
   --color-holo-text: #ede9fb;
   --color-holo-muted: #a99fc9;
-  --color-holo-accent: #7c5cff;
+  /* Also a text colour: 4.75:1 on the panel, where #7c5cff fell short of 4.5. */
+  --color-holo-accent: #8466ff;
 }
 
 /*

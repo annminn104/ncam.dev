@@ -2,7 +2,7 @@ import { createFileRoute, notFound } from '@tanstack/react-router';
 import { getProject } from '@ncam/project-registry';
 import { createLogger } from '@ncam/logger';
 import { ProjectStagePage, loadSsrExports, ssrLoaders } from '../../components/ProjectStage';
-import { projectHead } from '../../lib/project-head';
+import { projectHead, withStageExpect } from '../../lib/project-head';
 
 const log = createLogger({ scope: 'portfolio' });
 
@@ -47,7 +47,8 @@ export const Route = createFileRoute('/projects/$projectId')({
       return NO_SSR;
     }
   },
-  head: ({ params }) => projectHead(params.projectId),
+  head: ({ params, loaderData }) =>
+    withStageExpect(projectHead(params.projectId), Boolean(loaderData?.html)),
   // Shared with the splat route on purpose — one component function means one
   // React element type, so moving between `/projects/x` and `/projects/x/...`
   // reconciles the stage instead of disposing the mounted remote.

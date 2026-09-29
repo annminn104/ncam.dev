@@ -1,4 +1,3 @@
-import { useEffect, useRef } from 'react';
 import { cn } from '../lib/utils';
 
 const SLIDES = [{ label: 'WATER WAVE' }, { label: 'GRIDWAVE' }, { label: 'LIGHT TUNNEL' }];
@@ -10,35 +9,7 @@ interface HeroProps {
   onSlideChange: (i: number) => void;
 }
 
-/** Apply IntersectionObserver-based reveal to a container's .reveal-up / .reveal-right children. */
-function useReveal(ref: React.RefObject<HTMLElement | null>) {
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const targets = el.querySelectorAll<HTMLElement>('.reveal-up, .reveal-right');
-    if (!targets.length) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            (entry.target as HTMLElement).classList.add('is-visible');
-            observer.unobserve(entry.target);
-          }
-        });
-      },
-      { threshold: 0.35 },
-    );
-
-    targets.forEach((t) => observer.observe(t));
-    return () => observer.disconnect();
-  }, [ref]);
-}
-
 export function Hero({ activeIndex, onSlideChange }: HeroProps) {
-  const sectionRef = useRef<HTMLElement>(null);
-  useReveal(sectionRef);
-
   const isSlide0 = activeIndex === 0;
   const dotColor = isSlide0 ? ACCENT : '#ffffff';
   const dotShadow = isSlide0 ? `0 0 8px 3px ${ACCENT}88` : '0 0 8px 3px rgba(255,255,255,0.5)';
@@ -46,7 +17,6 @@ export function Hero({ activeIndex, onSlideChange }: HeroProps) {
 
   return (
     <main
-      ref={sectionRef}
       className="
         relative z-[2] flex h-screen flex-col justify-end items-end
         gap-[150px] pt-[190px] px-[15px]
@@ -65,12 +35,14 @@ export function Hero({ activeIndex, onSlideChange }: HeroProps) {
               type="button"
               onClick={() => onSlideChange(i)}
               aria-pressed={i === activeIndex}
-              aria-label={`Switch to ${slide.label}`}
               className={cn(
                 'role-link text-left text-white transition-opacity duration-300',
                 i === activeIndex ? 'opacity-100' : 'opacity-55 hover:opacity-75',
               )}
             >
+              {/* A prefix, not an aria-label: the accessible name must keep the
+                  visible "01 / WATER WAVE" (label-content-name-mismatch). */}
+              <span className="sr-only">Switch to </span>
               <span className="text-[8px] leading-3 tracking-[-0.08px] font-medium uppercase text-white/60">
                 0{i + 1}
               </span>

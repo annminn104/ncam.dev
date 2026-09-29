@@ -1,6 +1,5 @@
 import { useEffect } from 'react';
 import { createLogger } from '@ncam/logger';
-import './fonts';
 import { ScrollTrigger } from './lib/gsap';
 import { Navbar } from './components/sections/navbar';
 import { Hero } from './components/sections/hero';

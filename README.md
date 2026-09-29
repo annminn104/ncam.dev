@@ -181,8 +181,9 @@ Run from the repo root.
 | `pnpm format` / `format:check` | Prettier.                                                                                                |
 | `pnpm test` / `test:watch`     | Vitest over the shared packages, Strapi, Holodex, the host's `src/lib` and the apps' scripts.            |
 | `pnpm run ci`                  | Lint, format check, typecheck, test and build, as CI runs them. (`pnpm ci` is pnpm's own clean install.) |
-| `pnpm assets`                  | Downloads self-hosted assets where an app defines them (currently TOONHUB's figurines).                  |
+| `pnpm assets`                  | Fetches and derives self-hosted assets where an app defines them (TOONHUB's figurines).                  |
 | `pnpm thumbnails [id...]`      | Regenerates gallery thumbnails; see [Adding a project](#adding-a-project).                               |
+| `pnpm lighthouse`              | Lighthouse CI over every page type against the production build (`pnpm build` first); CI's own check.    |
 | `pnpm skills:add`              | Installs the agent skills listed in `scripts/add-agent-skills.sh`.                                       |
 
 ## Configuration

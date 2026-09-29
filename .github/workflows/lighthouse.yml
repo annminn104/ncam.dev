@@ -1,0 +1,85 @@
+name: Lighthouse
+
+# Every page type at 100 in all four categories, on mobile and on desktop,
+# measured against the production build served from the runner itself:
+# scripts/lighthouse/serve.mjs serves it, lighthouserc.cjs says how it is
+# measured and why. Each form factor is split over three jobs, a third of the
+# pages each (LH_SHARD): a page is three runs, and one run can take up to 45 s
+# while a remote streams video.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: lighthouse-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  lighthouse:
+    name: Lighthouse · ${{ matrix.form-factor }} · ${{ matrix.shard }}/3
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        form-factor: [mobile, desktop]
+        shard: [1, 2, 3]
+    env:
+      LH_FORM_FACTOR: ${{ matrix.form-factor }}
+      LH_SHARD: ${{ matrix.shard }}/3
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      # CI's Turbo cache, read only: the build here is the same build CI makes.
+      - name: Restore Turbo cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .turbo
+          key: turbo-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm build
+
+      # Starts the harness itself (startServerCommand) and stops it after.
+      # Lighthouse CI is fetched, pinned, rather than a devDependency: its tree
+      # (Lighthouse → puppeteer-core → @puppeteer/browsers) carries high
+      # advisories with no fixed release, in code it never runs here (the
+      # browser download), which `pnpm audit` and Dependabot would report.
+      - name: Collect
+        run: pnpm dlx @lhci/cli@0.15.1 collect --config=lighthouserc.cjs
+
+      - name: Save reports
+        if: ${{ !cancelled() }}
+        run: pnpm dlx @lhci/cli@0.15.1 upload --config=lighthouserc.cjs
+
+      - name: Assert every category at 100
+        run: pnpm dlx @lhci/cli@0.15.1 assert --config=lighthouserc.cjs
+
+      - name: Upload reports
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: lighthouse-${{ matrix.form-factor }}-${{ matrix.shard }}
+          path: .lighthouseci/${{ matrix.form-factor }}-${{ matrix.shard }}
+          if-no-files-found: ignore

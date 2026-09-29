@@ -184,6 +184,18 @@ export function defineRemote({
       target: 'esnext',
       modulePreload: false,
     },
+    experimental: {
+      // An asset the remote's JS imports (a poster, an `?inline` stylesheet's
+      // fonts) is named from the module's own URL at runtime: inside the host
+      // page a root-relative `/assets/…` resolves against the host, which has
+      // no such file. In the server render too, where the host's loader
+      // fetched the module from the remote's origin.
+      renderBuiltUrl(filename, { hostType }) {
+        if (hostType !== 'js') return undefined;
+        const path = (base.endsWith('/') ? base : `${base}/`) + filename;
+        return { runtime: `new URL(${JSON.stringify(path)}, import.meta.url).href` };
+      },
+    },
     // Second build environment whose only job is to emit `remoteEntry.ssr.js`
     // and the Node-targeted copy of every exposed module. `vite build` alone
     // builds the client environment only, so the remote's build script must run

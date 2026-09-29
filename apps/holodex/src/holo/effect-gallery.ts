@@ -18,7 +18,7 @@ import {
  * rare V` also returns `Shiny rare VMAX` cards, and an earlier draft of this
  * list put a VMAX under shiny-v exactly that way. `effect-gallery.test.ts`
  * keeps it honest against a captured copy of each card
- * (`effect-gallery.fixture.ts`). Swap a card only for one that passes the same
+ * (`effect-gallery.cards.ts`). Swap a card only for one that passes the same
  * check — and that has art, since HoloCard draws no foil without it:
  * `lib/images.ts#cardImageBase` must find a base for it, which the same test
  * file checks for every card. The subset-set cards (the Shiny Vault's

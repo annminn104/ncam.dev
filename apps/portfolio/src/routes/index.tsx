@@ -60,6 +60,9 @@ function propsFor(module: string, posts: BlogPost[]): SectionProps {
   return module === BLOG_MODULE ? { posts } : undefined;
 }
 
+/** The id of a section's slot: the element the head's rel=expect names. */
+const slotId = (module: string) => `slot-${module}`;
+
 export const Route = createFileRoute('/')({
   // Server-render every section through the federation runtime so the page is
   // complete, styled and crawlable on first paint. Only wired in the production
@@ -121,14 +124,24 @@ export const Route = createFileRoute('/')({
   // round-trip and re-mounting all six sections once the new `posts` array arrives.
   staleTime: 60_000,
   preloadStaleTime: 60_000,
-  head: () => ({
+  head: ({ loaderData }) => ({
     meta: [
       { name: 'robots', content: 'index,follow' },
       { property: 'og:url', content: `${SITE_URL}/` },
       // og.png again, now with its size, which the root leaves out.
       ...socialImageMeta(SITE_IMAGE),
     ],
-    links: [{ rel: 'canonical', href: `${SITE_URL}/` }],
+    links: [
+      { rel: 'canonical', href: `${SITE_URL}/` },
+      // The first paint waits for the parser to reach the second section's
+      // slot, i.e. for the whole hero, as a project page waits for its stage
+      // (lib/project-head.ts). Painted half-streamed, the hero grew as the rest
+      // arrived and took its bottom-anchored orb down with it: a 0.07 layout
+      // shift, on the runs a slow network split the markup.
+      ...(loaderData?.html[sections[0].module] && sections[1]
+        ? [{ rel: 'expect', href: `#${slotId(sections[1].module)}`, blocking: 'render' }]
+        : []),
+    ],
   }),
   component: HomePage,
 });
@@ -235,6 +248,7 @@ function SectionSlot({ section, html, props, onState }: SectionSlotProps) {
     <>
       <div
         ref={ref}
+        id={slotId(section.module)}
         className="mf-slot"
         data-module={`./${section.module}`}
         {...(html ? { dangerouslySetInnerHTML: { __html: html } } : {})}

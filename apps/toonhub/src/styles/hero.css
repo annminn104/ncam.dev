@@ -69,11 +69,6 @@
   box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.55);
 }
 
-/* Entry: hide only when JS is driving the animation (keeps no-JS visible). */
-.toonhub-hero[data-js='true']:not([data-entered='true']) {
-  opacity: 0;
-}
-
 /* ---------------- Grain ---------------- */
 .toon-grain {
   position: absolute;
@@ -256,10 +251,6 @@
     transform var(--toonhub-transition) cubic-bezier(0.4, 0, 0.2, 1),
     opacity 700ms ease;
 }
-.toonhub-hero[data-js='true']:not([data-entered='true']) .toon-ghost__text {
-  opacity: 0;
-  transform: scale(0.98);
-}
 .toonhub-hero[data-navigating='true'] .toon-ghost__text {
   transform: scale(0.985);
 }
@@ -391,27 +382,43 @@
 }
 
 /* ---------------- Carousel ---------------- */
+/* A size container, so a role's offsets can be written in the carousel's own
+   units (cqw / cqh) inside `transform`. */
 .toon-carousel {
   position: absolute;
   inset: 0;
   z-index: 3;
+  container-type: size;
+  /* The centre figurine's box, in % of the carousel (height, bottom), and its
+     scale. Every figurine is laid out in this box and drawn at its role's place
+     as a transform of it: only `transform` changes on a slide change, since a
+     transition of left, height or bottom is a layout shift on every frame. */
+  --toon-box-h: 92;
+  --toon-box-b: 0;
+  --toon-center-s: 1.68;
 }
 .toon-item {
+  /* This role's own box — height, bottom and centre x in % of the carousel,
+     and scale — which each [data-role] rule sets; the centre's is the box. */
+  --h: var(--toon-box-h);
+  --b: var(--toon-box-b);
+  --x: 50;
+  --s: var(--toon-center-s);
   position: absolute;
   left: 50%;
-  bottom: 0;
+  bottom: calc(var(--toon-box-b) * 1%);
+  height: calc(var(--toon-box-h) * 1%);
   aspect-ratio: 0.6 / 1;
   pointer-events: none;
   user-select: none;
   will-change: transform, filter, opacity;
-  transform: translateX(-50%) scale(1);
+  transform: translateX(calc(-50% + (var(--x) - 50) * 1cqw + var(--drag-x, 0px)))
+    translateY(calc((var(--toon-box-b) + var(--toon-box-h) / 2 - var(--b) - var(--h) / 2) * 1cqh))
+    scale(calc(var(--h) * var(--s) / var(--toon-box-h)));
   transition:
     transform var(--toonhub-transition) cubic-bezier(0.4, 0, 0.2, 1),
     filter var(--toonhub-transition) cubic-bezier(0.4, 0, 0.2, 1),
-    opacity var(--toonhub-transition) cubic-bezier(0.4, 0, 0.2, 1),
-    left var(--toonhub-transition) cubic-bezier(0.4, 0, 0.2, 1),
-    height var(--toonhub-transition) cubic-bezier(0.4, 0, 0.2, 1),
-    bottom var(--toonhub-transition) cubic-bezier(0.4, 0, 0.2, 1);
+    opacity var(--toonhub-transition) cubic-bezier(0.4, 0, 0.2, 1);
 }
 .toon-item__tilt {
   width: 100%;
@@ -420,6 +427,9 @@
   transform-style: preserve-3d;
   transition: transform 240ms ease-out;
 }
+.toon-item picture {
+  display: contents;
+}
 .toon-item img {
   width: 100%;
   height: 100%;
@@ -427,52 +437,44 @@
   object-position: bottom center;
   user-select: none;
   -webkit-user-drag: none;
-  opacity: 1;
-  transform: translateY(0);
 }
 
 /* Role placement — desktop defaults */
 .toon-item[data-role='center'] {
-  left: 50%;
-  height: 92%;
-  bottom: 0;
-  transform: translateX(calc(-50% + var(--drag-x, 0px))) scale(1.68);
   filter: blur(0);
   opacity: 1;
   z-index: 20;
 }
 .toon-item[data-role='left'] {
-  left: 30%;
-  height: 28%;
-  bottom: 12%;
-  transform: translateX(-50%) scale(1);
+  --h: 28;
+  --b: 12;
+  --x: 30;
+  --s: 1;
   filter: blur(2px);
   opacity: 0.85;
   z-index: 10;
 }
 .toon-item[data-role='right'] {
-  left: 70%;
-  height: 28%;
-  bottom: 12%;
-  transform: translateX(-50%) scale(1);
+  --h: 28;
+  --b: 12;
+  --x: 70;
+  --s: 1;
   filter: blur(2px);
   opacity: 0.85;
   z-index: 10;
 }
 .toon-item[data-role='back'] {
-  left: 50%;
-  height: 22%;
-  bottom: 12%;
-  transform: translateX(-50%) scale(1);
+  --h: 22;
+  --b: 12;
+  --s: 1;
   filter: blur(4px);
   opacity: 1;
   z-index: 5;
 }
 .toon-item[data-role='hidden'] {
-  left: 50%;
-  height: 22%;
-  bottom: 12%;
-  transform: translateX(-50%) scale(0.9);
+  --h: 22;
+  --b: 12;
+  --s: 0.9;
   filter: blur(6px);
   opacity: 0;
   z-index: 1;
@@ -866,56 +868,77 @@
 }
 
 /* ---------------- Entry stagger ---------------- */
-.toonhub-hero[data-js='true']:not([data-entered='true']) .toon-brand {
-  opacity: 0;
-  transform: translateY(-14px);
+/* Keyframes that start with the first paint — the server's markup, or the one
+   ./mount inserts — so the entrance never waits for (or replays on) the script
+   that attaches to it: a hydration seconds later used to blank a hero the
+   visitor was already looking at and fade it back in. `backwards` fill: once
+   done they leave every property to the rules above. `--enter` is a figurine's
+   delay step, set in the markup from the role it starts in. */
+@media (prefers-reduced-motion: no-preference) {
+  .toonhub-hero {
+    animation: toon-enter-fade 600ms ease backwards;
+  }
+  .toon-ghost__text {
+    animation: toon-enter-ghost 700ms ease backwards;
+  }
+  .toon-brand {
+    animation: toon-enter-brand 800ms cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
+  }
+  .toon-item img {
+    animation: toon-enter-figure 800ms cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
+    animation-delay: calc(var(--toon-entry-delay) * var(--enter, 1));
+  }
+  .toon-item:not([data-role='center']) img {
+    --toon-enter-y: 20px;
+  }
+  .toon-content,
+  .toon-cta,
+  .toon-progress,
+  .toon-controls,
+  .toon-metadata {
+    animation: toon-enter-rise 800ms cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
+  }
+  .toon-content {
+    animation-delay: calc(var(--toon-entry-delay) * 3);
+  }
+  .toon-metadata {
+    animation-delay: calc(var(--toon-entry-delay) * 3.5);
+  }
+  .toon-progress {
+    animation-delay: calc(var(--toon-entry-delay) * 4);
+  }
+  .toon-cta {
+    animation-delay: calc(var(--toon-entry-delay) * 4.5);
+  }
 }
-.toonhub-hero[data-js='true']:not([data-entered='true']) .toon-item[data-role='center'] img {
-  opacity: 0;
-  transform: translateY(40px);
+@keyframes toon-enter-fade {
+  from {
+    opacity: 0;
+  }
 }
-.toonhub-hero[data-js='true']:not([data-entered='true']) .toon-item[data-role='left'] img,
-.toonhub-hero[data-js='true']:not([data-entered='true']) .toon-item[data-role='right'] img,
-.toonhub-hero[data-js='true']:not([data-entered='true']) .toon-item[data-role='back'] img {
-  opacity: 0;
-  transform: translateY(20px);
+@keyframes toon-enter-ghost {
+  from {
+    opacity: 0;
+    scale: 0.98;
+  }
 }
-.toonhub-hero[data-js='true']:not([data-entered='true']) .toon-content,
-.toonhub-hero[data-js='true']:not([data-entered='true']) .toon-cta,
-.toonhub-hero[data-js='true']:not([data-entered='true']) .toon-progress,
-.toonhub-hero[data-js='true']:not([data-entered='true']) .toon-controls,
-.toonhub-hero[data-js='true']:not([data-entered='true']) .toon-metadata {
-  opacity: 0;
-  transform: translateY(16px);
+@keyframes toon-enter-brand {
+  from {
+    opacity: 0;
+    translate: 0 -14px;
+  }
 }
-.toonhub-hero[data-entered='true'] .toon-item img {
-  transition:
-    opacity 700ms ease,
-    transform 800ms cubic-bezier(0.2, 0.7, 0.2, 1);
+@keyframes toon-enter-figure {
+  from {
+    opacity: 0;
+    translate: 0 var(--toon-enter-y, 40px);
+  }
 }
-.toonhub-hero[data-entered='true'] .toon-item[data-role='center'] img {
-  transition-delay: var(--toon-entry-delay);
-}
-.toonhub-hero[data-entered='true'] .toon-item[data-role='left'] img {
-  transition-delay: calc(var(--toon-entry-delay) * 2);
-}
-.toonhub-hero[data-entered='true'] .toon-item[data-role='right'] img {
-  transition-delay: calc(var(--toon-entry-delay) * 2.5);
-}
-.toonhub-hero[data-entered='true'] .toon-item[data-role='back'] img {
-  transition-delay: calc(var(--toon-entry-delay) * 3);
-}
-.toonhub-hero[data-entered='true'] .toon-content {
-  transition-delay: calc(var(--toon-entry-delay) * 3);
-}
-.toonhub-hero[data-entered='true'] .toon-metadata {
-  transition-delay: calc(var(--toon-entry-delay) * 3.5);
-}
-.toonhub-hero[data-entered='true'] .toon-progress {
-  transition-delay: calc(var(--toon-entry-delay) * 4);
-}
-.toonhub-hero[data-entered='true'] .toon-cta {
-  transition-delay: calc(var(--toon-entry-delay) * 4.5);
+@keyframes toon-enter-rise {
+  from {
+    opacity: 0;
+    translate: 0 16px;
+  }
 }
 
 /* ---------------- Keyframes ---------------- */
@@ -1010,24 +1033,24 @@
 
 /* ---------------- Mobile ---------------- */
 @media (max-width: 640px) {
-  .toon-item[data-role='center'] {
-    height: 60%;
-    bottom: 22%;
-    transform: translateX(calc(-50% + var(--drag-x, 0px))) scale(1.25);
+  .toon-carousel {
+    --toon-box-h: 60;
+    --toon-box-b: 22;
+    --toon-center-s: 1.25;
   }
   .toon-item[data-role='left'] {
-    left: 20%;
-    height: 16%;
-    bottom: 32%;
+    --h: 16;
+    --b: 32;
+    --x: 20;
   }
   .toon-item[data-role='right'] {
-    left: 80%;
-    height: 16%;
-    bottom: 32%;
+    --h: 16;
+    --b: 32;
+    --x: 80;
   }
   .toon-item[data-role='back'] {
-    height: 13%;
-    bottom: 32%;
+    --h: 13;
+    --b: 32;
   }
   .toon-desc {
     display: none;
@@ -1061,9 +1084,9 @@
   .toon-ghost__text {
     font-size: clamp(70px, 20vw, 240px);
   }
-  .toon-item[data-role='center'] {
-    height: 86%;
-    transform: translateX(calc(-50% + var(--drag-x, 0px))) scale(1.42);
+  .toon-carousel {
+    --toon-box-h: 86;
+    --toon-center-s: 1.42;
   }
   .toon-nav {
     width: 48px;

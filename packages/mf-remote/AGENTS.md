@@ -47,7 +47,18 @@ env('HOLODEX_REMOTE_URL', 'http://localhost:9007/remoteEntry.js');
   remote's project names the remote itself. A value that is not an absolute
   http(s) URL fails the config;
 - the federation plugin with `filename: 'remoteEntry.js'`, `shared: {}` and
-  `dts: false`.
+  `dts: false`;
+- `experimental.renderBuiltUrl`: an asset the remote's JS imports (a poster,
+  the fonts of an `?inline` stylesheet) is named at runtime as
+  `new URL('/assets/…', import.meta.url)`, so it resolves against the remote's
+  origin inside the host page too, and in the server render, where the host's
+  loader fetched the module from that origin.
+
+`@ncam/mf-remote/css` is the one runtime entry (the package root is the Vite
+config, and must stay out of a bundle): `originOf(import.meta.url)` and
+`rebaseCssUrls(css, origin)`, which a remote's `./ssr` uses to hand the host
+its `@font-face` rules with URLs on the remote's origin, so a server render
+asks for its fonts on the first paint.
 
 `src/contract.ts` holds `MountConfig` (`route`, `onNavigate`, `assetBase`) and
 `MountHandle` (a disposer with an optional `update(route)`), and `SsrResult`,

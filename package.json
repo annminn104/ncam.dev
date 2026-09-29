@@ -11,6 +11,7 @@
     "typecheck": "turbo run typecheck",
     "assets": "turbo run assets",
     "thumbnails": "pnpm --filter @ncam/portfolio thumbnails",
+    "lighthouse": "pnpm dlx @lhci/cli@0.15.1 autorun --config=lighthouserc.cjs",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",

@@ -1,10 +1,22 @@
 import { useEffect, useRef, useState } from 'react';
 import { createLogger } from '@ncam/logger';
-import './fonts';
 import { Navbar } from './components/Navbar';
 import { Hero } from './components/Hero';
+import posterSmall from './assets/water-wave-poster-640.webp';
+import posterMedium from './assets/water-wave-poster-1280.webp';
+import posterLarge from './assets/water-wave-poster-1920.webp';
 
 const log = createLogger({ scope: 'viktor' });
+
+/** What counts as the visitor being here: any of these, the first one. */
+const INTERACTION_EVENTS = [
+  'pointermove',
+  'pointerdown',
+  'keydown',
+  'wheel',
+  'touchstart',
+  'scroll',
+] as const;
 
 const VIDEO_URLS = [
   'https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260629_030107_874273ea-684a-4e90-bb96-8fdfde48d53d.mp4',
@@ -14,62 +26,61 @@ const VIDEO_URLS = [
 
 export default function App() {
   const [activeIndex, setActiveIndex] = useState(0);
-  // Start with the original CDN URLs; swap to blob URLs as each loads.
-  const [videoSrcs, setVideoSrcs] = useState<string[]>(VIDEO_URLS);
-  const objectUrlsRef = useRef<string[]>([]);
+  const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
 
   useEffect(() => {
     log.info('viktor.mounted');
   }, []);
 
-  // Preload all videos as blobs so crossfade switching is instant.
+  // All three play, hidden but running, so a switch is a crossfade between
+  // videos already in motion. They start on the visitor's first interaction
+  // (a mouse move is enough; never under reduced motion), over the first one's
+  // poster: the markup has preload="none" and no autoplay. Playing with the
+  // page, 38 MB of streams shared the network with the first screen, and the
+  // video kept the screen changing for the whole load, which Speed Index
+  // counts. They used to be fetched in full as blobs as well, twice over.
   useEffect(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const controller = new AbortController();
-    const { signal } = controller;
-
-    const blobUrls: string[] = [];
-
-    const loadAll = async () => {
-      await Promise.all(
-        VIDEO_URLS.map(async (url, i) => {
-          try {
-            const res = await fetch(url, { signal });
-            if (!res.ok) return;
-            const blob = await res.blob();
-            const blobUrl = URL.createObjectURL(blob);
-            blobUrls[i] = blobUrl;
-            objectUrlsRef.current[i] = blobUrl;
-          } catch {
-            // Network error or abort — keep original URL.
-          }
-        }),
-      );
-
-      if (!signal.aborted && blobUrls.some(Boolean)) {
-        setVideoSrcs((prev) => prev.map((orig, i) => blobUrls[i] ?? orig));
-      }
-    };
-
-    void loadAll();
-
-    return () => {
+    const start = () => {
       controller.abort();
-      objectUrlsRef.current.forEach((u) => u && URL.revokeObjectURL(u));
-      objectUrlsRef.current = [];
+      for (const video of videoRefs.current) void video?.play().catch(() => undefined);
     };
+    for (const type of INTERACTION_EVENTS) {
+      window.addEventListener(type, start, {
+        once: true,
+        passive: true,
+        signal: controller.signal,
+      });
+    }
+    return () => controller.abort();
   }, []);
 
   return (
     <div className="relative h-screen w-full overflow-hidden bg-black font-figtree">
+      {/* The first video's first frame, under the videos until they play. */}
+      <img
+        className="absolute inset-0 h-full w-full object-cover"
+        src={posterMedium}
+        srcSet={`${posterSmall} 640w, ${posterMedium} 1280w, ${posterLarge} 1920w`}
+        sizes="100vw"
+        alt=""
+        aria-hidden="true"
+        fetchPriority="high"
+        decoding="async"
+      />
       {/* ── Video backgrounds (crossfade) ────────────────────────── */}
-      {videoSrcs.map((src, i) => (
+      {VIDEO_URLS.map((src, i) => (
         <video
-          key={i}
+          key={src}
+          ref={(el) => {
+            videoRefs.current[i] = el;
+          }}
           className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-[1200ms] ease-in-out ${
             i === activeIndex ? 'opacity-100' : 'opacity-0'
           }`}
           src={src}
-          autoPlay
+          preload="none"
           muted
           loop
           playsInline

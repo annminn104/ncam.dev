@@ -12,7 +12,7 @@ interface Mounted {
 const mounted = new WeakMap<HTMLElement, Mounted>();
 
 /**
- * Rewrite root-relative asset paths (e.g. `/figurines/01.png`) to this remote's
+ * Rewrite root-relative asset paths (e.g. `/figurines/01`) to this remote's
  * own origin, so images load from the remote and not from the host shell (which
  * may live on a different origin). The host's `assetBase` wins when it sends one.
  */
@@ -30,7 +30,7 @@ function withAssetBase(config: ToonHubConfig, assetBase?: string): ToonHubConfig
     ...config,
     items: config.items.map((item) => ({
       ...item,
-      src: item.src.startsWith('/') ? origin + item.src : item.src,
+      image: item.image.startsWith('/') ? origin + item.image : item.image,
     })),
   };
 }

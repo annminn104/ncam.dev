@@ -77,9 +77,13 @@
   --shadow: var(--dark-shadow);
   color-scheme: dark;
 
-  --font-display: 'Syne Variable', 'Syne', ui-sans-serif, system-ui, sans-serif;
-  --font-body: 'Inter Variable', 'Inter', system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono Variable', ui-monospace, SFMono-Regular, Menlo, monospace;
+  /* Each web font is followed by its metric-matched fallback (the @font-face
+     rules at the end), which is what shows while the font downloads. */
+  --font-display: 'Syne Variable', 'Syne', 'Syne Fallback', ui-sans-serif, system-ui, sans-serif;
+  --font-body: 'Inter Variable', 'Inter', 'Inter Fallback', system-ui, sans-serif;
+  --font-mono:
+    'JetBrains Mono Variable', 'JetBrains Mono Fallback', ui-monospace, SFMono-Regular, Menlo,
+    monospace;
 
   /* Host shell geometry the remote's section layout aligns to. */
   --nav-h: 64px;
@@ -150,4 +154,108 @@
   --tint: var(--dark-tint);
   --shadow: var(--dark-shadow);
   color-scheme: dark;
+}
+
+/* FALLBACK FONTS. What the type stacks show while a web font downloads: Arial
+   (Liberation Sans on Linux, same metrics) or Courier New (Liberation Mono),
+   resized and re-spaced per weight to the web font's average glyph width,
+   ascent and descent, so the swap to the real font moves no text. Without them
+   the paragraphs re-wrap and the vertically-centred hero shifts as a block.
+   The values follow next/font's fallback formula over @capsizecss/metrics:
+     size-adjust     = (font xWidthAvg / unitsPerEm) / (fallback's, same weight)
+     ascent-override = font ascent / unitsPerEm / size-adjust  (descent alike)
+   Syne widens sharply with weight (800 draws ~1.64× Arial Bold), so every face
+   the site sets gets its own rule. Where neither fallback is installed
+   (Android), the rule matches nothing and the stack carries on as before. */
+@font-face {
+  font-family: 'Inter Fallback';
+  src: local('Arial'), local('ArialMT'), local('Liberation Sans'), local('LiberationSans');
+  font-weight: 400;
+  size-adjust: 107.12%;
+  ascent-override: 90.44%;
+  descent-override: 22.52%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'Inter Fallback';
+  src: local('Arial'), local('ArialMT'), local('Liberation Sans'), local('LiberationSans');
+  font-weight: 500;
+  size-adjust: 108.21%;
+  ascent-override: 89.52%;
+  descent-override: 22.29%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'Inter Fallback';
+  src:
+    local('Arial Bold'), local('Arial-BoldMT'), local('Liberation Sans Bold'),
+    local('LiberationSans-Bold');
+  font-weight: 600;
+  size-adjust: 101.53%;
+  ascent-override: 95.42%;
+  descent-override: 23.76%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'Inter Fallback';
+  src:
+    local('Arial Bold'), local('Arial-BoldMT'), local('Liberation Sans Bold'),
+    local('LiberationSans-Bold');
+  font-weight: 700;
+  size-adjust: 102.54%;
+  ascent-override: 94.47%;
+  descent-override: 23.52%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'Syne Fallback';
+  src: local('Arial'), local('ArialMT'), local('Liberation Sans'), local('LiberationSans');
+  font-weight: 400;
+  size-adjust: 98.47%;
+  ascent-override: 93.93%;
+  descent-override: 27.93%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'Syne Fallback';
+  src:
+    local('Arial Bold'), local('Arial-BoldMT'), local('Liberation Sans Bold'),
+    local('LiberationSans-Bold');
+  font-weight: 700;
+  size-adjust: 114.17%;
+  ascent-override: 81.02%;
+  descent-override: 24.09%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'Syne Fallback';
+  src:
+    local('Arial Bold'), local('Arial-BoldMT'), local('Liberation Sans Bold'),
+    local('LiberationSans-Bold');
+  font-weight: 800;
+  size-adjust: 164.38%;
+  ascent-override: 56.27%;
+  descent-override: 16.73%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'JetBrains Mono Fallback';
+  src:
+    local('Courier New'), local('CourierNewPSMT'), local('Liberation Mono'), local('LiberationMono');
+  font-weight: 100 500;
+  size-adjust: 99.98%;
+  ascent-override: 102.02%;
+  descent-override: 30%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'JetBrains Mono Fallback';
+  src:
+    local('Courier New Bold'), local('CourierNewPS-BoldMT'), local('Liberation Mono Bold'),
+    local('LiberationMono-Bold');
+  font-weight: 600 900;
+  size-adjust: 99.98%;
+  ascent-override: 102.02%;
+  descent-override: 30%;
+  line-gap-override: 0%;
 }

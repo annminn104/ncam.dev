@@ -12,9 +12,13 @@ export function Destinations() {
 
   return (
     <section id="destinations" className="relative scroll-mt-28 py-24 md:py-32">
+      {/* Inside the section, not bled 10rem above it: until the hero's pin
+          spacer arrives with the script, this section starts one screen down,
+          so a glow reaching up sat on the first screen and then left it with
+          the whole section (a layout shift). */}
       <div
         aria-hidden="true"
-        className="glow-lime pointer-events-none absolute -top-40 right-0 h-[32rem] w-[32rem] opacity-60"
+        className="glow-lime pointer-events-none absolute top-0 right-0 h-[32rem] w-[32rem] opacity-60"
       />
       <div className="relative mx-auto max-w-7xl px-6">
         <SectionHeading

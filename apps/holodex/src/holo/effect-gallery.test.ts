@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { cardImageBase } from '../lib/images';
 import { EFFECT_GALLERY, isSectionCard, liveSelection, selectedCard } from './effect-gallery';
-import { CAPTURED_CARDS } from './effect-gallery.fixture';
+import { CAPTURED_CARDS } from './effect-gallery.cards';
 import {
   EFFECT_BY_RARITY,
   MODERN_EFFECT_BY_RARITY,

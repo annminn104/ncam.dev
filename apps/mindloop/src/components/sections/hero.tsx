@@ -1,5 +1,10 @@
+import { useRef } from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '../../lib/utils';
+import { usePlayOnInteraction } from '../../lib/video';
+import posterSmall from '../../assets/hero-poster-640.webp';
+import posterMedium from '../../assets/hero-poster-1280.webp';
+import posterLarge from '../../assets/hero-poster-1624.webp';
 import { useFade } from '../../lib/motion';
 import { buttonVariants } from '../ui/button';
 import { Input } from '../ui/input';
@@ -21,12 +26,28 @@ function Avatar({ index }: { index: number }) {
 
 export function Hero() {
   const fade = useFade();
+  const videoRef = useRef<HTMLVideoElement>(null);
+  usePlayOnInteraction(videoRef);
   return (
     <section className="relative flex min-h-screen items-center justify-center overflow-hidden">
+      {/* The video's first frame, under it until it plays: the video is 22 MB
+          and starts on the visitor's first interaction (lib/video.ts), where
+          the scene used to be a black screen while a phone buffered it. */}
+      <img
+        className="absolute inset-0 h-full w-full object-cover"
+        src={posterMedium}
+        srcSet={`${posterSmall} 640w, ${posterMedium} 1280w, ${posterLarge} 1624w`}
+        sizes="100vw"
+        alt=""
+        aria-hidden="true"
+        fetchPriority="high"
+        decoding="async"
+      />
       <video
+        ref={videoRef}
         className="absolute inset-0 h-full w-full object-cover"
         src={config.videos.hero}
-        autoPlay
+        preload="none"
         loop
         muted
         playsInline

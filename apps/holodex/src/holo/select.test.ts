@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { CARD_RARITIES } from '../lib/constants';
 import type { Card } from '../lib/tcgdex';
-import { CAPTURED_CARDS } from './effect-gallery.fixture';
+import { CAPTURED_CARDS } from './effect-gallery.cards';
 import {
   EFFECT_BY_RARITY,
   MODERN_EFFECT_BY_RARITY,
@@ -37,7 +37,7 @@ function card(patch: Partial<Card> = {}): Card {
 /*
  * Real cards for the era rule's edges, captured verbatim from
  * `GET https://api.tcgdex.net/v2/en/cards/{id}` on 2026-09-24 and trimmed as
- * effect-gallery.fixture.ts trims its own: Ho-Oh and Charizard from the two
+ * effect-gallery.cards.ts trims its own: Ho-Oh and Charizard from the two
  * Mega sets whose ids do not start with `me`, and Accelgor, a Rare from
  * before Scarlet & Violet.
  */
@@ -1302,7 +1302,7 @@ describe('selectHolo — 151 reverse holos', () => {
 describe('selectHolo — the Poké Ball reverses TCGdex lists', () => {
   /*
    * Real cards, captured verbatim from `GET /v2/en/cards/{id}` on 2026-09-25
-   * and trimmed as effect-gallery.fixture.ts trims its own, variants_detailed
+   * and trimmed as effect-gallery.cards.ts trims its own, variants_detailed
    * down to each printing's type and foil. Exeggcute and Amarys are from
    * Prismatic Evolutions, whose every Common, Uncommon and Rare lists a
    * Poké Ball reverse, and whose Pokémon list a Master Ball one besides.

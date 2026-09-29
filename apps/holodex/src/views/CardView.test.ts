@@ -1,6 +1,6 @@
 import { createElement } from 'react';
 import { describe, expect, it } from 'vitest';
-import { CAPTURED_CARDS } from '../holo/effect-gallery.fixture';
+import { CAPTURED_CARDS } from '../holo/effect-gallery.cards';
 import { CardView } from './CardView';
 import { dataEffects, renderView } from './render-view.test-util';
 

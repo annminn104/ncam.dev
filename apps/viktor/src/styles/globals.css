@@ -33,13 +33,13 @@
   }
 }
 
+/* No fade: the name it reveals is the page's largest text, its LCP, and Chrome
+   does not count text first painted at opacity 0 until something repaints it. */
 @keyframes revealUp {
   from {
-    opacity: 0;
     transform: translateY(80px);
   }
   to {
-    opacity: 1;
     transform: translateY(0);
   }
 }
@@ -68,19 +68,14 @@
 }
 
 /* ── Reveal animation helpers ────────────────────────────────────────── */
+/* From the first paint, not from a script: the hero is the whole page, so it is
+   always in view on load, and a reveal gated on hydration left the name and
+   copy invisible until the JavaScript arrived (seconds, on a phone). Each
+   element's `animation-delay` staggers them (inline, in Hero.tsx). */
 .reveal-up {
-  opacity: 0;
-  transform: translateY(80px);
-}
-.reveal-up.is-visible {
   animation: revealUp 0.9s var(--ease-spring) both;
 }
-
 .reveal-right {
-  opacity: 0;
-  transform: translateX(100px);
-}
-.reveal-right.is-visible {
   animation: revealRight 0.9s var(--ease-spring) both;
 }
 
@@ -153,11 +148,6 @@
 
   .reveal-up,
   .reveal-right {
-    opacity: 1;
-    transform: none;
-  }
-  .reveal-up.is-visible,
-  .reveal-right.is-visible {
     animation: none;
   }
 }

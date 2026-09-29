@@ -82,6 +82,38 @@ body {
   outline: 2px solid #fff;
   outline-offset: 2px;
 }
+/* Over a remote the pill is the host's only text, so it is set in the system
+   face: Inter would be a 47 KB download sharing the network with the remote's
+   first screen, for one word. */
+.stage__back--over {
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
+}
+/* Over a remote, on a phone: the pill sits on the remote's own header, whose
+   right-hand controls reach past the middle (it covered Mindloop's first social
+   link). There it keeps only the arrow, as a 40px circle, and the label is
+   left to assistive tech, still the link's name. */
+@media (max-width: 767px) {
+  .stage__back--over {
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    padding: 0;
+    font-size: 1rem;
+  }
+  .stage__back--over .stage__back-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
 /* Shown while a client-mounted remote downloads (StageLoading): a spinner in
    the middle of the empty stage, in the theme's own colours. `done` fades it
    out over the remote, then drops it from hit-testing and the accessibility

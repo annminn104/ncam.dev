@@ -1,0 +1,105 @@
+[
+  {
+    "documentId": "lighthouse-fixture-1",
+    "title": "Micro-frontends without the framework tax",
+    "slug": "micro-frontends-without-the-framework-tax",
+    "excerpt": "How a server-rendered host mounts independent remotes at runtime with Module Federation, and what it costs.",
+    "readingTime": 6,
+    "publishedAt": "2026-09-15T08:30:00.000Z",
+    "updatedAt": "2026-09-20T10:00:00.000Z",
+    "cover": null,
+    "tags": [
+      { "name": "Module Federation", "slug": "module-federation" },
+      { "name": "SSR", "slug": "ssr" }
+    ],
+    "seo": {
+      "metaTitle": null,
+      "metaDescription": null,
+      "ogImage": null,
+      "canonicalURL": null,
+      "metaRobots": null
+    },
+    "body": [
+      {
+        "type": "paragraph",
+        "children": [
+          {
+            "type": "text",
+            "text": "Every project on this site is its own Vite app, built and deployed on its own, and mounted into the host at runtime. This post walks through the contract between them."
+          }
+        ]
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "children": [{ "type": "text", "text": "One contract for every remote" }]
+      },
+      {
+        "type": "paragraph",
+        "children": [
+          { "type": "text", "text": "Each remote exposes " },
+          { "type": "text", "text": "mount", "code": true },
+          { "type": "text", "text": ", " },
+          { "type": "text", "text": "ssr", "code": true },
+          { "type": "text", "text": " and " },
+          { "type": "text", "text": "hydrate", "code": true },
+          {
+            "type": "text",
+            "text": ". The host server-renders the first, hydrates it in the browser and hands later navigations to the same instance."
+          }
+        ]
+      },
+      {
+        "type": "list",
+        "format": "unordered",
+        "children": [
+          {
+            "type": "list-item",
+            "children": [
+              {
+                "type": "text",
+                "text": "Remotes own their assets and resolve them against their own origin."
+              }
+            ]
+          },
+          {
+            "type": "list-item",
+            "children": [
+              { "type": "text", "text": "No framework runtime is shared across the boundary." }
+            ]
+          },
+          {
+            "type": "list-item",
+            "children": [
+              { "type": "text", "text": "A failed server render falls back to a client mount." }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "children": [{ "type": "text", "text": "Mounting a remote" }]
+      },
+      {
+        "type": "code",
+        "language": "ts",
+        "children": [
+          {
+            "type": "text",
+            "text": "const { mount } = await import('viktor/mount');\nconst dispose = mount(element, { route: '/' });"
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "children": [
+          {
+            "type": "text",
+            "text": "The handle it returns is a disposer; a route-aware remote also takes route updates without remounting."
+          }
+        ]
+      }
+    ]
+  }
+]

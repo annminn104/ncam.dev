@@ -17,6 +17,18 @@
   }
 }
 
+/* fadeSlideUp without the fade, for the paragraph: it is the page's largest
+   text, its LCP, and Chrome does not count text first painted at opacity 0
+   until something repaints it (the fonts arriving, seconds later). */
+@keyframes slideUp {
+  from {
+    transform: translateY(24px);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
 /* NOTE: no bare `* { margin:0; padding:0 }` reset here — Tailwind v4's preflight
    already does that inside @layer base. An UNLAYERED `*` rule outranks every
    @layer, so it would override all padding/margin utilities (px-*, py-*, m-*…). */

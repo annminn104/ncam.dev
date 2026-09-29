@@ -5,6 +5,9 @@
   "type": "module",
   "description": "Holodex — a Pokémon TCG explorer on the TCGdex API with a WebGL holo card renderer, packaged as a self-contained React Module Federation remote.",
   "scripts": {
+    "assets": "node scripts/download-gallery-art.mjs",
+    "predev": "node scripts/download-gallery-art.mjs",
+    "prebuild": "node scripts/download-gallery-art.mjs",
     "dev": "vite",
     "build": "vite build --app",
     "preview": "vite preview",

@@ -1,10 +1,12 @@
 import { createRootRoute, HeadContent, Outlet, Scripts } from '@tanstack/react-router';
 import type { ReactNode } from 'react';
-// The stylesheet is linked from head() via `?url` (the TanStack Start pattern) so
-// the server-rendered HTML is styled on first paint. A plain side-effect import
-// would only attach the CSS once the client bundle runs (flash of unstyled page).
-// app.css @imports the self-hosted fonts, styles.css (base + stage) and home.css.
-import appCss from '../app.css?url';
+// The stylesheet is inlined into the server-rendered <head> (`?inline`), so the
+// first paint waits on the document alone. As a <link> it was the one
+// render-blocking request on every page, and it cost mobile Lighthouse its
+// first-contentful-paint budget. A plain side-effect import would only attach
+// the CSS once the client bundle runs (a flash of unstyled page). app.css
+// @imports the self-hosted fonts, styles.css (base + stage) and home.css.
+import appCss from '../app.css?inline';
 import { NOT_FOUND_META } from '../lib/not-found';
 import { SITE_IMAGE, socialImageMeta } from '../lib/site';
 import { THEME_COLOR_META, THEME_SCRIPT } from '../lib/theme';
@@ -40,19 +42,30 @@ export const Route = createRootRoute({
       { name: 'twitter:title', content: TITLE },
       { name: 'twitter:description', content: DESCRIPTION },
     ],
-    links: [
-      { rel: 'stylesheet', href: appCss },
-      { rel: 'icon', href: '/favicon.svg', type: 'image/svg+xml' },
-    ],
+    links: [{ rel: 'icon', href: '/favicon.svg', type: 'image/svg+xml' }],
   }),
   component: RootComponent,
 });
+
+/**
+ * The site's stylesheet, on the server only. The root document is only ever
+ * hydrated, never rendered fresh on the client, and React leaves a hydrated
+ * element's server innerHTML alone while its `__html` stays the same, so the
+ * client can pass an empty string and keep the ~40 KB of CSS out of its bundle.
+ */
+const APP_CSS = import.meta.env.SSR ? appCss : '';
 
 function RootDocument({ children }: { children: ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
         <HeadContent />
+        {/* After HeadContent, so <meta charset> stays in the first 1024 bytes. */}
+        <style
+          id="app-css"
+          dangerouslySetInnerHTML={{ __html: APP_CSS }}
+          suppressHydrationWarning
+        />
         {/* Sets <html data-theme> for a returning visitor and retints the
             `theme-color` meta. A synchronous script in <head> runs while the
             document is still being parsed, so both land before anything paints —

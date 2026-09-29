@@ -7,7 +7,13 @@
  */
 
 export interface ToonHubItem {
-  src: string;
+  /**
+   * The figurine, as a path without width or extension: it is published as
+   * `<image>-<width>.webp` for every width in `FIGURINE_WIDTHS`
+   * (hero-template.ts), which `scripts/download-assets.mjs` derives from the
+   * PNG source in `assets/figurines/`.
+   */
+  image: string;
   bg: string;
   panel: string;
   name: string;
@@ -62,6 +68,11 @@ export interface ToonHubAccessibilityConfig {
   autoplayPlayLabel: string;
   muteLabel: string;
   unmuteLabel: string;
+  /**
+   * What the CTA leads to, read after its visible label ("DISCOVER IT,
+   * TOONHUB figurines"). An addition rather than a replacement: an accessible
+   * name must contain the visible label (WCAG 2.5.3, Label in Name).
+   */
   discoverLabel: string;
   slideAnnouncementTemplate: string;
 }
@@ -115,11 +126,11 @@ export interface ToonHubConfig {
   logging?: ToonHubLoggingConfig;
 }
 
-// Images are self-hosted from `public/figurines/`. Run `npm run assets` to
-// download them from source (also runs automatically before `dev` / `build`).
+// Images are self-hosted from `public/figurines/`, derived from the PNG sources
+// in `assets/figurines/` by `pnpm assets` (which also runs before `dev` / `build`).
 const items: ToonHubItem[] = [
   {
-    src: '/figurines/01.png',
+    image: '/figurines/01',
     bg: '#F4845F',
     panel: '#F79B7F',
     name: 'Solar Scout',
@@ -128,7 +139,7 @@ const items: ToonHubItem[] = [
     alt: 'Orange TOONHUB collectible figurine',
   },
   {
-    src: '/figurines/02.png',
+    image: '/figurines/02',
     bg: '#6BBF7A',
     panel: '#85CC92',
     name: 'Forest Runner',
@@ -137,7 +148,7 @@ const items: ToonHubItem[] = [
     alt: 'Green TOONHUB collectible figurine',
   },
   {
-    src: '/figurines/03.png',
+    image: '/figurines/03',
     bg: '#E882B4',
     panel: '#ED9DC4',
     name: 'Candy Dreamer',
@@ -146,7 +157,7 @@ const items: ToonHubItem[] = [
     alt: 'Pink TOONHUB collectible figurine',
   },
   {
-    src: '/figurines/04.png',
+    image: '/figurines/04',
     bg: '#6EB5FF',
     panel: '#8DC4FF',
     name: 'Sky Surfer',
@@ -204,7 +215,7 @@ export const toonHubConfig: ToonHubConfig = {
     autoplayPlayLabel: 'Resume automatic slide rotation',
     muteLabel: 'Mute background music',
     unmuteLabel: 'Play background music',
-    discoverLabel: 'Discover TOONHUB figurines',
+    discoverLabel: 'TOONHUB figurines',
     slideAnnouncementTemplate: 'Showing figurine {current} of {total}: {name}',
   },
   responsive: {

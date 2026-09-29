@@ -1,4 +1,5 @@
 import type { ToonHubConfig } from './data/toonhub';
+import { CENTER_SIZES, FALLBACK_WIDTH, SIDE_SIZES, figurineSrcset } from './figurines';
 
 // Framework-free Lucide icons, inlined as raw SVG at build time.
 import arrowLeftIcon from 'lucide-static/icons/arrow-left.svg?raw';
@@ -7,6 +8,9 @@ import volume2Icon from 'lucide-static/icons/volume-2.svg?raw';
 import volumeXIcon from 'lucide-static/icons/volume-x.svg?raw';
 import pauseIcon from 'lucide-static/icons/pause.svg?raw';
 import playIcon from 'lucide-static/icons/play.svg?raw';
+
+/** Entry delay of a figurine, in multiples of `--toon-entry-delay`, by its first role. */
+const ENTER_STEP: Record<string, number> = { center: 1, left: 2, right: 2.5, back: 3 };
 
 /** Escape a value for safe use inside a double-quoted HTML attribute or text. */
 function esc(value: string): string {
@@ -141,13 +145,22 @@ export function renderHeroHTML(config: ToonHubConfig): string {
   const slides = items
     .map((item, i) => {
       const role = roleFor(i);
+      const center = role === 'center';
+      // The centre figurine is the page's LCP: fetched first, at its size. The
+      // rest start small (SIDE_SIZES) and are widened by the controller.
+      const sizes = center ? CENTER_SIZES : SIDE_SIZES;
       return (
         `<figure class="toon-item" data-toonhub-item data-index="${i}" data-role="${role}" ` +
-        `aria-roledescription="slide" aria-hidden="${role === 'center' ? 'false' : 'true'}" ` +
-        `aria-label="${esc(`${item.name}, ${item.category}, edition ${item.edition}`)}">` +
-        '<div class="toon-item__tilt">' +
-        `<img src="${esc(item.src)}" alt="${esc(item.alt)}" draggable="false" loading="eager" decoding="async" />` +
-        '</div></figure>'
+        `aria-roledescription="slide" aria-hidden="${center ? 'false' : 'true'}" ` +
+        `aria-label="${esc(`${item.name}, ${item.category}, edition ${item.edition}`)}" ` +
+        `style="--enter:${ENTER_STEP[role] ?? 3}">` +
+        '<div class="toon-item__tilt"><picture>' +
+        `<source type="image/avif" srcset="${esc(figurineSrcset(item.image, 'avif'))}" sizes="${sizes}" />` +
+        `<img src="${esc(`${item.image}-${FALLBACK_WIDTH}.webp`)}" ` +
+        `srcset="${esc(figurineSrcset(item.image, 'webp'))}" sizes="${sizes}" ` +
+        `alt="${esc(item.alt)}" draggable="false" loading="eager" ` +
+        `fetchpriority="${center ? 'high' : 'low'}" decoding="async" />` +
+        '</picture></div></figure>'
       );
     })
     .join('');
@@ -204,8 +217,11 @@ export function renderHeroHTML(config: ToonHubConfig): string {
     : '';
 
   const cta =
-    `<a class="toon-cta" href="${esc(copy.ctaHref)}" data-cta aria-label="${esc(accessibility.discoverLabel)}">` +
+    `<a class="toon-cta" href="${esc(copy.ctaHref)}" data-cta>` +
     `<span class="toon-cta__label">${esc(copy.ctaLabel)}</span>` +
+    // Context for screen readers after the visible label, which stays part of
+    // the accessible name (an aria-label replaced it: label-content-name-mismatch).
+    `<span class="toon-sr-only">, ${esc(accessibility.discoverLabel)}</span>` +
     `<span class="toon-cta__arrow" aria-hidden="true">${arrowRightIcon}</span>` +
     '</a>';
 

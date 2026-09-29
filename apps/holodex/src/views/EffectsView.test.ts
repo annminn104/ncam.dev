@@ -1,7 +1,7 @@
 import { createElement } from 'react';
 import { describe, expect, it } from 'vitest';
 import { EFFECT_GALLERY, ERA_QUALIFIER } from '../holo/effect-gallery';
-import { CAPTURED_CARDS } from '../holo/effect-gallery.fixture';
+import { CAPTURED_CARDS } from '../holo/effect-gallery.cards';
 import { MODERN_EFFECT_BY_RARITY, type EffectId } from '../holo/select';
 import { CARD_RARITIES } from '../lib/constants';
 import { cardImageBase } from '../lib/images';
@@ -249,21 +249,33 @@ describe('EffectsView — basic’s note', () => {
 });
 
 describe('EffectsView — loading, one tile at a time', () => {
-  it('lets a card still loading cost its own tile, never its section or the live card', () => {
+  /** The skeleton a tile shows with neither TCGdex's card nor a captured one. */
+  const SKELETON = 'block animate-pulse rounded-lg bg-holo-panel';
+
+  it('shows a card still loading as captured, the live one included', () => {
     const [first, second] = EFFECT_GALLERY;
     const slow = second.cardIds[1];
     const loaded = ALL_CARDS.filter((card) => card.id !== slow);
     const html = renderPage({}, loaded);
     const all = tiles(html);
     expect(all).toHaveLength(CARD_IDS.size);
-    expect(all.filter((t) => !/<img\b/.test(t.inner)).map((t) => t.cardId)).toEqual([slow]);
+    // Its art, from the captured copy: no tile waits on TCGdex for a skeleton.
+    expect(all.filter((t) => !/<img\b/.test(t.inner)).map((t) => t.cardId)).toEqual([]);
     expect(dataEffects(html)).toEqual([first.effect]);
 
-    // A live card still loading renders its skeleton, and no other card goes
-    // live in its place.
+    // A live card still loading draws its foil from the captured copy, and no
+    // other card goes live in its place.
     const waiting = renderPage({ effect: second.effect, card: slow }, loaded);
-    expect(dataEffects(waiting)).toEqual([]);
+    expect(dataEffects(waiting)).toEqual([second.effect]);
     expect(pressedCards(waiting)).toEqual([slow]);
+  });
+
+  it('renders the whole gallery from its captured cards, as the server does, with nothing loaded', () => {
+    const html = renderPage();
+    const all = tiles(html);
+    expect(all).toHaveLength(CARD_IDS.size);
+    expect(html).not.toContain(SKELETON);
+    expect(dataEffects(html)).toEqual([EFFECT_GALLERY[0].effect]);
   });
 });
 
@@ -321,9 +333,11 @@ describe('EffectsView — a tile going live keeps the art it showed', () => {
   it('draws the live card on the grid’s own low-res art while its scene loads, not a high-res one', () => {
     // The high-res art started blank, or blurred, and the tile blinked
     // before its foil appeared. The scene still draws the high-res texture.
+    // (The first section's low-res art is this remote's own copy of it,
+    // /gallery/<id>.webp: the page's first screen, see lib/gallery-art.ts.)
     for (const [effect, card] of SELECTIONS.slice(0, 6)) {
       const live = tiles(livePage(effect, card)).find((tile) => tile.pressed);
-      expect(live?.inner, card).toMatch(/src="[^"]*\/low\.webp"/);
+      expect(live?.inner, card).toMatch(/src="[^"]*(?:\/low\.webp|\/gallery\/[^"/]+\.webp)"/);
       expect(live?.inner, card).not.toMatch(/\/high\.(?:webp|png)/);
     }
   });
@@ -340,5 +354,20 @@ describe('EffectsView — a tile asks for its card only once its section is near
       enabled: false,
     });
     expect(tileQuery(cardId, true).enabled).toBe(true);
+  });
+});
+
+describe('EffectsView — the first screen’s art comes from this remote', () => {
+  it('serves the first section’s art from /gallery, and every later tile’s from TCGdex', () => {
+    const html = renderPage({}, ALL_CARDS);
+    const [first, ...rest] = sections(html);
+    for (const tile of first!.tiles) {
+      expect(tile.inner, tile.cardId).toMatch(
+        new RegExp(`src="[^"]*/gallery/${tile.cardId}\\.webp"`),
+      );
+    }
+    for (const tile of rest.flatMap((section) => section.tiles)) {
+      expect(tile.inner, tile.cardId).not.toContain('/gallery/');
+    }
   });
 });

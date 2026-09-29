@@ -1,5 +1,6 @@
 import { createLogger, type Logger, type LogLevel } from '@ncam/logger';
 import type { ToonHubAudioConfig, ToonHubConfig, ToonHubLoggingConfig } from './data/toonhub';
+import { CENTER_SIZES } from './figurines';
 
 /**
  * TOONHUB carousel controller.
@@ -420,7 +421,7 @@ class ToonHubCarousel {
     this.updateAutoplay();
     this.setupObserver();
     this.attachListeners();
-    this.runEntry();
+    this.widenFigurines();
 
     this.log('init', {
       index: this.activeIndex,
@@ -447,6 +448,22 @@ class ToonHubCarousel {
     this.audio?.destroy();
     this.audio = null;
     delete this.root.dataset.initialized;
+  }
+
+  /**
+   * The side figurines were fetched small for the first paint (SIDE_SIZES, see
+   * figurines.ts); from the page's load on, every one asks for its centre
+   * size, ready for its turn there.
+   */
+  private widenFigurines(): void {
+    const widen = () => {
+      const nodes = this.root.querySelectorAll<HTMLImageElement | HTMLSourceElement>(
+        '[data-toonhub-item] source, [data-toonhub-item] img',
+      );
+      for (const node of nodes) node.sizes = CENTER_SIZES;
+    };
+    if (document.readyState === 'complete') widen();
+    else window.addEventListener('load', widen, { once: true, signal: this.ac.signal });
   }
 
   private clearTimer(id: number | null): void {
@@ -1082,17 +1099,7 @@ class ToonHubCarousel {
     this.log('easter-egg', { state: 'end' });
   }
 
-  /* --------------------------- entry --------------------------- */
-
-  private runEntry(): void {
-    if (this.reducedMotion) return; // stay visible, no motion
-    this.root.dataset.js = 'true';
-    requestAnimationFrame(() =>
-      requestAnimationFrame(() => {
-        if (!this.destroyed) this.root.dataset.entered = 'true';
-      }),
-    );
-  }
+  // The entrance is hero.css's own (keyframes from the first paint), not the controller's.
 }
 
 export { ToonHubCarousel };

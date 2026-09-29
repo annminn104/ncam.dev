@@ -46,6 +46,7 @@ crawlers), and a `<noscript>` override in `App.tsx` reveals it for no-JS users.
   base layer, and `.liquid-glass`.
 - `src/components/ui/*` — small shadcn-style `Button` (cva) + `Input`.
 - `src/lib/utils.ts` — `cn()` (clsx + tailwind-merge).
+- `src/lib/video.ts` — when each background video starts (after load / when near).
 - `src/fonts.ts` — `@fontsource` imports (bundled/injected on mount).
 - `src/mount.tsx` / `src/ssr.tsx` / `src/hydrate.tsx` — the three federated
   entries. `src/standalone.tsx` + `index.html` — standalone dev preview
@@ -70,6 +71,17 @@ crawlers), and a `<noscript>` override in `App.tsx` reveals it for no-JS users.
   tokens. Italic accent words use `font-serif` (Instrument Serif).
 - Videos are external (CloudFront MP4s + a Mux HLS stream); CTA uses `hls.js`
   with a native-HLS fallback (`canPlayType('application/vnd.apple.mpegurl')`).
+- **No video loads with the page** (`src/lib/video.ts`): each is `preload="none"`
+  without `autoPlay`. The hero's starts on the visitor's first interaction (a
+  mouse move is enough; never under reduced motion), over its poster
+  (`src/assets/hero-poster-*.webp`, the video's first frame, as a `srcset`
+  image under it); the three below the fold start when the visitor scrolls
+  near them, the CTA's HLS stream (and hls.js) included. Autoplaying all four
+  together kept a phone's first screen black for ~10 s, and a video playing
+  from the first second keeps the screen changing, which Speed Index counts.
+- Imported assets (the posters) resolve against this remote's own origin, in
+  the host page too: `defineRemote()`'s `renderBuiltUrl` names them from
+  `import.meta.url`.
 - **Avatars + platform icons are inline monochrome SVG placeholders** (in
   `App.tsx`), not PNGs — this keeps assets working across standalone + federated
   mounting (no cross-origin `/asset.png` resolution problem). Swap for real brand

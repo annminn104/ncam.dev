@@ -12,11 +12,12 @@ const imgWithSrc = (url: string) =>
   new RegExp(`<img[^>]*src="${url.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`);
 
 describe('SetLogo', () => {
-  it('fades the logo in over a blurred placeholder', () => {
+  it('puts the logo over a blurred placeholder, shown as it arrives in the server’s markup', () => {
     const html = render({ id: 'swsh3', logo: LOGO, symbol: SYMBOL });
     expect(html).toMatch(imgWithSrc(`${LOGO}.webp`));
     expect(html).toMatch(/<span[^>]*data-placeholder="blur"[^>]*aria-hidden="true"/);
-    expect(html).toContain('opacity-0');
+    // It fades in only once mounted, and only if still loading then.
+    expect(html).not.toContain('opacity-0');
   });
 
   it('shows the symbol for a set without a logo', () => {
