@@ -1,0 +1,78 @@
+/* The @font-face rules: imported by src/fonts.ts on the client (standalone and
+   ./mount) and inlined by ./ssr with the host's copy of the page, so a server
+   render asks for its fonts on first paint rather than after ./hydrate. */
+@import '@fontsource/inter/400.css';
+@import '@fontsource/inter/500.css';
+@import '@fontsource/inter/600.css';
+@import '@fontsource/inter/700.css';
+@import '@fontsource/instrument-serif/400.css';
+@import '@fontsource/instrument-serif/400-italic.css';
+
+/* What the stacks show while those download: Arial / Times New Roman
+   (Liberation on Linux) resized and re-spaced to each face's average glyph
+   width, ascent and descent (next/font's formula over @capsizecss/metrics), so
+   the swap moves no text. The hero is centred on the screen, so a headline
+   that re-wraps when its font lands moves everything. */
+@font-face {
+  font-family: 'Inter Fallback';
+  src: local('Arial'), local('ArialMT'), local('Liberation Sans'), local('LiberationSans');
+  font-weight: 400;
+  size-adjust: 107.12%;
+  ascent-override: 90.44%;
+  descent-override: 22.52%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'Inter Fallback';
+  src: local('Arial'), local('ArialMT'), local('Liberation Sans'), local('LiberationSans');
+  font-weight: 500;
+  size-adjust: 108.21%;
+  ascent-override: 89.52%;
+  descent-override: 22.29%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'Inter Fallback';
+  src:
+    local('Arial Bold'), local('Arial-BoldMT'), local('Liberation Sans Bold'),
+    local('LiberationSans-Bold');
+  font-weight: 600;
+  size-adjust: 101.53%;
+  ascent-override: 95.42%;
+  descent-override: 23.76%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'Inter Fallback';
+  src:
+    local('Arial Bold'), local('Arial-BoldMT'), local('Liberation Sans Bold'),
+    local('LiberationSans-Bold');
+  font-weight: 700;
+  size-adjust: 102.54%;
+  ascent-override: 94.47%;
+  descent-override: 23.52%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'Instrument Serif Fallback';
+  src:
+    local('Times New Roman'), local('TimesNewRomanPSMT'), local('Liberation Serif'),
+    local('LiberationSerif');
+  font-weight: 400;
+  size-adjust: 83.94%;
+  ascent-override: 117.94%;
+  descent-override: 36.93%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'Instrument Serif Fallback';
+  src:
+    local('Times New Roman Italic'), local('TimesNewRomanPS-ItalicMT'),
+    local('Liberation Serif Italic'), local('LiberationSerif-Italic');
+  font-weight: 400;
+  font-style: italic;
+  size-adjust: 87.95%;
+  ascent-override: 112.57%;
+  descent-override: 35.25%;
+  line-gap-override: 0%;
+}

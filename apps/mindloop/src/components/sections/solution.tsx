@@ -1,10 +1,15 @@
+import { useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useFade } from '../../lib/motion';
+import { play, useWhenNear } from '../../lib/video';
 import { mindloopConfig as config } from '../../data/mindloop';
 
 export function Solution() {
   const { label, features } = config.solution;
   const fade = useFade();
+  const videoRef = useRef<HTMLVideoElement>(null);
+  // Below the fold: it loads only once the visitor scrolls near it (lib/video.ts).
+  useWhenNear(videoRef, play);
   return (
     <section className="border-t border-border/30 px-6 py-32 md:py-44">
       <div className="mx-auto max-w-6xl">
@@ -16,10 +21,11 @@ export function Solution() {
         </motion.h2>
 
         <motion.video
+          ref={videoRef}
           {...fade(0.2)}
           className="mt-12 aspect-[3/1] w-full rounded-2xl object-cover"
           src={config.videos.solution}
-          autoPlay
+          preload="none"
           loop
           muted
           playsInline

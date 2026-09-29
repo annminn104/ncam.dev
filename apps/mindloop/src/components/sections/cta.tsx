@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useRef } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
 import { cn } from '../../lib/utils';
@@ -6,33 +6,35 @@ import { useFade } from '../../lib/motion';
 import { buttonVariants } from '../ui/button';
 import { ConcentricLogo } from '../common/concentric-logo';
 import { mindloopConfig as config } from '../../data/mindloop';
+import { useWhenNear } from '../../lib/video';
+
+/** Attaches the HLS stream to `video`, which autoplays it; returns the teardown. */
+function attachStream(video: HTMLVideoElement): () => void {
+  let hls: { destroy(): void } | undefined;
+  let cancelled = false;
+  if (video.canPlayType('application/vnd.apple.mpegurl')) {
+    video.src = config.videos.ctaHls; // native HLS (Safari)
+  } else {
+    // Lazy-load hls.js on the client only — keeps the SSR entry importable.
+    void import('hls.js').then(({ default: Hls }) => {
+      if (cancelled || !Hls.isSupported()) return;
+      const inst = new Hls();
+      inst.loadSource(config.videos.ctaHls);
+      inst.attachMedia(video);
+      hls = inst;
+    });
+  }
+  return () => {
+    cancelled = true;
+    hls?.destroy();
+  };
+}
 
 export function CTA() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const fade = useFade();
-
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
-    let hls: { destroy(): void } | undefined;
-    let cancelled = false;
-    if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      video.src = config.videos.ctaHls; // native HLS (Safari)
-    } else {
-      // Lazy-load hls.js on the client only — keeps the SSR entry importable.
-      void import('hls.js').then(({ default: Hls }) => {
-        if (cancelled || !Hls.isSupported()) return;
-        const inst = new Hls();
-        inst.loadSource(config.videos.ctaHls);
-        inst.attachMedia(video);
-        hls = inst;
-      });
-    }
-    return () => {
-      cancelled = true;
-      hls?.destroy();
-    };
-  }, []);
+  // The last section: its stream (and hls.js) waits until the visitor nears it.
+  useWhenNear(videoRef, attachStream);
 
   return (
     <section className="relative overflow-hidden border-t border-border/30 py-32 md:py-44">
