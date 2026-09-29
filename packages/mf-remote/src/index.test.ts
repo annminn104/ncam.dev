@@ -45,6 +45,20 @@ describe('defineRemote()', () => {
     expect(federation).toHaveBeenLastCalledWith(expect.objectContaining({ dts: false }));
   });
 
+  it('names imported assets from the module’s own URL, not the page’s', () => {
+    // In the host page a root-relative /assets/… resolves against the host.
+    type Render = (
+      filename: string,
+      context: { hostType: 'js' | 'css' | 'html' },
+    ) => { runtime: string } | undefined;
+    const render = remote().experimental?.renderBuiltUrl as unknown as Render;
+    expect(render('assets/poster-Ab12.webp', { hostType: 'js' })).toEqual({
+      runtime: 'new URL("/assets/poster-Ab12.webp", import.meta.url).href',
+    });
+    // A stylesheet's own url()s already resolve against the stylesheet.
+    expect(render('assets/font-Cd34.woff2', { hostType: 'css' })).toBeUndefined();
+  });
+
   it('keeps the SSR build output out of the dev server’s watcher', () => {
     // Vite ignores the client outDir (dist) by itself, but not the ssr
     // environment's, so a build flooded every dev server watching the app.
