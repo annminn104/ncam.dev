@@ -17,7 +17,7 @@ lucide-react, packaged as a **self-contained** React Module Federation remote.
 
 ## Structure
 
-- `src/App.tsx` — root container; holds `activeIndex` state + video preload (blob URLs);
+- `src/App.tsx` — root container; holds `activeIndex` state + starts the videos on first interaction;
   renders `<Navbar>` + `<Hero>`.
 - `src/components/Navbar.tsx` — desktop nav (numbered links, email, live clock) + mobile
   hamburger with CSS grid expand/collapse panel.
@@ -40,10 +40,19 @@ lucide-react, packaged as a **self-contained** React Module Federation remote.
   a valid JS identifier, so no underscore/kebab split like the other remotes).
 - Slide 0 accent = `#F598F2` (pink); slides 1-2 accent = white. Both the availability
   dot glow and the "." in the name track `activeIndex`.
-- Videos are preloaded as blob URLs on mount for instant crossfade. Original CDN
-  URLs are used until blobs resolve.
-- Reveal animations (`revealUp`, `revealRight`) are triggered once via
-  `IntersectionObserver` (threshold 0.35); disabled under `prefers-reduced-motion`.
+- All three videos play, hidden ones included, so a switch crossfades between
+  videos already in motion. They are `preload="none"` without `autoPlay` and
+  start on the visitor's first interaction (a mouse move is enough; never under
+  reduced motion), over the first one's poster
+  (`src/assets/water-wave-poster-*.webp`, its first frame, as a `srcset` image
+  under them). No blob preload: it fetched all 38 MB a second time. Imported
+  assets resolve against this remote's origin (`defineRemote()`'s
+  `renderBuiltUrl`).
+- Reveal animations (`revealUp`, `revealRight`) run from the first paint, pure
+  CSS (the hero is the whole page, always in view on load), staggered by each
+  element's inline `animation-delay`; disabled under `prefers-reduced-motion`.
+  `revealUp` (the name, the page's LCP) rises without fading: Chrome does not
+  count text first painted at opacity 0 until something repaints it.
 - CTA button fill uses a `::before` translateY trick (class `.cta-btn`); the label
   inside needs class `cta-btn-label` for the color transition to black on hover.
 

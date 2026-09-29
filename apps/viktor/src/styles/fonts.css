@@ -1,0 +1,6 @@
+/* The @font-face rules: imported by src/fonts.ts on the client (standalone and
+   ./mount) and inlined by ./ssr with the host's copy of the page, so a server
+   render asks for its fonts on first paint rather than after ./hydrate. */
+@import '@fontsource/figtree/400.css';
+@import '@fontsource/figtree/500.css';
+@import '@fontsource/figtree/600.css';
