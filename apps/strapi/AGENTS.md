@@ -67,10 +67,11 @@ instead, via `autoOpen: false` in `config/admin.ts`.
 - `src/api/health/` — `GET /api/health`, public through `auth: false` (no
   role permission): 200 `{ status, database, uptime }` when a `select 1`
   answers, 503 when it does not, never the error itself, and always
-  `Cache-Control: no-store`. An external uptime monitor requests it every 5
-  minutes to keep the free service awake, and the keep-awake workflow is the
-  backstop (`docs/deployment.md`). Strapi's `/_health` stays for Render's
-  deploy health check (`render.yaml`).
+  `Cache-Control: no-store`. The keep-awake workflow requests it every 5
+  minutes to keep the free service awake: a relay of ~5 h 40 min runs that
+  each dispatch the next, because GitHub delivers a schedule only every few
+  hours (`docs/deployment.md`). Strapi's `/_health` stays for Render's deploy
+  health check (`render.yaml`).
 - Unit tests sit next to the code (`*.test.ts`, run by the root Vitest); they
   use a fake `strapi` object, never a database.
 
