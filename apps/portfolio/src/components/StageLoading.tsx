@@ -1,16 +1,17 @@
 import type { ProjectEntry } from '@ncam/project-registry';
 
 export interface StageLoadingProps {
-  project: Pick<ProjectEntry, 'name' | 'tagline' | 'thumbnail'>;
+  project: Pick<ProjectEntry, 'name'>;
   /** The remote has attached: fade out (styles.css), staying in the DOM for the fade. */
   done: boolean;
 }
 
 /**
- * What the stage shows while a client-mounted remote downloads: the project's
- * own 1200×630 screenshot, blurred and dimmed, under its name and tagline, so
- * entering `/projects/<id>` never paints a blank page. An SSR entry already
- * carries the remote's markup and never renders this (see ProjectStage).
+ * What the stage shows while a client-mounted remote downloads: a spinner in
+ * the middle of the empty stage, so entering `/projects/<id>` never paints a
+ * blank page. Screen readers hear "Loading <name>…" instead; the text is
+ * visually hidden. An SSR entry already carries the remote's markup and never
+ * renders this (see ProjectStage).
  *
  * `done` hides it with CSS (opacity, then visibility) instead of unmounting it,
  * so the remote fades in underneath rather than popping in.
@@ -25,23 +26,8 @@ export function StageLoading({ project, done }: StageLoadingProps) {
       role="status"
       aria-live="polite"
     >
-      {project.thumbnail ? (
-        <img
-          className="stage__loading-backdrop"
-          src={project.thumbnail}
-          alt=""
-          width={1200}
-          height={630}
-          decoding="async"
-          // The largest thing on a client-mounted entry's first paint.
-          fetchPriority="high"
-        />
-      ) : null}
-      <div className="stage__loading-card">
-        <span className="stage__spinner" aria-hidden="true" />
-        <p className="stage__loading-title">{`Loading ${name}…`}</p>
-        <p className="stage__loading-tagline">{project.tagline}</p>
-      </div>
+      <span className="stage__spinner" aria-hidden="true" />
+      <span className="stage__loading-label">{`Loading ${name}…`}</span>
     </div>
   );
 }

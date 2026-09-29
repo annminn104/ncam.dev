@@ -53,9 +53,10 @@ own six sections (the `profile` remote) on `/`. React 19.
     `{ html, css }` (`<style>` + `dangerouslySetInnerHTML`), then a
     `useEffect` calls `import('<remote>/hydrate')` → `hydrate(el, config)`.
     No-SSR path: `import('<remote>/mount')` → `mount(el, config)`, and until
-    it attaches the stage shows `components/StageLoading.tsx`: the project's
-    registry thumbnail, blurred under a scrim, with "Loading <name>…" and its
-    tagline (`role="status"`, the mount node `aria-busy`). It renders on the
+    it attaches the stage shows `components/StageLoading.tsx`: a spinner in
+    the theme's colours, nothing else on screen, with a visually hidden
+    "Loading <name>…" as its `role="status"` text (the mount node
+    `aria-busy`). It renders on the
     server too, so an SSR that fell back never paints a blank page, and it
     fades out (CSS, `data-state="done"`) once the remote attaches; an error
     replaces it. The SSR path never shows it. `config` is

@@ -182,9 +182,9 @@ export function ProjectStage({ projectId, html, css, route }: ProjectStageProps)
   }
 
   // A client-mounted entry (client navigation, or an SSR that fell back) starts
-  // with an empty stage while the remote downloads, so it shows the project's
-  // screenshot and name until the remote attaches. The server renders the same
-  // screen, so hydration matches and a fallback's first paint is never blank.
+  // with an empty stage while the remote downloads, so it shows a spinner
+  // until the remote attaches. The server renders the same screen, so
+  // hydration matches and a fallback's first paint is never blank.
   // An SSR entry already has the remote's markup and skips it.
   const clientMounted = !entry.html && project.status === 'live' && !error;
   const loading = clientMounted && attached !== project.id;
