@@ -16,7 +16,7 @@ import { SectionHead } from './section-head';
  */
 export function TechStacks() {
   const marqueeRef = useRef<HTMLDivElement>(null);
-  const gridRef = useRevealChildren<HTMLDivElement>({ y: 44, stagger: 0.06 });
+  const gridRef = useRevealChildren<HTMLUListElement>({ y: 44, stagger: 0.06 });
   const total = stackCategories.length;
 
   useGsap(({ finePointer }) => {
@@ -115,9 +115,10 @@ export function TechStacks() {
       </div>
 
       <div className="sec__inner">
-        <div ref={gridRef} className="stacks__grid" role="list" aria-label="Tech stack areas">
+        {/* A real list: an <article> may not take role="listitem" (axe's aria-allowed-role). */}
+        <ul ref={gridRef} className="stacks__grid" aria-label="Tech stack areas">
           {stackCategories.map((category) => (
-            <article key={category.title} className="stack-card" role="listitem">
+            <li key={category.title} className="stack-card">
               <span className="stack-card__spot" aria-hidden="true" />
               <h3 className="stack-card__title">{category.title}</h3>
               <ul className="stack-card__chips" aria-label={category.title}>
@@ -127,9 +128,9 @@ export function TechStacks() {
                   </li>
                 ))}
               </ul>
-            </article>
+            </li>
           ))}
-        </div>
+        </ul>
       </div>
     </section>
   );

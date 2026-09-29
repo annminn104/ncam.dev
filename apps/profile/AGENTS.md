@@ -81,6 +81,11 @@ manifest rail on the host shows the real lifecycle of each module.
 Same as `apps/bali`: everything through `useGsap()`, `fromTo` with the markup as
 the end state, stagger `wrapper.children` (never ref arrays).
 
+The hero's entrance is the exception: CSS keyframes that start with the first
+paint (`heroChar` / `heroIntro` in `profile.css`, per-glyph `--i`/`--side` and
+per-block `--n` from `hero.tsx`), never a GSAP timeline gated on hydration. Its
+copy is the home page's LCP, so nothing may keep it hidden until a script runs.
+
 Card grids (stacks, projects) share one idiom: `useRevealChildren()` staggers
 them in, and on a fine pointer each card tilts with `gsap.quickTo` on
 `rotationX/Y` while a `--mx/--my` spotlight follows the cursor. GSAP owns
