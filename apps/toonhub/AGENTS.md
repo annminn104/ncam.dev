@@ -55,8 +55,15 @@ never import the controller or `window`). `./hydrate` and `./mount` are client-o
   (no `hero.css` side-effect — the host inlined it from `./ssr`).
 - `src/standalone.ts` + `index.html` — run this remote on its own for dev
   (`pnpm --filter @ncam/toonhub dev`, port 9001).
-- `public/` + `scripts/download-assets.mjs` — figurine images (self-hosted; run
-  `pnpm --filter @ncam/toonhub assets`, also runs on predev/prebuild).
+- `assets/figurines/*.png` + `scripts/download-assets.mjs` — the figurine
+  sources (2160×2880, committed; the script fetches any that are missing) and
+  what the page serves from them: `public/figurines/<n>-<width>.avif` / `.webp`
+  at every width in `src/figurines.ts`, derived with sharp (not committed). Run
+  `pnpm --filter @ncam/toonhub assets`; it also runs on predev/prebuild.
+- `src/figurines.ts` — published widths and formats, and the `sizes` the
+  figurines are picked with: the centre one (the page's LCP) at its drawn size
+  with `fetchpriority="high"`, the side ones small until the controller widens
+  them all once the page has loaded (each takes the centre in turn).
 
 ## Rules
 
@@ -69,6 +76,13 @@ never import the controller or `window`). `./hydrate` and `./mount` are client-o
   remote origin in `mount.ts` (`withAssetBase`), never the host.
 - **Controller is self-cleaning.** Every listener/timer/observer/AudioContext is
   torn down in `destroy()`. `mount()`'s disposer calls it.
+- **Roles move by `transform` only** (`hero.css`, carousel): every figurine is
+  laid out in the centre's box and drawn at its role's place as a transform of
+  it, in the carousel's container units. Transitioning `left`, `height` or
+  `bottom` instead was a layout shift on every frame of every slide (CLS 0.18).
+- **The entrance is CSS** (keyframes from the first paint, `backwards` fill),
+  never a flag the controller sets: hydrating seconds later used to blank a
+  hero the visitor was already looking at and fade it back in.
 - `build.target` must stay `esnext` (Module Federation uses top-level await).
 
 ## Verify

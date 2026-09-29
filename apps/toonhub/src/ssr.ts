@@ -31,7 +31,7 @@ export function renderHeroSSR(options: RenderHeroSSROptions = {}): RenderHeroSSR
         ...config,
         items: config.items.map((item) => ({
           ...item,
-          src: item.src.startsWith('/') ? base + item.src : item.src,
+          image: item.image.startsWith('/') ? base + item.image : item.image,
         })),
       }
     : config;

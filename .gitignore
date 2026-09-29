@@ -8,6 +8,9 @@ dist/
 dist-ssr/
 build/
 .output/
+# TOONHUB's figurine AVIFs and WebPs, derived by `pnpm assets` from its committed PNGs
+apps/toonhub/public/figurines/*.avif
+apps/toonhub/public/figurines/*.webp
 
 # ---- caches / task runners ----
 .turbo/
