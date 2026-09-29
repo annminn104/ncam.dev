@@ -36,9 +36,17 @@ packaged as a **self-contained** React Module Federation remote.
   identifier); the **project id / route is `immersive-ocean`** (kebab).
 - Entrance animations are **pure CSS** keyframes (`fadeSlideUp`) via arbitrary
   `animate-[fadeSlideUp_..._both]` — they run on first paint without JS, so SSR
-  is safe (no framer-motion, no animate-gating needed).
+  is safe (no framer-motion, no animate-gating needed). The paragraph, the
+  page's largest text and so its LCP, uses `slideUp` (no fade): Chrome does not
+  count text first painted at opacity 0 until something repaints it.
 - `font-geist` maps to `--font-geist` in `@theme`; the video uses inline
   `objectPosition: '70% center'` and no z-index so it sits behind all content.
+- The video is `preload="none"` without `autoPlay`: `src/lib/video.ts` starts it
+  on the visitor's first interaction (a mouse move is enough; never under
+  reduced motion), over its poster (`src/assets/hero-poster-*.webp`, its first
+  frame, as a `srcset` image under it). Playing from the first second, it kept
+  the screen changing for the whole load, which Speed Index counts. Imported assets resolve
+  against this remote's own origin (`defineRemote()`'s `renderBuiltUrl`).
 
 ## Verify
 

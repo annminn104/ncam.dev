@@ -29,7 +29,7 @@ export function Hero() {
 
       {/* Bottom */}
       <div className="max-w-lg">
-        <p className="mb-7 max-w-sm text-sm leading-relaxed text-white/70 animate-[fadeSlideUp_0.8s_ease_0.7s_both] sm:max-w-md sm:text-base md:text-lg">
+        <p className="mb-7 max-w-sm text-sm leading-relaxed text-white/70 animate-[slideUp_0.8s_ease_0.7s_both] sm:max-w-md sm:text-base md:text-lg">
           {config.paragraph}
         </p>
         <div className="flex flex-wrap items-center gap-3 animate-[fadeSlideUp_0.8s_ease_0.9s_both] sm:gap-4">
