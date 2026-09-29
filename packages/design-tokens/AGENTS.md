@@ -7,6 +7,12 @@ One CSS file, `tokens.css`: the custom properties shared by the portfolio host
 
 - Colours, type stacks, accent palette, hairlines, easing, and the host shell
   geometry (`--nav-h`, `--rail-w`, `--gutter`) the remote aligns its sections to.
+- The type stacks' metric-matched fallbacks (`Inter Fallback`, `Syne Fallback`,
+  `JetBrains Mono Fallback`): `@font-face` rules at the end of the file that
+  resize Arial / Courier New (Liberation on Linux) to each web font's widths,
+  one rule per weight the site sets, so the swap to the web font moves no text.
+  A new weight of a display face gets its own rule; the header comment there
+  has the formula.
 - `--page-bg` is intentionally **not** here: the host sets and tweens it on
   `.home`; the remote reads `var(--page-bg, var(--bg))`.
 - Change a token here, not in either app. Both bundle their own copy, so a change
