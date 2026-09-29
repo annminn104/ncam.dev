@@ -58,6 +58,14 @@ export default tseslint.config(
     },
   },
 
+  // CommonJS on purpose (Lighthouse CI loads lighthouserc.cjs with require()),
+  // so require() is how these import.
+  {
+    files: ['**/*.cjs'],
+    languageOptions: { sourceType: 'commonjs' },
+    rules: { '@typescript-eslint/no-require-imports': 'off' },
+  },
+
   // Turn off rules that conflict with Prettier (keep last)
   prettier,
 );

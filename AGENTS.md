@@ -150,6 +150,27 @@ pnpm thumbnails <id>  # regenerates a gallery thumbnail (needs `pnpm dev` runnin
 ## Verification
 
 `pnpm run ci` must pass; the pre-push hook runs `turbo run typecheck build`.
+
+Lighthouse (`.github/workflows/lighthouse.yml`) holds every page type (home,
+blog, a post, each project) at 100 in all four categories, mobile and desktop,
+on the median of three runs, against the production build served from the
+runner: `scripts/lighthouse/serve.mjs` serves every remote, the host and a
+stand-in CMS, each behind a compressing proxy, and `lighthouserc.cjs` measures
+with DevTools throttling (it says why). Locally, beside `pnpm dev`:
+
+```bash
+eval "$(LH_PORT_OFFSET=200 node scripts/lighthouse/serve.mjs --build-env)"
+pnpm build
+LH_PORT_OFFSET=200 pnpm lighthouse   # LH_FORM_FACTOR=desktop too
+```
+
+Rules that keep the scores, learned on this site: nothing on the first screen
+waits for hydration (entrances are CSS from the first paint); text that could
+be the LCP never enters at opacity 0 (Chrome counts it only at its next
+repaint); fonts swap without moving text (metric-matched fallbacks) and a
+remote's `@font-face` rules ride in its SSR CSS; images are AVIF/WebP with
+`srcset` and the LCP one has `fetchpriority="high"`; a background video shows
+its first frame as a poster and plays on the first interaction.
 Runtime host↔remote integration needs the dev servers running (`pnpm dev`) or
 deployed remote URLs configured in the host. Server rendering needs a
 production build, either `pnpm build` then

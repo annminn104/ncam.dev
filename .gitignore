@@ -13,6 +13,8 @@ apps/toonhub/public/figurines/*.avif
 apps/toonhub/public/figurines/*.webp
 # Holodex's first-screen gallery art, copied from TCGdex by `pnpm assets`
 apps/holodex/public/gallery/*.webp
+# Lighthouse CI reports (lighthouserc.cjs)
+.lighthouseci/
 
 # ---- caches / task runners ----
 .turbo/
