@@ -12,7 +12,7 @@ const render = (props: Parameters<typeof CardImage>[0]) =>
 const images = (html: string) => [...html.matchAll(/<img\b[^>]*>/g)].map(([tag]) => tag);
 
 describe('CardImage', () => {
-  it('holds a sharp image back behind its own low-res art, blurred, while it loads', () => {
+  it('puts a sharp image over its own low-res art, blurred, shown as it arrives in the server’s markup', () => {
     const [placeholder, art, ...rest] = images(
       render({ base: BASE, name: 'Furret', quality: 'high' }),
     );
@@ -24,15 +24,17 @@ describe('CardImage', () => {
     expect(placeholder).toMatch(/\bblur-/);
     expect(art).toContain(`src="${BASE}/high.webp"`);
     expect(art).toContain('alt="Furret"');
-    expect(art).toContain('opacity-0');
+    // The fade is the client's, once mounted: held back until a script ran,
+    // art that had long arrived stayed invisible, and was no page's LCP.
+    expect(art).not.toContain('opacity-0');
   });
 
-  it('holds a grid image back behind a blurred card silhouette, having no smaller art', () => {
+  it('puts a grid image over a blurred card silhouette, having no smaller art', () => {
     const html = render({ base: BASE, name: 'Furret' });
     const [art, ...rest] = images(html);
     expect(rest).toEqual([]);
     expect(art).toContain(`src="${BASE}/low.webp"`);
-    expect(art).toContain('opacity-0');
+    expect(art).not.toContain('opacity-0');
     expect(html).toMatch(/<span[^>]*data-placeholder="silhouette"[^>]*aria-hidden="true"/);
   });
 

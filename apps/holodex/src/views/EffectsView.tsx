@@ -9,6 +9,7 @@ import {
 } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { CardImage } from '../components/CardImage';
+import { CAPTURED_CARDS } from '../holo/effect-gallery.cards';
 import {
   EFFECT_GALLERY,
   ERA_QUALIFIER,
@@ -21,6 +22,7 @@ import { HoloCard } from '../holo/HoloCard';
 import type { EffectId } from '../holo/select';
 import { useReducedMotion } from '../holo/use-reduced-motion';
 import { CARD_ASPECT } from '../lib/constants';
+import { galleryArt } from '../lib/gallery-art';
 import { cardImageBase } from '../lib/images';
 import { cardQuery } from '../lib/queries';
 import type { Card } from '../lib/tcgdex';
@@ -76,11 +78,14 @@ const BASIC_NOTE = 'basic draws no foil: HoloCard shows the plain art.';
  * on each pick. Either way nothing remounts and nothing refetches: two tiles
  * swap their art.
  *
- * Cards load client-side through the card page's own `cardQuery`, one query
- * per tile, so a slow or dead card costs its own tile and nothing else, and a
- * section's only once the visitor nears it (`useNearViewport`), or at once for
- * the live one: landing asks for nine cards, not 90. There is deliberately no
- * SSR prefetch: the page renders its skeletons, and each tile fetches its card.
+ * Every tile renders first from the card as captured (`effect-gallery.cards.ts`,
+ * `tileQuery`'s placeholder), on the server too, so the page's first paint
+ * has all its art and names. TCGdex's own copy loads client-side through the
+ * card page's `cardQuery`, one query per tile, so a slow or dead card costs its
+ * own tile and nothing else (it keeps the captured copy), and a section's only
+ * once the visitor nears it (`useNearViewport`), or at once for the live one:
+ * landing asks for nine cards, not 90. No SSR prefetch: the server asks TCGdex
+ * for nothing.
  */
 export function EffectsView({ effect, card }: { effect?: EffectId; card?: string }) {
   const [pick, setPick] = useState<GalleryPick | null>(null);
@@ -220,10 +225,14 @@ function useNearViewport(ref: RefObject<Element | null>, margin = '600px 0px'): 
 
 /**
  * A tile's card query: the card page's own, so the two share a cache, asked
- * for only once its section is near (`active`).
+ * for only once its section is near (`active`). Until it answers, the tile
+ * shows the card as captured (effect-gallery.cards.ts), which is what the
+ * server renders: the art and name are there on the first paint, where a
+ * skeleton used to wait for TCGdex, the tile's art seconds after that. A
+ * placeholder, so it never enters the cache the card page reads.
  */
 export function tileQuery(cardId: string, active: boolean) {
-  return { ...cardQuery(cardId), enabled: active };
+  return { ...cardQuery(cardId), enabled: active, placeholderData: CAPTURED_CARDS[cardId] };
 }
 
 interface TileProps {
@@ -238,10 +247,13 @@ interface TileProps {
 function ExampleTile({ entry, cardId, active, selected, onSelect }: TileProps) {
   // One query per tile, so a slow or dead card costs its own tile an error,
   // never its section or the page.
-  const { data: card, error, isPending, refetch } = useQuery(tileQuery(cardId, active));
+  const { data, error, isPending, refetch } = useQuery(tileQuery(cardId, active));
+  // A failed request keeps the captured card on screen: only a card with no
+  // captured copy has a skeleton, or an error, to show.
+  const card = data ?? CAPTURED_CARDS[cardId];
   const frame = { cardId, selected, onSelect };
 
-  if (isPending) {
+  if (!card && isPending) {
     return (
       <TileFrame {...frame}>
         <span
@@ -253,7 +265,7 @@ function ExampleTile({ entry, cardId, active, selected, onSelect }: TileProps) {
     );
   }
 
-  if (error || !card) {
+  if (!card) {
     return (
       <TileFrame
         {...frame}
@@ -286,9 +298,20 @@ function ExampleTile({ entry, cardId, active, selected, onSelect }: TileProps) {
           decorative: the caption below names the card, and the button's name
           should not say it twice. */}
       {selected ? (
-        <HoloCard card={card} variant={entry.variant} decorative artQuality="low" />
+        <HoloCard
+          card={card}
+          variant={entry.variant}
+          decorative
+          artQuality="low"
+          art={galleryArt(cardId)}
+        />
       ) : (
-        <CardImage base={cardImageBase(card)} name={card.name} decorative />
+        <CardImage
+          base={cardImageBase(card)}
+          name={card.name}
+          decorative
+          first={galleryArt(cardId)}
+        />
       )}
     </TileFrame>
   );
@@ -408,8 +431,12 @@ function Rarities({ entry }: { entry: EffectExample }) {
       </p>
     );
   }
+  // The chips are set in the system face, which never swaps: a row of them
+  // wraps on a few pixels, and Inter landing a moment after the first paint
+  // (a hair narrower than its fallback in short words) re-wrapped them and
+  // moved every section below.
   return (
-    <p className="mt-2 flex flex-wrap gap-1">
+    <p className="mt-2 flex flex-wrap gap-1 font-sans">
       {entry.rarities.map(({ rarity, era }) => (
         <span
           key={`${rarity}|${era ?? ''}`}

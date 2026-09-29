@@ -99,10 +99,25 @@ return a `MountHandle`: a disposer that also carries an optional
   card's era appears in both its sections, each chip qualified by era
   ("Rare · Scarlet & Violet, Mega", "Rare · before Scarlet & Violet").
   `basic`'s section says in a note beside its rarities that it draws no foil.
-  A section fetches its three cards only once it comes within 600px of the
-  viewport (the live section at once): landing on `/` asks TCGdex for nine
-  cards, where all 90 at once, reloaded a few times, got the visitor refused
-  (every request a 404 without CORS headers) for about 20 minutes.
+  Every tile renders first from its card as captured
+  (`src/holo/effect-gallery.cards.ts`, the tile query's `placeholderData`),
+  server render included, so the first paint has all the art and names; a
+  failed request keeps that copy. A section fetches TCGdex's own copy of its
+  three cards only once it comes within 600px of the viewport (the live
+  section at once): landing on `/` asks TCGdex for nine cards, where all 90
+  at once, reloaded a few times, got the visitor refused (every request a 404
+  without CORS headers) for about 20 minutes.
+- The first section's three cards, the landing page's first screen and its
+  LCP, draw from this remote's own copy of their low-res art
+  (`public/gallery/<id>.webp`, `src/lib/gallery-art.ts`), which
+  `scripts/download-gallery-art.mjs` copies from TCGdex on `pnpm assets` /
+  predev / prebuild (not committed; best-effort). assets.tcgdex.net has no CDN
+  in front of it: a new connection there cost the page ~0.9 s on a desktop
+  profile. A missing copy falls through to TCGdex's own file.
+- Images show as they arrive in the server's markup; the fade over their
+  placeholder is the client's (`useImageFallback`'s `hidden`, set before the
+  first paint of a mount). Held at opacity 0 until hydration, the first
+  screen's art counted for nothing, not even as the page's LCP.
 - `src/holo/` — eager (statically imported by `HoloCard.tsx`, so part of the
   main chunk): `select.ts` (rarity/layout/printing → `HoloSelection`),
   `regions.ts` (`ClipShape` and the card's `CardLayout` → inset rect, cut-out
@@ -112,7 +127,7 @@ return a `MountHandle`: a disposer that also carries an optional
   `effect-gallery.ts` (the effects page's matrix: three
   example cards per `EffectId`, rarities read off `EFFECT_BY_RARITY` and
   `MODERN_EFFECT_BY_RARITY`, each card checked against the real `selectHolo`
-  on a captured TCGdex copy in `effect-gallery.fixture.ts`), `canvas-key.ts` (`holoCanvasKey`, the key that
+  on a captured TCGdex copy in `effect-gallery.cards.ts`), `canvas-key.ts` (`holoCanvasKey`, the key that
   gives every scene a canvas of its own — see the fourth gotcha below),
   `HoloCard.tsx` itself (mount, pop/showcase, context-loss and off-screen
   handling). Lazy (only reachable through

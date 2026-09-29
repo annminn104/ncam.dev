@@ -23,6 +23,7 @@ export function HoloCard({
   variant,
   decorative = false,
   artQuality = 'high',
+  art,
 }: {
   card: Card;
   /** The printing shown, when not the normal one: selectHolo's `variant`. */
@@ -40,6 +41,8 @@ export function HoloCard({
    * the high-res loads. The scene's own texture is high-res either way.
    */
   artQuality?: ImageQuality;
+  /** An effects tile's same-origin copy of that low-res art, when it has one (lib/gallery-art.ts). */
+  art?: string;
 }) {
   const hostRef = useRef<HTMLSpanElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -326,6 +329,7 @@ export function HoloCard({
         base={base}
         name={card.name}
         quality={artQuality}
+        first={art}
         priority
         decorative={decorative}
         className={active ? 'invisible' : undefined}

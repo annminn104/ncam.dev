@@ -2,8 +2,11 @@ import type { Card } from '../lib/tcgdex';
 
 /**
  * The example cards `effect-gallery.ts` shows, three per effect, as TCGdex
- * actually serves them — so `effect-gallery.test.ts` can run the real
- * `selectHolo` on the real card without touching the network.
+ * actually serves them. The effects page renders each tile from its copy here
+ * until TCGdex's own arrives (`tileQuery`'s placeholder), so the server's
+ * markup has every card's art and name and the first screen asks TCGdex for
+ * nothing; and `effect-gallery.test.ts` runs the real `selectHolo` on the
+ * real card without touching the network.
  *
  * Captured from `GET https://api.tcgdex.net/v2/en/cards/{id}` and trimmed to
  * what `selectHolo` reads (`rarity`, `suffix`, `localId`, `category`,

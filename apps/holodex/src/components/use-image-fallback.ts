@@ -1,4 +1,11 @@
-import { useEffect, useEffectEvent, useRef, useState, type RefObject } from 'react';
+import {
+  useEffect,
+  useEffectEvent,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type RefObject,
+} from 'react';
 
 /**
  * Every image URL this page has shown. One shown before shows again at once,
@@ -17,6 +24,14 @@ export interface ImageFallback {
   src: string | undefined;
   /** Whether `src` has finished loading: the moment to fade it in over its placeholder. */
   loaded: boolean;
+  /**
+   * Whether to hold the image back (at opacity 0) until then: only once
+   * mounted, and only while it is still loading. The server's markup shows it
+   * as it arrives, since it may load and paint long before any script runs:
+   * held back for a script, it sat invisible and counted for nothing, not
+   * even as the page's LCP.
+   */
+  hidden: boolean;
   ref: RefObject<HTMLImageElement | null>;
   onLoad: () => void;
   onError: () => void;
@@ -57,5 +72,14 @@ export function useImageFallback(urls: readonly string[]): ImageFallback {
   });
   useEffect(() => settle(), [src]);
 
-  return { src, loaded, ref, onLoad, onError };
+  // Before the first paint of a mount (or of a new `src`): an image not yet
+  // complete fades in from here on. On the server, and on hydration's first
+  // render, nothing is held back.
+  const [waiting, setWaiting] = useState(false);
+  useLayoutEffect(() => {
+    const image = ref.current;
+    setWaiting(Boolean(image) && !image!.complete);
+  }, [src]);
+
+  return { src, loaded, hidden: waiting && !loaded, ref, onLoad, onError };
 }

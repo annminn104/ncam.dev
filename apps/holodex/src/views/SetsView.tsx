@@ -81,7 +81,7 @@ export function SetsView() {
  * or whose files all failed, gets a badge of its id in place of a blank.
  */
 export function SetLogo({ set }: { set: { id: string; logo?: string; symbol?: string } }) {
-  const { src, loaded, ref, onLoad, onError } = useImageFallback(setImageUrls(set));
+  const { src, loaded, hidden, ref, onLoad, onError } = useImageFallback(setImageUrls(set));
   if (!src) {
     return (
       <span
@@ -113,7 +113,7 @@ export function SetLogo({ set }: { set: { id: string; logo?: string; symbol?: st
         onError={onError}
         className={cn(
           'relative h-10 w-16 object-contain transition-opacity duration-300',
-          loaded ? 'opacity-100' : 'opacity-0',
+          hidden ? 'opacity-0' : 'opacity-100',
         )}
       />
     </span>

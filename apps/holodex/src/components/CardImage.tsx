@@ -16,6 +16,11 @@ export interface CardImageProps {
    * repeating it: `alt=""` on the image, `aria-hidden` on the fallback.
    */
   decorative?: boolean;
+  /**
+   * A copy of the low-res art to try before TCGdex's own files: the effects
+   * page's first screen, served from this remote's origin (lib/gallery-art.ts).
+   */
+  first?: string;
 }
 
 /** A card-shaped glow in the holo palette: what a grid tile shows until its art loads. */
@@ -34,7 +39,8 @@ const FADE = 'transition-opacity duration-300';
  * loads, a placeholder holds its place and it fades in over it: the card's own
  * low-res art, blurred, for a high-res image (a visitor from the grid has it
  * cached already), and a blurred card silhouette for a grid image, which has
- * nothing smaller.
+ * nothing smaller. The fade is the client's: in the server's markup the image
+ * shows as it arrives (`hidden`, useImageFallback).
  */
 export function CardImage({
   base,
@@ -43,8 +49,12 @@ export function CardImage({
   className,
   priority = false,
   decorative = false,
+  first,
 }: CardImageProps) {
-  const { src, loaded, ref, onLoad, onError } = useImageFallback(imageUrls(base, quality));
+  const urls = imageUrls(base, quality);
+  const { src, loaded, hidden, ref, onLoad, onError } = useImageFallback(
+    first && quality === 'low' && urls.length > 0 ? [first, ...urls] : urls,
+  );
   if (!src) return <UnavailableCard name={name} decorative={decorative} className={className} />;
   const lqip = quality === 'high' ? imageUrl(base, 'low') : null;
 
@@ -96,7 +106,7 @@ export function CardImage({
         className={cn(
           'relative block h-full w-full rounded-lg object-contain',
           FADE,
-          loaded ? 'opacity-100' : 'opacity-0',
+          hidden ? 'opacity-0' : 'opacity-100',
         )}
       />
     </span>
