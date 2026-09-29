@@ -108,13 +108,16 @@ export function Itinerary() {
                     {day.title}
                   </h3>
                   <p className="mt-5 leading-relaxed text-soft-gray">{day.description}</p>
-                  <p className="mt-8 font-display text-6xl leading-none text-off-white/10">
-                    {String(day.day).padStart(2, '0')}
-                    <span className="text-2xl text-off-white/10">
-                      {' '}
-                      / {String(itinerary.length).padStart(2, '0')}
-                    </span>
-                  </p>
+                  {/* A watermark, not content (the badge above already names the
+                      day): generated text, hidden from assistive tech. WCAG sets
+                      no contrast minimum for pure decoration, and its 10% ink is
+                      the point. */}
+                  <p
+                    aria-hidden="true"
+                    data-day={String(day.day).padStart(2, '0')}
+                    data-total={` / ${String(itinerary.length).padStart(2, '0')}`}
+                    className="mt-8 font-display text-6xl leading-none text-off-white/10 before:content-[attr(data-day)] after:text-2xl after:content-[attr(data-total)]"
+                  />
                 </div>
               </div>
             </article>

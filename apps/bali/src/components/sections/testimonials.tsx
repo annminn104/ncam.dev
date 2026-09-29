@@ -31,7 +31,7 @@ export function Testimonials() {
               className="glass flex h-full flex-col rounded-3xl bg-white/[0.03] p-7 transition-colors duration-500 hover:border-tropical-lime/35"
             >
               <div className="flex items-center justify-between">
-                <div className="flex gap-1" aria-label={`${item.rating} out of 5 stars`}>
+                <div className="flex gap-1" role="img" aria-label={`${item.rating} out of 5 stars`}>
                   {Array.from({ length: item.rating }).map((_, i) => (
                     <Star
                       key={i}

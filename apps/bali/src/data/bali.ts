@@ -4,7 +4,7 @@
  * presentational; edit content here.
  *
  * Photography: Unsplash (photo ids below, served via images.unsplash.com).
- * Hero parallax layers: provided artwork on the strvid CDN.
+ * Hero parallax layers: provided artwork, self-hosted as AVIF/WebP (src/assets/hero).
  * Film: "Bali - Pura Tirta Empul (2025)" by Chainwit., CC BY 4.0, Wikimedia Commons.
  */
 
@@ -36,11 +36,6 @@ export const navLinks = [
 ] as const;
 
 export const hero = {
-  layers: {
-    back: 'https://strvid.nyc3.cdn.digitaloceanspaces.com/motionsite/s7_layer_1.png',
-    mid: 'https://strvid.nyc3.cdn.digitaloceanspaces.com/motionsite/s7_layer_2.png',
-    front: 'https://strvid.nyc3.cdn.digitaloceanspaces.com/motionsite/s7_layer_3.png',
-  },
   /** Giant wordmark rendered behind the front parallax layer. */
   wordmark: 'BALI',
   eyebrow: 'Private journeys · Est. 2014 · Ubud',

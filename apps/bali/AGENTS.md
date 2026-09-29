@@ -30,7 +30,12 @@ to this repo's stack — no Next.js, no `tailwind.config.ts`; `<Link>` → plain
   Testimonials → Booking → Footer), a `<noscript>` reveal for the hero copy, and
   a late `ScrollTrigger.refresh()` (fonts ready / `load` / 700 ms).
 - `src/data/bali.ts` — **single source of truth** for all copy, lists and media
-  URLs (`unsplash(id, width)` helper, hero layer URLs, film sources + credit).
+  URLs (`unsplash(id, width)` helper, film sources + credit).
+- `src/assets/hero/` — the hero's parallax layers, self-hosted: AVIF at three
+  widths plus a WebP fallback each, derived from the artwork's PNGs on the
+  strvid CDN (`index.ts` says how). The PNGs were 1 MB on the first screen.
+  Imported, so their URLs resolve against this remote's origin in the host too
+  (`defineRemote()`'s `renderBuiltUrl`).
 - `src/components/sections/*` — one file per section (kebab-case, as mindloop).
 - `src/components/ui/section-heading.tsx` (`SectionHeading`, `Accent` = serif
   italic lime word), `ui/modal.tsx` (framer-motion dialog shell: backdrop,
@@ -88,7 +93,7 @@ The body background is applied to the **root div** (`[data-bali-root]`), not
 - Navbar is a centred fixed pill at `top: var(--stage-top-inset, 1.25rem)`. The
   host sets `--stage-top-inset` on `.stage` so the pill clears its fixed
   "← Projects" button; standalone it sits at 1.25rem.
-- Media: Unsplash photos (ids in `data/bali.ts`), hero layers on the strvid CDN,
+- Media: Unsplash photos (ids in `data/bali.ts`), hero layers in `src/assets/hero`,
   film = "Bali – Pura Tirta Empul (2025)" by Chainwit., **CC BY 4.0** (Wikimedia
   Commons) — keep the on-page credit if you swap the clip for another CC file.
 - Booking + newsletter forms are **demo flows**: no backend; the submitted

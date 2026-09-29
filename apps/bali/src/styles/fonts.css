@@ -1,0 +1,10 @@
+/* The @font-face rules: imported by src/fonts.ts on the client (standalone and
+   ./mount) and inlined by ./ssr with the host's copy of the page, so a server
+   render asks for its fonts on first paint rather than after ./hydrate.
+     Outfit            — primary sans (UI, body, headings)
+     Playfair Display  — editorial serif, used italic for accent words
+     Anton             — massive display face for the hero wordmarks */
+@import '@fontsource-variable/outfit/wght.css';
+@import '@fontsource-variable/playfair-display/wght.css';
+@import '@fontsource-variable/playfair-display/wght-italic.css';
+@import '@fontsource/anton/400.css';
