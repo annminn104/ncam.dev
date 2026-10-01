@@ -10,7 +10,10 @@ export interface RenderHeroSSROptions {
 
 export async function renderHeroSSR(options: RenderHeroSSROptions = {}): Promise<SsrResult> {
   const { renderToString } = await import('react-dom/server');
-  const base = options.assetBase ?? `${originOf(import.meta.url)}/`;
+  // No origin to derive (a module that wasn't fetched over http) means an empty
+  // base, which assetUrl() reads as root-relative; '/' alone is not a valid base.
+  const origin = originOf(import.meta.url);
+  const base = options.assetBase ?? (origin ? `${origin}/` : '');
   return {
     html: renderToString(<App assetBase={base} />),
     css,

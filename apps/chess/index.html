@@ -14,6 +14,14 @@
     <link rel="canonical" href="%SITE_URL%/projects/chess" />
 
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <!-- Standalone page only: no 8px white frame around the app. Not in globals.css, which the host also loads. -->
+    <style>
+      html,
+      body {
+        margin: 0;
+        background: #0b0f14;
+      }
+    </style>
 
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Cultivation Chess" />
