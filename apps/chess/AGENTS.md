@@ -27,6 +27,23 @@ host's `MountConfig`; only `assetBase` is read. Not route-aware.
 - `public/arenas/*.avif` are lobby previews captured from the real scene:
   `pnpm --filter @ncam/chess capture:arenas` with this app's dev server running.
 
+## The battle scene
+
+- `battle/Battle.tsx` is the chunk's root. `useGame` is the one place React state wraps
+  `createGame()`; the scene calls `game.clickSquare` and never decides legality.
+- A module-level cache of GPU objects (treasure geometry, materials, glyph textures) wraps what
+  it creates in `own()` and registers its reset with `onDispose()` (`scene/dispose.ts`);
+  `Battle` runs `disposeOwned()` when it unmounts.
+- `PieceView` keeps a piece's pose in a ref and writes the group every frame. R3F re-applies a
+  group's props whenever React re-inserts it into the scene, and a move re-orders
+  `snap.pieces`, so a pose read back off the group (or a `position` prop that follows the
+  square) snaps the piece mid-move.
+- `CameraRig` (camera-controls through drei) has no pan: `truckSpeed={0}` zeroes every mouse and
+  touch pan path. `framingFit` (`rig-math.ts`) pulls the camera back on screens narrower than
+  1.5:1 so the board's width fits; `reset` and `faceSide` aim at the nearest full turn of
+  azimuth, which only ever accumulates.
+- `THREE.Clock … deprecated` in the console is R3F 9.8's own, not ours.
+
 ## Commands
 
     pnpm --filter @ncam/chess dev        # :9008 standalone

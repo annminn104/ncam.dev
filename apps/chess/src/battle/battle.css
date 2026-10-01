@@ -1,0 +1,32 @@
+.chess-battle {
+  position: fixed;
+  inset: 0;
+  background: #05070a;
+  touch-action: none;
+}
+.chess-root .chess-battle canvas {
+  display: block;
+}
+.chess-fallback {
+  min-height: 100svh;
+  display: grid;
+  place-content: center;
+  gap: 16px;
+  padding: 16px;
+  text-align: center;
+}
+.chess-fallback h2,
+.chess-fallback p {
+  margin: 0;
+}
+.chess-fallback .chess-start {
+  justify-self: center;
+}
+.chess-hud-temp {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}

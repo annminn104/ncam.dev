@@ -180,3 +180,11 @@
   outline: 2px solid var(--chess-gold);
   outline-offset: 3px;
 }
+/* Shown while the battle chunk (three, R3F) downloads after "Enter battle". */
+.chess-loading {
+  min-height: 100svh;
+  margin: 0;
+  display: grid;
+  place-content: center;
+  color: var(--chess-muted);
+}
