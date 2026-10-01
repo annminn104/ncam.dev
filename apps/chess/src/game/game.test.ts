@@ -51,6 +51,7 @@ describe('createGame', () => {
 
   it.each(['q', 'r', 'b', 'n'] as const)('promotes to %s', (piece) => {
     const game = createGame('8/P7/8/8/8/8/8/k6K w - - 0 1');
+    expect(game.legalTargets('a7')).toEqual(['a8']);
     expect(game.isPromotion('a7', 'a8')).toBe(true);
     expect(game.isPromotion('h1', 'h2')).toBe(false);
     expect(game.move({ from: 'a7', to: 'a8', promotion: piece })).toBe(true);

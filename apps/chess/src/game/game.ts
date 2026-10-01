@@ -71,7 +71,9 @@ export function createGame(fen?: string): Game {
     },
     legalTargets(from) {
       if (isOver(status())) return [];
-      return (chess.moves({ square: from, verbose: true }) as Move[]).map((m) => m.to);
+      // A promotion yields one move per piece; the board square is the same.
+      const moves = chess.moves({ square: from, verbose: true }) as Move[];
+      return [...new Set(moves.map((m) => m.to))];
     },
     isPromotion(from, to) {
       return (chess.moves({ square: from, verbose: true }) as Move[]).some(
