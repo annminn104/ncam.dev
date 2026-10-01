@@ -38,14 +38,7 @@ export default function Battle({ settings, onExit, capture }: BattleProps) {
 
   // A lost context unmounts the Canvas; the fallback leads back to the lobby,
   // and entering a battle again mounts a fresh one.
-  if (!webgl || lost) {
-    return (
-      <>
-        <style>{css}</style>
-        <WebglFallback onExit={onExit} />
-      </>
-    );
-  }
+  if (!webgl || lost) return <WebglFallback onExit={onExit} />;
 
   return (
     <QualityContext.Provider value={quality}>

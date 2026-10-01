@@ -15,8 +15,8 @@ host's `MountConfig`; only `assetBase` is read. Not route-aware.
 
 - `src/game/` — the only place chess rules live (wraps chess.js). Pure TS, unit-tested.
 - `src/engine/` — Stockfish UCI client. `spawn.ts` is browser-only.
-- `src/lobby/`, `App.tsx`, `ssr.tsx`, `settings.ts`, `arenas-meta.ts`, `lib/` —
-  SSR-safe; they must never statically import three, `@react-three/*` or
+- `src/lobby/`, `App.tsx`, `ErrorBoundary.tsx`, `ssr.tsx`, `settings.ts`, `arenas-meta.ts`,
+  `lib/` — SSR-safe; they must never statically import three, `@react-three/*` or
   `src/battle/**` (a test walks the import graph to enforce it). The battle is
   `React.lazy(() => import('./battle/Battle'))`.
 - `src/battle/` — the lazy chunk: Canvas, HUD, scene, effects, arenas.
@@ -42,6 +42,14 @@ host's `MountConfig`; only `assetBase` is read. Not route-aware.
   touch pan path. `framingFit` (`rig-math.ts`) pulls the camera back on screens narrower than
   1.5:1 so the board's width fits; `reset` and `faceSide` aim at the nearest full turn of
   azimuth, which only ever accumulates.
+- When a battle cannot open the player must still have the lobby. `hasWebgl()` probes WebGL 2
+  only (three 0.186 creates nothing else), and `BattleErrorBoundary` (`src/ErrorBoundary.tsx`)
+  wraps the battle's `Suspense` in `App`: a chunk that fails to load, a renderer that cannot
+  start or a scene that throws (R3F rethrows from its Canvas) shows `ArenaFailed` instead of
+  React unmounting the whole root. Both fallbacks are styled in `globals.css`, not
+  `battle.css`: the chunk is what may have failed. There is no retry to offer: `lazy()` and
+  Chromium both remember a rejected dynamic import (a cache-busted URL loads, the same one
+  fails until a reload), so the way out is the lobby and the message says to reload.
 - `THREE.Clock … deprecated` in the console is R3F 9.8's own, not ours.
 
 ## Commands

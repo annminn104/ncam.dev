@@ -10,10 +10,16 @@ export function WebglFallback({ onExit }: { onExit(): void }) {
   );
 }
 
-export function hasWebgl(): boolean {
+/**
+ * Can this browser give three a WebGL context? Only WebGL 2 counts: three creates nothing else
+ * (WebGLRenderer asks for 'webgl2' alone and throws without it), so a probe that also took
+ * WebGL 1 would let a browser through only for the renderer to fail.
+ */
+export function hasWebgl(
+  createCanvas: () => HTMLCanvasElement = () => document.createElement('canvas'),
+): boolean {
   try {
-    const canvas = document.createElement('canvas');
-    const gl = canvas.getContext('webgl2') ?? canvas.getContext('webgl');
+    const gl = createCanvas().getContext('webgl2');
     // Browsers cap live contexts (Chrome keeps 16 and drops the oldest, which could be the
     // battle's own), so a probe that is only here to answer yes/no gives its context back.
     gl?.getExtension('WEBGL_lose_context')?.loseContext();

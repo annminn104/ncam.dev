@@ -1,9 +1,12 @@
 import { Suspense, lazy, useEffect, useState } from 'react';
+import { BattleErrorBoundary } from './ErrorBoundary';
 import { Lobby } from './lobby/Lobby';
 import { DEFAULT_SETTINGS, loadSettings, saveSettings, type GameSettings } from './settings';
 
 // three, R3F and drei live in this chunk. It loads when a battle starts, never with the lobby
-// or its server render (ssr-graph.test.ts holds the static import graph to that).
+// or its server render (ssr-graph.test.ts holds the static import graph to that). A load that
+// fails stays failed: lazy() and the browser both remember a rejected import, so there is no
+// retry to offer, only the lobby, and the failure screen tells the player to reload.
 const Battle = lazy(() => import('./battle/Battle'));
 
 export interface AppProps {
@@ -32,15 +35,17 @@ export default function App({ assetBase }: AppProps) {
           assetBase={assetBase}
         />
       ) : (
-        <Suspense fallback={<p className="chess-loading">Gathering qi…</p>}>
-          <Battle
-            key={round}
-            settings={settings}
-            assetBase={assetBase}
-            onExit={() => setPhase('lobby')}
-            onRematch={() => setRound((r) => r + 1)}
-          />
-        </Suspense>
+        <BattleErrorBoundary onBack={() => setPhase('lobby')}>
+          <Suspense fallback={<p className="chess-loading">Gathering qi…</p>}>
+            <Battle
+              key={round}
+              settings={settings}
+              assetBase={assetBase}
+              onExit={() => setPhase('lobby')}
+              onRematch={() => setRound((r) => r + 1)}
+            />
+          </Suspense>
+        </BattleErrorBoundary>
       )}
     </div>
   );
