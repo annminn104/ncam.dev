@@ -34,6 +34,11 @@ describe('renderHeroSSR', () => {
       expect(tag).toContain('loading="lazy"');
     }
   });
+  it('never marks a preview as failed in the server markup', async () => {
+    // ArenaCard marks a failed preview only after mount, so the first client render matches.
+    const { html } = await renderHeroSSR({ assetBase: 'https://chess.example.dev/' });
+    expect(html).not.toContain('data-failed');
+  });
   it('falls back to root-relative asset URLs when the module has no origin', async () => {
     // Under test import.meta.url is a file: URL, so there is no origin to derive a base from.
     const { html } = await renderHeroSSR({});

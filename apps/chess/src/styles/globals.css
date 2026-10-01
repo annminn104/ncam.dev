@@ -131,12 +131,20 @@
   object-fit: cover;
   z-index: -1;
 }
+/* A preview that failed to load: the card's fallback gradient shows alone, with no broken-image icon. */
+.chess-arena__img[data-failed] {
+  visibility: hidden;
+}
+/* Caption scrim, anchored to the bottom and sized in rem like the caption it sits behind (the name
+   and up to three lines of lore are about 6rem tall). From the top of the caption down it is at
+   least 62% black whatever the preview behind it is, so the text keeps 4.5:1 even over white. */
 .chess-arena::after {
   content: '';
   position: absolute;
-  inset: 0;
+  inset: auto 0 0;
+  height: 10rem;
   z-index: -1;
-  background: linear-gradient(180deg, transparent 40%, rgb(0 0 0 / 0.75));
+  background: linear-gradient(180deg, transparent, rgb(0 0 0 / 0.62) 38%, rgb(0 0 0 / 0.84));
 }
 .chess-arena__name {
   padding: 0 16px;
@@ -160,7 +168,7 @@
   padding: 14px 28px;
   font-size: 1.1rem;
   font-weight: 600;
-  background: linear-gradient(135deg, #2f8f6f, #1d5b4a);
+  background: linear-gradient(135deg, #267259, #1d5b4a);
   border-color: var(--chess-jade);
 }
 .chess-start:hover,
