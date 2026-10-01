@@ -1,0 +1,21 @@
+.chess-root {
+  --chess-bg: #0b0f14;
+  --chess-ink: #e8f3ee;
+  --chess-muted: #9fb3ad;
+  --chess-jade: #7fd6b5;
+  --chess-crimson: #e0475b;
+  --chess-gold: #d8b45a;
+  --chess-panel: rgb(16 22 30 / 0.82);
+  --chess-line: rgb(232 243 238 / 0.14);
+  position: relative;
+  min-height: 100svh;
+  background: var(--chess-bg);
+  color: var(--chess-ink);
+  font-family: ui-serif, 'Songti SC', 'Noto Serif CJK SC', Georgia, 'Times New Roman', serif;
+  -webkit-font-smoothing: antialiased;
+}
+.chess-root *,
+.chess-root *::before,
+.chess-root *::after {
+  box-sizing: border-box;
+}
