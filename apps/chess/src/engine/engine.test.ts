@@ -66,4 +66,63 @@ describe('createEngine', () => {
     engine.dispose();
     await expect(engine.bestMove(START, levelOf(1))).rejects.toMatchObject({ reason: 'disposed' });
   });
+
+  it('serialises concurrent calls, each with its own answer', async () => {
+    const log: string[] = [];
+    const w = fakeWorker(null, log);
+    const base = w.postMessage.bind(w);
+    let n = 0;
+    w.postMessage = (msg) => {
+      base(msg);
+      if (msg.startsWith('go')) {
+        const mv = ['bestmove e2e4', 'bestmove d2d4'][n++];
+        queueMicrotask(() => w.onmessage?.({ data: mv }));
+      }
+    };
+    const engine = createEngine(() => w);
+    const a = engine.bestMove(START, levelOf(1));
+    const b = engine.bestMove(START, levelOf(2));
+    await expect(a).resolves.toEqual({ from: 'e2', to: 'e4' });
+    await expect(b).resolves.toEqual({ from: 'd2', to: 'd4' });
+    expect(log.slice(2)).toEqual([
+      'setoption name Skill Level value 0',
+      `position fen ${START}`,
+      'go movetime 100',
+      'setoption name Skill Level value 5',
+      `position fen ${START}`,
+      'go movetime 200',
+    ]);
+  });
+
+  it('rejects an in-flight search promptly on dispose', async () => {
+    const engine = createEngine(() => fakeWorker(null));
+    const result = engine.bestMove(START, levelOf(5)).catch((e: unknown) => e);
+    await vi.advanceTimersByTimeAsync(1);
+    engine.dispose();
+    const error = await result;
+    expect(error).toBeInstanceOf(EngineError);
+    expect((error as EngineError).reason).toBe('disposed');
+  });
+
+  it('restarts after a worker error and succeeds when the second worker answers', async () => {
+    let n = 0;
+    const engine = createEngine(() => {
+      const w = fakeWorker(n++ === 0 ? null : 'bestmove g1f3');
+      if (n === 1) {
+        const base = w.postMessage.bind(w);
+        w.postMessage = (msg) => {
+          if (msg === 'uci') queueMicrotask(() => w.onerror?.(new Error('wasm failed')));
+          else base(msg);
+        };
+      }
+      return w;
+    });
+    await expect(engine.bestMove(START, levelOf(1))).resolves.toEqual({ from: 'g1', to: 'f3' });
+    expect(n).toBe(2);
+  });
+
+  it('resolves null for bestmove (none)', async () => {
+    const engine = createEngine(() => fakeWorker('bestmove (none)'));
+    await expect(engine.bestMove(START, levelOf(1))).resolves.toBeNull();
+  });
 });

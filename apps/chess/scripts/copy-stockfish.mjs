@@ -27,11 +27,12 @@ const js = await find(pkgDir, (n) => /lite-single.*\.js$/.test(n) && !n.endsWith
 const wasm = await find(pkgDir, (n) => /lite-single.*\.wasm$/.test(n));
 if (!js || !wasm) throw new Error(`stockfish lite-single build not found under ${pkgDir}`);
 const licence = await find(pkgDir, (n) => /^(copying|license)(\.txt|\.md)?$/i.test(n));
+if (!licence) throw new Error(`stockfish licence (Copying.txt) not found under ${pkgDir}`);
 
 await mkdir(out, { recursive: true });
 await copyFile(js, path.join(out, 'stockfish.js'));
 await copyFile(wasm, path.join(out, 'stockfish.wasm'));
-if (licence) await copyFile(licence, path.join(out, 'COPYING.txt'));
+await copyFile(licence, path.join(out, 'COPYING.txt'));
 const { version } = require('stockfish/package.json');
 await writeFile(
   path.join(out, 'SOURCE.txt'),

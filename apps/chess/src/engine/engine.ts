@@ -6,6 +6,7 @@ export interface WorkerLike {
   postMessage(msg: string): void;
   onmessage: ((e: { data: unknown }) => void) | null;
   terminate(): void;
+  onerror?: ((e: unknown) => void) | null;
 }
 
 export class EngineError extends Error {
@@ -20,7 +21,11 @@ export interface Engine {
   dispose(): void;
 }
 
-type Waiter = { test: (line: string) => boolean; resolve: (line: string) => void };
+type Waiter = {
+  test: (line: string) => boolean;
+  resolve: (line: string) => void;
+  reject: (reason: EngineError['reason']) => void;
+};
 
 /**
  * A UCI client over one Stockfish worker. A search that outlives 5 × movetime
@@ -47,6 +52,11 @@ export function createEngine(
         }
       }
     };
+    w.onerror = () => {
+      if (worker !== w) return;
+      if (waiters.length === 0) stop();
+      else settleAll('crashed');
+    };
     worker = w;
     ready = (async () => {
       await send('uci', (l) => l === 'uciok', handshakeMs);
@@ -54,11 +64,18 @@ export function createEngine(
     })();
   };
 
-  const stop = () => {
+  /** Reject every pending wait (clearing its timer). */
+  const settleAll = (reason: EngineError['reason']) => {
+    const pending = waiters;
+    waiters = [];
+    for (const x of pending) x.reject(reason);
+  };
+
+  const stop = (reason: EngineError['reason'] = 'crashed') => {
+    settleAll(reason);
     worker?.terminate();
     worker = null;
     ready = null;
-    waiters = [];
   };
 
   function send(msg: string, until: (line: string) => boolean, ms: number): Promise<string> {
@@ -72,6 +89,10 @@ export function createEngine(
         resolve: (line) => {
           clearTimeout(timer);
           resolve(line);
+        },
+        reject: (reason) => {
+          clearTimeout(timer);
+          reject(new EngineError(reason));
         },
       };
       waiters.push(waiter);
@@ -92,21 +113,30 @@ export function createEngine(
     return parseBestMove(line) ?? null;
   }
 
-  return {
-    async bestMove(fen, level) {
+  async function attempt(fen: string, level: Level): Promise<MoveInput | null> {
+    if (disposed) throw new EngineError('disposed');
+    try {
+      return await ask(fen, level);
+    } catch (error) {
       if (disposed) throw new EngineError('disposed');
-      try {
-        return await ask(fen, level);
-      } catch (error) {
-        if (disposed) throw new EngineError('disposed');
-        if (!(error instanceof EngineError)) throw new EngineError('crashed');
-        stop();
-        return await ask(fen, level);
-      }
+      if (!(error instanceof EngineError)) throw new EngineError('crashed');
+      stop();
+      return await ask(fen, level);
+    }
+  }
+
+  // One search at a time: a second call would interleave setoption/position.
+  let chain: Promise<unknown> = Promise.resolve();
+
+  return {
+    bestMove(fen, level) {
+      const run = chain.then(() => attempt(fen, level));
+      chain = run.catch(() => undefined);
+      return run;
     },
     dispose() {
       disposed = true;
-      stop();
+      stop('disposed');
     },
   };
 }

@@ -20,5 +20,11 @@ export async function spawnStockfish(base: string): Promise<WorkerLike> {
     return r.text();
   });
   const blob = URL.createObjectURL(new Blob([source], { type: 'text/javascript' }));
-  return new Worker(`${blob}#${encodeURIComponent(wasmUrl)}`) as unknown as WorkerLike;
+  const worker = new Worker(`${blob}#${encodeURIComponent(wasmUrl)}`);
+  const terminate = worker.terminate.bind(worker);
+  worker.terminate = () => {
+    terminate();
+    URL.revokeObjectURL(blob);
+  };
+  return worker as unknown as WorkerLike;
 }
