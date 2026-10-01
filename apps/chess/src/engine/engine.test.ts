@@ -67,31 +67,32 @@ describe('createEngine', () => {
     await expect(engine.bestMove(START, levelOf(1))).rejects.toMatchObject({ reason: 'disposed' });
   });
 
-  it('serialises concurrent calls, each with its own answer', async () => {
+  it('serialises concurrent calls: the second waits for the first bestmove', async () => {
     const log: string[] = [];
-    const w = fakeWorker(null, log);
-    const base = w.postMessage.bind(w);
-    let n = 0;
-    w.postMessage = (msg) => {
-      base(msg);
-      if (msg.startsWith('go')) {
-        const mv = ['bestmove e2e4', 'bestmove d2d4'][n++];
-        queueMicrotask(() => w.onmessage?.({ data: mv }));
-      }
-    };
+    const w = fakeWorker(null, log); // never answers `go` by itself: replies are held
     const engine = createEngine(() => w);
     const a = engine.bestMove(START, levelOf(1));
     const b = engine.bestMove(START, levelOf(2));
-    await expect(a).resolves.toEqual({ from: 'e2', to: 'e4' });
-    await expect(b).resolves.toEqual({ from: 'd2', to: 'd4' });
+    await vi.advanceTimersByTimeAsync(1);
+    // Only A's search is on the worker; B has sent nothing yet.
     expect(log.slice(2)).toEqual([
       'setoption name Skill Level value 0',
       `position fen ${START}`,
       'go movetime 100',
+    ]);
+
+    w.onmessage?.({ data: 'bestmove e2e4' });
+    await expect(a).resolves.toEqual({ from: 'e2', to: 'e4' });
+    await vi.advanceTimersByTimeAsync(1);
+    // B starts only now, and the next bestmove is B's.
+    expect(log.slice(5)).toEqual([
       'setoption name Skill Level value 5',
       `position fen ${START}`,
       'go movetime 200',
     ]);
+
+    w.onmessage?.({ data: 'bestmove d2d4' });
+    await expect(b).resolves.toEqual({ from: 'd2', to: 'd4' });
   });
 
   it('rejects an in-flight search promptly on dispose', async () => {
