@@ -36,15 +36,3 @@ export function Scene(props: {
     </group>
   );
 }
-
-const HEIGHT = { p: 0.5, n: 0.7, b: 0.8, r: 0.9, q: 1.1, k: 1.25 } as const;
-
-/** Stand-in treasure: a cylinder sized by piece type, until Task 6's treasures replace it. */
-export function PlaceholderPiece({ piece }: { piece: BoardPiece }) {
-  return (
-    <mesh position-y={HEIGHT[piece.type] / 2} castShadow>
-      <cylinderGeometry args={[0.28, 0.34, HEIGHT[piece.type], 24]} />
-      <meshStandardMaterial color={piece.color === 'w' ? '#f2f5ef' : '#1b1d22'} />
-    </mesh>
-  );
-}

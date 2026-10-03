@@ -1,15 +1,20 @@
 import { Canvas } from '@react-three/fiber';
 import { PerformanceMonitor } from '@react-three/drei';
+import type { Square } from 'chess.js';
 import { useEffect, useRef, useState } from 'react';
 import type { Side } from '../game/coords';
 import type { GameSettings } from '../settings';
+import { JUMP_MS, movedKnights, squaresById } from './jumps';
 import { QualityContext, type Quality } from './quality';
 import { CameraRig, type CameraRigHandle } from './scene/CameraRig';
 import { disposeOwned } from './scene/dispose';
-import { PlaceholderPiece, Scene } from './scene/Scene';
+import { Treasure } from './scene/pieces';
+import { Scene } from './scene/Scene';
 import { useGame } from './useGame';
 import { WebglFallback, hasWebgl } from './WebglFallback';
 import css from './battle.css?inline';
+
+const NO_JUMPS: ReadonlySet<string> = new Set();
 
 export interface BattleProps {
   settings: GameSettings;
@@ -36,6 +41,24 @@ export default function Battle({ settings, onExit, capture }: BattleProps) {
 
   useEffect(() => () => disposeOwned(), []);
 
+  // A knight's bell rings while it jumps. Each position is compared with the one before it,
+  // so a reply landing within JUMP_MS (the AI's can) ends the ringing instead of leaving it on.
+  const [jumping, setJumping] = useState(NO_JUMPS);
+  const squares = useRef<Map<string, Square> | null>(null);
+  const { pieces } = game.snap;
+  useEffect(() => {
+    const before = squares.current;
+    squares.current = squaresById(pieces);
+    const moved = before ? movedKnights(before, pieces) : [];
+    if (moved.length === 0) return;
+    setJumping(new Set(moved));
+    const t = setTimeout(() => setJumping(NO_JUMPS), JUMP_MS);
+    return () => {
+      clearTimeout(t);
+      setJumping(NO_JUMPS);
+    };
+  }, [pieces]);
+
   // A lost context unmounts the Canvas; the fallback leads back to the lobby,
   // and entering a battle again mounts a fresh one.
   if (!webgl || lost) return <WebglFallback onExit={onExit} />;
@@ -61,7 +84,11 @@ export default function Battle({ settings, onExit, capture }: BattleProps) {
           <ambientLight intensity={0.5} />
           <directionalLight position={[5, 10, 5]} intensity={1.4} castShadow />
           <CameraRig ref={rig} initialSide={humanSide} />
-          <Scene game={game} cursor={null} renderPiece={(p) => <PlaceholderPiece piece={p} />} />
+          <Scene
+            game={game}
+            cursor={null}
+            renderPiece={(p) => <Treasure piece={p} jumping={jumping.has(p.id)} />}
+          />
         </Canvas>
         {!capture && (
           <div className="chess-hud-temp">
