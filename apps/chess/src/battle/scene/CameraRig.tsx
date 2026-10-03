@@ -2,7 +2,15 @@ import { CameraControls } from '@react-three/drei';
 import { useThree } from '@react-three/fiber';
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef } from 'react';
 import type { Side } from '../../game/coords';
-import { DISTANCE, POLAR, azimuthOf, framingFit, homePosition, nearestAzimuth } from './rig-math';
+import {
+  DISTANCE,
+  ORBIT,
+  POLAR,
+  azimuthOf,
+  framingFit,
+  homePosition,
+  nearestAzimuth,
+} from './rig-math';
 
 export interface CameraRigHandle {
   reset(): void;
@@ -73,10 +81,10 @@ export const CameraRig = forwardRef<CameraRigHandle, { initialSide: Side }>(func
     <CameraControls
       ref={attach}
       makeDefault
-      minDistance={6}
-      maxDistance={18 * fit}
-      minPolarAngle={0.2}
-      maxPolarAngle={1.35}
+      minDistance={ORBIT.minDistance}
+      maxDistance={ORBIT.maxDistance * fit}
+      minPolarAngle={ORBIT.minPolar}
+      maxPolarAngle={ORBIT.maxPolar}
       truckSpeed={0}
       smoothTime={0.35}
     />

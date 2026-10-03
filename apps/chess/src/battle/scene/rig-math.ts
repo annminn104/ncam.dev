@@ -6,6 +6,12 @@ export const DISTANCE = 11;
 /** Radians from straight up. */
 export const POLAR = 0.95;
 
+/**
+ * How far the player can take the camera: zoom (the far limit scaled by `framingFit`) and
+ * height (polar angle, radians from straight up). The arenas' scenery is checked against these.
+ */
+export const ORBIT = { minDistance: 6, maxDistance: 18, minPolar: 0.2, maxPolar: 1.35 } as const;
+
 const TAU = Math.PI * 2;
 /** Width / height at and above which the whole board fits the screen at DISTANCE. */
 const FIT_ASPECT = 1.5;

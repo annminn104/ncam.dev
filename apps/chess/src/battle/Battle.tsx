@@ -6,6 +6,7 @@ import type { Side } from '../game/coords';
 import type { GameSettings } from '../settings';
 import { JUMP_MS, movedKnights, squaresById } from './jumps';
 import { QualityContext, type Quality } from './quality';
+import { ARENA_DEFS } from './scene/arenas';
 import { CameraRig, type CameraRigHandle } from './scene/CameraRig';
 import { disposeOwned } from './scene/dispose';
 import { Treasure } from './scene/pieces';
@@ -38,6 +39,8 @@ export default function Battle({ settings, onExit, capture }: BattleProps) {
   const [quality, setQuality] = useState<Quality>('high');
   const [webgl] = useState(hasWebgl);
   const [lost, setLost] = useState(false);
+  const arena = ARENA_DEFS[settings.arenaId];
+  const ArenaEnvironment = arena.Environment;
 
   useEffect(() => () => disposeOwned(), []);
 
@@ -66,7 +69,8 @@ export default function Battle({ settings, onExit, capture }: BattleProps) {
   return (
     <QualityContext.Provider value={quality}>
       <style>{css}</style>
-      <div className="chess-battle">
+      {/* The arena's colour behind the canvas: no dark flash while the first frame compiles. */}
+      <div className="chess-battle" style={{ background: arena.background }}>
         <Canvas
           // 'percentage' is PCFShadowMap, which is what three falls back to (with a console
           // warning) for the default 'soft'.
@@ -80,12 +84,13 @@ export default function Battle({ settings, onExit, capture }: BattleProps) {
             });
           }}
         >
+          <color attach="background" args={[arena.background]} />
           <PerformanceMonitor onDecline={() => setQuality('low')} />
-          <ambientLight intensity={0.5} />
-          <directionalLight position={[5, 10, 5]} intensity={1.4} castShadow />
+          <ArenaEnvironment />
           <CameraRig ref={rig} initialSide={humanSide} />
           <Scene
             game={game}
+            skin={arena.skin}
             cursor={null}
             renderPiece={(p) => <Treasure piece={p} jumping={jumping.has(p.id)} />}
           />

@@ -52,6 +52,26 @@ host's `MountConfig`; only `assetBase` is read. Not route-aware.
   fails until a reload), so the way out is the lobby and the message says to reload.
 - `THREE.Clock … deprecated` in the console is R3F 9.8's own, not ours.
 
+## The arenas (`battle/scene/arenas/`)
+
+- `ARENA_DEFS` gives each `ArenaId` its board skin (`skins.ts`), clear colour and an
+  `Environment` that owns its sky, fog, lights (one shadow-casting `KeyLight`) and effects.
+  Everything is painted in code (`textures.ts`, `scenery.ts`): nothing is fetched. drei's
+  `<Clouds>` would fetch a PNG from a CDN and `<Environment preset>` an HDRI; don't use them.
+- The pieces keep their studio `envMap` (`materials.ts`): an arena reaches them through its key
+  light, hemisphere and fog, not `scene.environment`.
+- `ArenaFog` measures from the board, not the camera: a phone pulls the camera ~3× further back,
+  and world-fixed fog would hide the board there.
+- `SkyDome` is drawn at the far plane (`gl_Position.z = w`) and its horizon is the fog colour, so
+  ground running into the haze meets the sky without a seam.
+- drei's `MeshReflectorMaterial` takes the mirror's normal from the mesh's rotation (local +z):
+  rotate the mesh, never the plane geometry, or it mirrors across a wall. It renders the whole
+  scene a second time each frame; `PerformanceMonitor` swaps it for a plain material.
+- Scenery that rises above the board must stay out of every reachable camera's view of it:
+  `layout.test.ts` checks every column against the rig's `ORBIT` limits (`rig-math.ts`).
+- Visual checks headless: SwiftShader declines to `'low'` within seconds; for the `'high'`
+  path launch Chromium with `--use-angle=metal` (the real GPU).
+
 ## Commands
 
     pnpm --filter @ncam/chess dev        # :9008 standalone
