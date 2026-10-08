@@ -36,9 +36,11 @@ const rgbaToken = (name: string): Rgba => {
   if (!m) throw new Error(`--${name} is not an rgb(r g b / a) token in battle.css`);
   return [Number(m[1]), Number(m[2]), Number(m[3]), Number(m[4])];
 };
-const modalFill = (): Rgba => {
-  const m = /\.chess-modal\s*\{[^}]*?background:\s*rgb\((\d+) (\d+) (\d+) \/ ([\d.]+)\)/.exec(css);
-  if (!m) throw new Error('the .chess-modal background was not found in battle.css');
+const fillOf = (block: string): Rgba => {
+  const m = new RegExp(
+    `\\.${block}\\s*\\{[^}]*?background:\\s*rgb\\((\\d+) (\\d+) (\\d+) \\/ ([\\d.]+)\\)`,
+  ).exec(css);
+  if (!m) throw new Error(`the .${block} background was not found in battle.css`);
   return [Number(m[1]), Number(m[2]), Number(m[3]), Number(m[4])];
 };
 
@@ -46,7 +48,9 @@ const WHITE: Rgb = [255, 255, 255];
 const BLACK: Rgb = [0, 0, 0];
 const surfaces = [
   ['HUD panel', rgbaToken('hud-panel')],
-  ['modal', modalFill()],
+  ['modal', fillOf('chess-modal')],
+  // The engine-failure toast: its text and buttons sit on its own crimson fill.
+  ['toast', fillOf('chess-toast')],
 ] as const;
 
 describe('battle HUD contrast (WCAG AA)', () => {

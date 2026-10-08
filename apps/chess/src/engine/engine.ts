@@ -7,6 +7,12 @@ export interface WorkerLike {
   onmessage: ((e: { data: unknown }) => void) | null;
   terminate(): void;
   onerror?: ((e: unknown) => void) | null;
+  /**
+   * For a worker that is still on its way (`lazyWorker`: Stockfish downloads first). It settles
+   * once the worker can take commands, and the handshake's clock starts then, so a slow download
+   * doesn't count as a dead engine. It rejects if the worker will never come.
+   */
+  loaded?: Promise<unknown>;
 }
 
 export class EngineError extends Error {
@@ -18,18 +24,26 @@ export class EngineError extends Error {
 
 export interface Engine {
   bestMove(fen: string, level: Level): Promise<MoveInput | null>;
+  /**
+   * Start the worker and its handshake now, ahead of the first move: a battle vs the AI calls this
+   * as it opens, so the download overlaps the player's first move. A failure leaves nothing
+   * running, and the next `bestMove` starts afresh.
+   */
+  warmUp(): Promise<void>;
   dispose(): void;
 }
 
 type Waiter = {
-  test: (line: string) => boolean;
+  /** The line that ends the wait. A wait for a worker to load has none. */
+  test?: (line: string) => boolean;
   resolve: (line: string) => void;
   reject: (reason: EngineError['reason']) => void;
 };
 
 /**
- * A UCI client over one Stockfish worker. A search that outlives 5 × movetime
- * (+ 2 s) restarts the worker and asks once more before failing with 'timeout'.
+ * A UCI client over one Stockfish worker. A search that outlives 5 × movetime (+ 2 s) restarts
+ * the worker and asks once more before failing with 'timeout'. A call that fails stops its
+ * worker, so the next call starts a fresh one.
  */
 export function createEngine(
   spawn: () => WorkerLike,
@@ -43,9 +57,11 @@ export function createEngine(
   const start = () => {
     const w = spawn();
     w.onmessage = (e) => {
+      // A stopped worker answers nothing: a search given up on can still reply late.
+      if (worker !== w) return;
       const lines = String(e.data).split('\n');
       for (const line of lines) {
-        const hit = waiters.find((x) => x.test(line));
+        const hit = waiters.find((x) => x.test?.(line));
         if (hit) {
           waiters = waiters.filter((x) => x !== hit);
           hit.resolve(line);
@@ -58,10 +74,16 @@ export function createEngine(
       else settleAll('crashed');
     };
     worker = w;
-    ready = (async () => {
+    const handshake = (async () => {
+      if (w.loaded) await loading(w.loaded);
       await send('uci', (l) => l === 'uciok', handshakeMs);
       await send('isready', (l) => l === 'readyok', handshakeMs);
     })();
+    ready = handshake;
+    // A failed handshake leaves nothing running, whoever was waiting for it (a warm-up, a move).
+    handshake.catch(() => {
+      if (worker === w) stop();
+    });
   };
 
   /** Reject every pending wait (clearing its timer). */
@@ -77,6 +99,26 @@ export function createEngine(
     worker = null;
     ready = null;
   };
+
+  /** Wait for a worker on its way. There is no clock: stop() and dispose() end it like any wait. */
+  function loading(loaded: Promise<unknown>): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const waiter: Waiter = {
+        resolve: () => resolve(),
+        reject: (reason) => reject(new EngineError(reason)),
+      };
+      waiters.push(waiter);
+      const end = (settle: () => void) => () => {
+        if (!waiters.includes(waiter)) return; // already ended by stop()
+        waiters = waiters.filter((x) => x !== waiter);
+        settle();
+      };
+      loaded.then(
+        end(() => waiter.resolve('')),
+        end(() => waiter.reject('crashed')),
+      );
+    });
+  }
 
   function send(msg: string, until: (line: string) => boolean, ms: number): Promise<string> {
     return new Promise((resolve, reject) => {
@@ -117,11 +159,17 @@ export function createEngine(
     if (disposed) throw new EngineError('disposed');
     try {
       return await ask(fen, level);
+    } catch {
+      if (disposed) throw new EngineError('disposed');
+      stop();
+    }
+    try {
+      return await ask(fen, level);
     } catch (error) {
       if (disposed) throw new EngineError('disposed');
-      if (!(error instanceof EngineError)) throw new EngineError('crashed');
+      // This worker may still be searching: its bestmove must not answer the next call.
       stop();
-      return await ask(fen, level);
+      throw error instanceof EngineError ? error : new EngineError('crashed');
     }
   }
 
@@ -133,6 +181,11 @@ export function createEngine(
       const run = chain.then(() => attempt(fen, level));
       chain = run.catch(() => undefined);
       return run;
+    },
+    async warmUp() {
+      if (disposed) throw new EngineError('disposed');
+      if (!worker) start();
+      await ready;
     },
     dispose() {
       disposed = true;

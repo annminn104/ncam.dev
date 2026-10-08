@@ -6,6 +6,7 @@ import type { Side } from '../game/coords';
 import { isOver } from '../game/status';
 import type { GameSettings } from '../settings';
 import { BoardA11y } from './BoardA11y';
+import { EngineToast } from './EngineToast';
 import { Hud } from './Hud';
 import { JUMP_MS, movedKnights, squaresById } from './jumps';
 import { PromotionDialog } from './PromotionDialog';
@@ -16,6 +17,7 @@ import { CameraRig, type CameraRigHandle } from './scene/CameraRig';
 import { disposeOwned } from './scene/dispose';
 import { Treasure } from './scene/pieces';
 import { Scene } from './scene/Scene';
+import { useAiOpponent } from './useAiOpponent';
 import { useGame } from './useGame';
 import { WebglFallback, hasWebgl } from './WebglFallback';
 import css from './battle.css?inline';
@@ -31,14 +33,17 @@ export interface BattleProps {
   capture?: boolean;
 }
 
-export default function Battle({ settings, onExit, onRematch, capture }: BattleProps) {
+export default function Battle({ settings, assetBase, onExit, onRematch, capture }: BattleProps) {
   // A state initialiser, not useMemo: the random pick must hold for the whole battle.
   const [humanSide] = useState<Side>(() => {
     if (settings.mode === 'hotseat') return 'w';
     if (settings.playerSide === 'random') return Math.random() < 0.5 ? 'w' : 'b';
     return settings.playerSide;
   });
-  const hotseat = settings.mode === 'hotseat';
+  // This battle's own mode. It starts as the lobby's; if Stockfish fails, the toast can turn the
+  // battle into hot-seat and keep the position (a remount would lose it).
+  const [mode, setMode] = useState(settings.mode);
+  const hotseat = mode === 'hotseat';
   const canMove = (turn: Side) => hotseat || turn === humanSide;
   const game = useGame(canMove);
   const rig = useRef<CameraRigHandle>(null);
@@ -50,8 +55,15 @@ export default function Battle({ settings, onExit, onRematch, capture }: BattleP
 
   useEffect(() => () => disposeOwned(), []);
 
-  // The AI's turn arrives with Task 9; until then nobody thinks.
-  const thinking = false;
+  // No engine (and no download) for a battle that can't be played: no WebGL, or a lost context.
+  const ai = useAiOpponent({
+    enabled: mode === 'ai' && !capture && webgl && !lost,
+    aiSide: humanSide === 'w' ? 'b' : 'w',
+    level: settings.level,
+    game,
+    assetBase,
+  });
+  const thinking = ai.thinking;
   // The lobby's setting is where each battle starts; the HUD toggles it for this battle only.
   const [autoRotate, setAutoRotate] = useState(settings.autoRotate);
   // "View the board" sets the verdict aside until play resumes (an undo).
@@ -135,7 +147,7 @@ export default function Battle({ settings, onExit, onRematch, capture }: BattleP
             <div className="chess-hud" inert={modal}>
               <Hud
                 game={game}
-                settings={settings}
+                settings={{ ...settings, mode }}
                 humanSide={humanSide}
                 thinking={thinking}
                 autoRotate={autoRotate}
@@ -150,6 +162,14 @@ export default function Battle({ settings, onExit, onRematch, capture }: BattleP
               >
                 <BoardA11y game={game} viewSide={viewSide} onCursor={setCursor} />
               </Hud>
+              {/* Only the AI's turn can fail; once the battle is over there is nothing to ask. */}
+              {ai.error && !over && (
+                <EngineToast
+                  message={ai.error}
+                  onRetry={ai.retry}
+                  onHotseat={() => setMode('hotseat')}
+                />
+              )}
             </div>
             {game.pendingPromotion && (
               <PromotionDialog side={turn} onChoose={game.choosePromotion} />

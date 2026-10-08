@@ -14,8 +14,8 @@ const SIDES: Side[] = ['w', 'b'];
  * The battle's overlay: whose move it is, the view and game controls, the treasures each sect
  * has lost and the move list. It renders the parts of the `.chess-hud` grid that Battle lays
  * over the canvas. `children` (the keyboard board) goes between the top bar and the game
- * controls, which is where Tab reaches it. `thinking` is the AI's turn (Task 9): it turns Undo
- * off and says so.
+ * controls, which is where Tab reaches it. `thinking` is the AI at work on its move (loading
+ * Stockfish or searching): it turns Undo off and says so.
  */
 export function Hud(props: {
   game: GameApi;

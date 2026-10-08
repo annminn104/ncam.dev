@@ -14,7 +14,8 @@ host's `MountConfig`; only `assetBase` is read. Not route-aware.
 ## Layout and rules
 
 - `src/game/` — the only place chess rules live (wraps chess.js). Pure TS, unit-tested.
-- `src/engine/` — Stockfish UCI client. `spawn.ts` is browser-only.
+- `src/engine/` — Stockfish UCI client (`engine.ts`), its levels and UCI parsing. `spawn.ts` is
+  browser-only; `download.ts` and `lazy-worker.ts` are what it is built from, tested in Node.
 - `src/lobby/`, `App.tsx`, `ErrorBoundary.tsx`, `ssr.tsx`, `settings.ts`, `arenas-meta.ts`,
   `lib/` — SSR-safe; they must never statically import three, `@react-three/*` or
   `src/battle/**` (a test walks the import graph to enforce it). The battle is
@@ -79,6 +80,28 @@ host's `MountConfig`; only `assetBase` is read. Not route-aware.
   (≤ 500 px tall, a phone on its side) hides it and stands the game controls in a slim column on
   the left under the turn, where the board's sides leave room; a draw offer takes that column's
   place until it is answered.
+
+## vs AI (`battle/useAiOpponent.ts`, `engine/`)
+
+- One engine per battle, only vs the AI with a playable board (not hot-seat, capture mode or a
+  WebGL fallback). It is warmed up a tick after the battle mounts, so the ~7 MB download overlaps
+  the player's first move. The tick is there because StrictMode's dev-only remount disposes the
+  first engine at once, and then nothing has been fetched.
+- `spawnStockfish` downloads the wasm on the page (`download.ts`) and only then creates the worker,
+  which loads the wasm from a blob URL in its hash. A worker's own fetch can't be watched, so the
+  engine's handshake clock (10 s) could not tell a slow network from a dead engine. Now
+  `lazyWorker` hands `createEngine` a stand-in at once, whose `loaded` starts that clock when the
+  real worker exists. A download fails only when it stalls (20 s without a byte); a slow one that
+  keeps coming never does.
+- A Stockfish that fails to load errors its worker (the loader rethrows), and `onerror` makes a
+  blocked wasm fail at once. A failed call stops its worker, and a stopped worker's late lines
+  are ignored, so an abandoned search can't answer the next call.
+- `thinking` is "the AI is to move in a live game and nothing has failed". It covers loading, so
+  the elder meditates while Stockfish is still downloading. The AI's effect follows `fen` and
+  whether the game is over, so undoing a resignation made on the AI's turn hands it the move again.
+- A warm-up failure is only logged: the AI's move asks again (try + retry) before the toast
+  (`EngineToast`) says anything. Retry asks again. "Switch to hot-seat" flips Battle's own `mode`
+  state; a remount would lose the position.
 
 ## The arenas (`battle/scene/arenas/`)
 

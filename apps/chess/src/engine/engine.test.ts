@@ -20,6 +20,39 @@ function fakeWorker(reply: string | null, log: string[] = []): WorkerLike {
   return w;
 }
 
+/**
+ * A worker still downloading for `ms`, as `lazyWorker` hands one over: what it is sent meanwhile
+ * waits (Stockfish's loader queues commands until it is ready), and `loaded` settles on arrival.
+ */
+function lateWorker(ms: number, reply: string | null, log: string[] = []): WorkerLike {
+  const w = fakeWorker(reply, log);
+  const post = w.postMessage.bind(w);
+  const queue: string[] = [];
+  let arrived = false;
+  w.postMessage = (msg) => {
+    if (arrived) post(msg);
+    else queue.push(msg);
+  };
+  w.loaded = new Promise<void>((resolve) =>
+    setTimeout(() => {
+      arrived = true;
+      for (const msg of queue.splice(0)) post(msg);
+      resolve();
+    }, ms),
+  );
+  return w;
+}
+
+/** A promise's outcome, readable at any point without awaiting it. */
+function track<T>(p: Promise<T>) {
+  const state: { done: boolean; value?: T; error?: unknown } = { done: false };
+  p.then(
+    (value) => Object.assign(state, { done: true, value }),
+    (error: unknown) => Object.assign(state, { done: true, error }),
+  );
+  return state;
+}
+
 beforeEach(() => vi.useFakeTimers());
 afterEach(() => vi.useRealTimers());
 
@@ -125,5 +158,141 @@ describe('createEngine', () => {
   it('resolves null for bestmove (none)', async () => {
     const engine = createEngine(() => fakeWorker('bestmove (none)'));
     await expect(engine.bestMove(START, levelOf(1))).resolves.toBeNull();
+  });
+
+  it('gives up on the retry’s worker too: its late reply cannot answer the next call', async () => {
+    const spawned: WorkerLike[] = [];
+    const engine = createEngine(() => {
+      const w = fakeWorker(null); // never answers `go` by itself
+      spawned.push(w);
+      return w;
+    });
+    const first = engine.bestMove(START, levelOf(1)).catch((e: unknown) => e);
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(await first).toMatchObject({ reason: 'timeout' });
+    expect(spawned).toHaveLength(2);
+    expect(spawned[1].terminate).toHaveBeenCalled();
+
+    // The next call starts a worker of its own, and the abandoned search's bestmove, arriving
+    // late, answers nothing: the next call gets its own worker's move.
+    const next = track(engine.bestMove(START, levelOf(1)));
+    await vi.advanceTimersByTimeAsync(1);
+    expect(spawned).toHaveLength(3);
+    spawned[1].onmessage?.({ data: 'bestmove a2a3' });
+    await vi.advanceTimersByTimeAsync(1);
+    expect(next.done).toBe(false);
+    spawned[2].onmessage?.({ data: 'bestmove g1f3' });
+    await vi.advanceTimersByTimeAsync(1);
+    expect(next).toMatchObject({ done: true, value: { from: 'g1', to: 'f3' } });
+  });
+});
+
+describe('createEngine with a worker that arrives late (a slow first download)', () => {
+  it('starts the handshake clock only once the worker has loaded', async () => {
+    const log: string[] = [];
+    let spawned = 0;
+    const engine = createEngine(() => {
+      spawned++;
+      return lateWorker(15_000, 'bestmove e2e4', log);
+    });
+    const move = track(engine.bestMove(START, levelOf(1)));
+    // Longer than the 10 s handshake budget: the download is not the handshake.
+    await vi.advanceTimersByTimeAsync(14_999);
+    expect(move.done).toBe(false);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(move).toMatchObject({ done: true, value: { from: 'e2', to: 'e4' } });
+    expect(spawned).toBe(1);
+    expect(log.slice(0, 2)).toEqual(['uci', 'isready']);
+  });
+
+  it('still times out a worker that loads but never answers the handshake', async () => {
+    const engine = createEngine(() => {
+      const w = lateWorker(15_000, null);
+      w.postMessage = () => undefined; // deaf
+      return w;
+    });
+    const result = track(engine.bestMove(START, levelOf(1)));
+    await vi.advanceTimersByTimeAsync(15_000 + 9_999);
+    expect(result.done).toBe(false);
+    // The retry's worker downloads and is deaf too.
+    await vi.advanceTimersByTimeAsync(1 + 25_000);
+    expect(result).toMatchObject({ done: true, error: { reason: 'timeout' } });
+  });
+
+  it('retries a worker that cannot load once, then fails as crashed', async () => {
+    const spawned: WorkerLike[] = [];
+    const engine = createEngine(() => {
+      const w = fakeWorker('bestmove e2e4');
+      w.loaded = Promise.reject(new Error('stockfish.wasm stalled'));
+      spawned.push(w);
+      return w;
+    });
+    await expect(engine.bestMove(START, levelOf(1))).rejects.toMatchObject({ reason: 'crashed' });
+    expect(spawned).toHaveLength(2);
+    expect(spawned[1].terminate).toHaveBeenCalled();
+  });
+
+  it('ends the wait for a loading worker at once on dispose', async () => {
+    const engine = createEngine(() => lateWorker(60_000, 'bestmove e2e4'));
+    const result = track(engine.bestMove(START, levelOf(1)));
+    await vi.advanceTimersByTimeAsync(1);
+    engine.dispose();
+    await vi.advanceTimersByTimeAsync(1);
+    expect(result).toMatchObject({ done: true, error: { reason: 'disposed' } });
+  });
+});
+
+describe('Engine.warmUp', () => {
+  it('starts the worker and its handshake ahead of the first move, which reuses them', async () => {
+    const log: string[] = [];
+    let spawned = 0;
+    const engine = createEngine(() => {
+      spawned++;
+      return fakeWorker('bestmove e2e4', log);
+    });
+    await engine.warmUp();
+    expect(log).toEqual(['uci', 'isready']);
+    await expect(engine.bestMove(START, levelOf(1))).resolves.toEqual({ from: 'e2', to: 'e4' });
+    expect(spawned).toBe(1);
+    expect(log.slice(2)).toEqual([
+      'setoption name Skill Level value 0',
+      `position fen ${START}`,
+      'go movetime 100',
+    ]);
+  });
+
+  it('lets a move asked during a slow warm-up wait for the same worker', async () => {
+    let spawned = 0;
+    const engine = createEngine(() => {
+      spawned++;
+      return lateWorker(15_000, 'bestmove e7e5');
+    });
+    void engine.warmUp();
+    // The player moves 5 s in, while Stockfish is still downloading.
+    await vi.advanceTimersByTimeAsync(5_000);
+    const reply = track(engine.bestMove(START, levelOf(1)));
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(reply).toMatchObject({ done: true, value: { from: 'e7', to: 'e5' } });
+    expect(spawned).toBe(1);
+  });
+
+  it('leaves nothing running when it fails: the first move starts afresh', async () => {
+    const spawned: WorkerLike[] = [];
+    const engine = createEngine(() => {
+      const w = fakeWorker('bestmove e2e4');
+      if (spawned.length === 0) w.loaded = Promise.reject(new Error('offline'));
+      spawned.push(w);
+      return w;
+    });
+    await expect(engine.warmUp()).rejects.toMatchObject({ reason: 'crashed' });
+    expect(spawned[0].terminate).toHaveBeenCalled();
+    await expect(engine.bestMove(START, levelOf(1))).resolves.toEqual({ from: 'e2', to: 'e4' });
+    expect(spawned).toHaveLength(2);
+  });
+
+  it('rejects after dispose', async () => {
+    const engine = createEngine(() => fakeWorker('bestmove e2e4'));
+    engine.dispose();
+    await expect(engine.warmUp()).rejects.toMatchObject({ reason: 'disposed' });
   });
 });
