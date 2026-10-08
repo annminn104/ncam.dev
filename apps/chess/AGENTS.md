@@ -70,8 +70,15 @@ host's `MountConfig`; only `assetBase` is read. Not route-aware.
 - Undo rules live in `undo.ts` (`undoPlies`): hot-seat 1 ply, vs AI 2 (1 after the player's own
   game-ending move), off while the AI thinks; a resignation or an agreed draw is taken back
   alone (0 plies). `thinking` (the AI's turn) is passed in by `Battle`.
-- Phones (≤ 720 px wide) get the side panel under the board; a phone on its side (≤ 500 px tall)
-  hides it and stands the game controls in a column in the bottom-right corner.
+- A hot-seat draw offer stands only in the position it was made in (`draw-offer.ts`): `Hud`
+  shows every position it renders to `offerIn()`, so the first move, undo or verdict withdraws
+  it for good and no undo brings it back.
+- Once a battle is over the game controls carry Rematch, so "View the board" never strands the
+  players (the lobby is always in the top bar).
+- Phones (≤ 720 px wide) get the side panel under the board. A short screen of any width
+  (≤ 500 px tall, a phone on its side) hides it and stands the game controls in a slim column on
+  the left under the turn, where the board's sides leave room; a draw offer takes that column's
+  place until it is answered.
 
 ## The arenas (`battle/scene/arenas/`)
 

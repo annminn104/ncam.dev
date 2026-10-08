@@ -81,4 +81,22 @@ describe('battle HUD contrast (WCAG AA)', () => {
       }
     }
   });
+
+  it('keeps the Rematch label at 4.5:1 along its whole gradient, hovered or not', () => {
+    const rules = [...css.matchAll(/\.chess-btn--primary[^{]*\{[^}]*?linear-gradient\(([^)]*)\)/g)];
+    expect(rules.length, 'normal and hover gradients of .chess-btn--primary').toBe(2);
+    const ink = hexToken(globals, 'chess-ink');
+    for (const [, args] of rules) {
+      const stops = [...args.matchAll(/#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})/gi)].map(
+        (m) => [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)] as Rgb,
+      );
+      expect(stops).toHaveLength(2);
+      const [from, to] = stops;
+      for (let step = 0; step <= 10; step++) {
+        const t = step / 10;
+        const stop = from.map((c, i) => Math.round(c + (to[i] - c) * t)) as Rgb;
+        expect(contrast(ink, stop), `gradient at ${step * 10}%`).toBeGreaterThanOrEqual(4.5);
+      }
+    }
+  });
 });

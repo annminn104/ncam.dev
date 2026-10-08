@@ -146,6 +146,7 @@ export default function Battle({ settings, onExit, onRematch, capture }: BattleP
                   rig.current?.reset(!hotseat ? humanSide : autoRotate && !over ? turn : viewSide)
                 }
                 onExit={onExit}
+                onRematch={onRematch}
               >
                 <BoardA11y game={game} viewSide={viewSide} onCursor={setCursor} />
               </Hud>

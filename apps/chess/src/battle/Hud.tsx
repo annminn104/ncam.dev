@@ -4,6 +4,7 @@ import type { Side } from '../game/coords';
 import { describeStatus, isOver } from '../game/status';
 import { SECTS, TREASURES } from '../game/treasures';
 import type { GameSettings } from '../settings';
+import { NO_OFFER, offerIn, positionKey, type DrawOffer } from './draw-offer';
 import { undoPlies } from './undo';
 import type { GameApi } from './useGame';
 
@@ -25,10 +26,11 @@ export function Hud(props: {
   onToggleRotate(): void;
   onResetView(): void;
   onExit(): void;
+  onRematch(): void;
   children?: ReactNode;
 }) {
   const { game, settings, humanSide, thinking, autoRotate } = props;
-  const { onToggleRotate, onResetView, onExit, children } = props;
+  const { onToggleRotate, onResetView, onExit, onRematch, children } = props;
   const { snap, plyCount } = game;
   const hotseat = settings.mode === 'hotseat';
   const over = isOver(snap.status);
@@ -42,9 +44,14 @@ export function Hud(props: {
   });
   const resigner: Side = hotseat ? snap.turn : humanSide;
 
-  // An offer stands for the position it was made in: a move or an undo withdraws it.
-  const [offer, setOffer] = useState<{ by: Side; ply: number } | null>(null);
-  const offerBy = hotseat && !over && offer?.ply === plyCount ? offer.by : null;
+  // An offer stands for the position it was made in. Every position change is shown to
+  // offerIn() as this component renders it (adjusting state while rendering, React's pattern
+  // for state that follows a prop), so the first move, undo or verdict withdraws it for good.
+  const position = positionKey(plyCount, snap.status);
+  const [stored, setOffer] = useState<DrawOffer>(NO_OFFER);
+  const offer = offerIn(stored, position);
+  if (offer !== stored) setOffer(offer);
+  const offerBy = hotseat && !over ? offer.by : null;
   const offerButton = useRef<HTMLButtonElement>(null);
   const acceptButton = useRef<HTMLButtonElement>(null);
   const offerTextId = useId();
@@ -152,7 +159,7 @@ export function Hud(props: {
               type="button"
               className="chess-btn"
               onClick={() => {
-                setOffer(null);
+                setOffer({ by: null, position });
                 game.agreeDraw();
               }}
             >
@@ -163,7 +170,7 @@ export function Hud(props: {
               className="chess-btn"
               onClick={() => {
                 // The offer button comes back: hand it the focus this button is about to lose.
-                flushSync(() => setOffer(null));
+                flushSync(() => setOffer({ by: null, position }));
                 offerButton.current?.focus();
               }}
             >
@@ -195,11 +202,18 @@ export function Hud(props: {
               onClick={() => {
                 // The other player answers next: their Accept takes the focus of this button,
                 // which the offer replaces.
-                flushSync(() => setOffer({ by: snap.turn, ply: plyCount }));
+                flushSync(() => setOffer({ by: snap.turn, position }));
                 acceptButton.current?.focus();
               }}
             >
               Offer draw
+            </button>
+          )}
+          {/* Reviewing a finished battle ("View the board"): the result's Rematch stays at hand,
+              as the lobby does in the top bar. */}
+          {over && (
+            <button type="button" className="chess-btn chess-btn--primary" onClick={onRematch}>
+              Rematch
             </button>
           )}
         </div>

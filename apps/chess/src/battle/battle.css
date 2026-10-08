@@ -159,6 +159,17 @@
   background: var(--chess-jade);
   box-shadow: 0 0 6px var(--chess-jade);
 }
+/* The way on once a battle is decided (Rematch): the lobby's jade call to action. Hover adds a
+   ring rather than brightening, which would take the label under 4.5:1. */
+.chess-btn--primary {
+  border-color: var(--chess-jade);
+  background: linear-gradient(135deg, #267259, #1d5b4a);
+  font-weight: 600;
+}
+.chess-btn--primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #267259, #1d5b4a);
+  box-shadow: inset 0 0 0 1px var(--chess-jade);
+}
 
 .chess-hud__side {
   grid-area: side;
@@ -271,31 +282,61 @@
     min-width: 0;
   }
 }
-/* A phone on its side: the board fills the height and its near rank runs along the bottom edge,
-   so the side panel goes and the game controls stand in a column in the bottom-right corner,
-   off the squares. */
-@media (max-height: 500px) and (min-width: 721px) {
+/* A short screen, whatever its width (a phone on its side): the board fills the height, its near
+   rank runs along the bottom edge and its sides leave room only towards the top. So the side
+   panel goes, the controls slim down, and the game controls stand in a column on the left under
+   the turn, clear of the squares; a draw offer takes that column's place until it is answered.
+   After the phone rules above, so it wins on a narrow phone on its side (667×375). */
+@media (max-height: 500px) {
+  .chess-hud {
+    grid-template:
+      'top top' auto
+      'bottom .' minmax(0, 1fr) / auto 1fr;
+    font-size: 0.85rem;
+  }
   .chess-hud__side {
     display: none;
   }
   .chess-hud__bar {
+    gap: 6px;
     padding-top: max(8px, env(safe-area-inset-top));
-    padding-bottom: max(8px, env(safe-area-inset-bottom));
+    padding-bottom: 8px;
   }
   .chess-hud__bottom {
-    position: absolute;
-    right: 0;
-    bottom: 0;
-    align-items: flex-end;
+    align-self: start;
+    align-items: stretch;
+    padding-top: 0;
   }
   .chess-hud__bottom .chess-dock {
     flex-direction: column;
+    flex-wrap: nowrap;
     align-items: stretch;
-    border-radius: 24px;
+    border-radius: 21px;
+  }
+  .chess-hud__bottom:has(.chess-offer) > .chess-dock:not(.chess-offer) {
+    display: none;
+  }
+  .chess-dock {
+    gap: 4px;
+    padding: 4px;
+  }
+  .chess-btn {
+    min-height: 34px;
+    padding: 5px 12px;
+  }
+  .chess-turn {
+    min-height: 44px;
+    padding: 6px 16px 6px 12px;
   }
   .chess-offer {
-    padding: 10px 5px 5px;
+    padding: 8px 4px 4px;
     text-align: center;
+  }
+  .chess-offer__text {
+    max-width: 6.5rem;
+    margin: 0 auto;
+    font-size: 0.8rem;
+    line-height: 1.3;
   }
 }
 
