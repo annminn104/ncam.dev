@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import type { Square } from 'chess.js';
 import type { Side } from '../game/coords';
 import { createGame, type GameSnapshot, type MoveInput, type PromotionPiece } from '../game/game';
+import { isOver } from '../game/status';
 
 export interface GameApi {
   snap: GameSnapshot;
@@ -49,7 +50,8 @@ export function useGame(canMove: (turn: Side) => boolean): GameApi {
 
   const clickSquare = useCallback(
     (sq: Square) => {
-      if (locked || pendingPromotion || !canMove(snap.turn)) return;
+      // A finished battle is for looking at: nothing to pick up.
+      if (locked || pendingPromotion || isOver(snap.status) || !canMove(snap.turn)) return;
       const own = snap.pieces.find((p) => p.square === sq && p.color === snap.turn);
       if (selected && targets.includes(sq)) {
         if (game.isPromotion(selected, sq)) setPending({ from: selected, to: sq });

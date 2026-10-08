@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { squareToPosition } from '../../game/coords';
-import { DISTANCE, POLAR, azimuthOf, framingFit, homePosition, nearestAzimuth } from './rig-math';
+import {
+  DISTANCE,
+  POLAR,
+  azimuthOf,
+  framingFit,
+  homePosition,
+  nearestAzimuth,
+  viewSideOf,
+} from './rig-math';
 
 describe('homePosition', () => {
   it('stands white behind the white pieces, high enough to look down at the board', () => {
@@ -83,5 +91,29 @@ describe('nearestAzimuth', () => {
         );
       }
     }
+  });
+});
+
+describe('viewSideOf', () => {
+  const TAU = Math.PI * 2;
+
+  it('names the end of the board the camera stands at', () => {
+    expect(viewSideOf(azimuthOf('w'), 'b')).toBe('w');
+    expect(viewSideOf(azimuthOf('b'), 'w')).toBe('b');
+    // Turns the player has spun the board count for nothing.
+    expect(viewSideOf(3 * TAU + 0.4, 'b')).toBe('w');
+    expect(viewSideOf(-2 * TAU + Math.PI - 0.4, 'w')).toBe('b');
+  });
+
+  it('keeps its last answer while the camera looks at the board side-on', () => {
+    for (const azimuth of [Math.PI / 2, -Math.PI / 2, Math.PI / 2 + 0.1, 1.5 * Math.PI - 0.1]) {
+      expect(viewSideOf(azimuth, 'w')).toBe('w');
+      expect(viewSideOf(azimuth, 'b')).toBe('b');
+    }
+  });
+
+  it('changes its answer once the camera is clearly past the side-on view', () => {
+    expect(viewSideOf(Math.PI / 2 + 0.3, 'w')).toBe('b');
+    expect(viewSideOf(Math.PI / 2 - 0.3, 'b')).toBe('w');
   });
 });

@@ -52,6 +52,27 @@ host's `MountConfig`; only `assetBase` is read. Not route-aware.
   fails until a reload), so the way out is the lobby and the message says to reload.
 - `THREE.Clock … deprecated` in the console is R3F 9.8's own, not ours.
 
+## The HUD (`battle/Hud.tsx`, dialogs, `BoardA11y.tsx`)
+
+- `Battle` lays a `.chess-hud` grid over the canvas and `Hud` renders its parts into it (top bar,
+  side panel, game controls; the keyboard board goes between the top bar and the controls, which
+  is its place in the Tab order). The layer lets the pointer through except on its controls.
+- While a modal is open (`PromotionDialog`, `ResultOverlay`) the layer is `inert`, so Tab stays
+  in the modal. `useDialog` moves focus into it, hands it back to whatever had it, and maps
+  Escape (cancel / "View the board") wherever the focus is.
+- Arenas run from Cloud Peak's near-white sky to Blood Moon's black ground: HUD text only ever
+  sits on `--hud-panel`, and a control's edge is `--hud-edge` on a panel. `hud-contrast.test.ts`
+  holds 4.5:1 text and 3:1 edges over both extremes; don't put HUD text straight on the scene.
+- `BoardA11y` is a visually hidden grid of buttons mirroring the board (roving tabindex; the 3D
+  gold cursor shows its focus). It is laid out from the end the camera looks from
+  (`CameraRig onViewSide`, `viewSideOf`), so arrow keys follow the screen. Its rows are keyed by
+  rank: when the view turns React moves them, and the focused square keeps its focus.
+- Undo rules live in `undo.ts` (`undoPlies`): hot-seat 1 ply, vs AI 2 (1 after the player's own
+  game-ending move), off while the AI thinks; a resignation or an agreed draw is taken back
+  alone (0 plies). `thinking` (the AI's turn) is passed in by `Battle`.
+- Phones (≤ 720 px wide) get the side panel under the board; a phone on its side (≤ 500 px tall)
+  hides it and stands the game controls in a column in the bottom-right corner.
+
 ## The arenas (`battle/scene/arenas/`)
 
 - `ARENA_DEFS` gives each `ArenaId` its board skin (`skins.ts`), clear colour and an

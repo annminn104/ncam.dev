@@ -48,3 +48,17 @@ export function homePosition(side: Side, fit = 1): [x: number, y: number, z: num
 export function nearestAzimuth(current: number, azimuth: number): number {
   return azimuth + TAU * Math.round((current - azimuth) / TAU);
 }
+
+/** cos(azimuth) inside ±VIEW_BAND is "side-on" (within ~11.5° of it). */
+const VIEW_BAND = 0.2;
+
+/**
+ * Which end of the board a camera at `azimuth` looks from, so the keyboard board's arrow keys
+ * follow the screen. Side-on, `previous` stands: a camera parked there doesn't flip-flop.
+ */
+export function viewSideOf(azimuth: number, previous: Side): Side {
+  const towardsWhite = Math.cos(azimuth);
+  if (towardsWhite > VIEW_BAND) return 'w';
+  if (towardsWhite < -VIEW_BAND) return 'b';
+  return previous;
+}

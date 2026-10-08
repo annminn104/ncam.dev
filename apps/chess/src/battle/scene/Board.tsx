@@ -78,10 +78,37 @@ export function Board(props: {
               </mesh>
             )}
             {sq === cursor && (
-              <mesh rotation-x={-Math.PI / 2} position-y={0.012}>
-                <ringGeometry args={[0.44, 0.49, 4, 1, Math.PI / 4]} />
-                <meshBasicMaterial color="#d8b45a" depthWrite={false} />
-              </mesh>
+              // The keyboard focus: a square frame out by the tile's edge, where piece bases
+              // don't hide it, and two-tone (gold on a dark band) so it reads on light and dark
+              // squares alike; no tone mapping or fog, it is UI. Both draw in the transparent pass,
+              // the gold last (renderOrder): neither writes depth, so an opaque gold ring would be
+              // drawn first and the band laid over it. A 4-segment ring's radii are to its
+              // corners: half-width × √2.
+              <group position-y={0.012}>
+                <mesh rotation-x={-Math.PI / 2} renderOrder={1}>
+                  <ringGeometry
+                    args={[0.405 * Math.SQRT2, 0.495 * Math.SQRT2, 4, 1, Math.PI / 4]}
+                  />
+                  <meshBasicMaterial
+                    color="#0b0f14"
+                    transparent
+                    opacity={0.78}
+                    depthWrite={false}
+                    toneMapped={false}
+                    fog={false}
+                  />
+                </mesh>
+                <mesh rotation-x={-Math.PI / 2} position-y={0.002} renderOrder={2}>
+                  <ringGeometry args={[0.42 * Math.SQRT2, 0.48 * Math.SQRT2, 4, 1, Math.PI / 4]} />
+                  <meshBasicMaterial
+                    color="#d8b45a"
+                    transparent
+                    depthWrite={false}
+                    toneMapped={false}
+                    fog={false}
+                  />
+                </mesh>
+              </group>
             )}
           </group>
         );

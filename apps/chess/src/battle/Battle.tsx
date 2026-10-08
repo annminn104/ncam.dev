@@ -3,9 +3,14 @@ import { PerformanceMonitor } from '@react-three/drei';
 import type { Square } from 'chess.js';
 import { useEffect, useRef, useState } from 'react';
 import type { Side } from '../game/coords';
+import { isOver } from '../game/status';
 import type { GameSettings } from '../settings';
+import { BoardA11y } from './BoardA11y';
+import { Hud } from './Hud';
 import { JUMP_MS, movedKnights, squaresById } from './jumps';
+import { PromotionDialog } from './PromotionDialog';
 import { QualityContext, type Quality } from './quality';
+import { ResultOverlay } from './ResultOverlay';
 import { ARENA_DEFS } from './scene/arenas';
 import { CameraRig, type CameraRigHandle } from './scene/CameraRig';
 import { disposeOwned } from './scene/dispose';
@@ -26,14 +31,15 @@ export interface BattleProps {
   capture?: boolean;
 }
 
-export default function Battle({ settings, onExit, capture }: BattleProps) {
+export default function Battle({ settings, onExit, onRematch, capture }: BattleProps) {
   // A state initialiser, not useMemo: the random pick must hold for the whole battle.
   const [humanSide] = useState<Side>(() => {
     if (settings.mode === 'hotseat') return 'w';
     if (settings.playerSide === 'random') return Math.random() < 0.5 ? 'w' : 'b';
     return settings.playerSide;
   });
-  const canMove = (turn: Side) => settings.mode === 'hotseat' || turn === humanSide;
+  const hotseat = settings.mode === 'hotseat';
+  const canMove = (turn: Side) => hotseat || turn === humanSide;
   const game = useGame(canMove);
   const rig = useRef<CameraRigHandle>(null);
   const [quality, setQuality] = useState<Quality>('high');
@@ -43,6 +49,34 @@ export default function Battle({ settings, onExit, capture }: BattleProps) {
   const ArenaEnvironment = arena.Environment;
 
   useEffect(() => () => disposeOwned(), []);
+
+  // The AI's turn arrives with Task 9; until then nobody thinks.
+  const thinking = false;
+  // The lobby's setting is where each battle starts; the HUD toggles it for this battle only.
+  const [autoRotate, setAutoRotate] = useState(settings.autoRotate);
+  // "View the board" sets the verdict aside until play resumes (an undo).
+  const [reviewing, setReviewing] = useState(false);
+  // The keyboard board's focused square, drawn in 3D as the gold cursor.
+  const [cursor, setCursor] = useState<Square | null>(null);
+  // The end of the board the camera looks from: the keyboard board's arrows follow the screen.
+  const [viewSide, setViewSide] = useState<Side>(humanSide);
+  const { turn, status } = game.snap;
+  const over = isOver(status);
+
+  // Hot-seat: face whoever moves next.
+  useEffect(() => {
+    if (hotseat && autoRotate && !over) rig.current?.faceSide(turn);
+  }, [hotseat, autoRotate, over, turn]);
+  // Mate: a slow push-in.
+  useEffect(() => {
+    if (status.kind === 'checkmate') rig.current?.pushIn();
+  }, [status.kind]);
+  useEffect(() => {
+    if (!over) setReviewing(false);
+  }, [over]);
+
+  const showResult = over && !reviewing;
+  const modal = game.pendingPromotion !== null || showResult;
 
   // A knight's bell rings while it jumps. Each position is compared with the one before it,
   // so a reply landing within JUMP_MS (the AI's can) ends the ringing instead of leaving it on.
@@ -87,24 +121,47 @@ export default function Battle({ settings, onExit, capture }: BattleProps) {
           <color attach="background" args={[arena.background]} />
           <PerformanceMonitor onDecline={() => setQuality('low')} />
           <ArenaEnvironment />
-          <CameraRig ref={rig} initialSide={humanSide} />
+          <CameraRig ref={rig} initialSide={humanSide} onViewSide={setViewSide} />
           <Scene
             game={game}
             skin={arena.skin}
-            cursor={null}
+            cursor={cursor}
             renderPiece={(p) => <Treasure piece={p} jumping={jumping.has(p.id)} />}
           />
         </Canvas>
         {!capture && (
-          <div className="chess-hud-temp">
-            <button type="button" onClick={onExit}>
-              Lobby
-            </button>
-            <button type="button" onClick={() => rig.current?.reset()}>
-              Reset view
-            </button>
-            <span>{game.snap.turn === 'w' ? 'Righteous' : 'Demonic'} to move</span>
-          </div>
+          <>
+            {/* While a modal is open the HUD and the keyboard board are inert: Tab stays in it. */}
+            <div className="chess-hud" inert={modal}>
+              <Hud
+                game={game}
+                settings={settings}
+                humanSide={humanSide}
+                thinking={thinking}
+                autoRotate={autoRotate}
+                onToggleRotate={() => setAutoRotate((v) => !v)}
+                // Home is the player's end vs the AI. Hot-seat: the mover's end while the camera
+                // follows the mover, otherwise the end it is at now.
+                onResetView={() =>
+                  rig.current?.reset(!hotseat ? humanSide : autoRotate && !over ? turn : viewSide)
+                }
+                onExit={onExit}
+              >
+                <BoardA11y game={game} viewSide={viewSide} onCursor={setCursor} />
+              </Hud>
+            </div>
+            {game.pendingPromotion && (
+              <PromotionDialog side={turn} onChoose={game.choosePromotion} />
+            )}
+            {showResult && (
+              <ResultOverlay
+                status={status}
+                onRematch={onRematch}
+                onExit={onExit}
+                onReview={() => setReviewing(true)}
+              />
+            )}
+          </>
         )}
       </div>
     </QualityContext.Provider>
