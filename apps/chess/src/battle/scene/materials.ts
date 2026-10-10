@@ -11,6 +11,7 @@ import {
   MeshPhysicalMaterial,
   MeshStandardMaterial,
   RGBAFormat,
+  Texture,
 } from 'three';
 import type { Side } from '../../game/coords';
 import { onDispose, own } from './dispose';
@@ -52,6 +53,25 @@ export const QI_RIM_GLSL = /* glsl */ `
   float qiFresnel = pow( 1.0 - saturate( dot( normalize( vViewPosition ), normal ) ), 3.0 );
   totalEmissiveRadiance += uQiRim * qiFresnel * ( 1.0 - smoothstep( 0.55, 0.9, qiUp ) ) * uQiRimStrength;`;
 
+/**
+ * The uniform that carries three's DFG lookup texture to the jade's shader. three (r186) makes
+ * that texture once, at module level, for all its renderers, and never frees it; each renderer
+ * that draws with it adds a dispose listener to it, and that listener keeps the renderer, with
+ * its context long lost, reachable for as long as the page lives: one per battle. Seen here, in
+ * the qi rim's onBeforeCompile, so that releaseSharedLut can let them go.
+ */
+let sharedLut: { value: unknown } | undefined;
+
+/**
+ * Frees three's shared DFG lookup texture: disposing it runs every renderer's listener, and each
+ * removes itself. Called once a battle's renderer is gone (its context lost); the next battle's
+ * renderer uploads the texture again.
+ */
+export function releaseSharedLut(): void {
+  const lut = sharedLut?.value;
+  if (lut instanceof Texture) lut.dispose();
+}
+
 /** Adds the qi rim to a physical material. The colour and strength are uniforms, not code. */
 export function withQiRim(
   material: MeshPhysicalMaterial,
@@ -64,6 +84,7 @@ export function withQiRim(
   };
   material.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, uniforms);
+    sharedLut = shader.uniforms.dfgLUT ?? sharedLut;
     shader.fragmentShader = shader.fragmentShader
       .replace(
         '#include <common>',

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DISTANCE, ORBIT, framingFit } from '../rig-math';
+import { DISTANCE, MIN_ASPECT, ORBIT, framingFit } from '../rig-math';
 import { BLOOD_MOON, BOARD_UNDERSIDE, CLOUD_PEAK, LOTUS_LAKE } from './layout';
 import {
   cloudPuffs,
@@ -7,7 +7,9 @@ import {
   columnGeometry,
   inlayPlacements,
   lotusGeometry,
+  motePlacements,
   seamGeometry,
+  thinnedPuffs,
   type Column,
   type ColumnStyle,
 } from './scenery';
@@ -21,9 +23,12 @@ interface Solid {
   top: number;
 }
 
-/** Screens from a phone in a tall in-app browser to a wide monitor. */
-const ASPECTS = [0.38, 0.46, 0.6, 0.8, 1, 1.5, 2.4];
-const FARTHEST = ORBIT.maxDistance * framingFit(Math.min(...ASPECTS));
+/**
+ * Screens from a phone in a tall in-app browser to a wide monitor, and two narrower than the
+ * rig's floor (MIN_ASPECT), which framingFit clamps to the floor's camera.
+ */
+const ASPECTS = [0.1, 0.25, MIN_ASPECT, 0.46, 0.6, 0.8, 1, 1.5, 2.4];
+const FARTHEST = ORBIT.maxDistance * Math.max(...ASPECTS.map(framingFit));
 
 /** Every camera the rig allows, sampled: zoom, height and a full turn round the board. */
 function* cameras(): Generator<V> {
@@ -111,6 +116,13 @@ describe('arena scenery never hides the board', () => {
     expect(Math.min(...BLOOD_MOON.canyon, ...LOTUS_LAKE.hills)).toBeGreaterThan(FARTHEST + 10);
   });
 
+  it('the farthest camera is the one at the floor, however narrow the screen', () => {
+    expect(FARTHEST).toBeCloseTo(ORBIT.maxDistance * framingFit(MIN_ASPECT));
+    for (const aspect of [0.3, 0.2, 0.05, 0.01]) {
+      expect(ORBIT.maxDistance * framingFit(aspect)).toBeLessThanOrEqual(FARTHEST);
+    }
+  });
+
   it('the check itself catches a pillar planted in front of the board', () => {
     const decoy: Solid = { name: 'decoy', x: 0, z: 9, radius: 1, top: 2 };
     expect(firstOcclusion([decoy])).not.toBeNull();
@@ -149,6 +161,21 @@ describe('Jade Cloud Peak cloud sea', () => {
     expect(CLOUD_PEAK.cloudTop).toBeLessThan(CLOUD_PEAK.summit.top);
   });
 
+  it('thins out on a weak GPU without moving a single puff', () => {
+    const high = cloudPuffs(140, 21, 0, CLOUD_PEAK.cloudTop);
+    const low = thinnedPuffs(high, 56);
+    expect(low).toHaveLength(56);
+    // Every puff the low sea keeps is one of the high sea's, exactly where it was, once each.
+    expect(new Set(low).size).toBe(56);
+    for (const p of low) expect(high).toContain(p);
+    // The collar round the summit's neck (the first 30%) and the open sea thin alike.
+    const collar = (ps: typeof high) => ps.filter((p) => high.indexOf(p) < 140 * 0.3).length;
+    expect(collar(low) / low.length).toBeCloseTo(collar(high) / high.length, 1);
+    // Asking for as many as there are, or more, keeps them all.
+    expect(thinnedPuffs(high, 140)).toEqual(high);
+    expect(thinnedPuffs(high, 500)).toEqual(high);
+  });
+
   it('is warmer on the side the sun shines from', () => {
     const puffs = cloudPuffs(200, 21, 0, CLOUD_PEAK.cloudTop);
     const sunward = puffs.filter((p) => p.x > 20);
@@ -156,6 +183,21 @@ describe('Jade Cloud Peak cloud sea', () => {
     const warmth = (ps: typeof puffs) =>
       ps.reduce((s, p) => s + p.tint[0] - p.tint[2], 0) / ps.length;
     expect(warmth(sunward)).toBeGreaterThan(warmth(away));
+  });
+});
+
+describe('drifting motes (embers, fireflies)', () => {
+  it('a weak GPU draws the first of the same motes, so none of them moves', () => {
+    const look = {
+      count: { high: 130, low: 50 },
+      seed: 71,
+      radius: [5, 15] as [number, number],
+      y: [-6.5, 11] as [number, number],
+    };
+    const high = motePlacements(look, look.count.high);
+    const low = motePlacements(look, look.count.low);
+    expect(high.position.subarray(0, low.position.length)).toEqual(low.position);
+    expect(high.mote.subarray(0, low.mote.length)).toEqual(low.mote);
   });
 });
 

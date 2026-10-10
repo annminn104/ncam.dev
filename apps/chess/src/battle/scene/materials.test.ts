@@ -1,16 +1,16 @@
-import { MeshPhysicalMaterial, ShaderLib, type Color } from 'three';
+import { DataTexture, MeshPhysicalMaterial, ShaderLib, type Color } from 'three';
 import { afterEach, describe, expect, it } from 'vitest';
 import { disposeOwned } from './dispose';
-import { QI_COLOR, QI_RIM_GLSL, sectMaterials, withQiRim } from './materials';
+import { QI_COLOR, QI_RIM_GLSL, releaseSharedLut, sectMaterials, withQiRim } from './materials';
 
 afterEach(() => disposeOwned());
 
 type Shader = Parameters<MeshPhysicalMaterial['onBeforeCompile']>[0];
 
 /** Runs a material's onBeforeCompile over three's own physical shader, as the renderer would. */
-function compile(material: MeshPhysicalMaterial): Shader {
+function compile(material: MeshPhysicalMaterial, uniforms: Shader['uniforms'] = {}): Shader {
   const shader = {
-    uniforms: {},
+    uniforms,
     vertexShader: ShaderLib.physical.vertexShader,
     fragmentShader: ShaderLib.physical.fragmentShader,
   } as unknown as Shader;
@@ -48,6 +48,25 @@ describe('withQiRim', () => {
     const a = withQiRim(new MeshPhysicalMaterial(), QI_COLOR.w, 0.5);
     const b = withQiRim(new MeshPhysicalMaterial(), QI_COLOR.b, 0.8);
     expect(a.customProgramCacheKey()).toBe(b.customProgramCacheKey());
+  });
+});
+
+describe('releaseSharedLut', () => {
+  it("frees three's shared DFG lookup texture, which the rim's shader carries", () => {
+    // three hands every physically based shader the same LUT (UniformsLib.envmap's dfgLUT).
+    expect(ShaderLib.physical.uniforms).toHaveProperty('dfgLUT');
+    const lut = new DataTexture();
+    let freed = 0;
+    lut.addEventListener('dispose', () => freed++);
+    // The renderer sets the uniform's value after compiling, as it draws.
+    const dfgLUT = { value: null as DataTexture | null };
+    compile(withQiRim(new MeshPhysicalMaterial(), QI_COLOR.w, 0.5), { dfgLUT });
+    dfgLUT.value = lut;
+    releaseSharedLut();
+    expect(freed).toBe(1);
+    // Again (a second lost context, say): harmless.
+    releaseSharedLut();
+    expect(freed).toBe(2);
   });
 });
 

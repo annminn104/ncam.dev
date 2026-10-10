@@ -1,5 +1,6 @@
 import { Canvas } from '@react-three/fiber';
 import { PerformanceMonitor } from '@react-three/drei';
+import { createLogger } from '@ncam/logger';
 import type { Square } from 'chess.js';
 import { useEffect, useRef, useState } from 'react';
 import type { Side } from '../game/coords';
@@ -15,6 +16,7 @@ import { ResultOverlay } from './ResultOverlay';
 import { ARENA_DEFS } from './scene/arenas';
 import { CameraRig, type CameraRigHandle } from './scene/CameraRig';
 import { disposeOwned } from './scene/dispose';
+import { releaseSharedLut } from './scene/materials';
 import { Treasure } from './scene/pieces';
 import { Scene } from './scene/Scene';
 import { useAiOpponent } from './useAiOpponent';
@@ -23,6 +25,7 @@ import { WebglFallback, hasWebgl } from './WebglFallback';
 import css from './battle.css?inline';
 
 const NO_JUMPS: ReadonlySet<string> = new Set();
+const log = createLogger({ scope: 'chess' });
 
 export interface BattleProps {
   settings: GameSettings;
@@ -53,7 +56,26 @@ export default function Battle({ settings, assetBase, onExit, onRematch, capture
   const arena = ARENA_DEFS[settings.arenaId];
   const ArenaEnvironment = arena.Environment;
 
-  useEffect(() => () => disposeOwned(), []);
+  useEffect(
+    () => () => {
+      try {
+        disposeOwned();
+      } catch (e) {
+        // Everything else was freed all the same. A rematch or the way back to the lobby must
+        // not end on the error screen over a resource that would not let go.
+        log.warn('battle cleanup failed', { error: String(e) });
+      }
+    },
+    [],
+  );
+
+  // The render loop rests while the tab is hidden: nothing to draw, no GPU or battery to spend.
+  const [visible, setVisible] = useState(() => document.visibilityState !== 'hidden');
+  useEffect(() => {
+    const onChange = () => setVisible(document.visibilityState !== 'hidden');
+    document.addEventListener('visibilitychange', onChange);
+    return () => document.removeEventListener('visibilitychange', onChange);
+  }, []);
 
   // No engine (and no download) for a battle that can't be played: no WebGL, or a lost context.
   const ai = useAiOpponent({
@@ -122,11 +144,15 @@ export default function Battle({ settings, assetBase, onExit, onRematch, capture
           // warning) for the default 'soft'.
           shadows="percentage"
           dpr={quality === 'high' ? [1, 2] : 1}
+          frameloop={visible ? 'always' : 'never'}
           camera={{ fov: 40, position: [0, 8, 11] }}
           onCreated={({ gl }) => {
+            // Also how every battle ends: R3F loses the context once it has let the renderer go,
+            // and three's shared lookup texture must not keep that renderer (materials.ts).
             gl.domElement.addEventListener('webglcontextlost', (e) => {
               e.preventDefault();
               setLost(true);
+              releaseSharedLut();
             });
           }}
         >

@@ -14,7 +14,7 @@ import { QualityContext } from '../../quality';
 import { own } from '../dispose';
 import { ArenaFog, KeyLight, SkyDome, direction, type SkyLook } from './common';
 import { BOARD_UNDERSIDE, CLOUD_PEAK } from './layout';
-import { cloudPuffs, columnsGeometry, daisGeometry } from './scenery';
+import { cloudPuffs, columnsGeometry, daisGeometry, thinnedPuffs } from './scenery';
 import { puffTexture } from './textures';
 
 /** The sun's bearing: right of the board and a little behind it, from the white player's seat. */
@@ -39,10 +39,14 @@ const PUFFS = { high: 140, low: 56 };
  */
 function CloudSea() {
   const quality = useContext(QualityContext);
-  const count = PUFFS[quality];
+  const sea = useMemo(
+    () => cloudPuffs(PUFFS.high, 21, (SUN_AZIMUTH * Math.PI) / 180, CLOUD_PEAK.cloudTop),
+    [],
+  );
+  // A weak GPU keeps some of the same puffs: when the quality drops, puffs go, none moves.
   const puffs = useMemo(
-    () => cloudPuffs(count, 21, (SUN_AZIMUTH * Math.PI) / 180, CLOUD_PEAK.cloudTop),
-    [count],
+    () => (quality === 'high' ? sea : thinnedPuffs(sea, PUFFS.low)),
+    [sea, quality],
   );
   const geometry = useMemo(() => own(new PlaneGeometry(1, 1)), []);
   const material = useMemo(
@@ -100,8 +104,16 @@ function CloudSea() {
     if (m.instanceColor) m.instanceColor.needsUpdate = true;
   });
 
-  // The puffs move every frame; culling by their first positions would drop them.
-  return <instancedMesh ref={mesh} args={[geometry, material, count]} frustumCulled={false} />;
+  // The puffs move every frame; culling by their first positions would drop them. The instance
+  // buffers are sized for the high sea, and `count` draws the first `puffs.length` of them.
+  return (
+    <instancedMesh
+      ref={mesh}
+      args={[geometry, material, PUFFS.high]}
+      count={puffs.length}
+      frustumCulled={false}
+    />
+  );
 }
 
 /** Jade Cloud Peak: a white-jade dais on a summit above a sea of clouds, in morning sun. */

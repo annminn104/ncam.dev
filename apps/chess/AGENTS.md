@@ -34,15 +34,21 @@ host's `MountConfig`; only `assetBase` is read. Not route-aware.
   `createGame()`; the scene calls `game.clickSquare` and never decides legality.
 - A module-level cache of GPU objects (treasure geometry, materials, glyph textures) wraps what
   it creates in `own()` and registers its reset with `onDispose()` (`scene/dispose.ts`);
-  `Battle` runs `disposeOwned()` when it unmounts.
+  `Battle` runs `disposeOwned()` when it unmounts. A dispose or reset that throws stops none of
+  the others; the failure is thrown after them, and Battle only logs it.
 - `PieceView` keeps a piece's pose in a ref and writes the group every frame. R3F re-applies a
   group's props whenever React re-inserts it into the scene, and a move re-orders
   `snap.pieces`, so a pose read back off the group (or a `position` prop that follows the
   square) snaps the piece mid-move.
+- Battle stops the frame loop while the tab is hidden (`frameloop="never"`), and R3F restarts its
+  clock from 0 whenever the loop starts again. A pose computed from the clock is fine; anything
+  timed by a start time against the clock must sum frame deltas instead (`glide.ts`). R3F may
+  draw one more frame after the switch, with a huge delta: deltas must be safe to be large.
 - `CameraRig` (camera-controls through drei) has no pan: `truckSpeed={0}` zeroes every mouse and
   touch pan path. `framingFit` (`rig-math.ts`) pulls the camera back on screens narrower than
-  1.5:1 so the board's width fits; `reset` and `faceSide` aim at the nearest full turn of
-  azimuth, which only ever accumulates.
+  1.5:1 so the board's width fits, down to `MIN_ASPECT` (0.38): any further and the camera
+  would pass the scenery and the horizon walls. `reset` and `faceSide` aim at the nearest full
+  turn of azimuth, which only ever accumulates.
 - When a battle cannot open the player must still have the lobby. `hasWebgl()` probes WebGL 2
   only (three 0.186 creates nothing else), and `BattleErrorBoundary` (`src/ErrorBoundary.tsx`)
   wraps the battle's `Suspense` in `App`: a chunk that fails to load, a renderer that cannot
@@ -115,13 +121,37 @@ host's `MountConfig`; only `assetBase` is read. Not route-aware.
   and world-fixed fog would hide the board there.
 - `SkyDome` is drawn at the far plane (`gl_Position.z = w`) and its horizon is the fog colour, so
   ground running into the haze meets the sky without a seam.
-- drei's `MeshReflectorMaterial` takes the mirror's normal from the mesh's rotation (local +z):
+- The lake's mirror is `LakeMirror`: drei's reflector material and blur pass (deep imports from
+  `@react-three/drei/materials/`) driven by our own frame code, because drei's
+  `<MeshReflectorMaterial>` never frees its render targets (~10 MB left on the GPU after every
+  drop to the plain lake). It takes the mirror's normal from the mesh's rotation (local +z):
   rotate the mesh, never the plane geometry, or it mirrors across a wall. It renders the whole
   scene a second time each frame; `PerformanceMonitor` swaps it for a plain material.
 - Scenery that rises above the board must stay out of every reachable camera's view of it:
-  `layout.test.ts` checks every column against the rig's `ORBIT` limits (`rig-math.ts`).
+  `layout.test.ts` checks every column against the rig's `ORBIT` limits (`rig-math.ts`), at
+  every aspect down to (and below) `MIN_ASPECT`.
 - Visual checks headless: SwiftShader declines to `'low'` within seconds; for the `'high'`
   path launch Chromium with `--use-angle=metal` (the real GPU).
+
+## Effects and the quality fallback (`battle/scene/effects/`, `battle/quality.ts`)
+
+- `CaptureBurst`: one pooled `Points` cloud, re-seeded by each capture where the victim stood, in
+  its sect's qi (`capturedPiece`: the piece id that disappeared, so an en passant victim bursts on
+  its own square; an undo brings a piece back and bursts nothing). `CheckAura`: a pulsing ring
+  under the king in check.
+- `QiTrail`: a camera-facing ribbon laid along the glide's own arc (`glide.ts`, `qi-trail.ts`),
+  written by its `PieceView` right after it moves the piece, so its head is the piece that frame.
+  A finished glide is kept until its trail has landed too. Not drei's `<Trail>`: that one leaks
+  a MeshLine geometry and material per mount, starts every trail from the board's centre and
+  allocates every frame. Normal blending: additive qi over Cloud Peak's white jade turns white.
+- A drop to `'low'` (PerformanceMonitor's decline) gives dpr 1, 1024² shadow maps, a subset of
+  the same cloud puffs (`thinnedPuffs`), the first of the same motes (a draw range), the plain
+  lake, 80 of the burst's 200 particles and no trails. It never rebuilds or moves what stays.
+- Leaks: three r186 keeps one DFG lookup texture for all its renderers and never frees it; each
+  renderer's dispose listener on it kept every finished battle's renderer alive. Battle calls
+  `releaseSharedLut()` (`materials.ts`) when its context is lost, which is how every battle ends.
+  R3F's frame loop keeps the last root's state until another root runs (one renderer at most);
+  in dev, React Refresh also keeps every R3F root it has seen (dev only).
 
 ## Commands
 

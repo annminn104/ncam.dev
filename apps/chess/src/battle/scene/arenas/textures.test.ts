@@ -7,6 +7,8 @@ import {
   puffPixels,
   puffTexture,
   seeded,
+  sparkPixels,
+  sparkTexture,
 } from './textures';
 
 afterEach(() => disposeOwned());
@@ -110,6 +112,36 @@ describe('lotusPixels', () => {
   });
 });
 
+describe('sparkPixels', () => {
+  const S = 32;
+  const px = sparkPixels(S);
+
+  it('is a round glint: white, solid at the heart, fading to clear before the edge', () => {
+    for (let n = 0; n < S * S; n++) {
+      expect(px[n * 4]).toBe(255);
+      expect(px[n * 4 + 1]).toBe(255);
+      expect(px[n * 4 + 2]).toBe(255);
+    }
+    expect(at(px, S, S / 2, S / 2, 3)).toBeGreaterThan(240);
+    for (let i = 0; i < S; i++) {
+      for (const [x, y] of [
+        [i, 0],
+        [i, S - 1],
+        [0, i],
+        [S - 1, i],
+      ])
+        expect(at(px, S, x, y, 3)).toBe(0);
+    }
+    // Round: as bright at the same distance whichever way (the grid's centre is at S/2 - 0.5).
+    const x = S / 2 + S / 4;
+    const a = at(px, S, x, S / 2, 3);
+    expect(at(px, S, S / 2, x, 3)).toBe(a);
+    expect(at(px, S, S - 1 - x, S / 2, 3)).toBe(a);
+    expect(at(px, S, S / 2, S - 1 - x, 3)).toBe(a);
+    expect(a).toBeLessThan(at(px, S, S / 2 + 2, S / 2, 3));
+  });
+});
+
 describe('arena textures', () => {
   it('are built once per battle and freed by disposeOwned', () => {
     const puff = puffTexture();
@@ -117,9 +149,12 @@ describe('arena textures', () => {
     let freed = false;
     puff.addEventListener('dispose', () => (freed = true));
     const crack = crackTexture();
+    const spark = sparkTexture();
+    expect(sparkTexture()).toBe(spark);
     disposeOwned();
     expect(freed).toBe(true);
     expect(puffTexture()).not.toBe(puff);
     expect(crackTexture()).not.toBe(crack);
+    expect(sparkTexture()).not.toBe(spark);
   });
 });

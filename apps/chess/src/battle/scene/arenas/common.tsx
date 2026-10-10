@@ -1,5 +1,5 @@
 import { useFrame } from '@react-three/fiber';
-import { useContext, useMemo, useRef } from 'react';
+import { useContext, useLayoutEffect, useMemo, useRef } from 'react';
 import {
   AdditiveBlending,
   BackSide,
@@ -13,7 +13,7 @@ import {
 } from 'three';
 import { QualityContext } from '../../quality';
 import { own } from '../dispose';
-import { seeded } from './textures';
+import { motePlacements } from './scenery';
 
 // The parts every arena is built from. Each arena owns its sky, fog, lights and ambient effects;
 // the chess pieces keep their own studio reflections (materials.ts), so an arena reaches them
@@ -267,32 +267,21 @@ void main() {
   #include <colorspace_fragment>
 }`;
 
-/** Where the motes start ([x, bottom, z] each) and their [phase, pace]: seeded, so stable. */
-export function motePlacements(look: MotesLook, count: number) {
-  const rand = seeded(look.seed);
-  const position = new Float32Array(count * 3);
-  const mote = new Float32Array(count * 2);
-  const [r0, r1] = look.radius;
-  for (let i = 0; i < count; i++) {
-    const a = rand() * Math.PI * 2;
-    // Uniform over the annulus's area, not bunched at its inner edge.
-    const r = Math.sqrt(r0 * r0 + rand() * (r1 * r1 - r0 * r0));
-    position.set([Math.cos(a) * r, look.y[0], Math.sin(a) * r], i * 3);
-    mote.set([rand(), 0.6 + rand() * 0.8], i * 2);
-  }
-  return { position, mote };
-}
-
 export function Motes({ look }: { look: MotesLook }) {
   const quality = useContext(QualityContext);
-  const count = look.count[quality];
+  // Built once at the high count. A weak GPU draws the first of them (motePlacements gives a
+  // smaller count the same first motes): no second geometry, and no mote moves.
   const geometry = useMemo(() => {
-    const { position, mote } = motePlacements(look, count);
+    const { position, mote } = motePlacements(look, look.count.high);
     const g = new BufferGeometry();
     g.setAttribute('position', new Float32BufferAttribute(position, 3));
     g.setAttribute('aMote', new Float32BufferAttribute(mote, 2));
     return own(g);
-  }, [look, count]);
+  }, [look]);
+  const count = look.count[quality];
+  useLayoutEffect(() => {
+    geometry.setDrawRange(0, count);
+  }, [geometry, count]);
   const material = useMemo(
     () =>
       own(

@@ -21,8 +21,24 @@ export function onDispose(reset: () => void): void {
   resetters.add(reset);
 }
 
+/**
+ * Frees every owned resource, then empties every cache. One that throws stops nothing: the rest
+ * are freed and every cache emptied all the same (a cache left full would hand the next battle a
+ * freed resource), and only then is the failure thrown, an AggregateError if there were several.
+ */
 export function disposeOwned(): void {
-  for (const r of owned) r.dispose();
+  const errors: unknown[] = [];
+  const attempt = (step: () => void) => {
+    try {
+      step();
+    } catch (e) {
+      errors.push(e);
+    }
+  };
+  const freeing = [...owned];
   owned.clear();
-  for (const reset of resetters) reset();
+  for (const r of freeing) attempt(() => r.dispose());
+  for (const reset of resetters) attempt(reset);
+  if (errors.length === 1) throw errors[0];
+  if (errors.length > 1) throw new AggregateError(errors, 'disposeOwned: several disposals failed');
 }

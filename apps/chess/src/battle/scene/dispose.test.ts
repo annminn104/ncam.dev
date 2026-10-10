@@ -56,3 +56,65 @@ describe('onDispose', () => {
     expect(reset).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('disposeOwned when something throws', () => {
+  it('still frees every other resource and empties every cache, then reports the failure', () => {
+    const before = own(resource<BufferGeometry>());
+    const broken = own(resource<Material>());
+    const after = own(resource<Texture>());
+    const failure = new Error('lost context');
+    vi.mocked(broken.dispose).mockImplementation(() => {
+      throw failure;
+    });
+    const reset = vi.fn();
+    onDispose(reset);
+
+    expect(() => disposeOwned()).toThrow(failure);
+    expect(before.dispose).toHaveBeenCalledTimes(1);
+    expect(after.dispose).toHaveBeenCalledTimes(1);
+    expect(reset).toHaveBeenCalledTimes(1);
+
+    // Forgotten all the same: the next battle neither frees them again nor hits the error.
+    expect(() => disposeOwned()).not.toThrow();
+    expect(broken.dispose).toHaveBeenCalledTimes(1);
+    expect(after.dispose).toHaveBeenCalledTimes(1);
+  });
+
+  it('runs every reset even when one throws', () => {
+    const failure = new Error('reset failed');
+    const first = vi.fn<() => void>(() => {
+      throw failure;
+    });
+    const second = vi.fn();
+    onDispose(first);
+    onDispose(second);
+    const geometry = own(resource<BufferGeometry>());
+
+    expect(() => disposeOwned()).toThrow(failure);
+    expect(second).toHaveBeenCalledTimes(1);
+    expect(geometry.dispose).toHaveBeenCalledTimes(1);
+    // A reset that throws stays registered; the caches are module-level and outlive a battle.
+    first.mockImplementation(() => undefined);
+    disposeOwned();
+    expect(first).toHaveBeenCalledTimes(2);
+    expect(second).toHaveBeenCalledTimes(2);
+  });
+
+  it('reports every failure when more than one thing throws', () => {
+    const errors = [new Error('a'), new Error('b')];
+    for (const e of errors) {
+      const r = own(resource<BufferGeometry>());
+      vi.mocked(r.dispose).mockImplementation(() => {
+        throw e;
+      });
+    }
+    let thrown: unknown;
+    try {
+      disposeOwned();
+    } catch (e) {
+      thrown = e;
+    }
+    expect(thrown).toBeInstanceOf(AggregateError);
+    expect((thrown as AggregateError).errors).toEqual(errors);
+  });
+});

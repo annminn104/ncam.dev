@@ -14,15 +14,23 @@ export const ORBIT = { minDistance: 6, maxDistance: 18, minPolar: 0.2, maxPolar:
 
 const TAU = Math.PI * 2;
 /** Width / height at and above which the whole board fits the screen at DISTANCE. */
-const FIT_ASPECT = 1.5;
+export const FIT_ASPECT = 1.5;
+/**
+ * The narrowest screen the camera still pulls back for (a phone in a tall in-app browser).
+ * Narrower ones get this one's camera and lose a sliver of the board's sides: pulled back any
+ * further, the camera would pass the arenas' scenery and the horizon walls, and see where the
+ * world ends (layout.test.ts checks every camera up to this one).
+ */
+export const MIN_ASPECT = 0.38;
 
 /**
  * How far to pull the camera back, as a multiple of DISTANCE, so the board's width fits a
  * screen of this aspect ratio. The vertical field of view is fixed, so a narrow screen sees a
- * narrow slice of the board: 1 on a landscape screen, 3 on a phone held upright.
+ * narrow slice of the board: 1 on a landscape screen, 3 on a phone held upright, and never more
+ * than at MIN_ASPECT.
  */
 export function framingFit(aspect: number): number {
-  return aspect > 0 ? Math.max(1, FIT_ASPECT / aspect) : 1;
+  return aspect > 0 ? Math.max(1, FIT_ASPECT / Math.max(aspect, MIN_ASPECT)) : 1;
 }
 
 /** Orbit azimuth that puts the camera at `side`'s end of the board (white sits at +z). */

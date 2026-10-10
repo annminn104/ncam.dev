@@ -174,6 +174,24 @@ export function lotusPixels(size: number): Uint8Array {
   return out;
 }
 
+/**
+ * A round glint, white on transparent: solid at its heart, its alpha falling off smoothly to
+ * nothing at its rim, short of the edge. The capture burst's particles.
+ */
+export function sparkPixels(size: number): Uint8Array {
+  const out = new Uint8Array(size * size * 4);
+  for (let j = 0; j < size; j++) {
+    const y = ((j + 0.5) / size) * 2 - 1;
+    for (let i = 0; i < size; i++) {
+      const x = ((i + 0.5) / size) * 2 - 1;
+      const k = (j * size + i) * 4;
+      out[k] = out[k + 1] = out[k + 2] = 255;
+      out[k + 3] = Math.round(255 * Math.pow(1 - smoothstep(0, 0.9, Math.hypot(x, y)), 1.5));
+    }
+  }
+  return out;
+}
+
 function texture(data: Uint8Array, size: number, color: boolean, repeat: boolean): DataTexture {
   const tex = own(new DataTexture(data, size, size, RGBAFormat, UnsignedByteType));
   tex.colorSpace = color ? SRGBColorSpace : NoColorSpace;
@@ -188,12 +206,15 @@ function texture(data: Uint8Array, size: number, color: boolean, repeat: boolean
 let puff: DataTexture | null = null;
 let crack: DataTexture | null = null;
 let lotus: DataTexture | null = null;
+let spark: DataTexture | null = null;
 onDispose(() => {
   puff = null;
   crack = null;
   lotus = null;
+  spark = null;
 });
 
 export const puffTexture = () => (puff ??= texture(puffPixels(128), 128, true, false));
 export const crackTexture = () => (crack ??= texture(crackPixels(256, 7), 256, false, true));
 export const lotusTexture = () => (lotus ??= texture(lotusPixels(128), 128, false, false));
+export const sparkTexture = () => (spark ??= texture(sparkPixels(32), 32, false, false));

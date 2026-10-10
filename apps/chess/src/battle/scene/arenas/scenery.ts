@@ -405,6 +405,39 @@ export function cloudPuffs(count: number, seed: number, sunAzimuth: number, ceil
   return puffs;
 }
 
+/**
+ * The puffs a weak GPU keeps: `count` of them, spread evenly through the layout, so the collar
+ * and the open sea thin out alike and every puff kept stays where it was. (A smaller layout of
+ * its own would be a different sea: the collar is a share of the count.)
+ */
+export function thinnedPuffs(puffs: readonly Puff[], count: number): Puff[] {
+  if (count >= puffs.length) return [...puffs];
+  return Array.from({ length: count }, (_, k) => puffs[Math.floor((k * puffs.length) / count)]);
+}
+
+/**
+ * Where drifting motes start ([x, bottom, z] each) and their [phase, pace]: seeded, scattered
+ * evenly over the annulus `radius` at the bottom of their band `y`. Each mote takes the same
+ * draws whatever the count, so a smaller count is the first motes of a larger one.
+ */
+export function motePlacements(
+  look: { seed: number; radius: [min: number, max: number]; y: [bottom: number, span: number] },
+  count: number,
+) {
+  const rand = seeded(look.seed);
+  const position = new Float32Array(count * 3);
+  const mote = new Float32Array(count * 2);
+  const [r0, r1] = look.radius;
+  for (let i = 0; i < count; i++) {
+    const a = rand() * Math.PI * 2;
+    // Uniform over the annulus's area, not bunched at its inner edge.
+    const r = Math.sqrt(r0 * r0 + rand() * (r1 * r1 - r0 * r0));
+    position.set([Math.cos(a) * r, look.y[0], Math.sin(a) * r], i * 3);
+    mote.set([rand(), 0.6 + rand() * 0.8], i * 2);
+  }
+  return { position, mote };
+}
+
 /** A lotus cluster on the lake: its pads and whether a flower blooms on the first one. */
 export interface LotusCluster {
   x: number;

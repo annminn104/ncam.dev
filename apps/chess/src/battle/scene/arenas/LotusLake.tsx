@@ -1,6 +1,11 @@
-import { MeshReflectorMaterial } from '@react-three/drei';
-import { useContext, useMemo } from 'react';
-import { DoubleSide, MeshBasicMaterial, MeshStandardMaterial, PlaneGeometry } from 'three';
+import { useContext, useMemo, useRef } from 'react';
+import {
+  DoubleSide,
+  MeshBasicMaterial,
+  MeshStandardMaterial,
+  PlaneGeometry,
+  type Mesh,
+} from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { QualityContext } from '../../quality';
 import { own } from '../dispose';
@@ -13,6 +18,7 @@ import {
   type MotesLook,
   type SkyLook,
 } from './common';
+import { LakeMirror } from './LakeMirror';
 import { BOARD_UNDERSIDE, LOTUS_LAKE } from './layout';
 import { inlayGeometry, lotusGeometry, platformGeometry, ridgeGeometry } from './scenery';
 import { lotusTexture } from './textures';
@@ -59,6 +65,7 @@ function hills(seed: number, low: number, high: number) {
 /** Lotus Moon Lake: a pale stone terrace with lotus inlays, in a still lake at dusk. */
 export function LotusLake() {
   const quality = useContext(QualityContext);
+  const lake = useRef<Mesh>(null);
   const scene = useMemo(() => {
     const { pads, flowers } = lotusGeometry(LOTUS_LAKE.clusters, LOTUS_LAKE.water);
     return {
@@ -136,22 +143,16 @@ export function LotusLake() {
       <ArenaFog color={LOTUS_LAKE_SKY.horizon} near={8} far={64} />
       <hemisphereLight args={['#a2b5ff', '#1f2848', 0.7]} />
       <KeyLight position={KEY} color="#cfdcff" intensity={1.7} />
-      <mesh geometry={scene.lake} position-y={LOTUS_LAKE.water} rotation-x={-Math.PI / 2}>
+      <mesh
+        ref={lake}
+        geometry={scene.lake}
+        position-y={LOTUS_LAKE.water}
+        rotation-x={-Math.PI / 2}
+      >
         {quality === 'high' ? (
           // The spec's mirror lake; PerformanceMonitor drops it (and its second render of the
-          // scene every frame) for the plain material on a weak GPU.
-          // drei multiplies the reflection into the albedo, then lights it: a neutral grey keeps
-          // the sky's own colours (a blue one squared the blue).
-          <MeshReflectorMaterial
-            resolution={512}
-            mirror={1}
-            mixStrength={3}
-            mixBlur={0.8}
-            blur={[200, 80]}
-            color="#8a909c"
-            roughness={0.6}
-            metalness={0}
-          />
+          // scene every frame, and its render targets) for the plain material on a weak GPU.
+          <LakeMirror mesh={lake} />
         ) : (
           <primitive object={scene.lakePlain} attach="material" />
         )}

@@ -3,6 +3,8 @@ import type { ReactNode } from 'react';
 import type { BoardPiece } from '../../game/pieces';
 import type { GameApi } from '../useGame';
 import { Board, DEFAULT_SKIN, type BoardSkin } from './Board';
+import { CaptureBurst } from './effects/CaptureBurst';
+import { CheckAura } from './effects/CheckAura';
 import { PieceView } from './PieceView';
 
 export function Scene(props: {
@@ -33,6 +35,8 @@ export function Scene(props: {
           {renderPiece(p)}
         </PieceView>
       ))}
+      <CaptureBurst snap={snap} />
+      <CheckAura square={snap.checkSquare} side={snap.turn} />
     </group>
   );
 }

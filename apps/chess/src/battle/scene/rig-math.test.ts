@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { squareToPosition } from '../../game/coords';
 import {
   DISTANCE,
+  FIT_ASPECT,
+  MIN_ASPECT,
   POLAR,
   azimuthOf,
   framingFit,
@@ -53,6 +55,19 @@ describe('framingFit', () => {
 
   it('survives a screen with no size yet', () => {
     for (const aspect of [0, -1, NaN]) expect(framingFit(aspect)).toBe(1);
+  });
+
+  it('stops pulling back at MIN_ASPECT, so the camera never leaves the arena', () => {
+    const farthest = FIT_ASPECT / MIN_ASPECT;
+    expect(framingFit(MIN_ASPECT)).toBeCloseTo(farthest);
+    // Narrower still (a tall in-app browser, a split screen): the same camera as at the floor.
+    for (const aspect of [0.37, 0.3, 0.26, 0.2, 0.1, 0.01]) {
+      expect(framingFit(aspect)).toBe(framingFit(MIN_ASPECT));
+    }
+    // Every screen at all: never further than at the floor.
+    for (let aspect = 0.005; aspect < 3; aspect += 0.005) {
+      expect(framingFit(aspect)).toBeLessThanOrEqual(farthest + 1e-12);
+    }
   });
 
   it('scales the home position along the same line of sight', () => {
