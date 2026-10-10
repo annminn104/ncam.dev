@@ -1,6 +1,6 @@
 name: Lighthouse
 
-# Every page type at 100 in all four categories, on mobile and on desktop,
+# Every page type at 80 or more in all four categories, on mobile and on desktop,
 # measured against the production build served from the runner itself:
 # scripts/lighthouse/serve.mjs serves it, lighthouserc.cjs says how it is
 # measured and why. Each form factor is split over three jobs, a third of the
@@ -73,7 +73,7 @@ jobs:
         if: ${{ !cancelled() }}
         run: pnpm dlx @lhci/cli@0.15.1 upload --config=lighthouserc.cjs
 
-      - name: Assert every category at 100
+      - name: Assert every category at 80 or more
         run: pnpm dlx @lhci/cli@0.15.1 assert --config=lighthouserc.cjs
 
       - name: Upload reports

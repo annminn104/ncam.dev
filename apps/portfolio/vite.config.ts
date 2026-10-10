@@ -21,6 +21,7 @@ const BALI_REMOTE = env('BALI_REMOTE_URL', 'http://localhost:9005/remoteEntry.js
 // The home page's own sections live in the `profile` remote (one module each).
 const PROFILE_REMOTE = env('PROFILE_REMOTE_URL', 'http://localhost:9006/remoteEntry.js');
 const HOLODEX_REMOTE = env('HOLODEX_REMOTE_URL', 'http://localhost:9007/remoteEntry.js');
+const CHESS_REMOTE = env('CHESS_REMOTE_URL', 'http://localhost:9008/remoteEntry.js');
 const PORTFOLIO_PORT = Number(env('PORTFOLIO_PORT', '9000'));
 
 /**
@@ -179,6 +180,11 @@ export default defineConfig({
           type: 'module',
           name: 'holodex',
           entry: HOLODEX_REMOTE,
+        },
+        chess: {
+          type: 'module',
+          name: 'chess',
+          entry: CHESS_REMOTE,
         },
       },
       shared: {

@@ -16,7 +16,7 @@
  * bakes into its remote URLs.
  *
  * Ports are the ones .env and the host build default to (host 9000, remotes
- * 9001-9007), shifted by LH_PORT_OFFSET so a run can sit beside the dev
+ * 9001-9008), shifted by LH_PORT_OFFSET so a run can sit beside the dev
  * servers. A non-zero offset needs a build made with the exports that
  * `--build-env` prints:
  *

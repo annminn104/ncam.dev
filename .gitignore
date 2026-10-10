@@ -71,3 +71,5 @@ Desktop.ini
 .tanstack/
 .vercel/
 .mf/
+# Cultivation Chess: Stockfish files copied from node_modules by `pnpm assets`
+apps/chess/public/stockfish/

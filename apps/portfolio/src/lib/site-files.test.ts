@@ -94,6 +94,7 @@ describe('sitemapXml', () => {
       'https://ncam.dev/projects/bali',
       'https://ncam.dev/projects/holodex',
       'https://ncam.dev/projects/holodex/sets',
+      'https://ncam.dev/projects/chess',
     ]);
     expect(xml).not.toContain('<lastmod>');
     expect(xml).not.toMatch(/changefreq|priority/);
@@ -199,7 +200,10 @@ describe('llmsTxt', () => {
     expect(text).toMatch(/^- \[Blog\]\(https:\/\/ncam\.dev\/blog\): Long-form write-ups/m);
     expect(text).toContain('- [TOONHUB](https://ncam.dev/projects/toonhub): Collectible figurines');
     expect(text).toContain('- [Holodex](https://ncam.dev/projects/holodex): Pokémon TCG explorer');
-    expect(text.match(/^- \[.+\]\(https:\/\/ncam\.dev\/projects\//gm)).toHaveLength(6);
+    expect(text).toContain(
+      '- [Cultivation Chess](https://ncam.dev/projects/chess): 3D xianxia chess',
+    );
+    expect(text.match(/^- \[.+\]\(https:\/\/ncam\.dev\/projects\//gm)).toHaveLength(7);
   });
 
   it('lists the newest indexable posts on one line each, and omits the section with none', () => {

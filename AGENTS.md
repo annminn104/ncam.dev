@@ -23,6 +23,8 @@ apps/
   holodex/          Pokémon TCG explorer remote (:9007). React 19, route-aware
                     (host-owned nested URLs, no remount on in-app navigation),
                     with a lazily-chunked three.js holo card renderer.
+  chess/            Cultivation Chess remote (:9008). React 19 + React Three
+                    Fiber; chess.js rules, Stockfish WASM opponent (GPLv3).
   strapi/           Strapi 5 headless CMS for the blog (:1337): a backend
                     service, not a federation remote.
 packages/
@@ -55,7 +57,7 @@ Commands (from the root):
 
 ```bash
 pnpm install
-pnpm dev              # every dev server (host :9000, remotes :9001–:9007, strapi :1337)
+pnpm dev              # every dev server (host :9000, remotes :9001–:9008, strapi :1337)
 pnpm build            # builds every app
 pnpm typecheck
 pnpm lint             # ESLint; `pnpm format:check` for Prettier
@@ -90,7 +92,11 @@ pnpm thumbnails <id>  # regenerates a gallery thumbnail (needs `pnpm dev` runnin
   in-app navigation instead of remounting.
 - Remotes own their assets. Because the host and a remote can live on different
   origins, a remote must resolve its own asset URLs against its origin (see
-  `apps/toonhub/src/mount.ts`), never assume the host origin.
+  `apps/toonhub/src/mount.ts`), never assume the host origin. The host hands an
+  `assetBase` to TOONHUB's server render only
+  (`apps/portfolio/src/lib/ssr-asset-base.ts`): every other remote names its
+  origin from its own module URL, on the server as in the browser, so its
+  server markup and its hydrate agree.
 - `shared: {}` on every remote: each one bundles its own runtime, React
   included, so it behaves the same standalone and mounted, whatever the host's
   own `shared` block declares. Keep it that way unless a genuine shared runtime
@@ -136,6 +142,10 @@ pnpm thumbnails <id>  # regenerates a gallery thumbnail (needs `pnpm dev` runnin
 6. With `pnpm dev` running, generate its gallery thumbnail: `pnpm thumbnails <id>`
    (a 1200×630 capture of the project page, minus the host's back button — see
    `apps/portfolio/scripts/capture-thumbnails.mjs`).
+7. Deploy before the merge: its Vercel project, then `<NAME>_REMOTE_URL` (with
+   `/remoteEntry.js`) on the host's (`docs/deployment.md` → "Adding a remote to
+   the live site"). Merged first, the host bakes in `localhost` and the gallery
+   lists a page that cannot load.
 
 ## Turborepo notes
 
@@ -152,7 +162,7 @@ pnpm thumbnails <id>  # regenerates a gallery thumbnail (needs `pnpm dev` runnin
 `pnpm run ci` must pass; the pre-push hook runs `turbo run typecheck build`.
 
 Lighthouse (`.github/workflows/lighthouse.yml`) holds every page type (home,
-blog, a post, each project) at 100 in all four categories, mobile and desktop,
+blog, a post, each project) at 80 or more in all four categories, mobile and desktop,
 on the median of three runs, against the production build served from the
 runner: `scripts/lighthouse/serve.mjs` serves every remote, the host and a
 stand-in CMS, each behind a compressing proxy, and `lighthouserc.cjs` measures

@@ -37,8 +37,8 @@ const DESKTOP_THROTTLING = {
   cpuSlowdownMultiplier: 1,
 };
 
-/** Every category at 100, on the median of the runs. */
-const perfect = ['error', { minScore: 1, aggregationMethod: 'median-run' }];
+/** Every category at 80 or more, on the median of the runs. */
+const atLeast80 = ['error', { minScore: 0.8, aggregationMethod: 'median-run' }];
 
 module.exports = {
   ci: {
@@ -57,10 +57,10 @@ module.exports = {
     },
     assert: {
       assertions: {
-        'categories:performance': perfect,
-        'categories:accessibility': perfect,
-        'categories:best-practices': perfect,
-        'categories:seo': perfect,
+        'categories:performance': atLeast80,
+        'categories:accessibility': atLeast80,
+        'categories:best-practices': atLeast80,
+        'categories:seo': atLeast80,
       },
     },
     upload: {

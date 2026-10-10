@@ -36,6 +36,7 @@ export const ssrLoaders: Record<string, () => Promise<unknown>> = {
   viktor: () => import('viktor/ssr'),
   bali: () => import('bali/ssr'),
   holodex: () => import('holodex/ssr'),
+  chess: () => import('chess/ssr'),
 };
 const hydrateLoaders: Record<string, () => Promise<HydrateModule>> = {
   toonhub: () => import('toonhub/hydrate'),
@@ -44,6 +45,7 @@ const hydrateLoaders: Record<string, () => Promise<HydrateModule>> = {
   viktor: () => import('viktor/hydrate'),
   bali: () => import('bali/hydrate'),
   holodex: () => import('holodex/hydrate'),
+  chess: () => import('chess/hydrate'),
 };
 const mountLoaders: Record<string, () => Promise<MountModule>> = {
   toonhub: () => import('toonhub/mount'),
@@ -52,6 +54,7 @@ const mountLoaders: Record<string, () => Promise<MountModule>> = {
   viktor: () => import('viktor/mount'),
   bali: () => import('bali/mount'),
   holodex: () => import('holodex/mount'),
+  chess: () => import('chess/mount'),
 };
 
 /**

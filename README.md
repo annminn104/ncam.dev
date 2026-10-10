@@ -40,6 +40,12 @@ deployed on its own.
       <br><sub><b>Holodex</b> · Pokémon TCG explorer</sub>
     </td>
   </tr>
+  <tr>
+    <td align="center" width="33%">
+      <a href="https://ncam-profile.vercel.app/projects/chess"><img src="apps/portfolio/public/thumbnails/chess.jpg" alt="Cultivation Chess"></a>
+      <br><sub><b>Cultivation Chess</b> · 3D xianxia chess</sub>
+    </td>
+  </tr>
 </table>
 
 ## Contents
@@ -70,6 +76,7 @@ A Turborepo monorepo on pnpm workspaces, TypeScript everywhere.
 | `apps/bali`            | Bali Adventure: a cinematic luxury-travel landing page. React 19, Tailwind v4, GSAP ScrollTrigger, framer-motion.                                   | 9005     |
 | `apps/profile`         | The home page's six sections (hero, stacks, experience, projects, blog, contact), one federated module each.                                        | 9006     |
 | `apps/holodex`         | Holodex: a Pokémon TCG explorer on the TCGdex API, with nested URLs of its own and three.js holo foil cards. React 19, Tailwind v4, TanStack Query. | 9007     |
+| `apps/chess`           | Cultivation Chess: chess with cultivation-treasure pieces in three 3D arenas, vs a friend or Stockfish. React 19, React Three Fiber, chess.js.      | 9008     |
 | `apps/strapi`          | Strapi 5 headless CMS for the blog, with a public read-only REST API. A backend service, not a remote.                                              | 1337     |
 
 | Package                  | What it is                                                                                                   |
@@ -91,7 +98,7 @@ flowchart LR
   browser([Browser])
   subgraph vercel [Vercel]
     host["Host · apps/portfolio<br/>TanStack Start SSR on Nitro"]
-    remotes["7 remotes · apps/*<br/>static Vite builds"]
+    remotes["8 remotes · apps/*<br/>static Vite builds"]
   end
   cms[("Strapi · apps/strapi<br/>Render + Postgres")]
   tcgdex[("TCGdex API")]
@@ -133,14 +140,14 @@ flowchart LR
 
 ## Tech stack
 
-| Area       | Tools                                                                                                          |
-| ---------- | -------------------------------------------------------------------------------------------------------------- |
-| Host       | TanStack Start and TanStack Router, React 19, Nitro                                                            |
-| Federation | `@module-federation/vite`, with server-side remote entries                                                     |
-| Remotes    | Vite 8, React 19 or plain TypeScript, Tailwind CSS v4, GSAP, framer-motion, hls.js, three.js, TanStack Query   |
-| CMS        | Strapi 5: SQLite in development, Postgres in Docker and on Render                                              |
-| Tooling    | pnpm workspaces, Turborepo, TypeScript, Vitest, ESLint (flat config), Prettier, Husky, lint-staged, commitlint |
-| Hosting    | Vercel (the host and the remotes), Render (the CMS), Docker Compose (the whole stack)                          |
+| Area       | Tools                                                                                                                                                                    |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Host       | TanStack Start and TanStack Router, React 19, Nitro                                                                                                                      |
+| Federation | `@module-federation/vite`, with server-side remote entries                                                                                                               |
+| Remotes    | Vite 8, React 19 or plain TypeScript, Tailwind CSS v4, GSAP, framer-motion, hls.js, three.js, React Three Fiber, drei, TanStack Query, chess.js, Stockfish (WebAssembly) |
+| CMS        | Strapi 5: SQLite in development, Postgres in Docker and on Render                                                                                                        |
+| Tooling    | pnpm workspaces, Turborepo, TypeScript, Vitest, ESLint (flat config), Prettier, Husky, lint-staged, commitlint                                                           |
+| Hosting    | Vercel (the host and the remotes), Render (the CMS), Docker Compose (the whole stack)                                                                                    |
 
 ## Getting started
 
@@ -151,7 +158,7 @@ later) and pnpm, which `corepack enable` installs at the version pinned in
 ```bash
 corepack enable
 pnpm install
-pnpm dev        # host :9000, remotes :9001–:9007, Strapi :1337
+pnpm dev        # host :9000, remotes :9001–:9008, Strapi :1337
 ```
 
 Open http://localhost:9000 and pick a project. The host loads that remote at
@@ -179,7 +186,7 @@ Run from the repo root.
 | `pnpm typecheck`               | `tsc --noEmit` in every workspace.                                                                       |
 | `pnpm lint` / `lint:fix`       | ESLint (flat config).                                                                                    |
 | `pnpm format` / `format:check` | Prettier.                                                                                                |
-| `pnpm test` / `test:watch`     | Vitest over the shared packages, Strapi, Holodex, the host's `src/lib` and the apps' scripts.            |
+| `pnpm test` / `test:watch`     | Vitest over the shared packages, Strapi, Holodex, Chess, the host's `src/lib` and the apps' scripts.     |
 | `pnpm run ci`                  | Lint, format check, typecheck, test and build, as CI runs them. (`pnpm ci` is pnpm's own clean install.) |
 | `pnpm assets`                  | Fetches and derives self-hosted assets where an app defines them (TOONHUB's figurines).                  |
 | `pnpm thumbnails [id...]`      | Regenerates gallery thumbnails; see [Adding a project](#adding-a-project).                               |
@@ -195,7 +202,7 @@ exception: the built server reads them from the real environment only. Never
 put secrets in `.env`.
 
 Below, `<NAME>` stands for `TOONHUB`, `MINDLOOP`, `IMMERSIVE_OCEAN`, `VIKTOR`,
-`BALI`, `PROFILE` or `HOLODEX`.
+`BALI`, `PROFILE`, `HOLODEX` or `CHESS`.
 
 | Variable                          | Purpose                                                                                                                                                                                           |
 | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -234,6 +241,9 @@ set `SITE_URL` on every remote's project as well.
    to the `Dockerfile`, and an upstream at `portfolio:<port>` plus a server
    block to `nginx/nginx.conf`. The comments in those three files say why.
 6. With `pnpm dev` running, generate its thumbnail: `pnpm thumbnails <id>`.
+7. Before merging, deploy it in
+   [the order docs/deployment.md gives](docs/deployment.md#adding-a-remote-to-the-live-site):
+   its own Vercel project first, then its `<NAME>_REMOTE_URL` on the host's.
 
 **Thumbnails** are generated, not designed. Each gallery card and each project
 page's `og:image` is a 1200×630 Playwright capture of `/projects/<id>` on the
@@ -262,7 +272,7 @@ Re-run it whenever a remote's first screen changes rather than editing an image.
 
 ## Deployment
 
-- **Vercel** serves the host (a Nitro server) and the seven remotes (static
+- **Vercel** serves the host (a Nitro server) and the eight remotes (static
   builds), one project per app, each configured by its own `vercel.json`. The
   host bakes each `<NAME>_REMOTE_URL` in at build time.
 - **Render** runs Strapi and its Postgres from [`render.yaml`](render.yaml),
