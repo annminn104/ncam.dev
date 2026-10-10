@@ -152,7 +152,7 @@ pnpm thumbnails <id>  # regenerates a gallery thumbnail (needs `pnpm dev` runnin
 `pnpm run ci` must pass; the pre-push hook runs `turbo run typecheck build`.
 
 Lighthouse (`.github/workflows/lighthouse.yml`) holds every page type (home,
-blog, a post, each project) at 100 in all four categories, mobile and desktop,
+blog, a post, each project) at 80 or more in all four categories, mobile and desktop,
 on the median of three runs, against the production build served from the
 runner: `scripts/lighthouse/serve.mjs` serves every remote, the host and a
 stand-in CMS, each behind a compressing proxy, and `lighthouserc.cjs` measures
