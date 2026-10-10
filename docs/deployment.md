@@ -15,7 +15,8 @@ Remotes are static Vite builds, and the host is a Nitro server. Each app has its
 own `vercel.json`: build command, output directory, the CORS header the remotes
 need, and `ignoreCommand: npx turbo-ignore`, so that a push rebuilds only the
 apps it touched. Create **one Vercel project per app** from this repo, each with
-the matching **Root Directory**. The live ones:
+the matching **Root Directory**. The live ones, and Chess, whose project is yet
+to be created ([the order](#adding-a-remote-to-the-live-site) matters):
 
 | App                     | Root Directory         | Production URL                          |
 | ----------------------- | ---------------------- | --------------------------------------- |
@@ -27,6 +28,7 @@ the matching **Root Directory**. The live ones:
 | Bali Adventure          | `apps/bali`            | https://ncam-bali.vercel.app            |
 | Profile (home sections) | `apps/profile`         | https://ncam-sections.vercel.app        |
 | Holodex                 | `apps/holodex`         | https://ncam-holodex.vercel.app         |
+| Cultivation Chess       | `apps/chess`           | https://ncam-chess.vercel.app (planned) |
 
 1. **Remotes first.** Pick the Vite framework preset; everything else comes
    from `vercel.json`. Deploy each remote and note its production URL.
@@ -50,6 +52,7 @@ the matching **Root Directory**. The live ones:
    BALI_REMOTE_URL=https://ncam-bali.vercel.app/remoteEntry.js
    PROFILE_REMOTE_URL=https://ncam-sections.vercel.app/remoteEntry.js
    HOLODEX_REMOTE_URL=https://ncam-holodex.vercel.app/remoteEntry.js
+   CHESS_REMOTE_URL=https://ncam-chess.vercel.app/remoteEntry.js
    NODE_OPTIONS=--experimental-vm-modules
    ```
 
@@ -78,9 +81,30 @@ the matching **Root Directory**. The live ones:
    them too, or their canonicals keep naming the old origin.
 
 Hobby plan notes: one build runs at a time, so a push that touches everything
-builds the eight projects one after another (`turbo-ignore` skips the untouched
+builds the nine projects one after another (`turbo-ignore` skips the untouched
 ones); the plan is for non-commercial use only. Share the Turbo cache with
 `npx turbo login && npx turbo link`.
+
+### Adding a remote to the live site
+
+The host bakes every `<NAME>_REMOTE_URL` in at build time, and an unset one
+falls back to the `.env` default, `http://localhost:<port>/remoteEntry.js`. The
+project registry lists the project as soon as it is merged, so the home page's
+gallery (the profile remote bundles the registry), the host's sitemap and its
+`llms.txt` would all send visitors to a page whose remote cannot load. A new
+remote (Chess, today) therefore goes live in this order:
+
+1. Create its Vercel project (Root Directory `apps/<id>`, the Vite preset; for
+   Chess `apps/chess`, named `ncam-chess`) and deploy it.
+2. Set its `SITE_URL` Production variable to the host's public origin and
+   redeploy it, so its standalone page names the host's `/projects/<id>` as its
+   canonical.
+3. On the host project, set `<NAME>_REMOTE_URL` to the remote's production URL
+   **with** `/remoteEntry.js` (for Chess,
+   `CHESS_REMOTE_URL=https://ncam-chess.vercel.app/remoteEntry.js`).
+4. Only then merge. The merge rebuilds the host and the profile remote, which
+   both depend on the registry; redeploy either by hand if `turbo-ignore`
+   skipped it.
 
 ## Docker
 

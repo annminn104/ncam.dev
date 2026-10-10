@@ -142,6 +142,10 @@ pnpm thumbnails <id>  # regenerates a gallery thumbnail (needs `pnpm dev` runnin
 6. With `pnpm dev` running, generate its gallery thumbnail: `pnpm thumbnails <id>`
    (a 1200×630 capture of the project page, minus the host's back button — see
    `apps/portfolio/scripts/capture-thumbnails.mjs`).
+7. Deploy before the merge: its Vercel project, then `<NAME>_REMOTE_URL` (with
+   `/remoteEntry.js`) on the host's (`docs/deployment.md` → "Adding a remote to
+   the live site"). Merged first, the host bakes in `localhost` and the gallery
+   lists a page that cannot load.
 
 ## Turborepo notes
 

@@ -140,14 +140,14 @@ flowchart LR
 
 ## Tech stack
 
-| Area       | Tools                                                                                                          |
-| ---------- | -------------------------------------------------------------------------------------------------------------- |
-| Host       | TanStack Start and TanStack Router, React 19, Nitro                                                            |
-| Federation | `@module-federation/vite`, with server-side remote entries                                                     |
-| Remotes    | Vite 8, React 19 or plain TypeScript, Tailwind CSS v4, GSAP, framer-motion, hls.js, three.js, TanStack Query   |
-| CMS        | Strapi 5: SQLite in development, Postgres in Docker and on Render                                              |
-| Tooling    | pnpm workspaces, Turborepo, TypeScript, Vitest, ESLint (flat config), Prettier, Husky, lint-staged, commitlint |
-| Hosting    | Vercel (the host and the remotes), Render (the CMS), Docker Compose (the whole stack)                          |
+| Area       | Tools                                                                                                                                                                    |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Host       | TanStack Start and TanStack Router, React 19, Nitro                                                                                                                      |
+| Federation | `@module-federation/vite`, with server-side remote entries                                                                                                               |
+| Remotes    | Vite 8, React 19 or plain TypeScript, Tailwind CSS v4, GSAP, framer-motion, hls.js, three.js, React Three Fiber, drei, TanStack Query, chess.js, Stockfish (WebAssembly) |
+| CMS        | Strapi 5: SQLite in development, Postgres in Docker and on Render                                                                                                        |
+| Tooling    | pnpm workspaces, Turborepo, TypeScript, Vitest, ESLint (flat config), Prettier, Husky, lint-staged, commitlint                                                           |
+| Hosting    | Vercel (the host and the remotes), Render (the CMS), Docker Compose (the whole stack)                                                                                    |
 
 ## Getting started
 
@@ -241,6 +241,9 @@ set `SITE_URL` on every remote's project as well.
    to the `Dockerfile`, and an upstream at `portfolio:<port>` plus a server
    block to `nginx/nginx.conf`. The comments in those three files say why.
 6. With `pnpm dev` running, generate its thumbnail: `pnpm thumbnails <id>`.
+7. Before merging, deploy it in
+   [the order docs/deployment.md gives](docs/deployment.md#adding-a-remote-to-the-live-site):
+   its own Vercel project first, then its `<NAME>_REMOTE_URL` on the host's.
 
 **Thumbnails** are generated, not designed. Each gallery card and each project
 page's `og:image` is a 1200×630 Playwright capture of `/projects/<id>` on the
