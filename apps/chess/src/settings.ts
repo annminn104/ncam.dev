@@ -1,5 +1,6 @@
 import { ARENAS, type ArenaId } from './arenas-meta';
 import { levelOf, type LevelId } from './engine/levels';
+import { DEFAULT_PRESET, isPresetId, presetMeta, type PresetId } from './presets-meta';
 
 export type Mode = 'hotseat' | 'ai';
 export type SidePick = 'w' | 'b' | 'random';
@@ -11,6 +12,10 @@ export interface GameSettings {
   arenaId: ArenaId;
   /** Hot-seat: turn the camera to whoever moves next. */
   autoRotate: boolean;
+  /** Piece sets. Linked: one choice for both sides (vs AI the AI answers with its contrast). */
+  whitePreset: PresetId;
+  blackPreset: PresetId;
+  linkPresets: boolean;
 }
 
 export const DEFAULT_SETTINGS: GameSettings = {
@@ -19,7 +24,15 @@ export const DEFAULT_SETTINGS: GameSettings = {
   level: 2,
   arenaId: 'cloud-peak',
   autoRotate: true,
+  whitePreset: DEFAULT_PRESET,
+  blackPreset: DEFAULT_PRESET,
+  linkPresets: true,
 };
+
+/** A stored preset id, if it is still one the lobby offers. */
+function presetOr(v: unknown): PresetId {
+  return isPresetId(v) && presetMeta(v).ready ? v : DEFAULT_PRESET;
+}
 
 const KEY = 'ncam-chess:settings';
 
@@ -37,6 +50,9 @@ export function parseSettings(raw: unknown): GameSettings {
       ? (r.arenaId as ArenaId)
       : DEFAULT_SETTINGS.arenaId,
     autoRotate: typeof r.autoRotate === 'boolean' ? r.autoRotate : DEFAULT_SETTINGS.autoRotate,
+    whitePreset: presetOr(r.whitePreset),
+    blackPreset: presetOr(r.blackPreset),
+    linkPresets: typeof r.linkPresets === 'boolean' ? r.linkPresets : DEFAULT_SETTINGS.linkPresets,
   };
 }
 
