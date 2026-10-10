@@ -261,9 +261,10 @@ loader)` for the six modules **sequentially** → `mod.ssr()` →
 
 ## Performance (Lighthouse)
 
-Every page is held at 100 in all four Lighthouse categories, mobile and
-desktop, by `.github/workflows/lighthouse.yml` (root `lighthouserc.cjs`,
-`scripts/lighthouse/`). What keeps the host there:
+Every page is held at 80 or more in all four Lighthouse categories, mobile
+and desktop, by `.github/workflows/lighthouse.yml` (root `lighthouserc.cjs`,
+`scripts/lighthouse/`); every page measured 100 when the gate was lowered from
+100 to 80. What keeps the host there:
 
 - **One inline stylesheet.** `app.css` is inlined into the server-rendered
   `<head>` (`?inline` in `__root.tsx`), so the first paint waits for no request.
