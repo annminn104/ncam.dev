@@ -4,10 +4,16 @@ import { Lobby } from './lobby/Lobby';
 import { DEFAULT_SETTINGS, loadSettings, saveSettings, type GameSettings } from './settings';
 
 // three, R3F and drei live in this chunk. It loads when a battle starts, never with the lobby
-// or its server render (ssr-graph.test.ts holds the static import graph to that). A load that
-// fails stays failed: lazy() and the browser both remember a rejected import, so there is no
-// retry to offer, only the lobby, and the failure screen tells the player to reload.
-const Battle = lazy(() => import('./battle/Battle'));
+// or its server render (ssr-graph.test.ts holds the static import graph to that). The server
+// only ever renders the lobby (a battle starts from a click), so its build names no chunk at
+// all: Vite folds import.meta.env.SSR to true there and the import goes with its branch. A load
+// that fails stays failed: lazy() and the browser both remember a rejected import, so there is
+// no retry to offer, only the lobby, and the failure screen tells the player to reload.
+const Battle = lazy(() =>
+  import.meta.env.SSR
+    ? Promise.reject(new Error('A battle never renders on the server'))
+    : import('./battle/Battle'),
+);
 
 export interface AppProps {
   assetBase: string;

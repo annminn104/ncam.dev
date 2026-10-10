@@ -64,4 +64,17 @@ describe('SSR import graph', () => {
       expect(files.has(path.join(SRC, ...rel.split('/')))).toBe(true);
     }
   });
+
+  it('leaves the battle chunk out of the server build', () => {
+    // The lazy import is allowed above, but a server build still bundles what it names: a dead
+    // 2.9 MB copy of three, R3F and the scene. The server only renders the lobby (a battle starts
+    // from a click), so App names the chunk only when import.meta.env.SSR is false; Vite folds
+    // that to true in the ssr build, and the import goes with its branch.
+    const app = readFileSync(path.join(SRC, 'App.tsx'), 'utf8');
+    const imports = app.match(/import\(\s*['"]\.\/battle\/Battle['"]\s*\)/g) ?? [];
+    expect(imports).toHaveLength(1);
+    expect(app).toMatch(
+      /import\.meta\.env\.SSR\s*\?[\s\S]*?:\s*import\(\s*['"]\.\/battle\/Battle['"]\s*\)/,
+    );
+  });
 });

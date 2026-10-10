@@ -88,7 +88,7 @@ One multi-stage image builds the whole monorepo, and `docker-compose.yml` runs
 the SSR host and each remote (as a static preview) from that same image:
 
 ```bash
-docker compose up --build                     # host http://localhost:9000, remotes :9001–:9007
+docker compose up --build                     # host http://localhost:9000, remotes :9001–:9008
 docker compose --profile gateway up --build   # + nginx on :80 → http://ncam.localhost
 ```
 

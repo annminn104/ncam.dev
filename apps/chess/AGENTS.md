@@ -19,7 +19,8 @@ host's `MountConfig`; only `assetBase` is read. Not route-aware.
 - `src/lobby/`, `App.tsx`, `ErrorBoundary.tsx`, `ssr.tsx`, `settings.ts`, `arenas-meta.ts`,
   `lib/` — SSR-safe; they must never statically import three, `@react-three/*` or
   `src/battle/**` (a test walks the import graph to enforce it). The battle is
-  `React.lazy(() => import('./battle/Battle'))`.
+  `React.lazy(() => import('./battle/Battle'))`, named only when `import.meta.env.SSR` is false:
+  the server renders the lobby alone, so its build (`dist-ssr`) carries no battle chunk.
 - `src/battle/` — the lazy chunk: Canvas, HUD, scene, effects, arenas.
 - Assets resolve against the remote's origin via `lib/asset-url.ts`.
 - `public/stockfish/` is generated from `node_modules/stockfish` by
@@ -86,6 +87,9 @@ host's `MountConfig`; only `assetBase` is read. Not route-aware.
   (≤ 500 px tall, a phone on its side) hides it and stands the game controls in a slim column on
   the left under the turn, where the board's sides leave room; a draw offer takes that column's
   place until it is answered.
+- Inside the host its fixed "← Projects" pill floats over the middle of the top edge. The lobby's
+  head, and below 900 px wide the HUD's top bar (short screens excepted), start below it: the host
+  sets `--stage-top-inset` on its stage, and standalone it is unset, so nothing moves.
 
 ## vs AI (`battle/useAiOpponent.ts`, `engine/`)
 

@@ -46,6 +46,15 @@
   align-items: center;
   padding-top: max(12px, env(safe-area-inset-top));
 }
+/* Inside the host its "← Projects" pill floats over the middle of the top edge (a 40px circle on
+   a phone). Below 900px wide the turn or the view controls can reach under it, so there the top
+   bar starts below it: the host sets --stage-top-inset on its stage, and standalone it is unset.
+   A short screen keeps its bar where it is: its height belongs to the board. */
+@media (max-width: 899px) and (min-height: 501px) {
+  .chess-hud__top {
+    padding-top: max(12px, env(safe-area-inset-top), var(--stage-top-inset, 0px));
+  }
+}
 .chess-hud__bottom {
   grid-area: bottom;
   flex-direction: column;

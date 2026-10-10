@@ -10,6 +10,7 @@ describe('project-registry', () => {
       'viktor',
       'bali',
       'holodex',
+      'chess',
     ]);
   });
 
