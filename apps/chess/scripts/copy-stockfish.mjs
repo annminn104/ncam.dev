@@ -2,6 +2,8 @@
 // public/stockfish/ as stockfish.js + stockfish.wasm (+ licence), so the remote
 // serves it from its own origin. Runs on predev / prebuild; the output is gitignored.
 // Stockfish is GPLv3: the files are copied unmodified, with the licence.
+// The names stay the same across versions, so vercel.json has browsers revalidate
+// them (never `immutable`): an upgrade reaches returning visitors as a matching pair.
 import { copyFile, mkdir, readdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { createRequire } from 'node:module';

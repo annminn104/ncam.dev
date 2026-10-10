@@ -25,7 +25,10 @@ host's `MountConfig`; only `assetBase` is read. Not route-aware.
 - Assets resolve against the remote's origin via `lib/asset-url.ts`.
 - `public/stockfish/` is generated from `node_modules/stockfish` by
   `scripts/copy-stockfish.mjs` (predev/prebuild) and gitignored. Stockfish is
-  GPLv3 — its files ship unmodified with their licence.
+  GPLv3 — its files ship unmodified with their licence. Their names never change
+  (`stockfish.js`, `stockfish.wasm`), so `vercel.json` has browsers revalidate them
+  (`max-age=0, must-revalidate`; Vercel sends the ETag): `immutable` would keep a returning
+  visitor on the old pair after an upgrade (`vercel-config.test.ts`).
 - `public/arenas/*.avif` are lobby previews captured from the real scene:
   `pnpm --filter @ncam/chess capture:arenas` with this app's dev server running.
 
