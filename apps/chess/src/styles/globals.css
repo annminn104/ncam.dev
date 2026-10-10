@@ -119,7 +119,6 @@
   position: relative;
   display: grid;
   align-content: end;
-  gap: 4px;
   text-align: left;
   border-radius: 16px;
   padding: 0;
@@ -139,16 +138,15 @@
 .chess-arena__img[data-failed] {
   visibility: hidden;
 }
-/* Caption scrim, anchored to the bottom and sized in rem like the caption it sits behind (the name
-   and up to three lines of lore are about 6rem tall). From the top of the caption down it is at
-   least 62% black whatever the preview behind it is, so the text keeps 4.5:1 even over white. */
-.chess-arena::after {
-  content: '';
-  position: absolute;
-  inset: auto 0 0;
-  height: 10rem;
-  z-index: -1;
-  background: linear-gradient(180deg, transparent, rgb(0 0 0 / 0.62) 38%, rgb(0 0 0 / 0.84));
+/* The caption carries its own scrim, so the scrim is exactly as tall as the text whatever number
+   of lines the card's width wraps the lore to, and the preview shows unshaded above it: a 2rem
+   fade, then from the top of the text down at least 66% black whatever the preview behind it is,
+   so even the dimmer lore keeps 4.5:1 over white (contrast.test.ts). */
+.chess-arena__caption {
+  display: grid;
+  gap: 4px;
+  padding-top: 2rem;
+  background: linear-gradient(180deg, transparent, rgb(0 0 0 / 0.66) 2rem, rgb(0 0 0 / 0.84));
 }
 .chess-arena__name {
   padding: 0 16px;

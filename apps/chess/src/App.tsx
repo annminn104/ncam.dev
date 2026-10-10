@@ -1,4 +1,5 @@
 import { Suspense, lazy, useEffect, useState } from 'react';
+import type { ArenaId } from './arenas-meta';
 import { BattleErrorBoundary } from './ErrorBoundary';
 import { Lobby } from './lobby/Lobby';
 import { DEFAULT_SETTINGS, loadSettings, saveSettings, type GameSettings } from './settings';
@@ -17,16 +18,25 @@ const Battle = lazy(() =>
 
 export interface AppProps {
   assetBase: string;
+  /**
+   * Capture mode (scripts/capture-arenas.mjs, through the standalone page only): this arena's
+   * battle alone, with no lobby, HUD or stored settings, for the lobby's preview images.
+   */
+  capture?: ArenaId;
 }
 
-export default function App({ assetBase }: AppProps) {
+export default function App({ assetBase, capture }: AppProps) {
   // Server and first client render use the defaults (hydration-safe); stored
   // settings arrive in an effect.
-  const [settings, setSettings] = useState<GameSettings>(DEFAULT_SETTINGS);
-  const [phase, setPhase] = useState<'lobby' | 'battle'>('lobby');
+  const [settings, setSettings] = useState<GameSettings>(() =>
+    capture ? { ...DEFAULT_SETTINGS, mode: 'hotseat', arenaId: capture } : DEFAULT_SETTINGS,
+  );
+  const [phase, setPhase] = useState<'lobby' | 'battle'>(capture ? 'battle' : 'lobby');
   // Bumped by a rematch: a new key mounts a fresh battle.
   const [round, setRound] = useState(0);
-  useEffect(() => setSettings(loadSettings()), []);
+  useEffect(() => {
+    if (!capture) setSettings(loadSettings());
+  }, [capture]);
   const change = (next: GameSettings) => {
     setSettings(next);
     saveSettings(next);
@@ -49,6 +59,7 @@ export default function App({ assetBase }: AppProps) {
               assetBase={assetBase}
               onExit={() => setPhase('lobby')}
               onRematch={() => setRound((r) => r + 1)}
+              capture={capture !== undefined}
             />
           </Suspense>
         </BattleErrorBoundary>

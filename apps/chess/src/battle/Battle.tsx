@@ -1,4 +1,4 @@
-import { Canvas } from '@react-three/fiber';
+import { Canvas, useFrame } from '@react-three/fiber';
 import { PerformanceMonitor } from '@react-three/drei';
 import { createLogger } from '@ncam/logger';
 import type { Square } from 'chess.js';
@@ -15,6 +15,7 @@ import { QualityContext, type Quality } from './quality';
 import { ResultOverlay } from './ResultOverlay';
 import { ARENA_DEFS } from './scene/arenas';
 import { CameraRig, type CameraRigHandle } from './scene/CameraRig';
+import { CaptureCamera } from './scene/CaptureCamera';
 import { disposeOwned } from './scene/dispose';
 import { releaseSharedLut } from './scene/materials';
 import { Treasure } from './scene/pieces';
@@ -27,12 +28,26 @@ import css from './battle.css?inline';
 const NO_JUMPS: ReadonlySet<string> = new Set();
 const log = createLogger({ scope: 'chess' });
 
+/** Capture mode: tells scripts/capture-arenas.mjs the scene has drawn (30 frames in). */
+function ReadySignal() {
+  const frames = useRef(0);
+  useFrame(() => {
+    frames.current += 1;
+    if (frames.current === 30)
+      (window as unknown as { __chessReady?: boolean }).__chessReady = true;
+  });
+  return null;
+}
+
 export interface BattleProps {
   settings: GameSettings;
   assetBase: string;
   onExit(): void;
   onRematch(): void;
-  /** Capture mode (scripts/capture-arenas.mjs): no HUD, fixed camera, signals readiness. */
+  /**
+   * Capture mode (scripts/capture-arenas.mjs): no HUD or engine, the arena's preview camera in
+   * place of the rig, no quality decline, and `window.__chessReady` once the scene has drawn.
+   */
   capture?: boolean;
 }
 
@@ -157,9 +172,15 @@ export default function Battle({ settings, assetBase, onExit, onRematch, capture
           }}
         >
           <color attach="background" args={[arena.background]} />
-          <PerformanceMonitor onDecline={() => setQuality('low')} />
+          {/* A preview shows the arena at its best, whatever GPU (or software one) draws it. */}
+          {!capture && <PerformanceMonitor onDecline={() => setQuality('low')} />}
           <ArenaEnvironment />
-          <CameraRig ref={rig} initialSide={humanSide} onViewSide={setViewSide} />
+          {capture ? (
+            <CaptureCamera view={arena.capture} />
+          ) : (
+            <CameraRig ref={rig} initialSide={humanSide} onViewSide={setViewSide} />
+          )}
+          {capture && <ReadySignal />}
           <Scene
             game={game}
             skin={arena.skin}

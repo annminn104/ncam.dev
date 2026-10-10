@@ -35,6 +35,38 @@ describe('lobby colour contrast (WCAG AA, 4.5:1)', () => {
     }
   });
 
+  it('keeps the arena captions readable over any preview, even a white one', () => {
+    // The caption's own scrim: transparent, then from the top of the text (its padding-top, where
+    // the fade ends) down at least `from` black, darkening to `to`. The worst preview behind it is
+    // white; the name is --chess-ink, the lore that ink at its own alpha over the scrimmed white.
+    const block = /\.chess-arena__caption\s*\{([^}]*)\}/.exec(css)?.[1] ?? '';
+    const scrim =
+      /padding-top:\s*([\d.]+rem);[\s\S]*?linear-gradient\(\s*180deg\s*,\s*transparent\s*,\s*rgb\(0 0 0 \/ ([\d.]+)\)\s*([\d.]+rem)\s*,\s*rgb\(0 0 0 \/ ([\d.]+)\)\s*\)/.exec(
+        block,
+      );
+    if (!scrim) throw new Error('the .chess-arena__caption scrim was not found in globals.css');
+    expect(scrim[3], 'the scrim is solid from where its fade ends: the top of the text').toBe(
+      scrim[1],
+    );
+    const lore = /\.chess-arena__lore\s*\{[^}]*?color:\s*rgb\((\d+) (\d+) (\d+) \/ ([\d.]+)\)/.exec(
+      css,
+    );
+    if (!lore) throw new Error('the .chess-arena__lore colour was not found in globals.css');
+    const loreInk = [Number(lore[1]), Number(lore[2]), Number(lore[3])] as Rgb;
+    const loreAlpha = Number(lore[4]);
+    for (const alpha of [Number(scrim[2]), Number(scrim[4])]) {
+      const bg = [0, 0, 0].map(() => Math.round(255 * (1 - alpha))) as Rgb;
+      const loreOnBg = loreInk.map((c, i) => Math.round(c * loreAlpha + bg[i] * (1 - loreAlpha)));
+      expect(contrast(token('ink'), bg), `name over white under ${alpha}`).toBeGreaterThanOrEqual(
+        4.5,
+      );
+      expect(
+        contrast(loreOnBg as Rgb, bg),
+        `lore over white under ${alpha}`,
+      ).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+
   it('keeps the "Enter battle" label readable along its whole gradient', () => {
     const m =
       /\.chess-start\s*\{[^}]*?linear-gradient\(\s*135deg\s*,\s*(#[0-9a-f]{6})\s*,\s*(#[0-9a-f]{6})\s*\)/i.exec(

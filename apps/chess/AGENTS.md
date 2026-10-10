@@ -30,7 +30,15 @@ host's `MountConfig`; only `assetBase` is read. Not route-aware.
   (`max-age=0, must-revalidate`; Vercel sends the ETag): `immutable` would keep a returning
   visitor on the old pair after an upgrade (`vercel-config.test.ts`).
 - `public/arenas/*.avif` are lobby previews captured from the real scene:
-  `pnpm --filter @ncam/chess capture:arenas` with this app's dev server running.
+  `pnpm --filter @ncam/chess capture:arenas` with this app's dev server running. The script
+  opens the standalone page with `?capture=<id>` (`standalone.tsx`, then App's and Battle's
+  `capture`): the battle alone, no HUD or engine, `CaptureCamera` at the arena's
+  `ARENA_DEFS[id].capture` view (lower than the rig's resting view, which shows no sky, so the
+  sun or moon is in frame), no quality decline (SwiftShader draws it, the same on any machine),
+  and `window.__chessReady` after 30 frames. Change a view, re-run it, look at the lobby.
+- Arena cards: the caption carries its own scrim (`.chess-arena__caption`), as tall as its text
+  at any width, at least 66% black from the top of the text down, so the name and lore keep
+  4.5:1 over any preview, even white (`contrast.test.ts`).
 
 ## The battle scene
 

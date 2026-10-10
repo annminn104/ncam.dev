@@ -45,8 +45,10 @@ export function ArenaCard(props: {
         data-failed={failed === src ? '' : undefined}
         onError={() => setFailed(src)}
       />
-      <span className="chess-arena__name">{arena.name}</span>
-      <span className="chess-arena__lore">{arena.lore}</span>
+      <span className="chess-arena__caption">
+        <span className="chess-arena__name">{arena.name}</span>
+        <span className="chess-arena__lore">{arena.lore}</span>
+      </span>
     </button>
   );
 }
