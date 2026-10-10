@@ -31,8 +31,11 @@ const BODY: Record<PieceSymbol, ComponentType<TreasureProps>> = {
   p: Pearl,
 };
 
-/** The lotus-ringed jade base every treasure floats over, its glyph toward the owner. */
-function Base({ side, glyph }: { side: Side; glyph: string }) {
+/**
+ * The lotus-ringed jade base under every piece, whatever its set. Its glyph faces the owner once
+ * the caller has turned black's pieces round, as `Treasure` does.
+ */
+export function PieceBase({ side, glyph }: { side: Side; glyph: string }) {
   const k = baseKit();
   const m = sectMaterials(side);
   return (
@@ -53,7 +56,7 @@ export function Treasure({ piece, jumping }: { piece: BoardPiece; jumping: boole
   return (
     // The glyph faces its owner: black's pieces turn to face the other end of the board.
     <group rotation-y={piece.color === 'w' ? 0 : Math.PI}>
-      <Base side={piece.color} glyph={TREASURES[piece.type].glyph} />
+      <PieceBase side={piece.color} glyph={TREASURES[piece.type].glyph} />
       <Float speed={4} rotationIntensity={0.2} floatIntensity={1} floatingRange={[-0.025, 0.025]}>
         <group position-y={BODY_Y}>
           <Body side={piece.color} jumping={jumping} />

@@ -2,7 +2,8 @@ import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { flushSync } from 'react-dom';
 import type { Side } from '../game/coords';
 import { describeStatus, isOver } from '../game/status';
-import { SECTS, TREASURES } from '../game/treasures';
+import { SECTS } from '../game/treasures';
+import { pieceLabel, type PresetId } from '../presets-meta';
 import type { GameSettings } from '../settings';
 import { NO_OFFER, offerIn, positionKey, type DrawOffer } from './draw-offer';
 import { undoPlies } from './undo';
@@ -15,12 +16,14 @@ const SIDES: Side[] = ['w', 'b'];
  * has lost and the move list. It renders the parts of the `.chess-hud` grid that Battle lays
  * over the canvas. `children` (the keyboard board) goes between the top bar and the game
  * controls, which is where Tab reaches it. `thinking` is the AI at work on its move (loading
- * Stockfish or searching): it turns Undo off and says so.
+ * Stockfish or searching): it turns Undo off and says so. `presets` is the piece set each side
+ * plays: a lost piece is named by its own side's set.
  */
 export function Hud(props: {
   game: GameApi;
   settings: GameSettings;
   humanSide: Side;
+  presets: Record<Side, PresetId>;
   thinking: boolean;
   autoRotate: boolean;
   onToggleRotate(): void;
@@ -29,7 +32,7 @@ export function Hud(props: {
   onRematch(): void;
   children?: ReactNode;
 }) {
-  const { game, settings, humanSide, thinking, autoRotate } = props;
+  const { game, settings, humanSide, presets, thinking, autoRotate } = props;
   const { onToggleRotate, onResetView, onExit, onRematch, children } = props;
   const { snap, plyCount } = game;
   const hotseat = settings.mode === 'hotseat';
@@ -111,7 +114,8 @@ export function Hud(props: {
       <aside className="chess-hud__side chess-panel" aria-label="Moves and captures">
         <h2 className="chess-label">Treasures lost</h2>
         {SIDES.map((side) => {
-          const lost = snap.captured[side];
+          // The pieces this side has lost, named in its own set (the glyphs are the same in all).
+          const lost = snap.captured[side].map((t) => pieceLabel(presets[side], t));
           return (
             <p key={side} className="chess-lost">
               <span className="chess-lost__sect">{SECTS[side]}</span>{' '}
@@ -124,9 +128,9 @@ export function Hud(props: {
                     className={`chess-lost__glyphs chess-lost__glyphs--${side}`}
                     aria-hidden="true"
                   >
-                    {lost.map((t) => TREASURES[t].glyph).join(' ')}
+                    {lost.map((t) => t.glyph).join(' ')}
                   </span>
-                  <span className="chess-sr">{lost.map((t) => TREASURES[t].name).join(', ')}</span>
+                  <span className="chess-sr">{lost.map((t) => t.name).join(', ')}</span>
                 </>
               )}
             </p>

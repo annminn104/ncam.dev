@@ -2,6 +2,7 @@ import type { Square } from 'chess.js';
 import { useId, useRef, useState } from 'react';
 import { SQUARES, type Side } from '../game/coords';
 import { SECTS } from '../game/treasures';
+import type { PresetId } from '../presets-meta';
 import { describeSquare, isArrow, stepSquare } from './a11y-nav';
 import type { GameApi } from './useGame';
 
@@ -9,15 +10,18 @@ import type { GameApi } from './useGame';
  * The board for keyboards and screen readers: a visually hidden grid of buttons that mirrors the
  * 3D board as seen from `viewSide`'s end. One square at a time is in the Tab order (a roving
  * tabindex); arrows move it and the 3D board shows it as the gold cursor. Enter or Space clicks
- * the square (a button does that natively), Escape puts the selected treasure down.
+ * the square (a button does that natively), Escape puts the selected treasure down. `presets` is
+ * the piece set each side plays: the squares are named by it.
  */
 export function BoardA11y({
   game,
   viewSide,
+  presets,
   onCursor,
 }: {
   game: GameApi;
   viewSide: Side;
+  presets: Record<Side, PresetId>;
   onCursor(sq: Square | null): void;
 }) {
   const [cursor, setCursor] = useState<Square>(viewSide === 'w' ? 'e2' : 'e7');
@@ -56,7 +60,8 @@ export function BoardA11y({
                   tabIndex={sq === cursor ? 0 : -1}
                   aria-selected={selected === sq}
                   aria-label={
-                    describeSquare(sq, snap.pieces) + (targets.includes(sq) ? ', legal move' : '')
+                    describeSquare(sq, snap.pieces, presets) +
+                    (targets.includes(sq) ? ', legal move' : '')
                   }
                   ref={(el) => {
                     if (el) refs.current.set(sq, el);

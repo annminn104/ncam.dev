@@ -27,9 +27,21 @@ describe('isArrow', () => {
 });
 
 describe('describeSquare', () => {
-  it('names the treasure and the piece on a square', () => {
+  it('names the piece and its sect on a square, by the owner’s piece set', () => {
     const pieces = createGame().snapshot().pieces;
-    expect(describeSquare('e1', pieces)).toBe('e1, Righteous Sect Heaven Seal (King)');
-    expect(describeSquare('e4', pieces)).toBe('e4, empty');
+    const presets = { w: 'treasures', b: 'treasures' } as const;
+    expect(describeSquare('e1', pieces, presets)).toBe('e1, Righteous Sect Heaven Seal (King)');
+    expect(describeSquare('e4', pieces, presets)).toBe('e4, empty');
+    expect(describeSquare('e8', pieces, { w: 'treasures', b: 'holy-order' })).toBe(
+      'e8, Demonic Sect Patriarch (King)',
+    );
+  });
+  it('reads each piece from its own side’s set, not the other’s', () => {
+    const pieces = createGame().snapshot().pieces;
+    const presets = { w: 'holy-order', b: 'treasures' } as const;
+    expect(describeSquare('d1', pieces, presets)).toBe('d1, Righteous Sect Saint Abbess (Queen)');
+    expect(describeSquare('d8', pieces, presets)).toBe(
+      'd8, Demonic Sect Flying Sword Ring (Queen)',
+    );
   });
 });

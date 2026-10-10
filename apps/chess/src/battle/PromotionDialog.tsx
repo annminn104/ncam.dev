@@ -1,17 +1,22 @@
 import { useId, useRef } from 'react';
 import type { Side } from '../game/coords';
 import type { PromotionPiece } from '../game/game';
-import { TREASURES } from '../game/treasures';
+import { pieceLabel, type PresetId } from '../presets-meta';
 import { useDialog } from './useDialog';
 
 const CHOICES: PromotionPiece[] = ['q', 'r', 'b', 'n'];
 
-/** A pawn reached the last rank: pick the treasure it becomes, or cancel (Escape) to take it back. */
+/**
+ * A pawn reached the last rank: pick the treasure it becomes, or cancel (Escape) to take it back.
+ * The choices are named by the promoting side's piece set (`preset`).
+ */
 export function PromotionDialog({
   side,
+  preset,
   onChoose,
 }: {
   side: Side;
+  preset: PresetId;
   onChoose(p: PromotionPiece | null): void;
 }) {
   const first = useRef<HTMLButtonElement>(null);
@@ -21,21 +26,24 @@ export function PromotionDialog({
     <div className="chess-modal" role="dialog" aria-modal="true" aria-labelledby={titleId}>
       <h2 id={titleId}>The pearl ascends — choose its new form</h2>
       <div className="chess-modal__choices">
-        {CHOICES.map((p, i) => (
-          <button
-            key={p}
-            ref={i === 0 ? first : undefined}
-            type="button"
-            className={`chess-promo chess-promo--${side}`}
-            onClick={() => onChoose(p)}
-          >
-            <span className="chess-promo__glyph" aria-hidden="true">
-              {TREASURES[p].glyph}
-            </span>
-            <span className="chess-promo__name">{TREASURES[p].name}</span>
-            <small className="chess-promo__piece">{TREASURES[p].piece}</small>
-          </button>
-        ))}
+        {CHOICES.map((p, i) => {
+          const t = pieceLabel(preset, p);
+          return (
+            <button
+              key={p}
+              ref={i === 0 ? first : undefined}
+              type="button"
+              className={`chess-promo chess-promo--${side}`}
+              onClick={() => onChoose(p)}
+            >
+              <span className="chess-promo__glyph" aria-hidden="true">
+                {t.glyph}
+              </span>
+              <span className="chess-promo__name">{t.name}</span>
+              <small className="chess-promo__piece">{t.piece}</small>
+            </button>
+          );
+        })}
       </div>
       <button type="button" className="chess-link" onClick={() => onChoose(null)}>
         Cancel

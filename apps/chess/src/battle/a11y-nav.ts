@@ -1,7 +1,8 @@
 import type { Square } from 'chess.js';
 import { FILES, type Side } from '../game/coords';
 import type { BoardPiece } from '../game/pieces';
-import { SECTS, TREASURES } from '../game/treasures';
+import { SECTS } from '../game/treasures';
+import { pieceLabel, type PresetId } from '../presets-meta';
 
 // The keyboard board's arithmetic, free of React and three so it runs under Node tests.
 
@@ -25,10 +26,18 @@ export function stepSquare(from: Square, key: Arrow, viewSide: Side): Square {
   return `${FILES[file]}${rank}` as Square;
 }
 
-/** What a screen reader hears for a square: "e1, Righteous Sect Heaven Seal (King)". */
-export function describeSquare(sq: Square, pieces: BoardPiece[]): string {
+/**
+ * What a screen reader hears for a square: "e1, Righteous Sect Heaven Seal (King)". The name is
+ * the one in the piece's own side's set (`presets`); the chess piece in brackets is the same in
+ * every set.
+ */
+export function describeSquare(
+  sq: Square,
+  pieces: BoardPiece[],
+  presets: Record<Side, PresetId>,
+): string {
   const p = pieces.find((x) => x.square === sq);
   if (!p) return `${sq}, empty`;
-  const t = TREASURES[p.type];
+  const t = pieceLabel(presets[p.color], p.type);
   return `${sq}, ${SECTS[p.color]} ${t.name} (${t.piece})`;
 }

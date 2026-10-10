@@ -2,9 +2,10 @@ import { Canvas, useFrame } from '@react-three/fiber';
 import { PerformanceMonitor } from '@react-three/drei';
 import { createLogger } from '@ncam/logger';
 import type { Square } from 'chess.js';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Side } from '../game/coords';
 import { isOver } from '../game/status';
+import { resolvePresets } from '../presets-meta';
 import type { GameSettings } from '../settings';
 import { BoardA11y } from './BoardA11y';
 import { EngineToast } from './EngineToast';
@@ -18,7 +19,7 @@ import { CameraRig, type CameraRigHandle } from './scene/CameraRig';
 import { CaptureCamera } from './scene/CaptureCamera';
 import { disposeOwned } from './scene/dispose';
 import { releaseSharedLut } from './scene/materials';
-import { Treasure } from './scene/pieces';
+import { PresetPiece } from './scene/presets';
 import { Scene } from './scene/Scene';
 import { useAiOpponent } from './useAiOpponent';
 import { useGame } from './useGame';
@@ -58,6 +59,10 @@ export default function Battle({ settings, assetBase, onExit, onRematch, capture
     if (settings.playerSide === 'random') return Math.random() < 0.5 ? 'w' : 'b';
     return settings.playerSide;
   });
+  // The piece set each side plays, resolved from the lobby's settings (its mode, not this battle's
+  // own `mode` below): if Stockfish fails and the battle turns hot-seat, the pieces keep the sets
+  // they started with.
+  const presets = useMemo(() => resolvePresets(settings, humanSide), [settings, humanSide]);
   // This battle's own mode. It starts as the lobby's; if Stockfish fails, the toast can turn the
   // battle into hot-seat and keep the position (a remount would lose it).
   const [mode, setMode] = useState(settings.mode);
@@ -185,7 +190,9 @@ export default function Battle({ settings, assetBase, onExit, onRematch, capture
             game={game}
             skin={arena.skin}
             cursor={cursor}
-            renderPiece={(p) => <Treasure piece={p} jumping={jumping.has(p.id)} />}
+            renderPiece={(p) => (
+              <PresetPiece preset={presets[p.color]} piece={p} jumping={jumping.has(p.id)} />
+            )}
           />
         </Canvas>
         {!capture && (
@@ -196,6 +203,7 @@ export default function Battle({ settings, assetBase, onExit, onRematch, capture
                 game={game}
                 settings={{ ...settings, mode }}
                 humanSide={humanSide}
+                presets={presets}
                 thinking={thinking}
                 autoRotate={autoRotate}
                 onToggleRotate={() => setAutoRotate((v) => !v)}
@@ -207,7 +215,7 @@ export default function Battle({ settings, assetBase, onExit, onRematch, capture
                 onExit={onExit}
                 onRematch={onRematch}
               >
-                <BoardA11y game={game} viewSide={viewSide} onCursor={setCursor} />
+                <BoardA11y game={game} viewSide={viewSide} presets={presets} onCursor={setCursor} />
               </Hud>
               {/* Only the AI's turn can fail; once the battle is over there is nothing to ask. */}
               {ai.error && !over && (
@@ -219,7 +227,7 @@ export default function Battle({ settings, assetBase, onExit, onRematch, capture
               )}
             </div>
             {game.pendingPromotion && (
-              <PromotionDialog side={turn} onChoose={game.choosePromotion} />
+              <PromotionDialog side={turn} preset={presets[turn]} onChoose={game.choosePromotion} />
             )}
             {showResult && (
               <ResultOverlay
