@@ -30,13 +30,24 @@ overrides:
   # Each override is scoped to the affected major so unrelated majors keep their own range.
   'js-yaml@4': '4.3.2' # GHSA-5p4m-2wfm-xmqj, GHSA-2883-xcg3-v3hh (commitlint, tanstack start)
   'nanoid@3': '3.3.18' # GHSA-2v37-7h3g-55p8 (postcss via vite / vitest)
-  'brace-expansion@5': '5.0.9' # GHSA-mh99-v99m-4gvg, GHSA-rgw5-rvv9-x895 (eslint / minimatch)
+  'brace-expansion@5': '5.0.11' # GHSA-mh99-v99m-4gvg, GHSA-rgw5-rvv9-x895, GHSA-6j4f-fj2g-mc7p, GHSA-qhr7-859c-m2p7 (eslint / minimatch)
+  'brace-expansion@1': '1.1.20' # GHSA-6j4f-fj2g-mc7p, GHSA-qhr7-859c-m2p7 (@strapi/* via minimatch 3)
+  'source-map-js@1': '1.2.2' # GHSA-68fv-2mgg-jv7q (postcss via vite / vitest / tailwind)
+  'handlebars@4': '4.7.10' # GHSA-8r5x-fm3f-whwj, GHSA-p8wg-vrv2-v86f (@strapi/*)
+  'shell-quote@1': '1.11.0' # GHSA-pqg4-j6r4-53mv (@strapi/*)
+  'axios@1': '1.20.0' # GHSA-3pq3-5fj3-cg6v, GHSA-542g-h47m-68v8, GHSA-mghh-pgcx-3jjj, GHSA-x97p-jq2g-jp4f, GHSA-m8m8-qj5v-23w3, GHSA-c29m-xwm3-cm6r, GHSA-r4gj-5m52-g5wh (@strapi/*)
   'browserslist@4': '4.28.9' # GHSA-c83g-rgw3-j3cx, GHSA-73wf-gq98-2v4g (babel, tanstack start)
   'fast-uri@3': '3.1.7' # GHSA-v2hh-gcrm-f6hx … GHSA-jqff-g426-hqxp (commitlint)
   'undici@7': '7.29.1' # GHSA-4cwx-7wf7-3272 (@module-federation/dts-plugin)
   adm-zip: '0.6.1' # GHSA-xcpc-8h2w-3j85, GHSA-vwc7-r8mq-g2x9 (@module-federation/dts-plugin)
-  'sharp@0.35': '0.35.4' # GHSA-rgj7-g3m4-5g8c (@strapi/upload)
-  'nodemailer@9': '9.1.1' # GHSA-2x7j-588g-ccc2, GHSA-8m3c-c648-2xjj (@strapi/provider-email-sendmail)
+  'sharp@0.35': '0.35.5' # GHSA-rgj7-g3m4-5g8c, GHSA-wq5f-xc86-pv6w (@strapi/upload, toonhub, chess, tanstack start)
+  # No 9.x release fixes GHSA-v53p-9fqp-m79j / GHSA-prgh-xp8r-p3m5 (addressparser DoS), so
+  # the sendmail provider's nodemailer 9 moves to 10. 10.x keeps a CommonJS build
+  # (main: dist/cjs) and the createTransport API the provider uses.
+  'nodemailer@9': '10.0.16' # GHSA-2x7j-588g-ccc2, GHSA-8m3c-c648-2xjj, GHSA-v53p-9fqp-m79j, GHSA-prgh-xp8r-p3m5 (@strapi/provider-email-sendmail)
+  # No 6.x release fixes GHSA-g84c-rxfj-3j2c (path traversal). Only @strapi/strapi's opt-in
+  # webpack bundler (`strapi develop --bundler=webpack`) loads it; the default is vite.
+  'webpack-dev-middleware@6': '7.4.5' # GHSA-g84c-rxfj-3j2c (@strapi/strapi)
   'qs@6': '6.16.0' # GHSA-4mjr-xmp4-gh2g, GHSA-x5fp-wj9c-mxmx (@strapi/* pin 6.15.3; koa via co-body / formidable)
   # Strapi pins vite 5.4.21 for its admin build, and the 5.x line no longer receives these
   # fixes (all land in 6.4.x). @vitejs/plugin-react-swc 3.11 accepts vite ^6, and
@@ -46,6 +57,15 @@ overrides:
   # Brings esbuild ^0.25 (GHSA-67mh-4wv8-2f99) along.
   '@strapi/strapi>vite': '6.4.3' # GHSA-4w7w-66w2-5vf9, GHSA-v6wh-96g9-6wx3, GHSA-fx2h-pf6j-xcff
 
+# High advisories with no patched release, accepted until one ships. Dismiss the matching
+# Dependabot alerts with the same reasoning:
+# - braces <= 3.0.3 (GHSA-vfj7-8cjw-p6xm, stack exhaustion on deeply nested patterns): 3.0.3
+#   is the latest release. Every path is Strapi tooling (micromatch via preferred-pm /
+#   find-yarn-workspace-root2, and via @strapi/types' dev tooling), which expands the
+#   project's own globs, not request input.
+auditConfig:
+  ignoreGhsas:
+    - GHSA-vfj7-8cjw-p6xm
 
 # Moderate advisories left open on purpose (`pnpm audit --audit-level high` gates CI, so
 # they do not block). Dismiss the matching Dependabot alerts with the same reasoning:
