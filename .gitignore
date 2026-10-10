@@ -24,6 +24,9 @@ apps/holodex/public/gallery/*.webp
 docs/superpowers/
 # Claude Code worktrees (EnterWorktree in the desktop app / CLI)
 .claude/worktrees/
+# autoharness plugin state (counters, ledger, staged intents); the skills it
+# lands go to .claude/skills/ and are committed or not by hand
+.claude/autoharness/
 .vite/
 .cache/
 *.tsbuildinfo

@@ -5,9 +5,19 @@
         "source": "github",
         "repo": "AgriciDaniel/claude-seo"
       }
+    },
+    "autoharness": {
+      "source": {
+        "source": "github",
+        "repo": "tigerless-labs/autoharness"
+      }
     }
   },
   "enabledPlugins": {
-    "claude-seo@agricidaniel-claude-seo": true
+    "claude-seo@agricidaniel-claude-seo": true,
+    "autoharness@autoharness": true
+  },
+  "env": {
+    "AUTOHARNESS_DISABLE_GLOBAL": "1"
   }
 }
