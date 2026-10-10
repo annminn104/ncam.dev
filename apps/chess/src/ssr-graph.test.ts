@@ -56,8 +56,12 @@ describe('SSR import graph', () => {
     for (const rel of [
       'App.tsx',
       'lobby/ArenaCard.tsx',
+      'lobby/PresetPicker.tsx',
+      'lobby/PresetCard.tsx',
+      'lobby/usePreviewImage.ts',
       'settings.ts',
       'arenas-meta.ts',
+      'presets-meta.ts',
       'engine/levels.ts',
       'lib/asset-url.ts',
     ]) {

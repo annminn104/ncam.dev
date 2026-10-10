@@ -212,3 +212,98 @@
   place-content: center;
   color: var(--chess-muted);
 }
+/* The piece-set picker: cards like the arena's, one radio group per row. Two to a row on a phone;
+   from 720px up as many as fit at 200px or more, so a card is wide enough for its caption. */
+.chess-presets {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+}
+@media (max-width: 720px) {
+  .chess-presets {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.chess-preset {
+  position: relative;
+  display: grid;
+  align-content: end;
+  align-self: stretch;
+  width: 100%;
+  min-width: 0;
+  text-align: left;
+  /* clip rather than hidden: the card keeps its caption's height as a minimum, so a caption that
+     wraps to more lines than 16:10 has room for makes the card taller instead of being cut off.
+     (A browser without clip keeps the hidden above it: rounded corners, a fixed 16:10.) */
+  overflow: hidden;
+  overflow: clip;
+  isolation: isolate;
+  aspect-ratio: 16 / 10;
+  padding: 0;
+  border-radius: 14px;
+  cursor: pointer;
+  font: inherit;
+  color: var(--chess-ink);
+  border: 1px solid var(--chess-line);
+}
+.chess-preset__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: -1;
+}
+/* A preview that failed to load: the card's swatch gradient shows alone, with no broken-image icon. */
+.chess-preset__img[data-failed] {
+  visibility: hidden;
+}
+/* The arena caption's scrim: as tall as the text whatever the card's width wraps it to, a 1.6rem
+   fade, then from the top of the text down at least 66% black whatever the preview behind it is,
+   so the name and the tagline keep 4.5:1 even over white (contrast.test.ts). */
+.chess-preset__caption {
+  display: grid;
+  gap: 2px;
+  padding: 1.6rem 12px 10px;
+  background: linear-gradient(180deg, transparent, rgb(0 0 0 / 0.66) 1.6rem, rgb(0 0 0 / 0.84));
+}
+.chess-preset__name {
+  font-weight: 600;
+  font-size: 0.98rem;
+}
+.chess-preset__tagline {
+  font-size: 0.78rem;
+  color: rgb(232 243 238 / 0.86);
+  line-height: 1.35;
+}
+.chess-preset[aria-checked='true'] {
+  border-color: var(--preset-accent);
+  box-shadow:
+    0 0 0 2px var(--preset-accent),
+    0 0 24px -8px var(--preset-accent);
+}
+.chess-preset:hover {
+  filter: brightness(1.1);
+}
+.chess-presets__side {
+  margin: 6px 0 0;
+  font-size: 0.85rem;
+  color: var(--chess-muted);
+}
+.chess-presets__note {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--chess-muted);
+}
+.chess-check {
+  display: inline-flex;
+  justify-self: start;
+  gap: 8px;
+  align-items: center;
+  min-height: 44px;
+  color: var(--chess-ink);
+  cursor: pointer;
+}
+.chess-check input {
+  accent-color: var(--chess-jade);
+}

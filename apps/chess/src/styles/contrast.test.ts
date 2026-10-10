@@ -67,6 +67,39 @@ describe('lobby colour contrast (WCAG AA, 4.5:1)', () => {
     }
   });
 
+  it('keeps the piece-set captions readable over any preview, even a white one', () => {
+    // The arena caption's scrim again: a fade as tall as the padding above the text, then from
+    // the top of the text down at least `from` black, so the name and the tagline hold 4.5:1
+    // however many lines the card's width wraps them to. Worst preview behind it: white.
+    const block = /\.chess-preset__caption\s*\{([^}]*)\}/.exec(css)?.[1] ?? '';
+    const scrim =
+      /padding:\s*([\d.]+rem)\s[^;]*;[\s\S]*?linear-gradient\(\s*180deg\s*,\s*transparent\s*,\s*rgb\(0 0 0 \/ ([\d.]+)\)\s*([\d.]+rem)\s*,\s*rgb\(0 0 0 \/ ([\d.]+)\)\s*\)/.exec(
+        block,
+      );
+    if (!scrim) throw new Error('the .chess-preset__caption scrim was not found in globals.css');
+    expect(scrim[3], 'the scrim is solid from where its fade ends: the top of the text').toBe(
+      scrim[1],
+    );
+    const tagline =
+      /\.chess-preset__tagline\s*\{[^}]*?color:\s*rgb\((\d+) (\d+) (\d+) \/ ([\d.]+)\)/.exec(css);
+    if (!tagline) throw new Error('the .chess-preset__tagline colour was not found in globals.css');
+    const taglineInk = [Number(tagline[1]), Number(tagline[2]), Number(tagline[3])] as Rgb;
+    const taglineAlpha = Number(tagline[4]);
+    for (const alpha of [Number(scrim[2]), Number(scrim[4])]) {
+      const bg = [0, 0, 0].map(() => Math.round(255 * (1 - alpha))) as Rgb;
+      const taglineOnBg = taglineInk.map((c, i) =>
+        Math.round(c * taglineAlpha + bg[i] * (1 - taglineAlpha)),
+      );
+      expect(contrast(token('ink'), bg), `name over white under ${alpha}`).toBeGreaterThanOrEqual(
+        4.5,
+      );
+      expect(
+        contrast(taglineOnBg as Rgb, bg),
+        `tagline over white under ${alpha}`,
+      ).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+
   it('keeps the "Enter battle" label readable along its whole gradient', () => {
     const m =
       /\.chess-start\s*\{[^}]*?linear-gradient\(\s*135deg\s*,\s*(#[0-9a-f]{6})\s*,\s*(#[0-9a-f]{6})\s*\)/i.exec(

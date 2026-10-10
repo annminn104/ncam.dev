@@ -2,6 +2,7 @@ import { ARENAS } from '../arenas-meta';
 import { LEVELS, type LevelId } from '../engine/levels';
 import type { GameSettings, Mode, SidePick } from '../settings';
 import { ArenaCard } from './ArenaCard';
+import { PresetPicker } from './PresetPicker';
 
 const SIDES: { id: SidePick; label: string }[] = [
   { id: 'w', label: 'Righteous (white)' },
@@ -101,6 +102,8 @@ export function Lobby(props: {
           ))}
         </div>
       </fieldset>
+
+      <PresetPicker settings={settings} onChange={onChange} assetBase={assetBase} />
 
       <button type="button" className="chess-start" onClick={onStart}>
         Enter battle

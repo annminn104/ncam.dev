@@ -39,6 +39,10 @@ describe('renderHeroSSR', () => {
     const { html } = await renderHeroSSR({ assetBase: 'https://chess.example.dev/' });
     expect(html).not.toContain('data-failed');
   });
+  it('renders no piece-set picker while only one set is ready', async () => {
+    const { html } = await renderHeroSSR({ assetBase: 'https://chess.example.dev/' });
+    expect(html).not.toContain('Piece set');
+  });
   it('falls back to root-relative asset URLs when the module has no origin', async () => {
     // Under test import.meta.url is a file: URL, so there is no origin to derive a base from.
     const { html } = await renderHeroSSR({});
