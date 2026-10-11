@@ -99,6 +99,11 @@ function fail(why: string): never {
   throw new Error(`figure GLB: ${why}`);
 }
 
+/** What a thrown value says, to carry into the message of the error that names it. */
+function reason(cause: unknown): string {
+  return cause instanceof Error ? cause.message : String(cause);
+}
+
 function chunks(bytes: ArrayBuffer): { gltf: Gltf; bin: Uint8Array } {
   const view = new DataView(bytes);
   if (view.byteLength < 12 || view.getUint32(0, true) !== MAGIC || view.getUint32(4, true) !== 2) {
@@ -109,9 +114,20 @@ function chunks(bytes: ArrayBuffer): { gltf: Gltf; bin: Uint8Array } {
   for (let at = 12; at + 8 <= view.byteLength;) {
     const length = view.getUint32(at, true);
     const type = view.getUint32(at + 4, true);
+    if (at + 8 + length > view.byteLength) {
+      const left = view.byteLength - at - 8;
+      fail(
+        `the file is truncated: the chunk at byte ${at} declares ${length} bytes, ${left} remain`,
+      );
+    }
     const body = new Uint8Array(bytes, at + 8, length);
-    if (type === JSON_CHUNK) gltf = JSON.parse(new TextDecoder().decode(body)) as Gltf;
-    else if (type === BIN_CHUNK) bin = body;
+    if (type === JSON_CHUNK) {
+      try {
+        gltf = JSON.parse(new TextDecoder().decode(body)) as Gltf;
+      } catch (cause) {
+        fail(`the JSON chunk is not valid JSON: ${reason(cause)}`);
+      }
+    } else if (type === BIN_CHUNK) bin = body;
     at += 8 + length;
   }
   if (!gltf || !bin) fail('no JSON or no BIN chunk');
@@ -137,15 +153,19 @@ function viewBytes(
       fail('meshopt data outside the BIN chunk');
     }
     const from = packed.byteOffset ?? 0;
-    bytes = new Uint8Array(packed.count * packed.byteStride);
-    decoder.decodeGltfBuffer(
-      bytes,
-      packed.count,
-      packed.byteStride,
-      bin.subarray(from, from + packed.byteLength),
-      packed.mode,
-      packed.filter,
-    );
+    try {
+      bytes = new Uint8Array(packed.count * packed.byteStride);
+      decoder.decodeGltfBuffer(
+        bytes,
+        packed.count,
+        packed.byteStride,
+        bin.subarray(from, from + packed.byteLength),
+        packed.mode,
+        packed.filter,
+      );
+    } catch (cause) {
+      fail(`buffer view ${index} does not decode: ${reason(cause)}`);
+    }
   } else {
     if (view.buffer !== 0 || gltf.buffers?.[0]?.uri !== undefined) {
       fail(`buffer view ${index} outside the BIN chunk`);

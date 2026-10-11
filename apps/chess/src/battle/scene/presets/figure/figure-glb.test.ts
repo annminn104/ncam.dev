@@ -10,6 +10,9 @@ beforeAll(async () => {
 const read = async (options?: FixtureOptions) =>
   parseFigureGlb(await figureGlb(options), MeshoptDecoder);
 
+/** `bytes` parsed once called, for `expect(...).toThrow`. */
+const parsing = (bytes: ArrayBuffer) => () => parseFigureGlb(bytes, MeshoptDecoder);
+
 /**
  * Every triangle corner as text (position to the millimetre, slot, width to 0.1 mm), sorted: the
  * order a packer gave the vertices does not matter.
@@ -70,6 +73,32 @@ describe('parseFigureGlb', () => {
 
   it('refuses a file that is not a GLB', () => {
     expect(() => parseFigureGlb(new ArrayBuffer(16), MeshoptDecoder)).toThrow(/not a GLB 2.0 file/);
+  });
+
+  // Whatever is wrong with a file, the error says `figure GLB: …` and why, not what threw under it.
+  it('names a file that is cut short', async () => {
+    const bytes = await figureGlb({ packed: true });
+    // Inside the JSON chunk, then inside the BIN chunk (its data are the file's last bytes).
+    expect(parsing(bytes.slice(0, 60))).toThrow(/^figure GLB: the file is truncated/);
+    expect(parsing(bytes.slice(0, bytes.byteLength - 40))).toThrow(
+      /^figure GLB: the file is truncated/,
+    );
+  });
+
+  it('names a JSON chunk that is not JSON', async () => {
+    const bytes = await figureGlb({ packed: true });
+    new Uint8Array(bytes, 20, 4).fill(0x7b); // '{{{{', where the JSON chunk's body begins
+    expect(parsing(bytes)).toThrow(/^figure GLB: the JSON chunk is not valid JSON: /);
+  });
+
+  it('names compressed data the decoder refuses', async () => {
+    const bytes = await figureGlb({ packed: true });
+    // Blank the BIN chunk's body: it follows the file header, the JSON chunk and its own header.
+    const jsonLength = new DataView(bytes).getUint32(12, true);
+    new Uint8Array(bytes, 12 + 8 + jsonLength + 8).fill(0);
+    expect(parsing(bytes)).toThrow(
+      /^figure GLB: buffer view \d+ does not decode: Malformed buffer data/,
+    );
   });
 });
 
