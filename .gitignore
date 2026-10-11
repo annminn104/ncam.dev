@@ -13,6 +13,9 @@ apps/toonhub/public/figurines/*.avif
 apps/toonhub/public/figurines/*.webp
 # Holodex's first-screen gallery art, copied from TCGdex by `pnpm assets`
 apps/holodex/public/gallery/*.webp
+# apps/chess figures: raw Blender exports and review captures (scripts/build-figures.mjs,
+# scripts/capture-presets.mjs); the packed GLBs in public/presets/ are committed
+apps/chess/art/.out/
 # Lighthouse CI reports (lighthouserc.cjs)
 .lighthouseci/
 
