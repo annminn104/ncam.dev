@@ -8,7 +8,7 @@ import { assetUrl } from './lib/asset-url';
 
 export type PresetId =
   'treasures' | 'holy-order' | 'dark-court' | 'gentlemen' | 'bunny-mages' | 'constellation';
-export type PresetKind = 'treasure' | 'chibi' | 'constellation';
+export type PresetKind = 'treasure' | 'figure' | 'chibi' | 'constellation';
 export type Swatch = readonly [main: string, accent: string, glow: string];
 
 export interface PresetMeta {
@@ -46,7 +46,7 @@ export const PRESETS: readonly PresetMeta[] = [
   {
     id: 'holy-order',
     name: 'Holy Order',
-    kind: 'chibi',
+    kind: 'figure',
     ready: false,
     tagline: 'Mitred patriarchs, haloed abbesses and templar wardens.',
     contrast: 'dark-court',

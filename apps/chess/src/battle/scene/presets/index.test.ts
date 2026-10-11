@@ -3,9 +3,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BoardPiece } from '../../../game/pieces';
 import type { PresetPieceProps } from './index';
 
-// What is under test is the dispatch, not the treasures' meshes: a stand-in keeps three and drei
-// out of this Node test.
-vi.mock('../pieces', () => ({ Treasure: () => null }));
+// What is under test is the dispatch, not the treasures' meshes: stand-ins keep the treasures'
+// three and drei out of this Node test.
+vi.mock('../pieces', () => ({ Treasure: () => null, PieceBase: () => null }));
 
 const piece: BoardPiece = { id: 'wk-e1', square: 'e1', type: 'k', color: 'w' };
 
@@ -37,14 +37,19 @@ describe('PresetPiece', () => {
 
   it('hands a registered kind to its renderer, whole, and leaves the rest alone', async () => {
     const { PresetPiece, registerRenderer, Treasure } = await load();
-    const Chibi: ComponentType<PresetPieceProps> = () => null;
-    registerRenderer('chibi', Chibi);
-    for (const preset of ['holy-order', 'dark-court', 'gentlemen', 'bunny-mages'] as const) {
-      const el = PresetPiece({ preset, piece, jumping: false });
-      expect(el.type).toBe(Chibi);
-      expect(el.props).toEqual({ preset, piece, jumping: false });
+    const Figure: ComponentType<PresetPieceProps> = () => null;
+    registerRenderer('figure', Figure);
+    const el = PresetPiece({ preset: 'holy-order', piece, jumping: false });
+    expect(el.type).toBe(Figure);
+    expect(el.props).toEqual({ preset: 'holy-order', piece, jumping: false });
+    for (const preset of [
+      'treasures',
+      'dark-court',
+      'gentlemen',
+      'bunny-mages',
+      'constellation',
+    ] as const) {
+      expect(PresetPiece({ preset, piece, jumping: false }).type).toBe(Treasure);
     }
-    expect(PresetPiece({ preset: 'treasures', piece, jumping: false }).type).toBe(Treasure);
-    expect(PresetPiece({ preset: 'constellation', piece, jumping: false }).type).toBe(Treasure);
   });
 });

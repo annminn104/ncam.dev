@@ -10,9 +10,9 @@ export interface PresetPieceProps {
 }
 
 /**
- * Renderers by preset kind. 'treasure' is the original set; the chibi and constellation kinds are
- * registered by their tasks (an unregistered kind renders the treasures, so nothing breaks while a
- * batch is in progress).
+ * Renderers by preset kind. 'treasure' is the original set and 'figure' the Blender-built ones
+ * (presets/figure, registered when Battle imports it). A kind with no renderer yet draws the
+ * treasures, so a preset still being built never breaks a battle.
  */
 const RENDERERS: Partial<Record<PresetKind, ComponentType<PresetPieceProps>>> = {};
 

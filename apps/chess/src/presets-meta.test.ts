@@ -39,6 +39,10 @@ describe('presets-meta', () => {
     expect(presetMeta('constellation').pieces.n).toBe('Pegasus');
   });
 
+  it('draws Holy Order with the Blender figures', () => {
+    expect(presetMeta('holy-order').kind).toBe('figure');
+  });
+
   it('keeps the treasures names identical to the game', () => {
     expect(pieceLabel('treasures', 'k')).toEqual({
       name: 'Heaven Seal',
