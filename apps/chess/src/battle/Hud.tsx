@@ -12,7 +12,7 @@ import type { GameApi } from './useGame';
 const SIDES: Side[] = ['w', 'b'];
 
 /**
- * The battle's overlay: whose move it is, the view and game controls, the treasures each sect
+ * The battle's overlay: whose move it is, the view and game controls, the pieces each sect
  * has lost and the move list. It renders the parts of the `.chess-hud` grid that Battle lays
  * over the canvas. `children` (the keyboard board) goes between the top bar and the game
  * controls, which is where Tab reaches it. `thinking` is the AI at work on its move (loading
@@ -112,7 +112,7 @@ export function Hud(props: {
       {children}
 
       <aside className="chess-hud__side chess-panel" aria-label="Moves and captures">
-        <h2 className="chess-label">Treasures lost</h2>
+        <h2 className="chess-label">Captured</h2>
         {SIDES.map((side) => {
           // The pieces this side has lost, named in its own set (the glyphs are the same in all).
           const lost = snap.captured[side].map((t) => pieceLabel(presets[side], t));
@@ -123,7 +123,7 @@ export function Hud(props: {
                 <span className="chess-lost__none">none</span>
               ) : (
                 <>
-                  {/* The glyphs are for the eye; a screen reader hears the treasures' names. */}
+                  {/* The glyphs are for the eye; a screen reader hears the pieces' names. */}
                   <span
                     className={`chess-lost__glyphs chess-lost__glyphs--${side}`}
                     aria-hidden="true"

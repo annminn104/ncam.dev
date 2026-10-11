@@ -7,7 +7,7 @@ import { useDialog } from './useDialog';
 const CHOICES: PromotionPiece[] = ['q', 'r', 'b', 'n'];
 
 /**
- * A pawn reached the last rank: pick the treasure it becomes, or cancel (Escape) to take it back.
+ * A pawn reached the last rank: pick the piece it becomes, or cancel (Escape) to take it back.
  * The choices are named by the promoting side's piece set (`preset`).
  */
 export function PromotionDialog({
@@ -24,7 +24,7 @@ export function PromotionDialog({
   useDialog(first, () => onChoose(null));
   return (
     <div className="chess-modal" role="dialog" aria-modal="true" aria-labelledby={titleId}>
-      <h2 id={titleId}>The pearl ascends — choose its new form</h2>
+      <h2 id={titleId}>Promotion — choose a piece</h2>
       <div className="chess-modal__choices">
         {CHOICES.map((p, i) => {
           const t = pieceLabel(preset, p);

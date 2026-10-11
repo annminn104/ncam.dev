@@ -10,7 +10,7 @@ import type { GameApi } from './useGame';
  * The board for keyboards and screen readers: a visually hidden grid of buttons that mirrors the
  * 3D board as seen from `viewSide`'s end. One square at a time is in the Tab order (a roving
  * tabindex); arrows move it and the 3D board shows it as the gold cursor. Enter or Space clicks
- * the square (a button does that natively), Escape puts the selected treasure down. `presets` is
+ * the square (a button does that natively), Escape puts the selected piece down. `presets` is
  * the piece set each side plays: the squares are named by it.
  */
 export function BoardA11y({
@@ -42,7 +42,7 @@ export function BoardA11y({
   return (
     <div className="chess-sr">
       <p id={helpId}>
-        Arrow keys move between squares. Enter takes up a treasure or moves it there; Escape puts it
+        Arrow keys move between squares. Enter picks up a piece or moves it there; Escape puts it
         down.
       </p>
       <div role="grid" aria-label="Chess board" aria-describedby={helpId}>
