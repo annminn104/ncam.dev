@@ -7,6 +7,7 @@ import type { Side } from '../game/coords';
 import { isOver } from '../game/status';
 import { resolvePresets } from '../presets-meta';
 import type { GameSettings } from '../settings';
+import { AssetBaseContext } from './asset-base';
 import { BoardA11y } from './BoardA11y';
 import { EngineToast } from './EngineToast';
 import { Hud } from './Hud';
@@ -20,6 +21,8 @@ import { CaptureCamera } from './scene/CaptureCamera';
 import { disposeOwned } from './scene/dispose';
 import { releaseSharedLut } from './scene/materials';
 import { PresetPiece } from './scene/presets';
+// Registers the 'figure' kind's renderer: the Blender-built piece sets.
+import './scene/presets/figure';
 import { Scene } from './scene/Scene';
 import { useAiOpponent } from './useAiOpponent';
 import { useGame } from './useGame';
@@ -156,90 +159,101 @@ export default function Battle({ settings, assetBase, onExit, onRematch, capture
 
   return (
     <QualityContext.Provider value={quality}>
-      <style>{css}</style>
-      {/* The arena's colour behind the canvas: no dark flash while the first frame compiles. */}
-      <div className="chess-battle" style={{ background: arena.background }}>
-        <Canvas
-          // 'percentage' is PCFShadowMap, which is what three falls back to (with a console
-          // warning) for the default 'soft'.
-          shadows="percentage"
-          dpr={quality === 'high' ? [1, 2] : 1}
-          frameloop={visible ? 'always' : 'never'}
-          camera={{ fov: 40, position: [0, 8, 11] }}
-          onCreated={({ gl }) => {
-            // Also how every battle ends: R3F loses the context once it has let the renderer go,
-            // and three's shared lookup texture must not keep that renderer (materials.ts).
-            gl.domElement.addEventListener('webglcontextlost', (e) => {
-              e.preventDefault();
-              setLost(true);
-              releaseSharedLut();
-            });
-          }}
-        >
-          <color attach="background" args={[arena.background]} />
-          {/* A preview shows the arena at its best, whatever GPU (or software one) draws it. */}
-          {!capture && <PerformanceMonitor onDecline={() => setQuality('low')} />}
-          <ArenaEnvironment />
-          {capture ? (
-            <CaptureCamera view={arena.capture} />
-          ) : (
-            <CameraRig ref={rig} initialSide={humanSide} onViewSide={setViewSide} />
-          )}
-          {capture && <ReadySignal />}
-          <Scene
-            game={game}
-            skin={arena.skin}
-            cursor={cursor}
-            renderPiece={(p) => (
-              <PresetPiece preset={presets[p.color]} piece={p} jumping={jumping.has(p.id)} />
+      <AssetBaseContext.Provider value={assetBase}>
+        <style>{css}</style>
+        {/* The arena's colour behind the canvas: no dark flash while the first frame compiles. */}
+        <div className="chess-battle" style={{ background: arena.background }}>
+          <Canvas
+            // 'percentage' is PCFShadowMap, which is what three falls back to (with a console
+            // warning) for the default 'soft'.
+            shadows="percentage"
+            dpr={quality === 'high' ? [1, 2] : 1}
+            frameloop={visible ? 'always' : 'never'}
+            camera={{ fov: 40, position: [0, 8, 11] }}
+            onCreated={({ gl }) => {
+              // Also how every battle ends: R3F loses the context once it has let the renderer go,
+              // and three's shared lookup texture must not keep that renderer (materials.ts).
+              gl.domElement.addEventListener('webglcontextlost', (e) => {
+                e.preventDefault();
+                setLost(true);
+                releaseSharedLut();
+              });
+            }}
+          >
+            <color attach="background" args={[arena.background]} />
+            {/* A preview shows the arena at its best, whatever GPU (or software one) draws it. */}
+            {!capture && <PerformanceMonitor onDecline={() => setQuality('low')} />}
+            <ArenaEnvironment />
+            {capture ? (
+              <CaptureCamera view={arena.capture} />
+            ) : (
+              <CameraRig ref={rig} initialSide={humanSide} onViewSide={setViewSide} />
             )}
-          />
-        </Canvas>
-        {!capture && (
-          <>
-            {/* While a modal is open the HUD and the keyboard board are inert: Tab stays in it. */}
-            <div className="chess-hud" inert={modal}>
-              <Hud
-                game={game}
-                settings={{ ...settings, mode }}
-                humanSide={humanSide}
-                presets={presets}
-                thinking={thinking}
-                autoRotate={autoRotate}
-                onToggleRotate={() => setAutoRotate((v) => !v)}
-                // Home is the player's end vs the AI. Hot-seat: the mover's end while the camera
-                // follows the mover, otherwise the end it is at now.
-                onResetView={() =>
-                  rig.current?.reset(!hotseat ? humanSide : autoRotate && !over ? turn : viewSide)
-                }
-                onExit={onExit}
-                onRematch={onRematch}
-              >
-                <BoardA11y game={game} viewSide={viewSide} presets={presets} onCursor={setCursor} />
-              </Hud>
-              {/* Only the AI's turn can fail; once the battle is over there is nothing to ask. */}
-              {ai.error && !over && (
-                <EngineToast
-                  message={ai.error}
-                  onRetry={ai.retry}
-                  onHotseat={() => setMode('hotseat')}
+            {capture && <ReadySignal />}
+            <Scene
+              game={game}
+              skin={arena.skin}
+              cursor={cursor}
+              renderPiece={(p) => (
+                <PresetPiece preset={presets[p.color]} piece={p} jumping={jumping.has(p.id)} />
+              )}
+            />
+          </Canvas>
+          {!capture && (
+            <>
+              {/* While a modal is open the HUD and the keyboard board are inert: Tab stays in it. */}
+              <div className="chess-hud" inert={modal}>
+                <Hud
+                  game={game}
+                  settings={{ ...settings, mode }}
+                  humanSide={humanSide}
+                  presets={presets}
+                  thinking={thinking}
+                  autoRotate={autoRotate}
+                  onToggleRotate={() => setAutoRotate((v) => !v)}
+                  // Home is the player's end vs the AI. Hot-seat: the mover's end while the camera
+                  // follows the mover, otherwise the end it is at now.
+                  onResetView={() =>
+                    rig.current?.reset(!hotseat ? humanSide : autoRotate && !over ? turn : viewSide)
+                  }
+                  onExit={onExit}
+                  onRematch={onRematch}
+                >
+                  <BoardA11y
+                    game={game}
+                    viewSide={viewSide}
+                    presets={presets}
+                    onCursor={setCursor}
+                  />
+                </Hud>
+                {/* Only the AI's turn can fail; once the battle is over there is nothing to ask. */}
+                {ai.error && !over && (
+                  <EngineToast
+                    message={ai.error}
+                    onRetry={ai.retry}
+                    onHotseat={() => setMode('hotseat')}
+                  />
+                )}
+              </div>
+              {game.pendingPromotion && (
+                <PromotionDialog
+                  side={turn}
+                  preset={presets[turn]}
+                  onChoose={game.choosePromotion}
                 />
               )}
-            </div>
-            {game.pendingPromotion && (
-              <PromotionDialog side={turn} preset={presets[turn]} onChoose={game.choosePromotion} />
-            )}
-            {showResult && (
-              <ResultOverlay
-                status={status}
-                onRematch={onRematch}
-                onExit={onExit}
-                onReview={() => setReviewing(true)}
-              />
-            )}
-          </>
-        )}
-      </div>
+              {showResult && (
+                <ResultOverlay
+                  status={status}
+                  onRematch={onRematch}
+                  onExit={onExit}
+                  onReview={() => setReviewing(true)}
+                />
+              )}
+            </>
+          )}
+        </div>
+      </AssetBaseContext.Provider>
     </QualityContext.Provider>
   );
 }

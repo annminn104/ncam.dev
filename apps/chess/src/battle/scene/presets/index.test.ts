@@ -52,4 +52,13 @@ describe('PresetPiece', () => {
       expect(PresetPiece({ preset, piece, jumping: false }).type).toBe(Treasure);
     }
   });
+
+  it('draws Holy Order with the figure renderer once the battle has imported it', async () => {
+    const { PresetPiece } = await load();
+    const { FigureRenderer } = await import('./figure');
+    expect(PresetPiece({ preset: 'holy-order', piece, jumping: false }).type).toBe(FigureRenderer);
+    expect(PresetPiece({ preset: 'treasures', piece, jumping: false }).type).not.toBe(
+      FigureRenderer,
+    );
+  });
 });
