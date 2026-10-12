@@ -13,10 +13,11 @@ import { FIGURE_PALETTES, type FigurePresetId } from './palettes';
 import { SLOT_GEM, SLOT_GLOW, SLOT_GOLD, SLOTS } from './slots';
 
 // The approved Blender look (art/blender/kit.py's M_Paint and M_Line), in three. Paint: a soft
-// two-tone toon ramp with a rim on the lit side, gold from a metal ramp by view angle, faceted
-// gems with a glint, unlit glow. Outline: an inverted hull drawn from the same geometry, each
-// part's ink its own colour darkened. Colours come from a palette uniform indexed by each vertex's
-// slot, so both sides draw the same geometry.
+// two-tone grey toon ramp (three's toon lighting reads only its red channel, so the shadow is
+// neutral, as in the approved in-game test) with a rim on the lit side, gold from a metal ramp by
+// view angle, faceted gems with a glint, unlit glow. Outline: an inverted hull drawn from the same
+// geometry, each part's ink its own colour darkened. Colours come from a palette uniform indexed by
+// each vertex's slot, so both sides draw the same geometry.
 
 /**
  * The floor under the light level that lights the albedo: low enough to keep the toon shadow,
@@ -100,19 +101,21 @@ const OUTLINE_CLIP = 'if (_line <= 0.0) gl_Position = vec4(2.0, 2.0, 2.0, 1.0);'
 
 let ramp: DataTexture | null = null;
 
-/** The soft two-tone ramp: a cool shadow, a smooth step from 0.44 to 0.54, then full light. */
+/**
+ * The soft two-tone ramp: a grey shadow (0.42), a smooth step from 0.44 to 0.54, then full light.
+ * three's toon lighting samples only the red channel (gradientmap_pars_fragment), so the shadow is
+ * neutral, as in the approved in-game test. R, G and B carry the same value: nothing else is read.
+ */
 function toonRamp(): DataTexture {
   if (ramp) return ramp;
   const size = 32;
-  const shadow = [0.42, 0.45, 0.62];
+  const shadow = 0.42;
   const data = new Uint8Array(size * 4);
   for (let i = 0; i < size; i++) {
     const k = Math.min(1, Math.max(0, (i / (size - 1) - 0.44) / 0.1));
     const s = k * k * (3 - 2 * k);
-    for (let c = 0; c < 3; c++) {
-      data[i * 4 + c] = Math.round(255 * (shadow[c] + (1 - shadow[c]) * s));
-    }
-    data[i * 4 + 3] = 255;
+    const grey = Math.round(255 * (shadow + (1 - shadow) * s));
+    data.set([grey, grey, grey, 255], i * 4);
   }
   const texture = new DataTexture(data, size, 1, RGBAFormat);
   texture.magFilter = LinearFilter;

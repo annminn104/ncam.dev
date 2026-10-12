@@ -1,6 +1,8 @@
 import {
   BackSide,
   type Color,
+  type DataTexture,
+  LinearFilter,
   MeshToonMaterial,
   ShaderLib,
   type MeshBasicMaterial,
@@ -46,6 +48,24 @@ describe('figure materials', () => {
     const shading = fragmentShader.indexOf('figureGoldRamp(f * 0.5');
     expect(fragmentShader.indexOf('vec3 outgoingLight')).toBeLessThan(shading);
     expect(shading).toBeLessThan(fragmentShader.indexOf('#include <opaque_fragment>'));
+  });
+
+  it('shade with a plain grey toon step: three reads only its red channel', () => {
+    const ramp = paintMaterial('holy-order', 'w').gradientMap as DataTexture;
+    expect([ramp.image.width, ramp.image.height]).toEqual([32, 1]);
+    expect(ramp.magFilter).toBe(LinearFilter);
+    expect(ramp.minFilter).toBe(LinearFilter);
+    const bytes = Array.from(ramp.image.data ?? []);
+    expect(bytes).toHaveLength(32 * 4);
+    const texel = (i: number) => bytes.slice(i * 4, i * 4 + 4);
+    // The shadow is 0.42 (round(0.42 * 255) = 107) on every channel, the light is 1.
+    expect(texel(0)).toEqual([107, 107, 107, 255]);
+    expect(texel(31)).toEqual([255, 255, 255, 255]);
+    // three's getGradientIrradiance samples .r alone: a tint in G or B would be dead data.
+    for (let i = 0; i < 32; i++) {
+      const [r, g, b] = texel(i);
+      expect([g, b], `texel ${i}`).toEqual([r, r]);
+    }
   });
 
   it('draw the outline as an inverted hull, and none for decals', () => {
