@@ -41,8 +41,8 @@ describe('parseSettings', () => {
     expect(
       parseSettings({ whitePreset: 'treasures', blackPreset: 'nope', linkPresets: false }),
     ).toMatchObject({ whitePreset: 'treasures', blackPreset: 'treasures', linkPresets: false });
-    // Not ready yet in Task 1 → repaired. Task 5 flips holy-order to ready and changes this line
-    // to expect 'holy-order'.
-    expect(parseSettings({ whitePreset: 'holy-order' }).whitePreset).toBe('treasures');
+    // Holy Order is ready, so it is kept. Constellation is not yet, so it is repaired.
+    expect(parseSettings({ whitePreset: 'holy-order' }).whitePreset).toBe('holy-order');
+    expect(parseSettings({ whitePreset: 'constellation' }).whitePreset).toBe('treasures');
   });
 });

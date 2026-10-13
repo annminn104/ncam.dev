@@ -81,4 +81,9 @@ describe('SSR import graph', () => {
       /import\.meta\.env\.SSR\s*\?[\s\S]*?:\s*import\(\s*['"]\.\/battle\/Battle['"]\s*\)/,
     );
   });
+
+  it('names no figure file: the lobby never loads a GLB', () => {
+    const { files } = graph(path.join(SRC, 'ssr.tsx'));
+    for (const file of files) expect(readFileSync(file, 'utf8'), file).not.toMatch(/\.glb\b/);
+  });
 });

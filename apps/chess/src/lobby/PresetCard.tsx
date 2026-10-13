@@ -14,7 +14,7 @@ export function PresetCard(props: {
   const src = presetPreview(preset.id, 640, assetBase);
   const { ref, failed, onError } = usePreviewImage(src);
   const [w, b] = [preset.swatches.w, preset.swatches.b];
-  // The card's own background when its preview is missing or still loading: the side's swatches.
+  // The card's own background when it has no preview, or its preview is missing or still loading: the side's swatches.
   const fallback =
     side === 'b'
       ? `linear-gradient(135deg, ${b[0]} 0%, ${b[1]} 60%, ${b[2]} 100%)`
@@ -32,21 +32,23 @@ export function PresetCard(props: {
         { '--preset-accent': (side === 'b' ? b : w)[2], background: fallback } as CSSProperties
       }
     >
-      <img
-        ref={ref}
-        className="chess-preset__img"
-        src={src}
-        srcSet={`${presetPreview(preset.id, 320, assetBase)} 320w, ${src} 640w`}
-        sizes="(max-width: 720px) 50vw, 200px"
-        width={640}
-        height={400}
-        alt=""
-        decoding="async"
-        loading="lazy"
-        fetchPriority="auto"
-        data-failed={failed ? '' : undefined}
-        onError={onError}
-      />
+      {preset.preview && (
+        <img
+          ref={ref}
+          className="chess-preset__img"
+          src={src}
+          srcSet={`${presetPreview(preset.id, 320, assetBase)} 320w, ${src} 640w`}
+          sizes="(max-width: 720px) 50vw, 200px"
+          width={640}
+          height={400}
+          alt=""
+          decoding="async"
+          loading="lazy"
+          fetchPriority="auto"
+          data-failed={failed ? '' : undefined}
+          onError={onError}
+        />
+      )}
       <span className="chess-preset__caption">
         <span className="chess-preset__name">{preset.name}</span>
         <span className="chess-preset__tagline">{preset.tagline}</span>

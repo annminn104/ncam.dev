@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
   contrastOf,
@@ -107,5 +108,29 @@ describe('presets-meta', () => {
     expect(presetPreview('holy-order', 640, 'https://x.dev/')).toBe(
       'https://x.dev/presets/holy-order-640.avif',
     );
+  });
+
+  it('offers Holy Order next to the treasures, with lobby previews', () => {
+    expect(presetMeta('holy-order')).toMatchObject({ kind: 'figure', ready: true, preview: true });
+    expect(readyPresets().map((p) => p.id)).toEqual(['treasures', 'holy-order']);
+  });
+
+  it('ships both preview sizes for every preset that claims them', () => {
+    for (const p of PRESETS.filter((x) => x.preview)) {
+      for (const width of [320, 640]) {
+        const file = new URL(`../public/presets/${p.id}-${width}.avif`, import.meta.url);
+        expect(existsSync(file), `${p.id}-${width}`).toBe(true);
+      }
+    }
+  });
+
+  it('answers Holy Order with Holy Order vs the AI until the Dark Overlord Court is ready', () => {
+    const choice = {
+      mode: 'ai',
+      whitePreset: 'holy-order',
+      blackPreset: 'holy-order',
+      linkPresets: true,
+    } as const;
+    expect(resolvePresets(choice, 'w')).toEqual({ w: 'holy-order', b: 'holy-order' });
   });
 });

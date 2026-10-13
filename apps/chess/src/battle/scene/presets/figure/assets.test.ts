@@ -2,7 +2,7 @@ import { readFileSync, statSync } from 'node:fs';
 import type { PieceSymbol } from 'chess.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { presetMeta, type PresetId } from '../../../../presets-meta';
+import { PRESETS, presetMeta, type PresetId } from '../../../../presets-meta';
 import { BASE_TOP } from '../../pieces/kits';
 import { parseFigureGlb, type FigureData } from './figure-glb';
 import { LINE_MAX, SLOTS } from './slots';
@@ -39,6 +39,12 @@ beforeAll(async () => {
         figures.set(`${preset}/${type}/${lod}`, parseFigureGlb(bytes, MeshoptDecoder));
       }
     }
+  }
+});
+
+it('covers every figure preset the lobby offers', () => {
+  for (const p of PRESETS.filter((x) => x.kind === 'figure' && x.ready)) {
+    expect(Object.keys(BUDGETS), p.id).toContain(p.id);
   }
 });
 

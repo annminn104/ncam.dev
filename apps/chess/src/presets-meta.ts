@@ -18,6 +18,11 @@ export interface PresetMeta {
   kind: PresetKind;
   /** Shown in the lobby. A batch flips its presets to true once their renderer lands. */
   ready: boolean;
+  /**
+   * It has lobby previews (public/presets/<id>-{320,640}.avif, scripts/capture-presets.mjs);
+   * without them its card shows its swatches alone.
+   */
+  preview: boolean;
   contrast: PresetId;
   swatches: Record<Side, Swatch>;
   pieces: Record<PieceSymbol, string>;
@@ -31,6 +36,7 @@ export const PRESETS: readonly PresetMeta[] = [
     name: 'Cultivation Treasures',
     kind: 'treasure',
     ready: true,
+    preview: true,
     tagline: 'Floating seals, flying swords and spirit bells of the nine heavens.',
     contrast: 'constellation',
     swatches: { w: ['#eef6ef', '#d8b45a', '#5ef2ff'], b: ['#15181d', '#8a5a35', '#ff3355'] },
@@ -47,7 +53,8 @@ export const PRESETS: readonly PresetMeta[] = [
     id: 'holy-order',
     name: 'Holy Order',
     kind: 'figure',
-    ready: false,
+    ready: true,
+    preview: true,
     tagline: 'Mitred patriarchs, haloed abbesses and templar wardens.',
     contrast: 'dark-court',
     swatches: { w: ['#f4f6fb', '#d6b25e', '#7fb8e6'], b: ['#1c1d24', '#c9a24e', '#c8283c'] },
@@ -65,6 +72,7 @@ export const PRESETS: readonly PresetMeta[] = [
     name: 'Dark Overlord Court',
     kind: 'chibi',
     ready: false,
+    preview: false,
     tagline: 'An undead sovereign, his fallen queen and the battle maids of the tomb.',
     contrast: 'holy-order',
     swatches: { w: ['#e9e4d6', '#b9c0cc', '#a77bff'], b: ['#121016', '#b3122e', '#d4a64a'] },
@@ -82,6 +90,7 @@ export const PRESETS: readonly PresetMeta[] = [
     name: 'Gentleman Phantoms',
     kind: 'chibi',
     ready: false,
+    preview: false,
     tagline: 'Top hats, tailcoats and a parasol at midnight.',
     contrast: 'bunny-mages',
     swatches: { w: ['#f5f3ee', '#d9b24a', '#2f7fe0'], b: ['#141417', '#d0342c', '#f0a23a'] },
@@ -99,6 +108,7 @@ export const PRESETS: readonly PresetMeta[] = [
     name: 'Gothic Bunny Mages',
     kind: 'chibi',
     ready: false,
+    preview: false,
     tagline: 'Ribbons, ruffles and staffs topped with moon-eared bunnies.',
     contrast: 'gentlemen',
     swatches: { w: ['#d9cdf2', '#ffffff', '#f2a7c8'], b: ['#16151a', '#3a3a44', '#d8b45a'] },
@@ -116,6 +126,7 @@ export const PRESETS: readonly PresetMeta[] = [
     name: 'Constellation Spirits',
     kind: 'constellation',
     ready: false,
+    preview: false,
     tagline: 'Leo, Virgo and Pegasus, drawn in starlight.',
     contrast: 'treasures',
     swatches: { w: ['#fff6d8', '#ffd27a', '#5ef2ff'], b: ['#c9b6ff', '#9a7bff', '#ff3355'] },
