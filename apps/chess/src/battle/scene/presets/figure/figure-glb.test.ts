@@ -13,6 +13,40 @@ const read = async (options?: FixtureOptions) =>
 /** `bytes` parsed once called, for `expect(...).toThrow`. */
 const parsing = (bytes: ArrayBuffer) => () => parseFigureGlb(bytes, MeshoptDecoder);
 
+/** The parts of a GLB's JSON the tests below edit. */
+interface Editable {
+  accessors: { count: number }[];
+  bufferViews: {
+    byteLength: number;
+    byteStride?: number;
+    extensions?: { EXT_meshopt_compression?: { byteLength: number } };
+  }[];
+  meshes: { primitives: { attributes: Record<string, number>; indices: number }[] }[];
+}
+
+/**
+ * `bytes` with its JSON chunk rewritten by `edit`: padded with spaces to a multiple of four, the
+ * file's length and the chunk's set to match. The BIN chunk stays as it was.
+ */
+function withJson(bytes: ArrayBuffer, edit: (gltf: Editable) => void): ArrayBuffer {
+  const jsonLength = new DataView(bytes).getUint32(12, true);
+  const text = new TextDecoder().decode(new Uint8Array(bytes, 20, jsonLength));
+  const gltf = JSON.parse(text) as Editable;
+  edit(gltf);
+  const json = new TextEncoder().encode(JSON.stringify(gltf));
+  const padded = new Uint8Array(Math.ceil(json.length / 4) * 4).fill(0x20);
+  padded.set(json);
+  const bin = new Uint8Array(bytes, 20 + jsonLength); // the BIN chunk, its header included
+  const out = new Uint8Array(20 + padded.length + bin.length);
+  out.set(new Uint8Array(bytes, 0, 20)); // the file header and the JSON chunk's header
+  out.set(padded, 20);
+  out.set(bin, 20 + padded.length);
+  const view = new DataView(out.buffer);
+  view.setUint32(8, out.length, true);
+  view.setUint32(12, padded.length, true);
+  return out.buffer;
+}
+
 /**
  * Every triangle corner as text (position to the millimetre, slot, width to 0.1 mm), sorted: the
  * order a packer gave the vertices does not matter.
@@ -98,6 +132,47 @@ describe('parseFigureGlb', () => {
     new Uint8Array(bytes, 12 + 8 + jsonLength + 8).fill(0);
     expect(parsing(bytes)).toThrow(
       /^figure GLB: buffer view \d+ does not decode: Malformed buffer data/,
+    );
+  });
+
+  it.each([false, true])(
+    'names a buffer view that runs past the BIN chunk (packed: %s)',
+    async (packed) => {
+      const bytes = withJson(await figureGlb({ packed }), (gltf) => {
+        for (const view of gltf.bufferViews) {
+          (view.extensions?.EXT_meshopt_compression ?? view).byteLength += 1000;
+        }
+      });
+      expect(parsing(bytes)).toThrow(/^figure GLB: buffer view \d+ runs past the BIN chunk/);
+    },
+  );
+
+  it.each([
+    [false, 'a position accessor'],
+    [true, 'a position accessor'],
+    [false, 'the index accessor'],
+    [true, 'the index accessor'],
+  ])('names an accessor that runs past its buffer view (packed: %s, %s)', async (packed, which) => {
+    const bytes = withJson(await figureGlb({ packed }), (gltf) => {
+      const prim = gltf.meshes[0].primitives[0];
+      const at = which === 'the index accessor' ? prim.indices : prim.attributes.POSITION;
+      gltf.accessors[at].count += 3; // three more than its view holds (a triangle, for indices)
+    });
+    expect(parsing(bytes)).toThrow(/^figure GLB: accessor \d+ runs past its buffer view/);
+  });
+
+  it('takes the stride of a packed view from its extension when the view gives none', async () => {
+    const packed = await figureGlb({ packed: true });
+    let stripped = 0;
+    const strideless = withJson(packed, (gltf) => {
+      for (const view of gltf.bufferViews) {
+        if (view.byteStride !== undefined) stripped += 1;
+        delete view.byteStride;
+      }
+    });
+    expect(stripped).toBeGreaterThan(0); // the fixture does give its attribute views a stride
+    expect(parseFigureGlb(strideless, MeshoptDecoder)).toEqual(
+      parseFigureGlb(packed, MeshoptDecoder),
     );
   });
 });

@@ -153,6 +153,11 @@ function viewBytes(
       fail('meshopt data outside the BIN chunk');
     }
     const from = packed.byteOffset ?? 0;
+    // `subarray` clamps to the chunk without a word, so the view is checked first (and outside the
+    // try, whose catch would call this a decoder failure).
+    if (from + packed.byteLength > bin.byteLength) {
+      fail(`buffer view ${index} runs past the BIN chunk`);
+    }
     try {
       bytes = new Uint8Array(packed.count * packed.byteStride);
       decoder.decodeGltfBuffer(
@@ -171,11 +176,15 @@ function viewBytes(
       fail(`buffer view ${index} outside the BIN chunk`);
     }
     const from = view.byteOffset ?? 0;
+    if (from + view.byteLength > bin.byteLength) {
+      fail(`buffer view ${index} runs past the BIN chunk`);
+    }
     bytes = bin.subarray(from, from + view.byteLength);
   }
   return {
     bytes: new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength),
-    stride: view.byteStride,
+    // A meshopt view's stride is required on its extension, optional on the view itself.
+    stride: view.byteStride ?? packed?.byteStride,
   };
 }
 
@@ -211,6 +220,9 @@ function floats(
   if (acc.bufferView === undefined) fail(`accessor ${index} has no buffer view`);
   const { bytes, stride = width * comp.size } = viewBytes(gltf, bin, acc.bufferView, decoder);
   const base = acc.byteOffset ?? 0;
+  if (acc.count > 0 && base + (acc.count - 1) * stride + width * comp.size > bytes.byteLength) {
+    fail(`accessor ${index} runs past its buffer view`);
+  }
   const out = new Float32Array(acc.count * width);
   for (let i = 0; i < acc.count; i++) {
     for (let c = 0; c < width; c++) {
@@ -236,6 +248,10 @@ function indices(
   if (acc.bufferView === undefined || acc.count % 3 !== 0) fail('bad index accessor');
   const { bytes } = viewBytes(gltf, bin, acc.bufferView, decoder);
   const base = acc.byteOffset ?? 0;
+  // Indices are tightly packed (the view's stride, if any, is not read): offset and count only.
+  if (acc.count > 0 && base + acc.count * (wide ? 4 : 2) > bytes.byteLength) {
+    fail(`accessor ${index} runs past its buffer view`);
+  }
   const out = wide ? new Uint32Array(acc.count) : new Uint16Array(acc.count);
   for (let i = 0; i < acc.count; i++) {
     out[i] = wide ? bytes.getUint32(base + i * 4, true) : bytes.getUint16(base + i * 2, true);
