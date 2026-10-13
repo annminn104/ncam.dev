@@ -224,7 +224,9 @@ host's `MountConfig`; only `assetBase` is read. Not route-aware.
   2. its budgets and ladder in `art/budgets.json`, then `node scripts/build-figures.mjs <preset>`;
   3. its palette in `presets/<preset>/palette.ts` and a `FIGURE_PALETTES` entry;
   4. kind `'figure'` in `presets-meta.ts`;
-  5. previews with `capture:presets`, then `ready` and `preview`.
+  5. add its id to `PREVIEWS` in `scripts/capture-presets.mjs`, capture the previews with
+     `capture:presets` (and its review set with `capture:presets -- --review <id>`), then set
+     `ready` and `preview`.
 - Gotchas met building them:
   - Blender's camera space looks down +z, so a matcap key there has a negative z; three's view
     space has +z toward the camera;
