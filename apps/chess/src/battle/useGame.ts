@@ -20,11 +20,14 @@ export interface GameApi {
   plyCount: number;
 }
 
-/** React state around createGame(). `canMove(turn)` says whether the human may move now. */
-export function useGame(canMove: (turn: Side) => boolean): GameApi {
+/**
+ * React state around createGame(). `canMove(turn)` says whether the human may move now; `fen`
+ * starts from another position than the opening (capture mode's lineup).
+ */
+export function useGame(canMove: (turn: Side) => boolean, fen?: string): GameApi {
   // A lazy initialiser: a bare createGame() argument would build a throwaway chess.js
   // instance on every render.
-  const [game] = useState(() => createGame());
+  const [game] = useState(() => createGame(fen));
   const [snap, setSnap] = useState(() => game.snapshot());
   const [selected, setSelected] = useState<Square | null>(null);
   const [pendingPromotion, setPending] = useState<{ from: Square; to: Square } | null>(null);

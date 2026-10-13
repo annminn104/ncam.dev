@@ -1,5 +1,5 @@
 import { Suspense, lazy, useEffect, useState } from 'react';
-import type { ArenaId } from './arenas-meta';
+import type { CaptureOptions } from './capture';
 import { BattleErrorBoundary } from './ErrorBoundary';
 import { Lobby } from './lobby/Lobby';
 import { DEFAULT_SETTINGS, loadSettings, saveSettings, type GameSettings } from './settings';
@@ -19,17 +19,26 @@ const Battle = lazy(() =>
 export interface AppProps {
   assetBase: string;
   /**
-   * Capture mode (scripts/capture-arenas.mjs, through the standalone page only): this arena's
-   * battle alone, with no lobby, HUD or stored settings, for the lobby's preview images.
+   * Capture mode (src/capture.ts, through the standalone page only): a battle alone, with no
+   * lobby, HUD or stored settings, for the lobby's previews and the figure review.
    */
-  capture?: ArenaId;
+  capture?: CaptureOptions;
 }
 
 export default function App({ assetBase, capture }: AppProps) {
   // Server and first client render use the defaults (hydration-safe); stored
   // settings arrive in an effect.
   const [settings, setSettings] = useState<GameSettings>(() =>
-    capture ? { ...DEFAULT_SETTINGS, mode: 'hotseat', arenaId: capture } : DEFAULT_SETTINGS,
+    capture
+      ? {
+          ...DEFAULT_SETTINGS,
+          mode: 'hotseat',
+          arenaId: capture.arena,
+          whitePreset: capture.preset,
+          blackPreset: capture.preset,
+          linkPresets: true,
+        }
+      : DEFAULT_SETTINGS,
   );
   const [phase, setPhase] = useState<'lobby' | 'battle'>(capture ? 'battle' : 'lobby');
   // Bumped by a rematch: a new key mounts a fresh battle.
@@ -59,7 +68,7 @@ export default function App({ assetBase, capture }: AppProps) {
               assetBase={assetBase}
               onExit={() => setPhase('lobby')}
               onRematch={() => setRound((r) => r + 1)}
-              capture={capture !== undefined}
+              capture={capture}
             />
           </Suspense>
         </BattleErrorBoundary>

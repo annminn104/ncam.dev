@@ -5,6 +5,7 @@ import type { Square } from 'chess.js';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Side } from '../game/coords';
 import { isOver } from '../game/status';
+import { LINEUP_FEN, type CaptureOptions } from '../capture';
 import { resolvePresets } from '../presets-meta';
 import type { GameSettings } from '../settings';
 import { AssetBaseContext } from './asset-base';
@@ -17,7 +18,7 @@ import { QualityContext, type Quality } from './quality';
 import { ResultOverlay } from './ResultOverlay';
 import { ARENA_DEFS } from './scene/arenas';
 import { CameraRig, type CameraRigHandle } from './scene/CameraRig';
-import { CaptureCamera } from './scene/CaptureCamera';
+import { CaptureCamera, LINEUP_VIEW, ReviewCamera } from './scene/CaptureCamera';
 import { disposeOwned } from './scene/dispose';
 import { releaseSharedLut } from './scene/materials';
 import { PresetPiece } from './scene/presets';
@@ -49,10 +50,11 @@ export interface BattleProps {
   onExit(): void;
   onRematch(): void;
   /**
-   * Capture mode (scripts/capture-arenas.mjs): no HUD or engine, the arena's preview camera in
-   * place of the rig, no quality decline, and `window.__chessReady` once the scene has drawn.
+   * Capture mode (src/capture.ts): no HUD or engine, a fixed camera in place of the rig (the
+   * arena's preview, the lineup's or a review one), no quality decline, the lineup position when
+   * asked, and `window.__chessReady` once the scene has drawn.
    */
-  capture?: boolean;
+  capture?: CaptureOptions;
 }
 
 export default function Battle({ settings, assetBase, onExit, onRematch, capture }: BattleProps) {
@@ -71,9 +73,9 @@ export default function Battle({ settings, assetBase, onExit, onRematch, capture
   const [mode, setMode] = useState(settings.mode);
   const hotseat = mode === 'hotseat';
   const canMove = (turn: Side) => hotseat || turn === humanSide;
-  const game = useGame(canMove);
+  const game = useGame(canMove, capture?.lineup ? LINEUP_FEN : undefined);
   const rig = useRef<CameraRigHandle>(null);
-  const [quality, setQuality] = useState<Quality>('high');
+  const [quality, setQuality] = useState<Quality>(capture?.quality ?? 'high');
   const [webgl] = useState(hasWebgl);
   const [lost, setLost] = useState(false);
   const arena = ARENA_DEFS[settings.arenaId];
@@ -184,8 +186,10 @@ export default function Battle({ settings, assetBase, onExit, onRematch, capture
             {/* A preview shows the arena at its best, whatever GPU (or software one) draws it. */}
             {!capture && <PerformanceMonitor onDecline={() => setQuality('low')} />}
             <ArenaEnvironment />
-            {capture ? (
-              <CaptureCamera view={arena.capture} />
+            {capture?.view ? (
+              <ReviewCamera view={capture.view} />
+            ) : capture ? (
+              <CaptureCamera view={capture.lineup ? LINEUP_VIEW : arena.capture} />
             ) : (
               <CameraRig ref={rig} initialSide={humanSide} onViewSide={setViewSide} />
             )}
@@ -194,9 +198,17 @@ export default function Battle({ settings, assetBase, onExit, onRematch, capture
               game={game}
               skin={arena.skin}
               cursor={cursor}
-              renderPiece={(p) => (
-                <PresetPiece preset={presets[p.color]} piece={p} jumping={jumping.has(p.id)} />
-              )}
+              renderPiece={(p) => {
+                const piece = (
+                  <PresetPiece preset={presets[p.color]} piece={p} jumping={jumping.has(p.id)} />
+                );
+                // The lineup shows every figure's face: black's turn round to the camera as well.
+                return capture?.lineup && p.color === 'b' ? (
+                  <group rotation-y={Math.PI}>{piece}</group>
+                ) : (
+                  piece
+                );
+              }}
             />
           </Canvas>
           {!capture && (

@@ -13,7 +13,8 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "capture:arenas": "node scripts/capture-arenas.mjs",
-    "art:holy-order": "node scripts/build-figures.mjs holy-order"
+    "art:holy-order": "node scripts/build-figures.mjs holy-order",
+    "capture:presets": "node scripts/capture-presets.mjs"
   },
   "dependencies": {
     "@ncam/logger": "workspace:*",
