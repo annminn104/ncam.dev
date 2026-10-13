@@ -9,22 +9,34 @@
 //                                               real GPU (Metal) at DPR 2: lineups at both LODs,
 //                                               every arena from three views, phone views, an
 //                                               orbit video and frame rates, to art/.out/review/
+// Anything else is a usage error (exit 2); a leading `--`, which pnpm passes on in
+// `pnpm capture:presets -- --review`, is ignored (capture-args.mjs).
 // CHROMIUM_PATH names a Chromium when Playwright's own build is not installed.
 /* global window, requestAnimationFrame -- only inside page.evaluate / waitForFunction */
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 import sharp from 'sharp';
+import { USAGE, parseCaptureArgs } from './capture-args.mjs';
 
 const BASE = process.env.CHESS_URL ?? `http://localhost:${process.env.CHESS_PORT ?? 9008}/`;
 const local = (rel) => fileURLToPath(new URL(`../${rel}`, import.meta.url));
-const [mode, reviewPreset = 'holy-order'] = process.argv.slice(2);
-const review = mode === '--review';
 // The sets with lobby previews (presets-meta.ts, `preview: true`).
 const PREVIEWS = ['treasures', 'holy-order'];
 const ARENAS = ['cloud-peak', 'blood-moon', 'lotus-lake'];
 // Figure presets: their pages fetch six figure files each.
 const FIGURES = Object.keys(JSON.parse(await readFile(local('art/budgets.json'), 'utf8')));
+
+// Checked before anything starts: a typo must neither rewrite the previews nor review a set that
+// is not there.
+let args;
+try {
+  args = parseCaptureArgs(process.argv.slice(2), FIGURES);
+} catch (error) {
+  console.error(`presets: ${error.message}\n${USAGE}`);
+  process.exit(2);
+}
+const { review, preset: reviewPreset } = args;
 
 // Software WebGL can hang rather than fail: never let a capture run forever.
 const watchdog = setTimeout(() => {

@@ -1,8 +1,8 @@
 import { useFrame, useThree } from '@react-three/fiber';
-import { useLayoutEffect } from 'react';
+import { useLayoutEffect, useMemo } from 'react';
 import type { PerspectiveCamera } from 'three';
 import type { ReviewView } from '../../capture';
-import { homePosition } from './rig-math';
+import { framingFit, homePosition } from './rig-math';
 
 /** Where capture mode's camera stands and what it looks at, in world units. */
 export interface CaptureView {
@@ -37,19 +37,37 @@ export function CaptureCamera({ view }: { view: CaptureView }) {
  */
 export const LINEUP_VIEW: CaptureView = { position: [0, 3.8, 10.4], target: [0, -0.3, 0], fov: 29 };
 
-/** The review's fixed cameras (capture mode's `view`, scripts/capture-presets.mjs --review). */
-export const REVIEW_CAMERAS: Record<Exclude<ReviewView, 'orbit'>, CaptureView> = {
-  // The player's resting view, as white.
-  home: { position: homePosition('w'), target: [0, 0, 0], fov: 40 },
+/**
+ * The review's `home` view: where the rig rests for white on a screen of this aspect (width /
+ * height). The rig pulls back by `framingFit` on a screen narrower than 1.5:1 so the board's width
+ * fits (CameraRig.tsx), so a phone's review must stand there too, not at the landscape distance.
+ */
+export function homeView(aspect: number): CaptureView {
+  return { position: homePosition('w', framingFit(aspect)), target: [0, 0, 0], fov: 40 };
+}
+
+/** The review's other fixed cameras (capture mode's `view`, scripts/capture-presets.mjs --review). */
+export const REVIEW_CAMERAS: Record<Exclude<ReviewView, 'home' | 'orbit'>, CaptureView> = {
   // Low over white's front ranks.
   close: { position: [0.5, 1.95, 6.3], target: [0.5, 0.72, 3.5], fov: 40 },
   // Low over black's front ranks, from black's end.
   far: { position: [0.5, 1.95, -6.3], target: [0.5, 0.72, -3.5], fov: 40 },
 };
 
-/** A review camera: a fixed one by name, or `orbit`, once round the board every 20 s. */
+/**
+ * A review camera: `home`, the rig's resting view fitted to the screen; a fixed one by name; or
+ * `orbit`, once round the board every 20 s.
+ */
 export function ReviewCamera({ view }: { view: ReviewView }) {
-  return view === 'orbit' ? <OrbitCamera /> : <CaptureCamera view={REVIEW_CAMERAS[view]} />;
+  if (view === 'orbit') return <OrbitCamera />;
+  return view === 'home' ? <HomeCamera /> : <CaptureCamera view={REVIEW_CAMERAS[view]} />;
+}
+
+function HomeCamera() {
+  // The rig's own aspect (CameraRig.tsx), so the view follows the canvas if it is resized.
+  const aspect = useThree((s) => s.size.width / s.size.height);
+  const view = useMemo(() => homeView(aspect), [aspect]);
+  return <CaptureCamera view={view} />;
 }
 
 function OrbitCamera() {
