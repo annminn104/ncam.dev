@@ -2,9 +2,9 @@
 
 Cultivation Chess — international (FIDE) chess where the pieces are floating
 cultivation treasures or, side by side, a Blender-built piece set (Holy Order),
-played in one of three 3D arenas. Hot-seat or vs Stockfish. React 19 + Vite 8 + React Three Fiber 9 + drei 10 + chess.js,
-packaged as a **self-contained** React Module Federation remote (same model as
-`apps/viktor`). Port **9008**.
+played in one of three 3D arenas. Hot-seat or vs Stockfish. React 19 + Vite 8 + React Three
+Fiber 9 + drei 10 + chess.js, packaged as a **self-contained** React Module Federation remote
+(same model as `apps/viktor`). Port **9008**.
 
 ## What it exposes
 
@@ -178,10 +178,11 @@ host's `MountConfig`; only `assetBase` is read. Not route-aware.
   `art/blender/kit.py` (shared helpers, the `SLOTS` order, preview palettes and materials) and
   `art/blender/<preset>/*.py` (the piece builders, chained as `export.py`'s `PRESETS` says).
   `.blend` files are scratch: never committed. CI never runs Blender; the GLBs are committed.
-- `pnpm --filter @ncam/chess art:holy-order` (Blender 5.2: `$BLENDER`, else `blender` on PATH)
-  runs `art/blender/export.py` headless. That writes one raw GLB per piece and LOD to
-  `art/.out/` (gitignored): the parts joined, `_SLOT`, `_LINE` (the part's Solidify outline
-  width) and `_KEEP` (the face decals). `scripts/build-figures.mjs` then packs each:
+- `pnpm --filter @ncam/chess art:holy-order` runs `scripts/build-figures.mjs holy-order`, which
+  runs `art/blender/export.py` headless (Blender 5.2: `$BLENDER`, else `blender` on PATH). That
+  writes one raw GLB per piece and LOD to `art/.out/<preset>/` (gitignored): the parts joined,
+  `_SLOT`, `_LINE` (the part's Solidify outline width) and `_KEEP` (the face decals: the parts
+  `export.py`'s `FACE` names). The script then packs each:
   - weld, then meshoptimizer's simplifier to the budgets in `art/budgets.json`, with the
     `_KEEP` vertices locked, under an error ceiling (1.2e-3 high, 6e-3 low, as a share of the
     figure's size);
@@ -219,7 +220,7 @@ host's `MountConfig`; only `assetBase` is read. Not route-aware.
 - Captures (`src/capture.ts`, standalone page only):
   `?capture=<arena>&preset=<id>&lineup&view=<home|close|far|orbit>&quality=low`.
   `capture:presets` writes the lobby previews (SwiftShader); `capture:presets -- --review`
-  writes the review set (`art/.out/review/`: Metal at DPR 2, an orbit video, frame rates).
+  writes the review set (`art/.out/review/<preset>/`: Metal at DPR 2, an orbit video, frame rates).
   `CHROMIUM_PATH` names a Chromium when Playwright's own build is not installed.
 - Adding a figure preset:
   1. its scripts in `art/blender/<preset>/` and a `PRESETS` entry in `export.py`, its face parts
