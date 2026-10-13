@@ -24,8 +24,11 @@ const BUDGETS = JSON.parse(readFileSync(new URL('art/budgets.json', APP), 'utf8'
 const TYPES: PieceSymbol[] = ['k', 'q', 'b', 'r', 'n', 'p'];
 const LODS: Lod[] = ['high', 'low'];
 
+/** A shipped file's name under public/presets/. */
+const name = (preset: string, type: PieceSymbol, lod: Lod) =>
+  `${preset}/${type}${lod === 'low' ? '-low' : ''}.glb`;
 const file = (preset: string, type: PieceSymbol, lod: Lod) =>
-  new URL(`public/presets/${preset}/${type}${lod === 'low' ? '-low' : ''}.glb`, APP);
+  new URL(`public/presets/${name(preset, type, lod)}`, APP);
 const figures = new Map<string, FigureData>();
 const figure = (preset: string, type: PieceSymbol, lod: Lod) =>
   figures.get(`${preset}/${type}/${lod}`)!;
@@ -61,6 +64,23 @@ function measure(position: Float32Array) {
   return { top, bottom, reach };
 }
 
+/**
+ * How many triangles have corners that differ in slot or in outline width. The paint reads the
+ * slot interpolated across a triangle, so a mixed one blends two palette entries; the outline
+ * sends a vertex with no width outside the clip volume (material.ts), so a triangle mixing it
+ * with outlined corners stretches its hull to the clip, a sliver across the screen.
+ */
+function mixedTriangles({ index, slot, line }: Pick<FigureData, 'index' | 'slot' | 'line'>) {
+  let mixed = 0;
+  for (let i = 0; i < index.length; i += 3) {
+    const [a, b, c] = [index[i], index[i + 1], index[i + 2]];
+    if (slot[a] !== slot[b] || slot[a] !== slot[c] || line[a] !== line[b] || line[a] !== line[c]) {
+      mixed += 1;
+    }
+  }
+  return mixed;
+}
+
 describe.each(Object.keys(BUDGETS))('%s figures', (preset) => {
   const budget = BUDGETS[preset];
 
@@ -85,6 +105,12 @@ describe.each(Object.keys(BUDGETS))('%s figures', (preset) => {
       for (const w of new Set(f.line)) {
         expect(w >= 0 && w <= LINE_MAX, `${type} width ${w}`).toBe(true);
       }
+    }
+  });
+
+  it.each(LODS)('give every triangle one slot and one outline width (%s)', (lod) => {
+    for (const type of TYPES) {
+      expect(mixedTriangles(figure(preset, type, lod)), name(preset, type, lod)).toBe(0);
     }
   });
 

@@ -222,7 +222,8 @@ host's `MountConfig`; only `assetBase` is read. Not route-aware.
   writes the review set (`art/.out/review/`: Metal at DPR 2, an orbit video, frame rates).
   `CHROMIUM_PATH` names a Chromium when Playwright's own build is not installed.
 - Adding a figure preset:
-  1. its scripts in `art/blender/<preset>/` and a `PRESETS` entry in `export.py`;
+  1. its scripts in `art/blender/<preset>/` and a `PRESETS` entry in `export.py`, its face parts
+     named as `FACE` there lists them (the pack locks them, and refuses a file without any);
   2. its budgets and ladder in `art/budgets.json`, then `node scripts/build-figures.mjs <preset>`;
   3. its palette in `presets/<preset>/palette.ts` and a `FIGURE_PALETTES` entry;
   4. kind `'figure'` in `presets-meta.ts`;

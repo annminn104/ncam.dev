@@ -18,6 +18,8 @@ const local = (rel) => fileURLToPath(new URL(`../${rel}`, import.meta.url));
 const ERROR = { high: 1.2e-3, low: 6e-3 };
 // The widest outline a part may have: _LINE ships as width / LINE_MAX in a byte (figure/slots.ts).
 const LINE_MAX = 0.008;
+// The last index into SLOTS (figure/slots.ts): _SLOT ships as that index in a byte.
+const SLOT_MAX = 21;
 const RAW_ATTRIBUTES = 'NORMAL,POSITION,_KEEP,_LINE,_SLOT';
 
 const [preset, types = 'kqbrnp'] = process.argv.slice(2);
@@ -68,9 +70,9 @@ async function pack(src, dst, cap, error) {
     prim
       .getAttribute('_SLOT')
       .getArray()
-      .some((v) => !Number.isInteger(v) || v < 0 || v > 21)
+      .some((v) => !Number.isInteger(v) || v < 0 || v > SLOT_MAX)
   ) {
-    throw new Error(`${src}: a _SLOT outside 0-21`);
+    throw new Error(`${src}: a _SLOT outside 0-${SLOT_MAX}`);
   }
   if (
     prim
@@ -79,6 +81,14 @@ async function pack(src, dst, cap, error) {
       .some((v) => v < 0 || v > LINE_MAX)
   ) {
     throw new Error(`${src}: a _LINE outside 0-${LINE_MAX}`);
+  }
+  if (
+    !prim
+      .getAttribute('_KEEP')
+      .getArray()
+      .some((v) => v > 0.5)
+  ) {
+    throw new Error(`${src}: no _KEEP vertex (the face parts are the ones export.py's FACE names)`);
   }
 
   await doc.transform(weld());

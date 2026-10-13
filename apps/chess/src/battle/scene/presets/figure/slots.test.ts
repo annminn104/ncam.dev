@@ -18,4 +18,13 @@ describe('palette slots', () => {
     const list = /^SLOTS = \[([^\]]*)\]/m.exec(kit)?.[1] ?? '';
     expect([...list.matchAll(/'([a-z0-9]+)'/g)].map((m) => m[1])).toEqual([...SLOTS]);
   });
+
+  it('gives the pack step the same slot and outline limits', () => {
+    const pack = readFileSync(
+      new URL('../../../../../scripts/build-figures.mjs', import.meta.url),
+      'utf8',
+    );
+    expect(pack).toContain(`const SLOT_MAX = ${SLOTS.length - 1};`);
+    expect(pack).toContain(`const LINE_MAX = ${LINE_MAX};`);
+  });
 });
