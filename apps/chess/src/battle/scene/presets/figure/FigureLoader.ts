@@ -17,8 +17,18 @@ export function figureGeometry(data: FigureData): BufferGeometry {
   return geometry;
 }
 
-/** Every file loaded since the last battle ended: the reset drops each from R3F's cache. */
+/**
+ * Every file asked for since the last battle ended, loaded or failed: the reset drops each from
+ * R3F's cache.
+ */
+const requested = new Set<string>();
+/** The files among them that loaded. */
 const loaded = new Set<string>();
+
+/** Whether this battle has `url`'s geometry already: FigureRenderer picks its stand-in by it. */
+export function isFigureLoaded(url: string): boolean {
+  return loaded.has(url);
+}
 
 /**
  * Loads a figure GLB (figure-glb.ts) into a BufferGeometry the battle owns (dispose.ts), for
@@ -32,6 +42,7 @@ export class FigureLoader extends Loader<BufferGeometry> {
     _onProgress?: (event: ProgressEvent) => void,
     onError?: (error: unknown) => void,
   ): void {
+    requested.add(url);
     const href = this.manager.resolveURL(this.path + url);
     this.manager.itemStart(href);
     fetch(href, {
@@ -56,8 +67,9 @@ export class FigureLoader extends Loader<BufferGeometry> {
 }
 
 // The geometries go with the battle (disposeOwned); so must R3F's cache entries, or the next
-// battle would be handed a freed geometry.
+// battle would be handed a freed geometry, or a failure it should ask for again.
 onDispose(() => {
-  for (const url of loaded) useLoader.clear(FigureLoader, url);
+  for (const url of requested) useLoader.clear(FigureLoader, url);
+  requested.clear();
   loaded.clear();
 });

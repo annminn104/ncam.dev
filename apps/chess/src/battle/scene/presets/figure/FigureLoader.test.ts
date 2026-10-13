@@ -1,11 +1,14 @@
 import type { BufferGeometry } from 'three';
 import { describe, expect, it, vi } from 'vitest';
 import { disposeOwned } from '../../dispose';
-import { FigureLoader } from './FigureLoader';
+import { FigureLoader, isFigureLoaded } from './FigureLoader';
 import { figureGlb } from './glb-fixture';
 
 const { clear } = vi.hoisted(() => ({ clear: vi.fn() }));
 vi.mock('@react-three/fiber', () => ({ useLoader: { clear } }));
+
+/** Bytes that are no GLB: the load of this URL fails. */
+const NOT_A_GLB = 'data:model/gltf-binary;base64,AAAA';
 
 /** A packed fixture GLB as a data: URL, which fetch reads like any other. */
 async function dataUrl(): Promise<string> {
@@ -42,6 +45,26 @@ describe('FigureLoader', () => {
   });
 
   it('reports a file it cannot read', async () => {
-    await expect(load('data:model/gltf-binary;base64,AAAA')).rejects.toThrow(/not a GLB/);
+    await expect(load(NOT_A_GLB)).rejects.toThrow(/not a GLB/);
+  });
+
+  it('forgets a file that failed, so the next battle asks again', async () => {
+    await expect(load(NOT_A_GLB)).rejects.toThrow(/not a GLB/);
+    clear.mockClear();
+    disposeOwned();
+    expect(clear).toHaveBeenCalledWith(FigureLoader, NOT_A_GLB);
+  });
+
+  it('knows which files this battle has loaded', async () => {
+    disposeOwned();
+    const url = await dataUrl();
+    expect(isFigureLoaded(url)).toBe(false);
+    await load(url);
+    expect(isFigureLoaded(url)).toBe(true);
+    await expect(load(NOT_A_GLB)).rejects.toThrow(/not a GLB/);
+    expect(isFigureLoaded(NOT_A_GLB)).toBe(false);
+    disposeOwned();
+    expect(isFigureLoaded(url)).toBe(false);
+    expect(isFigureLoaded(NOT_A_GLB)).toBe(false);
   });
 });

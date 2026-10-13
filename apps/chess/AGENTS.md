@@ -208,9 +208,11 @@ host's `MountConfig`; only `assetBase` is read. Not route-aware.
     `_line`; `_line = 0` parts draw no hull.
 
   Both materials are cached per preset and side and `own()`ed. The loader `own()`s each
-  geometry, and its reset clears R3F's `useLoader` cache. The treasure stands in while a file
-  loads, and for good if it fails (`FigureBoundary`, one log line per file). At `'low'` quality
-  the low file swaps in place.
+  geometry, and its reset clears R3F's `useLoader` cache, failures included. The treasure stands
+  in while a file loads, and for the rest of the battle if it fails (`FigureBoundary`, keyed by
+  the piece's type, one log line per file). At `'low'` quality the low file swaps in place once
+  the high one is loaded, a battle that starts low fetches only the low files, and a low file
+  that fails leaves the high figure.
 
 - The shader hooks inject at three's chunk anchors (`inject()`), which throws if three renames
   one; `material.test.ts` runs them over three's own sources.
