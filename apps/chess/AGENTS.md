@@ -1,8 +1,8 @@
 # AGENTS.md — apps/chess
 
 Cultivation Chess — international (FIDE) chess where the pieces are floating
-cultivation treasures, played in one of three 3D arenas. Hot-seat or vs
-Stockfish. React 19 + Vite 8 + React Three Fiber 9 + drei 10 + chess.js,
+cultivation treasures or, side by side, a Blender-built piece set (Holy Order),
+played in one of three 3D arenas. Hot-seat or vs Stockfish. React 19 + Vite 8 + React Three Fiber 9 + drei 10 + chess.js,
 packaged as a **self-contained** React Module Federation remote (same model as
 `apps/viktor`). Port **9008**.
 
@@ -36,6 +36,10 @@ host's `MountConfig`; only `assetBase` is read. Not route-aware.
   `ARENA_DEFS[id].capture` view (lower than the rig's resting view, which shows no sky, so the
   sun or moon is in frame), no quality decline (SwiftShader draws it, the same on any machine),
   and `window.__chessReady` after 30 frames. Change a view, re-run it, look at the lobby.
+- `public/presets/` holds the figure sets' GLBs (`<preset>/<type>.glb`, `<type>-low.glb`, built
+  by `pnpm --filter @ncam/chess art:holy-order`) and the piece-set previews
+  (`<id>-{640,320}.avif`, `pnpm --filter @ncam/chess capture:presets`). Both are committed; see
+  "Figures (GLB presets)".
 - Arena cards: the caption carries its own scrim (`.chess-arena__caption`), as tall as its text
   at any width, at least 66% black from the top of the text down, so the name and lore keep
   4.5:1 over any preview, even white (`contrast.test.ts`).
@@ -168,8 +172,71 @@ host's `MountConfig`; only `assetBase` is read. Not route-aware.
   R3F's frame loop keeps the last root's state until another root runs (one renderer at most);
   in dev, React Refresh also keeps every R3F root it has seen (dev only).
 
+## Figures (GLB presets) (`art/`, `battle/scene/presets/figure/`)
+
+- A `'figure'` preset (Holy Order so far) is drawn from GLBs built in Blender by scripts:
+  `art/blender/kit.py` (shared helpers, the `SLOTS` order, preview palettes and materials) and
+  `art/blender/<preset>/*.py` (the piece builders, chained as `export.py`'s `PRESETS` says).
+  `.blend` files are scratch: never committed. CI never runs Blender; the GLBs are committed.
+- `pnpm --filter @ncam/chess art:holy-order` (Blender 5.2: `$BLENDER`, else `blender` on PATH)
+  runs `art/blender/export.py` headless. That writes one raw GLB per piece and LOD to
+  `art/.out/` (gitignored): the parts joined, `_SLOT`, `_LINE` (the part's Solidify outline
+  width) and `_KEEP` (the face decals). `scripts/build-figures.mjs` then packs each:
+  - weld, then meshoptimizer's simplifier to the budgets in `art/budgets.json`, with the
+    `_KEEP` vertices locked, under an error ceiling (1.2e-3 high, 6e-3 low, as a share of the
+    figure's size);
+  - `_SLOT` and `_LINE` as bytes, positions and normals quantized, `EXT_meshopt_compression`.
+
+  The low LOD also drops the painted linework (parts named `*Lines*` and `GoldScrolls`).
+  Blender's ray casts vary in the last bits, so a rebuild rewrites every file: rebuild and
+  commit only when a script changed.
+
+- The format is ours and fixed: one mesh, one triangle primitive, `POSITION`, `NORMAL`, `_SLOT`
+  (unsigned bytes, an index into `SLOTS`) and `_LINE` (normalized bytes, width / `LINE_MAX`).
+  `figure-glb.ts` reads that and nothing else, without three. The tests read the shipped files
+  with it: `assets.test.ts` holds them to the budgets, the height ladder, the base and the square.
+  Not drei's `useGLTF`: `GLTFLoader` alone costs ~20 KB gzip, and its Draco default fetches a
+  decoder from gstatic. Not gltfpack: it drops custom vertex attributes.
+- `SLOTS` (`figure/slots.ts`) is the contract between the scripts, the GLBs and the palettes, and a
+  test holds it to `kit.py`'s list. Append only. Colours live in `presets/<preset>/palette.ts`,
+  never in Blender (kit.py's palettes only colour its previews).
+- `FigureRenderer` draws the base, then one geometry twice:
+  - `paintMaterial`: a MeshToonMaterial with a soft two-tone ramp and a rim, a gold ramp by view
+    angle on `trim`, faceted `gem`, unlit `glow`, and a light floor `L_MIN` so the white side
+    survives Blood Moon;
+  - `outlineMaterial`: back faces pushed along `outlineNormal` (smooth across sharp edges) by
+    `_line`; `_line = 0` parts draw no hull.
+
+  Both materials are cached per preset and side and `own()`ed. The loader `own()`s each
+  geometry, and its reset clears R3F's `useLoader` cache. The treasure stands in while a file
+  loads, and for good if it fails (`FigureBoundary`, one log line per file). At `'low'` quality
+  the low file swaps in place.
+
+- The shader hooks inject at three's chunk anchors (`inject()`), which throws if three renames
+  one; `material.test.ts` runs them over three's own sources.
+- Captures (`src/capture.ts`, standalone page only):
+  `?capture=<arena>&preset=<id>&lineup&view=<home|close|far|orbit>&quality=low`.
+  `capture:presets` writes the lobby previews (SwiftShader); `capture:presets -- --review`
+  writes the review set (`art/.out/review/`: Metal at DPR 2, an orbit video, frame rates).
+  `CHROMIUM_PATH` names a Chromium when Playwright's own build is not installed.
+- Adding a figure preset:
+  1. its scripts in `art/blender/<preset>/` and a `PRESETS` entry in `export.py`;
+  2. its budgets and ladder in `art/budgets.json`, then `node scripts/build-figures.mjs <preset>`;
+  3. its palette in `presets/<preset>/palette.ts` and a `FIGURE_PALETTES` entry;
+  4. kind `'figure'` in `presets-meta.ts`;
+  5. previews with `capture:presets`, then `ready` and `preview`.
+- Gotchas met building them:
+  - Blender's camera space looks down +z, so a matcap key there has a negative z; three's view
+    space has +z toward the camera;
+  - decal ray casts must use the bare mesh, because an outline shell catches the rays;
+  - lathe poles skip `rmod`/`zmod`;
+  - sun shadows stripe a toon ramp, so keep them off in the previews;
+  - simplifying unlocked face decals turns the eyes into faceted diamonds.
+
 ## Commands
 
     pnpm --filter @ncam/chess dev        # :9008 standalone
     pnpm vitest run apps/chess
     pnpm --filter @ncam/chess typecheck
+    pnpm --filter @ncam/chess art:holy-order     # Blender 5.2: rebuild the Holy Order GLBs
+    pnpm --filter @ncam/chess capture:presets    # lobby previews (dev server running)

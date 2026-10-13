@@ -24,7 +24,8 @@ apps/
                     (host-owned nested URLs, no remount on in-app navigation),
                     with a lazily-chunked three.js holo card renderer.
   chess/            Cultivation Chess remote (:9008). React 19 + React Three
-                    Fiber; chess.js rules, Stockfish WASM opponent (GPLv3).
+                    Fiber; chess.js rules, Stockfish WASM opponent (GPLv3);
+                    piece sets as Blender-built GLBs (art/, built locally).
   strapi/           Strapi 5 headless CMS for the blog (:1337): a backend
                     service, not a federation remote.
 packages/
