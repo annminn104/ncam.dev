@@ -61,7 +61,11 @@ def build_front_q():
     # navy apron panel with gold borders and a star
     zs = [0.188, 0.25, 0.32, 0.39, 0.428]
     hw = lambda z: 0.055 + 0.058 * ((0.43 - z) / 0.242) ** 0.9
-    poly = [(-hw(zs[0]), zs[0]), (hw(zs[0]), zs[0])] + [(hw(z), z) for z in zs[1:]] + [(-hw(z), z) for z in reversed(zs[1:])]
+    # the top and bottom edges cross the round gown: points along them, or each ring's edge is a chord under the robe
+    seg = 12
+    bottom = [(hw(zs[0]) * (2 * i / seg - 1), zs[0]) for i in range(seg + 1)]
+    top = [(hw(zs[-1]) * (1 - 2 * i / seg), zs[-1]) for i in range(1, seg)]
+    poly = bottom + [(hw(z), z) for z in zs[1:]] + top + [(-hw(z), z) for z in reversed(zs[1:])]
     bm = new_bm()
     decal_poly(bm, gb, poly, FR, 0.0022, 'coat', center=(0, 0.31), rings=4)
     out(PFX + 'Apron', bm, 0, sharp=80, recalc=False)
