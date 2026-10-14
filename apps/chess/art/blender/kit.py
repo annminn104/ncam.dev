@@ -571,9 +571,11 @@ def _rgba(h):
 
 GOLD_STOPS = [(0.0, '#3a1f08'), (0.38, '#74410f'), (0.6, '#b9761d'), (0.8, '#e9a932'), (0.885, '#f6c24a'),
               (0.94, '#ffe08a'), (0.972, '#fff4cf'), (0.99, '#ffffff')]
+SILVER_STOPS = [(0.0, '#1b1e26'), (0.38, '#3b404c'), (0.6, '#69707f'), (0.8, '#a0a8b7'), (0.885, '#c0c6d2'),
+                (0.94, '#dbe0e8'), (0.972, '#eef1f5'), (0.99, '#ffffff')]
 
 
-def build_materials():
+def build_materials(metal=GOLD_STOPS):
     m = bpy.data.materials.get('M_Paint') or bpy.data.materials.new('M_Paint')
     m.use_nodes = True
     nt = m.node_tree
@@ -616,7 +618,8 @@ def build_materials():
     # Blender's camera space looks down +z, so the key vector's z is negative.
     dot.inputs[1].default_value = Vector((-0.35, 0.62, -0.70)).normalized()
     L(vt.outputs[0], dot.inputs[0])
-    gold = _ramp(nt, (-300, -900), [(p, _rgba(h)) for p, h in GOLD_STOPS])
+    gold = _ramp(nt, (-300, -900), [(p, _rgba(h)) for p, h in metal])
+    gold.name = 'Metal'
     mr = _node(nt, 'ShaderNodeMapRange', (-450, -1200))
     mr.inputs['From Min'].default_value = -1.0
     mr.inputs['From Max'].default_value = 1.0
@@ -696,6 +699,16 @@ def build_materials():
     L(em.outputs[0], out.inputs['Surface'])
     ln.use_backface_culling = True
     return m, ln
+
+
+def set_metal(stops):
+    """Gives M_Paint's metal ramp other stops (GOLD_STOPS or SILVER_STOPS), between a sheet's shots."""
+    cr = bpy.data.materials['M_Paint'].node_tree.nodes['Metal'].color_ramp
+    while len(cr.elements) > 1:
+        cr.elements.remove(cr.elements[-1])
+    cr.elements[0].position, cr.elements[0].color = stops[0][0], _rgba(stops[0][1])
+    for p, h in stops[1:]:
+        cr.elements.new(p).color = _rgba(h)
 
 
 def dress(ob, width=0.0042, line_on=True):
