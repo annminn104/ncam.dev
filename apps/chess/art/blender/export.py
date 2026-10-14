@@ -2,7 +2,7 @@
 # scripts/build-figures.mjs to pack. Headless, from apps/chess:
 #   blender --background --factory-startup --python-exit-code 1 \
 #     --python art/blender/export.py -- <preset> <outDir> [types]
-#   … -- <preset> <outDir> [types] --sheet   instead renders each piece's review sheet
+#   ... -- <preset> <outDir> [types] --sheet   instead renders each piece's review sheet
 # A piece is its parts joined into one mesh with three point attributes: _SLOT (its palette slot,
 # an index into kit.SLOTS), _LINE (the outline width its part was dressed with; 0 for decals and
 # painted lines) and _KEEP (1 on the face decals, which the pack step never simplifies). No
@@ -107,12 +107,17 @@ def export(ob, path):
 
 def make_sheet(ns, parts, preset, t, out_dir):
     """The piece's review sheet, as Holy Order's were made: white and black from the front (top row)
-    and the back (bottom row), with a face close-up and the piece at game size."""
+    and the back (bottom row), with a face close-up and the piece at game size. The cameras aim at
+    about half the piece's top (measured as the export's size print does), so a pawn is framed as
+    well as a king."""
     ns['scene_setup']()
     preview = ns.get('PREVIEW') or {'w': (ns['PAL_W'], ns['GOLD_STOPS']),
                                     'b': (ns['PAL_B'], ns['GOLD_STOPS'])}
     corners = [o.matrix_world @ Vector(c) for o in parts if part_name(o) == 'Face' for c in o.bound_box]
     face = sum(corners, Vector()) / len(corners) if corners else Vector((0, 0, 1.0))
+    top = max((o.matrix_world @ v.co).z for o in parts for v in o.data.vertices)
+    # The game view looks down from 42 degrees, so it aims a little lower than the others.
+    aim, aim_game = (0, 0, 0.52 * top), (0, 0, 0.465 * top)
     shot = {}
 
     def take(key, *args, **kw):
@@ -123,11 +128,11 @@ def make_sheet(ns, parts, preset, t, out_dir):
         pal, metal = preview[side]
         ns['recolor'](pal, pal['ink'])
         ns['set_metal'](metal)
-        take(f'{side}-front', 24, 12)
-        take(f'{side}-back', 150, 14)
+        take(f'{side}-front', 24, 12, tgt=aim)
+        take(f'{side}-back', 150, 14, tgt=aim)
         if side == 'w':
             take('face', 16, 6, dist=1.55, tgt=tuple(face))
-            take('game', 18, 42, dist=4.6)
+            take('game', 18, 42, dist=4.6, tgt=aim_game)
     out = os.path.join(out_dir, f'{t}-sheet.png')
     ns['contact_sheet']([shot['w-front'], shot['b-front'], shot['face']],
                         [shot['w-back'], shot['b-back'], shot['game']], out)
