@@ -1,6 +1,6 @@
 import {
   BackSide,
-  type Color,
+  Color,
   type DataTexture,
   LinearFilter,
   MeshToonMaterial,
@@ -9,9 +9,11 @@ import {
   type WebGLProgramParametersWithUniforms,
   type WebGLRenderer,
 } from 'three';
+import { readFileSync } from 'node:fs';
 import { describe, expect, it, vi } from 'vitest';
 import { disposeOwned } from '../../dispose';
-import { inject, L_MIN, outlineMaterial, paintMaterial } from './material';
+import { inject, L_MIN, METAL_RAMPS, outlineMaterial, paintMaterial } from './material';
+import type { Metal } from './palettes';
 
 /** Runs a material's hook over three's own shader sources for its kind, as the renderer would. */
 function compile(material: MeshToonMaterial | MeshBasicMaterial) {
@@ -27,6 +29,9 @@ function compile(material: MeshToonMaterial | MeshBasicMaterial) {
 
 const palette = (shader: WebGLProgramParametersWithUniforms) =>
   shader.uniforms.figurePalette.value as Color[];
+const metal = (shader: WebGLProgramParametersWithUniforms) =>
+  (shader.uniforms.figureMetal.value as Color[]).map((c) => c.getHexString());
+const hexes = (m: Metal) => METAL_RAMPS[m].map(([, hex]) => new Color(hex).getHexString());
 
 describe('figure materials', () => {
   it('paint each side from its own palette', () => {
@@ -42,12 +47,36 @@ describe('figure materials', () => {
     const { vertexShader, fragmentShader } = compile(paintMaterial('holy-order', 'w'));
     expect(vertexShader).toContain('vAlbedo = figurePalette[int(_slot + 0.5)];');
     expect(fragmentShader).toContain('diffuseColor.rgb = vAlbedo;');
-    expect(fragmentShader).toContain('figureGoldRamp(f * 0.5 + 0.5)');
+    expect(fragmentShader).toContain('figureMetalRamp(f * 0.5 + 0.5)');
     expect(fragmentShader).toContain(`max(lit, ${L_MIN})`);
     // The slot shading runs after three's lighting and before its output.
-    const shading = fragmentShader.indexOf('figureGoldRamp(f * 0.5');
+    const shading = fragmentShader.indexOf('figureMetalRamp(f * 0.5');
     expect(fragmentShader.indexOf('vec3 outgoingLight')).toBeLessThan(shading);
     expect(shading).toBeLessThan(fragmentShader.indexOf('#include <opaque_fragment>'));
+  });
+
+  it('trim Holy Order in gold on both sides, every ramp as long as the shader expects', () => {
+    for (const side of ['w', 'b'] as const) {
+      const shader = compile(paintMaterial('holy-order', side));
+      expect(metal(shader)).toEqual(hexes('gold'));
+      expect(shader.uniforms.figureMetalAt.value).toEqual(METAL_RAMPS.gold.map(([at]) => at));
+    }
+    expect(METAL_RAMPS.silver).toHaveLength(METAL_RAMPS.gold.length);
+  });
+
+  it("keep kit.py's metal ramps, which colour the Blender previews", () => {
+    const kit = readFileSync(new URL('../../../../../art/blender/kit.py', import.meta.url), 'utf8');
+    for (const [m, name] of [
+      ['gold', 'GOLD_STOPS'],
+      ['silver', 'SILVER_STOPS'],
+    ] as const) {
+      const body = kit.match(new RegExp(`^${name} = \\[([^\\]]*)\\]`, 'm'))?.[1] ?? '';
+      const stops = [...body.matchAll(/\(([\d.]+), '(#[0-9a-f]{6})'\)/g)].map(([, at, hex]) => [
+        Number(at),
+        hex,
+      ]);
+      expect(stops, name).toEqual(METAL_RAMPS[m].map(([at, hex]) => [at, hex]));
+    }
   });
 
   it('shade with a plain grey toon step: three reads only its red channel', () => {

@@ -9,15 +9,15 @@ import {
 } from 'three';
 import type { Side } from '../../../../game/coords';
 import { onDispose, own } from '../../dispose';
-import { FIGURE_PALETTES, type FigurePresetId } from './palettes';
+import { FIGURE_METALS, FIGURE_PALETTES, type FigurePresetId, type Metal } from './palettes';
 import { SLOT_GEM, SLOT_GLOW, SLOT_GOLD, SLOTS } from './slots';
 
 // The approved Blender look (art/blender/kit.py's M_Paint and M_Line), in three. Paint: a soft
 // two-tone grey toon ramp (three's toon lighting reads only its red channel, so the shadow is
-// neutral, as in the approved in-game test) with a rim on the lit side, gold from a metal ramp by
-// view angle, faceted gems with a glint, unlit glow. Outline: an inverted hull drawn from the same
-// geometry, each part's ink its own colour darkened. Colours come from a palette uniform indexed by
-// each vertex's slot, so both sides draw the same geometry.
+// neutral, as in the approved in-game test) with a rim on the lit side, gold or silver from a
+// metal ramp by view angle, faceted gems with a glint, unlit glow. Outline: an inverted hull drawn
+// from the same geometry, each part's ink its own colour darkened. Colours come from a palette
+// uniform indexed by each vertex's slot, so both sides draw the same geometry.
 
 /**
  * The floor under the light level that lights the albedo: low enough to keep the toon shadow,
@@ -25,17 +25,31 @@ import { SLOT_GEM, SLOT_GLOW, SLOT_GOLD, SLOTS } from './slots';
  */
 export const L_MIN = 0.55;
 
-/** kit.py's GOLD_STOPS: dark at grazing angles, white in the highlight. */
-const GOLD: readonly (readonly [at: number, hex: string])[] = [
-  [0, '#3a1f08'],
-  [0.38, '#74410f'],
-  [0.6, '#b9761d'],
-  [0.8, '#e9a932'],
-  [0.885, '#f6c24a'],
-  [0.94, '#ffe08a'],
-  [0.972, '#fff4cf'],
-  [0.99, '#ffffff'],
-];
+/** kit.py's GOLD_STOPS and SILVER_STOPS: dark at grazing angles, white in the highlight. */
+export const METAL_RAMPS: Record<Metal, readonly (readonly [at: number, hex: string])[]> = {
+  gold: [
+    [0, '#3a1f08'],
+    [0.38, '#74410f'],
+    [0.6, '#b9761d'],
+    [0.8, '#e9a932'],
+    [0.885, '#f6c24a'],
+    [0.94, '#ffe08a'],
+    [0.972, '#fff4cf'],
+    [0.99, '#ffffff'],
+  ],
+  silver: [
+    [0, '#1b1e26'],
+    [0.38, '#3b404c'],
+    [0.6, '#69707f'],
+    [0.8, '#a0a8b7'],
+    [0.885, '#c0c6d2'],
+    [0.94, '#dbe0e8'],
+    [0.972, '#eef1f5'],
+    [0.99, '#ffffff'],
+  ],
+};
+/** Every ramp has as many stops: the shader's arrays are sized by it, one program for all. */
+const STOPS = METAL_RAMPS.gold.length;
 
 /** Inserts `code` before or after `anchor` in a three shader; throws if three no longer has it. */
 export function inject(
@@ -58,13 +72,13 @@ const PAINT_VERTEX_BODY = `vSlot = _slot;
 vAlbedo = figurePalette[int(_slot + 0.5)];`;
 const PAINT_FRAGMENT_HEAD = `varying vec3 vAlbedo;
 varying float vSlot;
-uniform vec3 figureGold[${GOLD.length}];
-uniform float figureGoldAt[${GOLD.length}];
-vec3 figureGoldRamp(float t) {
-  vec3 c = figureGold[0];
-  for (int i = 1; i < ${GOLD.length}; i++) {
-    float k = clamp((t - figureGoldAt[i - 1]) / max(figureGoldAt[i] - figureGoldAt[i - 1], 1e-4), 0.0, 1.0);
-    if (t > figureGoldAt[i - 1]) c = mix(figureGold[i - 1], figureGold[i], k);
+uniform vec3 figureMetal[${STOPS}];
+uniform float figureMetalAt[${STOPS}];
+vec3 figureMetalRamp(float t) {
+  vec3 c = figureMetal[0];
+  for (int i = 1; i < ${STOPS}; i++) {
+    float k = clamp((t - figureMetalAt[i - 1]) / max(figureMetalAt[i] - figureMetalAt[i - 1], 1e-4), 0.0, 1.0);
+    if (t > figureMetalAt[i - 1]) c = mix(figureMetal[i - 1], figureMetal[i], k);
   }
   return c;
 }`;
@@ -76,7 +90,7 @@ const PAINT_SHADING = `{
   float lit = dot(outgoingLight, vec3(0.299, 0.587, 0.114)) /
     max(dot(diffuseColor.rgb, vec3(0.299, 0.587, 0.114)), 1e-3);
   if (abs(vSlot - ${glsl(SLOT_GOLD)}) < 0.5) {
-    outgoingLight = figureGoldRamp(f * 0.5 + 0.5) * clamp(0.55 + 0.6 * lit, 0.0, 1.05);
+    outgoingLight = figureMetalRamp(f * 0.5 + 0.5) * clamp(0.55 + 0.6 * lit, 0.0, 1.05);
   } else if (abs(vSlot - ${glsl(SLOT_GEM)}) < 0.5) {
     outgoingLight = f > 0.9 ? vec3(1.0)
       : mix(diffuseColor.rgb * 0.22, diffuseColor.rgb * 1.7, clamp((f + 0.5) / 1.38, 0.0, 1.0));
@@ -130,14 +144,15 @@ function colours(preset: FigurePresetId, side: Side): Color[] {
   return FIGURE_PALETTES[preset][side].map((hex) => new Color(hex));
 }
 
-function createPaint(palette: Color[]): MeshToonMaterial {
+function createPaint(palette: Color[], metal: Metal): MeshToonMaterial {
   const material = new MeshToonMaterial({ gradientMap: toonRamp() });
-  const metal = GOLD.map(([, hex]) => new Color(hex));
-  const stops = GOLD.map(([at]) => at);
+  const ramp = METAL_RAMPS[metal];
+  const colors = ramp.map(([, hex]) => new Color(hex));
+  const stops = ramp.map(([at]) => at);
   material.onBeforeCompile = (shader) => {
     shader.uniforms.figurePalette = { value: palette };
-    shader.uniforms.figureGold = { value: metal };
-    shader.uniforms.figureGoldAt = { value: stops };
+    shader.uniforms.figureMetal = { value: colors };
+    shader.uniforms.figureMetalAt = { value: stops };
     let vertex = inject(shader.vertexShader, 'void main() {', PAINT_VERTEX_HEAD, 'before');
     vertex = inject(vertex, '#include <begin_vertex>', PAINT_VERTEX_BODY, 'after');
     let fragment = inject(shader.fragmentShader, 'void main() {', PAINT_FRAGMENT_HEAD, 'before');
@@ -184,7 +199,7 @@ export function paintMaterial(preset: FigurePresetId, side: Side): MeshToonMater
   const key = `${preset}:${side}`;
   let material = paints.get(key);
   if (!material) {
-    material = own(createPaint(colours(preset, side)));
+    material = own(createPaint(colours(preset, side), FIGURE_METALS[preset][side]));
     paints.set(key, material);
   }
   return material;

@@ -9,6 +9,14 @@ export const FIGURE_PALETTES = {
 
 export type FigurePresetId = keyof typeof FIGURE_PALETTES;
 
+/** A figure set's trim metal: which of material.ts's METAL_RAMPS its `trim` slot takes. */
+export type Metal = 'gold' | 'silver';
+
+/** Each figure preset's trim metal by side. */
+export const FIGURE_METALS: Record<FigurePresetId, Record<Side, Metal>> = {
+  'holy-order': { w: 'gold', b: 'gold' },
+};
+
 export function isFigurePreset(id: PresetId): id is FigurePresetId {
   return id in FIGURE_PALETTES;
 }

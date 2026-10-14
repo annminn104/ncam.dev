@@ -176,7 +176,8 @@ host's `MountConfig`; only `assetBase` is read. Not route-aware.
 
 - A `'figure'` preset (Holy Order so far) is drawn from GLBs built in Blender by scripts:
   `art/blender/kit.py` (shared helpers, the `SLOTS` order, preview palettes and materials) and
-  `art/blender/<preset>/*.py` (the piece builders, chained as `export.py`'s `PRESETS` says).
+  `art/blender/<preset>/*.py` (the piece builders, chained as `export.py`'s `PRESETS` says; an
+  entry `<preset>/<script>` borrows another set's script, which that set's GLBs never notice).
   `.blend` files are scratch: never committed. CI never runs Blender; the GLBs are committed.
 - `pnpm --filter @ncam/chess art:holy-order` runs `scripts/build-figures.mjs holy-order`, which
   runs `art/blender/export.py` headless (Blender 5.2: `$BLENDER`, else `blender` on PATH). That
@@ -192,6 +193,10 @@ host's `MountConfig`; only `assetBase` is read. Not route-aware.
   Blender's ray casts vary in the last bits, so a rebuild rewrites every file: rebuild and
   commit only when a script changed.
 
+- `export.py -- <preset> <outDir> [types] --sheet` renders each piece's review sheet instead
+  (`<type>-sheet.png`: white and black from the front and the back, a face close-up, game size),
+  through kit's preview materials; a chain may set `PREVIEW = {'w': (palette, stops), 'b': …}`,
+  else Holy Order's palettes in gold. Sheets go to `art/.out/sheets/<preset>/` by convention.
 - The format is ours and fixed: one mesh, one triangle primitive, `POSITION`, `NORMAL`, `_SLOT`
   (unsigned bytes, an index into `SLOTS`) and `_LINE` (normalized bytes, width / `LINE_MAX`).
   `figure-glb.ts` reads that and nothing else, without three. The tests read the shipped files
@@ -202,9 +207,9 @@ host's `MountConfig`; only `assetBase` is read. Not route-aware.
   test holds it to `kit.py`'s list. Append only. Colours live in `presets/<preset>/palette.ts`,
   never in Blender (kit.py's palettes only colour its previews).
 - `FigureRenderer` draws the base, then one geometry twice:
-  - `paintMaterial`: a MeshToonMaterial with a soft two-tone ramp and a rim, a gold ramp by view
-    angle on `trim`, faceted `gem`, unlit `glow`, and a light floor `L_MIN` so the white side
-    survives Blood Moon;
+  - `paintMaterial`: a MeshToonMaterial with a soft two-tone ramp and a rim, a metal ramp by view
+    angle on `trim` (`METAL_RAMPS`, gold or silver as `FIGURE_METALS` says per preset and side),
+    faceted `gem`, unlit `glow`, and a light floor `L_MIN` so the white side survives Blood Moon;
   - `outlineMaterial`: back faces pushed along `outlineNormal` (smooth across sharp edges) by
     `_line`; `_line = 0` parts draw no hull.
 
@@ -226,7 +231,8 @@ host's `MountConfig`; only `assetBase` is read. Not route-aware.
   1. its scripts in `art/blender/<preset>/` and a `PRESETS` entry in `export.py`, its face parts
      named as `FACE` there lists them (the pack locks them, and refuses a file without any);
   2. its budgets and ladder in `art/budgets.json`, then `node scripts/build-figures.mjs <preset>`;
-  3. its palette in `presets/<preset>/palette.ts` and a `FIGURE_PALETTES` entry;
+  3. its palette in `presets/<preset>/palette.ts`, a `FIGURE_PALETTES` entry and its
+     `FIGURE_METALS`;
   4. kind `'figure'` in `presets-meta.ts`;
   5. add its id to `PREVIEWS` in `scripts/capture-presets.mjs`, capture the previews with
      `capture:presets` (and its review set with `capture:presets -- --review <id>`), then set
