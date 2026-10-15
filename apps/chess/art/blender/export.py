@@ -28,6 +28,9 @@ PRESETS = {
         'n': (('patriarch', 'warden', 'paladin'), 'build_n'),
         'p': (('patriarch', 'abbess', 'acolyte'), 'build_p'),
     },
+    'dark-court': {
+        'k': (('holy-order/patriarch', 'court', 'overlord'), 'build_k'),
+    },
 }
 # Parts the low LOD leaves out (by name, after the prefix): the painted linework, which would
 # only shimmer at that size.
