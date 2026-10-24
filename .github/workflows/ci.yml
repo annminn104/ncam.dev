@@ -84,7 +84,11 @@ jobs:
 
   commitlint:
     name: Commitlint (PR)
-    if: github.event_name == 'pull_request'
+    # Not on Dependabot's PRs: Dependabot writes its own titles and commit
+    # messages (their prefixes are set in .github/dependabot.yml), which
+    # commitlint.config.js ignores anyway, so the job has nothing to check
+    # there and could only fail on something else (#138 failed at its install).
+    if: github.event_name == 'pull_request' && github.event.pull_request.user.login != 'dependabot[bot]'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
