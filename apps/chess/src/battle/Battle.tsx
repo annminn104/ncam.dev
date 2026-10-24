@@ -24,6 +24,7 @@ import { releaseSharedLut } from './scene/materials';
 import { PresetPiece } from './scene/presets';
 // Registers the 'figure' kind's renderer: the Blender-built piece sets.
 import './scene/presets/figure';
+import { FigureFacingContext } from './scene/presets/figure/facing';
 import { Scene } from './scene/Scene';
 import { useAiOpponent } from './useAiOpponent';
 import { useGame } from './useGame';
@@ -194,22 +195,25 @@ export default function Battle({ settings, assetBase, onExit, onRematch, capture
               <CameraRig ref={rig} initialSide={humanSide} onViewSide={setViewSide} />
             )}
             {capture && <ReadySignal />}
-            <Scene
-              game={game}
-              skin={arena.skin}
-              cursor={cursor}
-              renderPiece={(p) => {
-                const piece = (
-                  <PresetPiece preset={presets[p.color]} piece={p} jumping={jumping.has(p.id)} />
-                );
-                // The lineup shows every figure's face: black's turn round to the camera as well.
-                return capture?.lineup && p.color === 'b' ? (
-                  <group rotation-y={Math.PI}>{piece}</group>
-                ) : (
-                  piece
-                );
-              }}
-            />
+            {/* A game's figures face each other; the lineup keeps them on their owners' ends. */}
+            <FigureFacingContext.Provider value={capture?.lineup ? 'owner' : 'opponent'}>
+              <Scene
+                game={game}
+                skin={arena.skin}
+                cursor={cursor}
+                renderPiece={(p) => {
+                  const piece = (
+                    <PresetPiece preset={presets[p.color]} piece={p} jumping={jumping.has(p.id)} />
+                  );
+                  // The lineup shows every figure's face: black's turn round to the camera as well.
+                  return capture?.lineup && p.color === 'b' ? (
+                    <group rotation-y={Math.PI}>{piece}</group>
+                  ) : (
+                    piece
+                  );
+                }}
+              />
+            </FigureFacingContext.Provider>
           </Canvas>
           {!capture && (
             <>

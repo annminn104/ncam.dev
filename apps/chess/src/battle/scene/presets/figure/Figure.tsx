@@ -6,6 +6,7 @@ import { AssetBaseContext } from '../../../asset-base';
 import { QualityContext } from '../../../quality';
 import { PieceBase, Treasure } from '../../pieces';
 import { registerRenderer, type PresetPieceProps } from '../index';
+import { FigureFacingContext, figureTurn, sideYaw } from './facing';
 import { FigureBoundary } from './FigureBoundary';
 import { FigureLoader, isFigureLoaded } from './FigureLoader';
 import { outlineMaterial, paintMaterial } from './material';
@@ -44,6 +45,7 @@ function FigureMeshes({
 export function FigureRenderer({ preset, piece, jumping }: PresetPieceProps) {
   const quality = useContext(QualityContext);
   const base = useContext(AssetBaseContext);
+  const facing = useContext(FigureFacingContext);
   const treasure = <Treasure piece={piece} jumping={jumping} />;
   if (!isFigurePreset(preset)) return treasure;
   const paint = paintMaterial(preset, piece.color);
@@ -64,10 +66,14 @@ export function FigureRenderer({ preset, piece, jumping }: PresetPieceProps) {
   return (
     <FigureBoundary key={piece.type} fallback={treasure}>
       <Suspense fallback={treasure}>
-        {/* The one turn: black's figures face the other end. The treasure turns itself. */}
-        <group rotation-y={piece.color === 'b' ? Math.PI : 0}>
+        {/*
+          The side's turn gives black's base, with its glyph, to black's seat. The figure on it takes
+          a half turn more (figureTurn) and looks at the other end: the two armies face each other.
+          A capture's lineup leaves it on its owner's end. The treasure turns itself.
+        */}
+        <group rotation-y={sideYaw(piece.color)}>
           <PieceBase side={piece.color} glyph={TREASURES[piece.type].glyph} />
-          {figure}
+          <group rotation-y={figureTurn(facing)}>{figure}</group>
         </group>
       </Suspense>
     </FigureBoundary>

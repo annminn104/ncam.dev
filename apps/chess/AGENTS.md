@@ -224,6 +224,10 @@ host's `MountConfig`; only `assetBase` is read. Not route-aware.
   the high one is loaded, a battle that starts low fetches only the low files, and a low file
   that fails leaves the high figure.
 
+  Figures face the other end of the board while their bases face their owner, and the capture's
+  lineup turns every figure to the camera (`facing.ts`: `figureTurn` is the half turn inside the
+  side's group, `FigureFacingContext` is what Battle sets to `'owner'` for the lineup).
+
 - The shader hooks inject at three's chunk anchors (`inject()`), which throws if three renames
   one; `material.test.ts` runs them over three's own sources.
 - Captures (`src/capture.ts`, standalone page only):
