@@ -4,7 +4,6 @@
 import math
 
 import bmesh
-import bpy
 from mathutils import Matrix, Vector
 
 PFX = 'BM_'
@@ -666,6 +665,3 @@ def build_p():
     build_lines_bm()
     pose_head()
     scale_figure(SCALE)
-    # join_into's operator evaluated the scene before the pose and the scaling, and the sheet aims its face shot at
-    # the Face part's bounding box: evaluate it again, or the box stays where the face was at the king's scale
-    bpy.context.view_layer.update()

@@ -119,6 +119,9 @@ def make_sheet(ns, parts, preset, t, out_dir):
     about half the piece's top (measured as the export's size print does), so a pawn is framed as
     well as a king."""
     ns['scene_setup']()
+    # A piece's last edits move vertices without evaluating the scene, so the Face part's bounding
+    # box can lag behind them: evaluate it before the face shot is aimed at it.
+    bpy.context.view_layer.update()
     preview = ns.get('PREVIEW') or {'w': (ns['PAL_W'], ns['GOLD_STOPS']),
                                     'b': (ns['PAL_B'], ns['GOLD_STOPS'])}
     corners = [o.matrix_world @ Vector(c) for o in parts if part_name(o) == 'Face' for c in o.bound_box]
