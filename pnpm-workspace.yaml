@@ -15,17 +15,15 @@ allowBuilds:
   core-js-pure: true
   sharp: true
 # Security overrides: pin patched transitive versions (GitHub Dependabot / pnpm audit).
-# - h3: force the SSE-injection / request-smuggling / path-traversal-patched h3 v2
-#   (rc.16 -> rc.25). Safe as a global override because removing `vinxi` eliminated the
-#   only h3 v1 consumers, so the whole tree is on h3 v2 now. We do NOT bump
-#   @tanstack/start-server-core itself: its only patched release (1.167.30) is incompatible
-#   with the pinned 1.167.x Start family (the "#tanstack-start-plugin-adapters" import moved),
-#   which breaks the SSR build.
+# - h3: the host's nitro (3.0.260311-beta) is its only consumer. The TanStack Start
+#   family's start-server-core pulled it too, under the alias `h3-v2` with an override of
+#   its own, until 1.169.x dropped the dependency, so that override went with it. nitro asks
+#   for ^2.0.1-rc.16, a range that holds the SSE-injection / path-traversal / open-redirect
+#   rcs (fixed by rc.18) and the stable 2.0.x line, which this nitro beta predates. The pin
+#   keeps it on rc.25, which has no advisory and is the h3 the host already runs on; revisit
+#   it with a nitro update.
 overrides:
   h3: '2.0.1-rc.25'
-  # start-server-core pulls h3 under the alias `h3-v2: npm:h3@...`, so it needs its own
-  # override entry — a plain `h3` override does not reach an aliased dependency.
-  h3-v2: 'npm:h3@2.0.1-rc.25'
   # High-severity advisories in transitive deps (`pnpm audit --audit-level high` gates CI).
   # Each override is scoped to the affected major so unrelated majors keep their own range.
   'js-yaml@4': '4.3.2' # GHSA-5p4m-2wfm-xmqj, GHSA-2883-xcg3-v3hh (commitlint, tanstack start)

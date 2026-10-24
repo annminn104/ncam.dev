@@ -67,7 +67,7 @@ export const getBlogPosts = createServerFn({ method: 'GET' }).handler(
 
 /** One published post with its body, or null for an unknown slug. */
 export const getBlogPost = createServerFn({ method: 'GET' })
-  .inputValidator((slug: string) => slug)
+  .validator((slug: string) => slug)
   .handler(async ({ data: slug }): Promise<BlogPost | null> => {
     const { apiBase, mediaBase } = getCmsEnv();
     return fetchArticleBySlug(apiBase, slug, mediaBase);
