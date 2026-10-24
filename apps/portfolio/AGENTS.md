@@ -270,8 +270,10 @@ and desktop, by `.github/workflows/lighthouse.yml` (root `lighthouserc.cjs`,
   fallbacks (`@ncam/design-tokens`).
 - **Preloads never compete with the first screen** (`src/server.ts`,
   `lib/low-priority-preloads.ts`): TanStack Start's modulepreload links go to
-  `fetchpriority="low"`, and on a project page, whose first screen is the
-  remote's, they are dropped (the entry script still loads every chunk).
+  `fetchpriority="low"` (Start renders them so itself since 1.169.3, and a link
+  that names its own priority is left alone), and on a project page, whose first
+  screen is the remote's, they are dropped (the entry script still loads every
+  chunk).
 - **A page paints its first screen once, whole.** While the stage has server
   markup a project page's head holds `<link rel="expect" href="#stage-end"
 blocking="render">` (`lib/project-head.ts`), and the home page's waits for
