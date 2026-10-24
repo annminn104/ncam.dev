@@ -12,6 +12,7 @@ describe('parseCapture', () => {
     expect(parseCapture('?capture=cloud-peak')).toEqual({
       arena: 'cloud-peak',
       preset: 'treasures',
+      vs: 'treasures',
       lineup: false,
       view: null,
       quality: 'high',
@@ -24,6 +25,7 @@ describe('parseCapture', () => {
     ).toEqual({
       arena: 'lotus-lake',
       preset: 'holy-order',
+      vs: 'holy-order',
       lineup: true,
       view: 'orbit',
       quality: 'low',
@@ -31,10 +33,23 @@ describe('parseCapture', () => {
     expect(parseCapture('?capture=cloud-peak&preset=dark-court')?.preset).toBe('dark-court');
   });
 
+  it('lets black play another set, ready or not', () => {
+    expect(parseCapture('?capture=blood-moon&preset=holy-order&vs=dark-court')).toMatchObject({
+      preset: 'holy-order',
+      vs: 'dark-court',
+    });
+    expect(parseCapture('?capture=blood-moon&preset=holy-order&vs=mars')?.vs).toBe('holy-order');
+    expect(parseCapture('?capture=blood-moon&vs=dark-court')).toMatchObject({
+      preset: 'treasures',
+      vs: 'dark-court',
+    });
+  });
+
   it('ignores values it does not know', () => {
     expect(parseCapture('?capture=blood-moon&preset=mars&view=top&quality=ultra')).toEqual({
       arena: 'blood-moon',
       preset: 'treasures',
+      vs: 'treasures',
       lineup: false,
       view: null,
       quality: 'high',

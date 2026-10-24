@@ -223,9 +223,12 @@ host's `MountConfig`; only `assetBase` is read. Not route-aware.
 - The shader hooks inject at three's chunk anchors (`inject()`), which throws if three renames
   one; `material.test.ts` runs them over three's own sources.
 - Captures (`src/capture.ts`, standalone page only):
-  `?capture=<arena>&preset=<id>&lineup&view=<home|close|far|orbit>&quality=low`.
-  `capture:presets` writes the lobby previews (SwiftShader); `capture:presets -- --review`
-  writes the review set (`art/.out/review/<preset>/`: Metal at DPR 2, an orbit video, frame rates).
+  `?capture=<arena>&preset=<id>&vs=<id>&lineup&view=<home|close|far|orbit>&quality=low`, where
+  `vs` is black's set (default: `preset`, so both sides play one set).
+  `capture:presets` writes the lobby previews (SwiftShader);
+  `capture:presets -- --review <id> [--white <id>]` writes the review set
+  (`art/.out/review/<preset>/`: Metal at DPR 2, an orbit video, frame rates; the arena views put
+  `--white`'s set on white against it).
   `CHROMIUM_PATH` names a Chromium when Playwright's own build is not installed.
 - Adding a figure preset:
   1. its scripts in `art/blender/<preset>/` and a `PRESETS` entry in `export.py`, its face parts

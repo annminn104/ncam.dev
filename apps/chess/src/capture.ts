@@ -3,7 +3,7 @@ import { DEFAULT_PRESET, isPresetId, type PresetId } from './presets-meta';
 
 // Capture mode (scripts/capture-arenas.mjs, scripts/capture-presets.mjs), read from the standalone
 // page's query only: the federated mount never sees it. ?capture=<arena> alone is the arena's
-// lobby preview; preset, lineup, view and quality add the piece-set previews and the review.
+// lobby preview; preset, vs, lineup, view and quality add the piece-set previews and the review.
 
 export const REVIEW_VIEWS = ['home', 'close', 'far', 'orbit'] as const;
 export type ReviewView = (typeof REVIEW_VIEWS)[number];
@@ -16,8 +16,10 @@ export const LINEUP_FEN = '8/1pnrbqk1/8/8/8/8/1PNRBQK1/8 w - - 0 1';
 
 export interface CaptureOptions {
   arena: ArenaId;
-  /** Both sides play this set, ready for the lobby or not. */
+  /** White's set, and black's unless `vs` names another: ready for the lobby or not. */
   preset: PresetId;
+  /** Black's set. */
+  vs: PresetId;
   /** The lineup position, every figure facing the camera, instead of the opening. */
   lineup: boolean;
   /** A review camera; without one, the arena's preview view (or the lineup's). */
@@ -31,10 +33,13 @@ export function parseCapture(search: string): CaptureOptions | null {
   const arena = ARENAS.find((a) => a.id === query.get('capture'))?.id;
   if (!arena) return null;
   const preset = query.get('preset');
+  const vs = query.get('vs');
   const view = REVIEW_VIEWS.find((v) => v === query.get('view')) ?? null;
+  const white = isPresetId(preset) ? preset : DEFAULT_PRESET;
   return {
     arena,
-    preset: isPresetId(preset) ? preset : DEFAULT_PRESET,
+    preset: white,
+    vs: isPresetId(vs) ? vs : white,
     lineup: query.has('lineup'),
     view,
     quality: query.get('quality') === 'low' ? 'low' : 'high',

@@ -35,8 +35,8 @@ export default function App({ assetBase, capture }: AppProps) {
           mode: 'hotseat',
           arenaId: capture.arena,
           whitePreset: capture.preset,
-          blackPreset: capture.preset,
-          linkPresets: true,
+          blackPreset: capture.vs,
+          linkPresets: false,
         }
       : DEFAULT_SETTINGS,
   );

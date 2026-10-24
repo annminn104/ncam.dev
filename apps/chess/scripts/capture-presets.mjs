@@ -4,11 +4,14 @@
 //   node scripts/capture-presets.mjs            the lobby previews: each set's lineup on Cloud
 //                                               Peak, drawn by SwiftShader (the same on any
 //                                               machine), to public/presets/<id>-{640,320}.avif
-//   node scripts/capture-presets.mjs --review [preset]
+//   node scripts/capture-presets.mjs --review [preset] [--white <preset>]
 //                                               a figure set's review (default holy-order) on the
 //                                               real GPU (Metal) at DPR 2: lineups at both LODs,
 //                                               every arena from three views, phone views, an
-//                                               orbit video and frame rates, to art/.out/review/
+//                                               orbit video and frame rates, to art/.out/review/.
+//                                               The arena views pit --white's set as white against
+//                                               the review set as black; the lineups show the
+//                                               review set alone.
 // Anything else is a usage error (exit 2); a leading `--`, which pnpm passes on in
 // `pnpm capture:presets -- --review`, is ignored (capture-args.mjs).
 // CHROMIUM_PATH names a Chromium when Playwright's own build is not installed.
@@ -36,7 +39,7 @@ try {
   console.error(`presets: ${error.message}\n${USAGE}`);
   process.exit(2);
 }
-const { review, preset: reviewPreset } = args;
+const { review, preset: reviewPreset, white } = args;
 
 // Software WebGL can hang rather than fail: never let a capture run forever.
 const watchdog = setTimeout(() => {
@@ -67,7 +70,8 @@ async function freshPage(target, options) {
  */
 async function open(page, query) {
   const params = new URLSearchParams(query);
-  const expected = FIGURES.includes(params.get('preset') ?? '') ? 6 : 0;
+  const sets = new Set([params.get('preset'), params.get('vs') ?? params.get('preset')]);
+  const expected = [...sets].filter((id) => FIGURES.includes(id ?? '')).length * 6;
   const low = params.get('quality') === 'low';
   const loaded = new Set();
   const seen = (response) => {
@@ -113,6 +117,8 @@ try {
     const desktop = { viewport: { width: 1280, height: 800 }, deviceScaleFactor: 2 };
     const phone = { viewport: { width: 375, height: 812 }, deviceScaleFactor: 2 };
     const set = `preset=${reviewPreset}`;
+    // The arena views: --white's set as white against the review set as black.
+    const match = white === reviewPreset ? set : `preset=${white}&vs=${reviewPreset}`;
     const shot = async (page, query, name) => {
       await open(page, query);
       await page.screenshot({ path: `${out}${name}.png`, type: 'png' });
@@ -125,9 +131,9 @@ try {
     const rates = [];
     for (const arena of ARENAS) {
       for (const view of ['home', 'close', 'far']) {
-        await shot(page, `capture=${arena}&${set}&view=${view}`, `${arena}-${view}`);
+        await shot(page, `capture=${arena}&${match}&view=${view}`, `${arena}-${view}`);
       }
-      await open(page, `capture=${arena}&${set}&view=home`);
+      await open(page, `capture=${arena}&${match}&view=home`);
       const fps = await page.evaluate(
         () =>
           new Promise((done) => {
@@ -147,7 +153,7 @@ try {
 
     const small = await freshPage(browser, phone);
     for (const arena of ARENAS)
-      await shot(small, `capture=${arena}&${set}&view=home`, `${arena}-phone`);
+      await shot(small, `capture=${arena}&${match}&view=home`, `${arena}-phone`);
     await small.close();
 
     const context = await browser.newContext({
@@ -155,7 +161,7 @@ try {
       recordVideo: { dir: `${out}video/`, size: { width: 1280, height: 800 } },
     });
     const filming = await freshPage(context);
-    await open(filming, `capture=cloud-peak&${set}&view=orbit`);
+    await open(filming, `capture=cloud-peak&${match}&view=orbit`);
     await filming.waitForTimeout(20_000);
     const saved = filming.video().saveAs(`${out}orbit.webm`);
     await context.close();
