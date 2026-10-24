@@ -302,3 +302,101 @@ def talon(bm, pts, r, slot='trim', k=8, n=28):
         ring = 0.22 * (math.exp(-((t - 0.3) / 0.04) ** 2) + math.exp(-((t - 0.58) / 0.04) ** 2))
         return r * ((1 - t) ** 0.75 * 0.92 + 0.08 * (1 - t)) * (1 + ring)
     tube(bm, pts, r, slot, n=n, k=k, radius=rad)
+
+
+# ---------------------------------------------------------------- the chibi face, undead
+def undead_face(ob):
+    """Holy Order's chibi face made undead: its irises (slot 'eyes') turn to 'glow', unlit in the
+    side's glow colour, while the highlights ('white') and the lower iris ('iris2') stay lit."""
+    eyes, glow = SLOTS.index('eyes'), SLOTS.index('glow')
+    for d in ob.data.attributes['_SLOT'].data:
+        if int(round(d.value)) == eyes:
+            d.value = float(glow)
+    ob.data.update()
+
+
+# ---------------------------------------------------------------- horns and wings
+def horn(bm, M, r, rise, curl, turns=0.85, lean=0.25, splay=0.1, drift=0.03, tip=0.35, ridges=6,
+         rings=(0.04, 0.2), slot='second', ring_slot='trim', n=48, k=10):
+    """A curled ram's horn from M's origin (the root, a little inside the head), laid out in M's
+    frame (basis(): local x the side it grows toward, y back, z up). It rises `rise` along z,
+    bending back by lean × rise and out by splay × rise, then curls on back over the top and down
+    round an axis along x for `turns` turns, the curl's radius shrinking from `curl` to tip × curl
+    (slowly at first, then faster) while it drifts `drift` out along x, clear of the head. Its
+    section is round: radius r at the root narrowing to a point, swelling in `ridges` low ridges
+    across it like a ram's. A band in ring_slot circles it at each fraction of its length in
+    `rings` (0 = root, 1 = tip). n, k: the tube's segments along and round it. Returns its
+    centreline in world space, root first."""
+    pts = [Vector((splay * rise * t * t, lean * rise * t * t, rise * t)) for t in (q / 10 for q in range(10))]
+    top = Vector((splay * rise, lean * rise, rise))
+    beta = math.atan2(2 * lean, 1.0)          # the curl starts along the stem's last direction
+    span = turns * 2 * math.pi
+    for q in range(49):
+        f = q / 48
+        a = span * f
+        R = curl * (1 - (1 - tip) * f ** 1.5)
+        yy, zz = curl - R * math.cos(a), R * math.sin(a)
+        pts.append(top + Vector((drift * f, yy * math.cos(beta) + zz * math.sin(beta),
+                                 -yy * math.sin(beta) + zz * math.cos(beta))))
+    path = [M @ p for p in pts]
+    dense = catmull(path, 240)
+    step = sum((b - a).length for a, b in zip(dense, dense[1:])) / n
+    C = resample(path, step)                  # even steps, so the ridges and the taper follow its length
+    if (C[-1] - dense[-1]).length > 0.3 * step:
+        C.append(dense[-1])
+    else:
+        C[-1] = dense[-1]
+    N = len(C) - 1
+
+    def rad(t):
+        return r * max(0.06, (1 - t) ** 1.1) * (1 + 0.13 * math.sin(math.pi * ridges * t) ** 4)
+    tube(bm, C, r, slot, n=N, k=k, radius=rad)
+    for t in rings:
+        i = max(1, min(N - 1, round(t * N)))
+        rr = rad(i / N) + 0.0012
+        band = [(rr + 0.0026 * math.cos(2 * math.pi * q / 8), 0.0042 * math.sin(2 * math.pi * q / 8)) for q in range(8)]
+        lathe(bm, band, 20, ring_slot, xform=Matrix.Translation(C[i]) @ axis_to(C[i + 1] - C[i - 1]), wrap=True)
+    return C
+
+
+def bat_wing(membrane, bones, M, span, height, thick=0.006, r=0.0055, scallop=0.3, cup=0.012, nu=5, nv=5,
+             wrist=(0.45, 1.0), tips=((1.0, 0.5), (0.82, -0.12), (0.5, -0.46)), body=(0.08, -0.3),
+             slot='coat', rib='second'):
+    """One small bat wing in M's frame (local x out along the span, z up; the membrane lies in the xz
+    plane, its outer face toward -y). The arm rises from the root (M's origin) to the wrist, the
+    wing's peak, at wrist × (span, height); the fingers fan from the wrist to the tips (fractions of
+    span and height, outermost first); the membrane spans them and its body edge, from the last tip
+    to the body point and up to the root. Its trailing edge dips by scallop × the gap between two
+    tips, and it billows `cup` toward +y between the bones. The membrane is a slab `thick` thick in
+    `slot` on both faces, so it shades and outlines like a cape (into bmesh membrane); the bones,
+    in `rib` (into bmesh bones), are tubes of radius r tapering to the finger tips, with a knob and a
+    small claw at the wrist. nu, nv: the membrane's grid per gap and along a bone."""
+    X, Y = (M.to_3x3() @ Vector((1, 0, 0))).normalized(), (M.to_3x3() @ Vector((0, 1, 0))).normalized()
+    W = Vector((wrist[0] * span, 0.0, wrist[1] * height))
+    edge = [Vector((x * span, 0.0, z * height)) for x, z in tips] + [Vector((body[0] * span, 0.0, body[1] * height)),
+                                                                   Vector((0.0, 0.0, 0.0))]
+    ang = [math.atan2((p - W).z, (p - W).x) for p in edge]
+    dist = [(p - W).length for p in edge]
+    gaps = len(edge) - 1
+    r0 = 1.25 * r                               # the membrane starts under the wrist's knob
+
+    def P(i, j):
+        g = min(i // nu, gaps - 1)
+        f = i / nu - g
+        a = ang[g] + (ang[g + 1] - ang[g]) * f
+        re = dist[g] + (dist[g + 1] - dist[g]) * f
+        if g < gaps - 1:                        # the trailing edge between two tips; the body edge is straight
+            re -= scallop * (edge[g] - edge[g + 1]).length * math.sin(math.pi * f)
+        rho = r0 + (re - r0) * j / nv
+        return M @ Vector((W.x + rho * math.cos(a), cup * math.sin(math.pi * f) * j / nv, W.z + rho * math.sin(a)))
+    sheet(membrane, P, nu * gaps, nv, thick, slot, slot, slot, outward=lambda p: -Y)
+    mid = Vector((0.0, thick / 2, 0.0))         # the bones run through the slab's middle
+    tube(bones, [M @ (edge[-1] - Vector((0.01 * span, 0, 0)) + mid), M @ (W * 0.5 + mid), M @ (W + mid)], r, rib,
+         n=10, k=8, radius=lambda t: r * (1.12 - 0.12 * t))
+    for p in edge[:-2]:
+        tube(bones, [M @ (W + mid), M @ (W + (p - W) * 0.55 + mid), M @ (W + (p - W) * 1.05 + mid)], r, rib,
+             n=10, k=6, radius=lambda t: r * (0.82 - 0.62 * t))
+    c = M @ (W + mid)
+    ellipsoid(bones, c, (1.6 * r,) * 3, rib, segs=10, rings=6)
+    up = (M.to_3x3() @ Vector((0, 0, 1))).normalized()
+    talon(bones, [c, c + up * 0.012 + X * 0.003, c + up * 0.022 - X * 0.002], 0.8 * r, slot=rib, n=10, k=6)
