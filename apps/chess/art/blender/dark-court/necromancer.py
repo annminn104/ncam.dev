@@ -329,8 +329,8 @@ def build_face_nc():
 
 
 def fringe_pts(phi, tip):
-    """A strand of the fringe: the Patriarch's (bang_pts), rooted higher, under the hood's edge, so no bare brow shows
-    between the two."""
+    """The control points of the fringe's strand at azimuth phi whose tip hangs to elevation tip: the Patriarch's
+    (bang_pts), rooted higher, under the hood's edge, so no bare brow shows between the two."""
     return [surf(phi, HOOD_EDGE['front'] + 2, 0.003, RH)] + bang_pts(phi, tip)
 
 
