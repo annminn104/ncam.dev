@@ -171,27 +171,36 @@ def skull_el(phi, z, C=None, R=None):
     return 0.5 * (lo + hi)
 
 
-JAW_MOUTH = 0.84  # the jaw's top edge in front, at the Overlord's size: the line between the two rows of teeth
+JAW_MOUTH = 0.84  # where the jaw meets the skull in front, at the Overlord's size: the upper teeth stand above it
+
+
+def jaw_pt(phi, v, C=None, R=None, half=42.0):
+    """A point on the outer face of skull_jaw's jaw at azimuth phi (within ±half), from its top edge
+    (v = 0) to its bottom edge under the chin (v = 1). The top edge lies over the skull's line at
+    height JAW_MOUTH along the mouth and curves down from each corner of it; the jaw stands 6.5 mm
+    proud of the skull, so in front that edge runs about 4 mm under JAW_MOUTH. The lower teeth hang
+    from it."""
+    C = HC if C is None else Vector(C)
+    R = HR if R is None else R
+    k = R / HR
+    a = abs(phi)
+    el_b = -80 + 14 * (a / half) ** 2
+    el_m = skull_el(phi, C.z + (JAW_MOUTH - HC.z) * k, C, R)
+    t = min(1.0, max(0.0, (a - 21) / (half - 21)))
+    el_t = el_m + (el_b + 1.5 - el_m) * t * t * (3 - 2 * t)
+    return skull_pt(phi, el_t + (el_b - el_t) * v, (0.0065 - 0.002 * t) * k, C, R)
 
 
 def skull_jaw(bm, C=None, R=None, slot='skin', rim='lskin', nu=24, nv=8, half=42.0):
     """The skull's small lower jaw: a U-shaped shell standing proud of skull_mesh round the chin, flat
     along the mouth under the upper teeth, its edge curving down from each corner of the mouth to
     meet the jaw line under the cheek (a corner that rose would read as a grin). Its rim is a shade
-    darker than the bone."""
+    darker than the bone. Its outer face is jaw_pt's."""
     C = HC if C is None else Vector(C)
     R = HR if R is None else R
     k = R / HR
-
-    def P(i, j):
-        phi = -half + 2 * half * i / nu
-        a = abs(phi)
-        el_b = -80 + 14 * (a / half) ** 2
-        el_m = skull_el(phi, C.z + (JAW_MOUTH - HC.z) * k, C, R)
-        t = min(1.0, max(0.0, (a - 21) / (half - 21)))
-        el_t = el_m + (el_b + 1.5 - el_m) * t * t * (3 - 2 * t)
-        return skull_pt(phi, el_t + (el_b - el_t) * j / nv, (0.0065 - 0.002 * t) * k, C, R)
-    sheet(bm, P, nu, nv, 0.012 * k, slot, slot, rim, outward=lambda p: p - C)
+    sheet(bm, lambda i, j: jaw_pt(-half + 2 * half * i / nu, j / nv, C, R, half), nu, nv, 0.012 * k, slot, slot, rim,
+          outward=lambda p: p - C)
 
 
 def socket_poly(cx, cz, rx, rz, s, slant=0.32, n=36):
@@ -224,8 +233,9 @@ def nose_poly(cx, cz, w, h, n=28):
 def skull_face(bm, bvh, C=None, R=None, frame=None, teeth=6):
     """Paints the face on bvh (the bare skull_mesh and skull_jaw): deep ink sockets with a glowing
     pupil and a glint in each, an ink nasal cavity, and white teeth with ink between them, the upper
-    row on the skull above the jaw's rim, the lower on the jaw. Laid out for the Overlord's head and
-    moved to C and R, for a skull that faces -y as the figures do (frame FR)."""
+    row on the skull above the jaw's rim, the lower on the jaw under its top edge as built (jaw_pt).
+    Laid out for the Overlord's head and moved to C and R, for a skull that faces -y as the figures
+    do (frame FR)."""
     C = HC if C is None else Vector(C)
     R = HR if R is None else R
     k = R / HR
@@ -245,7 +255,8 @@ def skull_face(bm, bvh, C=None, R=None, frame=None, teeth=6):
     decal_poly(bm, bvh, m(nose_poly(0.0, 0.888, 0.036, 0.032)), frame, 0.0015 * k, 'ink', center=mc(0, 0.887), rings=3)
     hw = 0.054
     cw = 2 * (hw - 0.004) / teeth
-    for row, (b0, b1) in enumerate(((JAW_MOUTH + 0.0055, JAW_MOUTH + 0.0255), (JAW_MOUTH - 0.025, JAW_MOUTH - 0.0015))):
+    lip = jaw_pt(0.0, 0.0).z  # the jaw's top edge in front, flat along the mouth: the lower row stays under it
+    for row, (b0, b1) in enumerate(((JAW_MOUTH + 0.0055, JAW_MOUTH + 0.0255), (lip - 0.025, lip - 0.0015))):
         decal_poly(bm, bvh, m(round_rect(0, (b0 + b1) / 2, hw, (b1 - b0) / 2, 0.007)), frame, 0.0015 * k, 'ink',
                    center=mc(0, (b0 + b1) / 2), rings=3)
         for q in range(teeth):
