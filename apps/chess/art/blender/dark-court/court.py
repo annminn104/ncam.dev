@@ -6,6 +6,7 @@ import math
 import bmesh
 import bpy
 from mathutils import Matrix, Vector
+from mathutils.bvhtree import BVHTree
 
 DC_W = {'skin': '#efe7e6', 'hair': '#dcd6ea', 'eyes': '#a77bff', 'main': '#e9e4d6', 'second': '#b9c0cc',
         'trim': '#c4cad6', 'accent': '#5b3d8f', 'ink': '#241f2e', 'glow': '#b58cff', 'white': '#ffffff',
@@ -443,3 +444,118 @@ def tatter_cols(pts, n, gap=0.006):
     step closer than gap to an outline point is left out."""
     keys = [u for u, _ in pts]
     return sorted(keys + [k / n for k in range(n + 1) if min(abs(k / n - q) for q in keys) >= gap])
+
+
+# ---------------------------------------------------------------- small skulls
+def point_in_poly(x, z, poly):
+    """Whether the point (x, z) lies inside the closed outline poly [(x, z)] (even-odd rule)."""
+    inside = False
+    for (x0, z0), (x1, z1) in zip(poly, poly[-1:] + poly[:-1]):
+        if (z0 > z) != (z1 > z) and x < x0 + (x1 - x0) * (z - z0) / (z1 - z0):
+            inside = not inside
+    return inside
+
+
+def ray_to_poly(cx, cz, dx, dz, poly):
+    """Where the ray from (cx, cz) along (dx, dz) first meets the closed outline poly [(x, z)] around it; the ray's
+    own end (cx + dx, cz + dz) if it meets none."""
+    best = None
+    for (x0, z0), (x1, z1) in zip(poly, poly[1:] + poly[:1]):
+        ex, ez = x1 - x0, z1 - z0
+        den = dx * ez - dz * ex
+        if abs(den) < 1e-12:
+            continue
+        t = ((x0 - cx) * ez - (z0 - cz) * ex) / den
+        s = ((x0 - cx) * dz - (z0 - cz) * dx) / den
+        if t > 0 and 0 <= s <= 1 and (best is None or t < best):
+            best = t
+    t = 1.0 if best is None else best
+    return cx + dx * t, cz + dz * t
+
+
+def skull_open_sockets(bm, faces, bvh, frame, sockets):
+    """Cuts skull()'s sockets through its bone, in bm: of faces (the skull's), those in front whose middle falls inside
+    a socket's outline go, then each vertex left on a hole's edge moves along the line from its socket's centre onto
+    the outline, back on the bone (bvh, the uncut skull), so each hole takes the socket's shape. frame: (centre, x,
+    up, the way into the face) as decal_poly reads it; sockets: ((cx, cz), outline) pairs in that frame's x and up."""
+    c, U, V, D = frame
+
+    def local(p):
+        """p in frame: its x, its up and how far behind the centre it lies."""
+        q = p - c
+        return q.dot(U), q.dot(V), q.dot(D)
+    cut = []
+    for f in faces:
+        x, z, y = local(f.calc_center_median())
+        if y < 0 and any(point_in_poly(x, z, poly) for _, poly in sockets):
+            cut.append(f)
+    verts = {v for f in faces for v in f.verts}
+    bmesh.ops.delete(bm, geom=cut, context='FACES')
+    for v in verts:
+        if not v.is_valid or not any(len(e.link_faces) == 1 for e in v.link_edges):
+            continue
+        x, z, _ = local(v.co)
+        (cx, cz), poly = min(sockets, key=lambda sk: (x - sk[0][0]) ** 2 + (z - sk[0][1]) ** 2)
+        tx, tz = ray_to_poly(cx, cz, x - cx, z - cz, poly)
+        hit, _, _, _ = bvh.ray_cast(c + U * tx + V * tz - D, D)
+        if hit is not None:
+            v.co = hit
+
+
+def skull(bm, c, r, slot='skin', face=None, pupils=None, hollow=False, rot=None, segs=32, rings=24, teeth=4):
+    """A small round skull of radius r centred at c (a lantern, a pendant): the Overlord's skull (skull_deform) at that
+    size without its lower jaw, built into bm in slot and turned by rot (a 3x3 matrix; None faces -y, as the figures
+    do). face: a bmesh for a part at width 0 (decals draw no outline), into which go its decals, laid out as
+    skull_face lays out the Overlord's: ink sockets (in each a pupil in slot pupils and a white glint, when pupils
+    names a slot), an ink nasal cavity and one row of `teeth` white teeth with ink between them; without face the
+    skull is bare bone, for the caller's own decals on the BVH returned. hollow: the sockets are cut through the bone
+    instead of painted (skull_open_sockets), each ringed in ink, for a glow core inside to show through them. segs,
+    rings: the uv sphere's resolution; a hollow skull wants about 40 x 30, so that each hole has points enough round
+    it. Returns the BVH of the bone before any cut, for more decals."""
+    c = Vector(c)
+    k = r / HR
+    R3 = rot if rot is not None else Matrix.Identity(3)
+    frame = (c, R3 @ Vector((1, 0, 0)), R3 @ Vector((0, 0, 1)), R3 @ Vector((0, 1, 0)))
+    verts = bmesh.ops.create_uvsphere(bm, u_segments=segs, v_segments=rings, radius=r)['verts']
+    for v in verts:
+        v.co = c + R3 @ (skull_deform(c + v.co, c, r) - c)
+    faces = list({f for v in verts for f in v.link_faces})
+    set_slot(bm, faces, slot)
+    index = {v: q for q, v in enumerate(verts)}
+    bvh = BVHTree.FromPolygons([v.co.copy() for v in verts], [[index[v] for v in f.verts] for f in faces])
+
+    def m(x, z):
+        """A point (x, z) of the Overlord's head, as skull_face names it, in this skull's frame."""
+        return x * k, (z - HC.z) * k
+    sockets = []
+    for s in (-1, 1):
+        cx, cz = m(s * 0.082, 0.95)
+        sockets.append(((cx, cz), socket_poly(cx, cz, 0.052 * k, 0.05 * k, s)))
+    if hollow:
+        skull_open_sockets(bm, faces, bvh, frame, sockets)
+    if face is None:
+        return bvh
+    off = 0.0006 + 0.0012 * k
+    for _, poly in sockets if hollow else []:        # a dark rim round each open socket, over its cut edge
+        decal_band(face, bvh, poly + poly[:2], [0.006 * k] * (len(poly) + 2), frame, off, 'ink', n=4 * len(poly))
+    for s, (_, poly) in zip((-1, 1), [] if hollow else sockets):
+        decal_poly(face, bvh, poly, frame, off, 'ink', center=m(s * 0.082, 0.948), rings=3)
+        if pupils:
+            px, pz = m(s * 0.086, 0.94)
+            decal_poly(face, bvh, ellipse(px, pz, 0.0175 * k, 0.0205 * k, 20), frame, off + 0.0005, pupils, rings=2)
+            gx, gz = m(s * 0.082 - 0.006, 0.948)
+            decal_poly(face, bvh, ellipse(gx, gz, 0.0055 * k, 0.0062 * k, 12), frame, off + 0.001, 'white', rings=1)
+    nx, nz = m(0.0, 0.888)
+    decal_poly(face, bvh, nose_poly(nx, nz, 0.036 * k, 0.032 * k), frame, off, 'ink', center=m(0.0, 0.887), rings=3)
+    hw, b0, b1 = 0.054, JAW_MOUTH + 0.0055, JAW_MOUTH + 0.0255      # skull_face's upper row
+    cw = 2 * (hw - 0.004) / teeth
+    decal_poly(face, bvh, [m(x, z) for x, z in round_rect(0, (b0 + b1) / 2, hw, (b1 - b0) / 2, 0.007)], frame, off,
+               'ink', center=m(0, (b0 + b1) / 2), rings=3)
+    for q in range(teeth):
+        x0 = -hw + 0.004 + cw * q
+        z0 = b0 + 0.0016 + 0.003 * abs(q - (teeth - 1) / 2) / max(0.5, (teeth - 1) / 2)    # the outer teeth shorter
+        z1 = b1 - 0.0018
+        tooth = round_rect(x0 + cw / 2, (z0 + z1) / 2, cw / 2 - 0.0016, (z1 - z0) / 2, 0.003, step=0.003, corner=2)
+        decal_poly(face, bvh, [m(x, z) for x, z in tooth], frame, off + 0.0006, 'white',
+                   center=m(x0 + cw / 2, (z0 + z1) / 2), rings=2)
+    return bvh

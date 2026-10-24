@@ -31,6 +31,7 @@ PRESETS = {
     'dark-court': {
         'k': (('holy-order/patriarch', 'court', 'overlord'), 'build_k'),
         'q': (('holy-order/patriarch', 'holy-order/abbess', 'court', 'queen'), 'build_q'),
+        'b': (('holy-order/patriarch', 'holy-order/bishop', 'court', 'necromancer'), 'build_b'),
         'r': (('holy-order/patriarch', 'holy-order/warden', 'court', 'deathknight'), 'build_r'),
     },
 }
