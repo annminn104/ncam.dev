@@ -70,7 +70,7 @@ export const PRESETS: readonly PresetMeta[] = [
   {
     id: 'dark-court',
     name: 'Dark Overlord Court',
-    kind: 'chibi',
+    kind: 'figure',
     ready: false,
     preview: false,
     tagline: 'An undead sovereign, his fallen queen and the battle maids of the tomb.',

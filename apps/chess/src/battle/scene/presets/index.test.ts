@@ -42,13 +42,9 @@ describe('PresetPiece', () => {
     const el = PresetPiece({ preset: 'holy-order', piece, jumping: false });
     expect(el.type).toBe(Figure);
     expect(el.props).toEqual({ preset: 'holy-order', piece, jumping: false });
-    for (const preset of [
-      'treasures',
-      'dark-court',
-      'gentlemen',
-      'bunny-mages',
-      'constellation',
-    ] as const) {
+    // One renderer per kind: every figure preset gets it.
+    expect(PresetPiece({ preset: 'dark-court', piece, jumping: false }).type).toBe(Figure);
+    for (const preset of ['treasures', 'gentlemen', 'bunny-mages', 'constellation'] as const) {
       expect(PresetPiece({ preset, piece, jumping: false }).type).toBe(Treasure);
     }
   });

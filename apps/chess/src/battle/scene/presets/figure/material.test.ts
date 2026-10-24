@@ -64,6 +64,11 @@ describe('figure materials', () => {
     expect(METAL_RAMPS.silver).toHaveLength(METAL_RAMPS.gold.length);
   });
 
+  it('trim the Dark Overlord Court in silver on white and gold on black', () => {
+    expect(metal(compile(paintMaterial('dark-court', 'w')))).toEqual(hexes('silver'));
+    expect(metal(compile(paintMaterial('dark-court', 'b')))).toEqual(hexes('gold'));
+  });
+
   it("keep kit.py's metal ramps, which colour the Blender previews", () => {
     const kit = readFileSync(new URL('../../../../../art/blender/kit.py', import.meta.url), 'utf8');
     for (const [m, name] of [

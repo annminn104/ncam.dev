@@ -40,8 +40,9 @@ describe('presets-meta', () => {
     expect(presetMeta('constellation').pieces.n).toBe('Pegasus');
   });
 
-  it('draws Holy Order with the Blender figures', () => {
+  it('draws Holy Order and the Dark Overlord Court with the Blender figures', () => {
     expect(presetMeta('holy-order').kind).toBe('figure');
+    expect(presetMeta('dark-court').kind).toBe('figure');
   });
 
   it('keeps the treasures names identical to the game', () => {

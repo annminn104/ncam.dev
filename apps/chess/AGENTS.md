@@ -174,9 +174,9 @@ host's `MountConfig`; only `assetBase` is read. Not route-aware.
 
 ## Figures (GLB presets) (`art/`, `battle/scene/presets/figure/`)
 
-- A `'figure'` preset (Holy Order so far) is drawn from GLBs built in Blender by scripts:
-  `art/blender/kit.py` (shared helpers, the `SLOTS` order, preview palettes and materials) and
-  `art/blender/<preset>/*.py` (the piece builders, chained as `export.py`'s `PRESETS` says; an
+- A `'figure'` preset (Holy Order, the Dark Overlord Court) is drawn from GLBs built in Blender by
+  scripts: `art/blender/kit.py` (shared helpers, the `SLOTS` order, preview palettes and materials)
+  and `art/blender/<preset>/*.py` (the piece builders, chained as `export.py`'s `PRESETS` says; an
   entry `<preset>/<script>` borrows another set's script, which that set's GLBs never notice).
   `.blend` files are scratch: never committed. CI never runs Blender; the GLBs are committed.
 - `pnpm --filter @ncam/chess art:holy-order` runs `scripts/build-figures.mjs holy-order`, which
@@ -251,4 +251,5 @@ host's `MountConfig`; only `assetBase` is read. Not route-aware.
     pnpm vitest run apps/chess
     pnpm --filter @ncam/chess typecheck
     pnpm --filter @ncam/chess art:holy-order     # Blender 5.2: rebuild the Holy Order GLBs
+    pnpm --filter @ncam/chess art:dark-court     # Blender 5.2: rebuild the Dark Court GLBs
     pnpm --filter @ncam/chess capture:presets    # lobby previews (dev server running)

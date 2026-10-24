@@ -18,7 +18,7 @@ describe('figure palettes', () => {
 
   it('know no preset that is not a figure preset', () => {
     expect(isFigurePreset('treasures')).toBe(false);
-    expect(isFigurePreset('dark-court')).toBe(false);
+    expect(isFigurePreset('gentlemen')).toBe(false);
   });
 
   it('keep the sides apart where it matters: robes and gems', () => {
@@ -26,5 +26,12 @@ describe('figure palettes', () => {
     expect(w[SLOTS.indexOf('main')]).toBe('#f4f6fb');
     expect(b[SLOTS.indexOf('main')]).toBe('#1c1d24');
     expect(w[SLOTS.indexOf('gem')]).not.toBe(b[SLOTS.indexOf('gem')]);
+  });
+
+  it("dress the Dark Overlord Court's sides in bone and in black", () => {
+    const { w, b } = FIGURE_PALETTES['dark-court'];
+    expect(w[SLOTS.indexOf('main')]).toBe('#e9e4d6');
+    expect(b[SLOTS.indexOf('main')]).toBe('#121016');
+    expect(w[SLOTS.indexOf('glow')]).not.toBe(b[SLOTS.indexOf('glow')]);
   });
 });
