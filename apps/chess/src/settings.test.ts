@@ -41,8 +41,10 @@ describe('parseSettings', () => {
     expect(
       parseSettings({ whitePreset: 'treasures', blackPreset: 'nope', linkPresets: false }),
     ).toMatchObject({ whitePreset: 'treasures', blackPreset: 'treasures', linkPresets: false });
-    // Holy Order is ready, so it is kept. Constellation is not yet, so it is repaired.
+    // Holy Order and the Dark Overlord Court are ready, so they are kept. Constellation is not
+    // yet, so it is repaired.
     expect(parseSettings({ whitePreset: 'holy-order' }).whitePreset).toBe('holy-order');
+    expect(parseSettings({ blackPreset: 'dark-court' }).blackPreset).toBe('dark-court');
     expect(parseSettings({ whitePreset: 'constellation' }).whitePreset).toBe('treasures');
   });
 });

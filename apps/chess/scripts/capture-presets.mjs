@@ -25,7 +25,7 @@ import { USAGE, parseCaptureArgs } from './capture-args.mjs';
 const BASE = process.env.CHESS_URL ?? `http://localhost:${process.env.CHESS_PORT ?? 9008}/`;
 const local = (rel) => fileURLToPath(new URL(`../${rel}`, import.meta.url));
 // The sets with lobby previews (presets-meta.ts, `preview: true`).
-const PREVIEWS = ['treasures', 'holy-order'];
+const PREVIEWS = ['treasures', 'holy-order', 'dark-court'];
 const ARENAS = ['cloud-peak', 'blood-moon', 'lotus-lake'];
 // Figure presets: their pages fetch six figure files each.
 const FIGURES = Object.keys(JSON.parse(await readFile(local('art/budgets.json'), 'utf8')));

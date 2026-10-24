@@ -111,9 +111,11 @@ describe('presets-meta', () => {
     );
   });
 
-  it('offers Holy Order next to the treasures, with lobby previews', () => {
-    expect(presetMeta('holy-order')).toMatchObject({ kind: 'figure', ready: true, preview: true });
-    expect(readyPresets().map((p) => p.id)).toEqual(['treasures', 'holy-order']);
+  it('offers Holy Order and the Dark Overlord Court next to the treasures, with lobby previews', () => {
+    for (const id of ['holy-order', 'dark-court'] as const) {
+      expect(presetMeta(id), id).toMatchObject({ kind: 'figure', ready: true, preview: true });
+    }
+    expect(readyPresets().map((p) => p.id)).toEqual(['treasures', 'holy-order', 'dark-court']);
   });
 
   it('ships both preview sizes for every preset that claims them', () => {
@@ -125,13 +127,16 @@ describe('presets-meta', () => {
     }
   });
 
-  it('answers Holy Order with Holy Order vs the AI until the Dark Overlord Court is ready', () => {
+  it('answers Holy Order with the Dark Overlord Court vs the AI, and the other way round', () => {
     const choice = {
       mode: 'ai',
       whitePreset: 'holy-order',
       blackPreset: 'holy-order',
       linkPresets: true,
     } as const;
-    expect(resolvePresets(choice, 'w')).toEqual({ w: 'holy-order', b: 'holy-order' });
+    expect(resolvePresets(choice, 'w')).toEqual({ w: 'holy-order', b: 'dark-court' });
+    expect(resolvePresets(choice, 'b')).toEqual({ w: 'dark-court', b: 'holy-order' });
+    const court = { ...choice, whitePreset: 'dark-court', blackPreset: 'dark-court' } as const;
+    expect(resolvePresets(court, 'w')).toEqual({ w: 'dark-court', b: 'holy-order' });
   });
 });

@@ -26,7 +26,7 @@ describe('renderHeroSSR', () => {
     const { html } = await renderHeroSSR({ assetBase: 'https://chess.example.dev/' });
     // React also hoists a preload <link> carrying the same attribute, so look at the <img> tags.
     const imgs = html.match(/<img\b[^>]*>/g) ?? [];
-    expect(imgs).toHaveLength(5); // three arenas, two piece sets
+    expect(imgs).toHaveLength(6); // three arenas, three piece sets
     expect(imgs[0]).toMatch(/fetchpriority="high"/i);
     expect(imgs[0]).toContain('loading="eager"');
     for (const tag of imgs.slice(1)) {
@@ -39,12 +39,13 @@ describe('renderHeroSSR', () => {
     const { html } = await renderHeroSSR({ assetBase: 'https://chess.example.dev/' });
     expect(html).not.toContain('data-failed');
   });
-  it('renders the piece-set picker with both ready sets and their previews', async () => {
+  it('renders the piece-set picker with every ready set and its preview', async () => {
     const { html } = await renderHeroSSR({ assetBase: 'https://chess.example.dev/' });
     expect(html).toContain('Piece set');
     expect(html).toContain('Cultivation Treasures');
     expect(html).toContain('Holy Order');
     expect(html).toContain('https://chess.example.dev/presets/holy-order-640.avif');
+    expect(html).toContain('https://chess.example.dev/presets/dark-court-640.avif');
     expect(html).toContain('https://chess.example.dev/presets/treasures-640.avif');
   });
   it('falls back to root-relative asset URLs when the module has no origin', async () => {

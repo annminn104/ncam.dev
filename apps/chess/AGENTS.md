@@ -1,8 +1,8 @@
 # AGENTS.md — apps/chess
 
 Cultivation Chess — international (FIDE) chess where the pieces are floating
-cultivation treasures or, side by side, a Blender-built piece set (Holy Order),
-played in one of three 3D arenas. Hot-seat or vs Stockfish. React 19 + Vite 8 + React Three
+cultivation treasures or, side by side, Blender-built piece sets (Holy Order, the Dark Overlord
+Court), played in one of three 3D arenas. Hot-seat or vs Stockfish. React 19 + Vite 8 + React Three
 Fiber 9 + drei 10 + chess.js, packaged as a **self-contained** React Module Federation remote
 (same model as `apps/viktor`). Port **9008**.
 
@@ -192,6 +192,10 @@ host's `MountConfig`; only `assetBase` is read. Not route-aware.
   The low LOD also drops the painted linework (parts named `*Lines*` and `GoldScrolls`).
   Blender's ray casts vary in the last bits, so a rebuild rewrites every file: rebuild and
   commit only when a script changed.
+
+  The dark court's pawn caps (14000/4600) and knight low cap (7800) exceed Holy Order's
+  (13000/4000, 7500): the owner raised them on 2026-10-24, after the pawn stopped at its
+  error ceiling.
 
 - `export.py -- <preset> <outDir> [types] --sheet` renders each piece's review sheet instead
   (`<type>-sheet.png`: white and black from the front and the back, a face close-up, game size),
