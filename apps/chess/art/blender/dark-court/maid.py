@@ -47,8 +47,10 @@ APRON_BOW = {'knot': Vector((0.0, 0.182, 0.456)), 'len': 0.075, 'width': 0.04}
 BUN = {'phi': 180.0, 'el': 0.0, 'turns': 2.0, 'r0': 0.056, 'r1': 0.01, 'out0': 0.014, 'out1': 0.066, 'thick': 0.024}
 BUN_LOCKS = ((((163, -42), (168, -26), (172, -12)), 0.03), (((118, -24), (140, -14), (160, -6)), 0.028))
 # broad locks lying over the crown behind the headband, combed from the parting down the sides and back toward the
-# bun: (azimuth, elevation) along each on her left side, and its width
+# bun: (azimuth, elevation) along each on her left side, and its width; all of them this thick (half, at the root) and
+# in this many rings; their outlines' half width (painted, in LinesHair)
 CROWN_LOCKS = ((((6, 84), (48, 70), (88, 50), (116, 30)), 0.046), (((10, 88), (128, 70), (154, 48), (166, 26)), 0.042))
+CROWN_LOCK_THICK, CROWN_LOCK_RINGS, CROWN_LOCK_LINE = 0.008, 10, 0.0026
 # the headband: the elevation (degrees) where it crosses the middle in front, its half width (as a share of the
 # radius); the frill standing on it: from where to where along the band (-1 her right ear, 1 her left), its height,
 # pleats, their depth, how far its points stand out; the bow on the band past the frill's end: where along the band,
@@ -409,6 +411,12 @@ def cap_off(phi, el):
     return 0.004 + 0.016 * max(0.0, (88 - el) / (88 - hem(phi))) ** 2.2
 
 
+def crown_lock_pts(s, path):
+    """A crown lock's control points, 4 mm over the cap: path, CROWN_LOCKS's (azimuth, elevation) pairs on her left,
+    on the side s (1 her left, -1 her right)."""
+    return [surf(s * phi, el, cap_off(s * phi, el) + 0.004, RH) for phi, el in path]
+
+
 def bun_pt(t, lift=0.0):
     """A point on the bun's coil at t along it (0 where it starts, outermost and lowest; 1 at its middle, highest),
     lift out from its axis (the coil's centre line at lift 0)."""
@@ -423,9 +431,9 @@ def bun_pt(t, lift=0.0):
 
 def build_hair_bm():
     """Her hair, put up for work: the Patriarch's cap closed over the crown with broad locks lying over it from a
-    parting (CROWN_LOCKS), his fringe (BANGS), the two locks past the cheeks that the Acolyte wears, and at the back of
-    the head a bun, a coil of hair wound in on itself, with locks gathered up into it from behind the ears and the
-    nape."""
+    parting (CROWN_LOCKS; outlined by painted lines, not a hull), his fringe (BANGS), the two locks past the cheeks
+    that the Acolyte wears, and at the back of the head a bun, a coil of hair wound in on itself, with locks gathered
+    up into it from behind the ears and the nape."""
     cols, rows, top = 56, 9, 88.0
     bm = new_bm()
     grid = []
@@ -448,9 +456,12 @@ def build_hair_bm():
     bm = new_bm()
     for s in (-1, 1):
         for path, w in CROWN_LOCKS:
-            strand(bm, [surf(s * phi, el, cap_off(s * phi, el) + 0.004, RH) for phi, el in path], w, 0.008, 'hair', HC,
-                   n=10, k=6, prof=bang_prof)
-    out(PFX + 'HairCrown', bm, MID, sharp=70)
+            strand(bm, crown_lock_pts(s, path), w, CROWN_LOCK_THICK, 'hair', HC, n=CROWN_LOCK_RINGS, k=6,
+                   prof=bang_prof)
+    # No hull: at the low LOD's error ceiling the pack folds these thin plates inside out, and a hull would draw every
+    # back face the folds bare in ink, blotches all over the crown. Their outlines are painted instead (LinesHair),
+    # and the low LOD drops them with the rest of the linework.
+    out(PFX + 'HairCrown', bm, 0, sharp=70)
     bm = new_bm()
     for phi, tip, w in BANGS:
         strand(bm, bang_pts(phi, tip), w, 0.009, 'hair', HC, n=12, k=8, prof=bang_prof)
@@ -567,7 +578,8 @@ def build_clip_bm():
 def build_lines_bm():
     """The painted linework: the dress's hem band engraved; folds on the dress (round the back and sides), the
     sleeves and the apron's gathers at the waist; the fringe's strands, a parting and strands combed from it over the
-    cap toward the bun, strands along the bun's coil; straws up the broom's two faces and a stitch across them."""
+    cap toward the bun, strands along the bun's coil, the crown locks' outlines; straws up the broom's two faces and a
+    stitch across them."""
     K = 1.5
     rb = bvh_of(O(PFX + 'Robe'))
     bm = new_bm()
@@ -634,6 +646,19 @@ def build_lines_bm():
             a = math.radians(ang)
             ctrl.append(c + (radial * math.cos(a) + A * math.sin(a)) * BUN['thick'] * (1 - 0.45 * t) * 1.1)
         line3d(bm, bun, ctrl, 0.0015, 'lhair', n=48)
+    # the crown locks' outlines, in ink as a hull draws them (build_hair_bm says why they have none): down each lock's
+    # two edges to its tip, on its top surface at 0.8 of its half width as strand() lays it, cast from outside onto
+    # what shows there, the lock or the cap where the lock dips under it
+    hb = bvh_of(O(PFX + 'HairCrown'), O(PFX + 'HairCap'))
+    for s in (-1, 1):
+        for path, w in CROWN_LOCKS:
+            F = strand_frames(crown_lock_pts(s, path), HC, CROWN_LOCK_RINGS)
+            for so in (-0.8, 0.8):
+                edge = [c + nr * (CROWN_LOCK_THICK * bang_prof(i / CROWN_LOCK_RINGS) * math.sqrt(1 - so * so)) +
+                        sd * (w * bang_prof(i / CROWN_LOCK_RINGS) * so) for i, (c, t, sd, nr) in enumerate(F)]
+                hits = [on_hair(hb, (p - HC).normalized(), 0.0) for p in catmull(edge, 16)]
+                strip(bm, [p for p, _ in hits], [n for _, n in hits], widths(len(hits), CROWN_LOCK_LINE, 'end'), 'ink',
+                      0.0012)
     out(PFX + 'LinesHair', bm, 0, sharp=80, recalc=False)
     # straws drawn up the broom's two flat faces, and a stitch across them
     sb = bvh_of(O(PFX + 'Straw'))
