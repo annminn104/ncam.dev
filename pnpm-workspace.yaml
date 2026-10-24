@@ -33,7 +33,7 @@ overrides:
   'fast-uri@3': '3.1.7' # GHSA-v2hh-gcrm-f6hx … GHSA-jqff-g426-hqxp (commitlint)
   'undici@7': '7.29.1' # GHSA-4cwx-7wf7-3272 (@module-federation/dts-plugin)
   adm-zip: '0.6.1' # GHSA-xcpc-8h2w-3j85, GHSA-vwc7-r8mq-g2x9 (@module-federation/dts-plugin)
-  'sharp@0.35': '0.35.4' # GHSA-rgj7-g3m4-5g8c (@strapi/upload)
+  'sharp@0.35': '0.35.5' # GHSA-rgj7-g3m4-5g8c, GHSA-wq5f-xc86-pv6w (@strapi/upload, toonhub, tanstack start's webpack minimizer)
   'nodemailer@9': '9.1.1' # GHSA-2x7j-588g-ccc2, GHSA-8m3c-c648-2xjj (@strapi/provider-email-sendmail)
   'qs@6': '6.16.0' # GHSA-4mjr-xmp4-gh2g, GHSA-x5fp-wj9c-mxmx (@strapi/* pin 6.15.3; koa via co-body / formidable)
   # Strapi pins vite 5.4.21 for its admin build, and the 5.x line no longer receives these
