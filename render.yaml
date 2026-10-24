@@ -4,14 +4,17 @@
 # long-lived process, a real database and somewhere durable for uploads. This
 # file lives at the repo root because that is where Render looks for a Blueprint.
 #
-# Free-plan caveats, all three of which bite a CMS (see apps/strapi/AGENTS.md):
+# Free-plan caveats that bite a CMS (see apps/strapi/AGENTS.md):
 #   - a free web service spins down after 15 minutes idle and takes ~1 minute to
 #     come back, which is far past the host's 2.5 s / 5 s CMS timeouts;
 #   - free web services cannot attach a persistent disk, so uploaded media is
-#     lost on every deploy, restart and spin-down;
-#   - a free Postgres expires 30 days after creation.
-# Moving `plan` to `starter` and adding the `disk` block below fixes the first
-# two; upgrading the database fixes the third.
+#     lost on every deploy, restart and spin-down.
+# Moving `plan` to `starter` and adding the `disk` block below fixes both.
+#
+# The database is a free Supabase project, not a Render Postgres: a free Render
+# Postgres expires 30 days after creation (this one did, on 2026-10-20), while a
+# free Supabase project only pauses after a week without activity, which the
+# keep-awake workflow's health check (a database query) prevents.
 
 services:
   - type: web
@@ -41,12 +44,20 @@ services:
         value: production
       - key: DATABASE_CLIENT
         value: postgres
-      # Private-network connection string. Free web services cannot *receive*
-      # private traffic but can still *send* it to a datastore in the region.
+      # Supabase's Session pooler connection string (Connect -> Session pooler),
+      # set in the Render Dashboard; `sync: false` keeps it out of this file and
+      # keeps a sync from overwriting it. The pooler is reachable over IPv4;
+      # Supabase's direct connection is IPv6-only on the free plan, which Render
+      # cannot reach. Leave `sslmode` out of the string: the two keys below set SSL.
       - key: DATABASE_URL
-        fromDatabase:
-          name: ncam-cms-db
-          property: connectionString
+        sync: false
+      - key: DATABASE_SSL
+        value: 'true'
+      # Supabase's root certificate (Database Settings -> SSL -> Download
+      # certificate), pasted as PEM text, so the connection is verified as well as
+      # encrypted (config/database.ts keeps rejectUnauthorized on).
+      - key: DATABASE_SSL_CA
+        sync: false
       # Generated once on the first sync and kept afterwards. Do not rotate
       # casually: it invalidates every admin session and API token.
       - key: APP_KEYS
@@ -63,10 +74,3 @@ services:
         generateValue: true
       # PUBLIC_URL is intentionally absent: config/server.ts falls back to
       # RENDER_EXTERNAL_URL, which Render injects with the service's public URL.
-
-databases:
-  - name: ncam-cms-db
-    plan: free
-    region: singapore
-    databaseName: strapi
-    user: strapi

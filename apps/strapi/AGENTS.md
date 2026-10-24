@@ -127,16 +127,23 @@ reports a healthy container as failing. `config/server.ts` already binds `$PORT`
 ## Render
 
 `render.yaml` at the **repo root** (where Render looks for a Blueprint) defines
-the `ncam-cms` web service and its `ncam-cms-db` Postgres. `dockerfilePath` and
-`dockerContext` are relative to the repo root, and the context must stay `.` —
-the Dockerfile copies `pnpm-workspace.yaml` and `pnpm-lock.yaml` from there, so
-a narrower context cannot install.
+the `ncam-cms` web service. `dockerfilePath` and `dockerContext` are relative to
+the repo root, and the context must stay `.` — the Dockerfile copies
+`pnpm-workspace.yaml` and `pnpm-lock.yaml` from there, so a narrower context
+cannot install.
 
-- **Postgres.** `DATABASE_CLIENT=postgres` plus `DATABASE_URL` wired from the
-  database's `connectionString` (private network). `config/database.ts` passes
-  it as `connectionString` alongside the discrete `DATABASE_*` defaults, and
-  `pg` resolves the connection string over them — verified against pg 8.23, so
-  the `localhost` defaults never win and no code change was needed.
+- **Postgres on Supabase.** The database is a free Supabase project (Singapore,
+  like the service), reached through its **Session pooler**: the direct
+  connection is IPv6-only on the free plan and Render cannot reach it.
+  `DATABASE_URL` (the pooler string, no `sslmode`) and `DATABASE_SSL_CA`
+  (Supabase's root certificate as PEM text) are `sync: false` values set in the
+  Render Dashboard; `DATABASE_SSL=true` comes from `render.yaml`, and
+  `config/database.ts` keeps `rejectUnauthorized` on, so the certificate is
+  verified. `config/database.ts` passes `DATABASE_URL` as `connectionString`
+  alongside the discrete `DATABASE_*` defaults, and `pg` resolves the connection
+  string over them — verified against pg 8.23, so the `localhost` defaults never
+  win. Until 2026-10-24 the database was a free Render Postgres; it expired after
+  30 days (`docs/deployment.md` → "Moving the database").
 - **Secrets** use `generateValue: true`: Render generates each once on the first
   sync and keeps it. Do not rotate casually — it invalidates every admin session
   and API token. `APP_KEYS` gets a single generated key, which Strapi accepts.
@@ -149,7 +156,7 @@ a narrower context cannot install.
 
 ### Free-plan limits that specifically hurt a CMS
 
-All three are documented Render behaviour, not guesses:
+All three are documented Render and Supabase behaviour, not guesses:
 
 1. **Spin-down.** A free web service sleeps after 15 minutes idle and takes
    about a minute to wake. The host allows the CMS 2.5 s on the home page and
@@ -162,9 +169,11 @@ All three are documented Render behaviour, not guesses:
    The `disk` block in `render.yaml` is commented out for exactly this reason;
    uncomment it on a paid plan. The durable fix that keeps the free plan is an
    external upload provider (S3, Cloudinary) instead of the local one.
-3. **30-day database expiry.** A free Render Postgres expires 30 days after
-   creation, with a 14-day grace period before deletion. Upgrade it or plan to
-   migrate before then.
+3. **Database pause.** A free Supabase project pauses after a week without
+   activity (restorable from its dashboard for a year). `/api/health` runs a
+   query, so the keep-awake checks keep it active. A free Render Postgres, by
+   contrast, expires 30 days after creation and is deleted 14 days later, which
+   is why the CMS left it.
 
 Note that attaching a disk also disables zero-downtime deploys: Render stops the
 old instance before starting the new one, so the CMS blinks for a few seconds on
