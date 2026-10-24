@@ -14,8 +14,13 @@ The variables mentioned here are described in the
 Remotes are static Vite builds, and the host is a Nitro server. Each app has its
 own `vercel.json`: build command, output directory, the CORS header the remotes
 need, and `ignoreCommand: npx turbo-ignore`, so that a push rebuilds only the
-apps it touched. Create **one Vercel project per app** from this repo, each with
-the matching **Root Directory**. The live ones:
+apps it touched. Each also sets `"git": { "deploymentEnabled": { "dependabot/**": false } }`,
+so Vercel never deploys a Dependabot branch (`**` because those branch names hold
+slashes, `dependabot/npm_and_yarn/…`); GitHub Actions still checks their pull
+requests. Vercel reads the rule from the commit it would deploy, so it holds for
+a Dependabot branch cut from, or rebased on, a `main` that has it, and a new
+app's `vercel.json` needs it too. Create **one Vercel project per app** from this
+repo, each with the matching **Root Directory**. The live ones:
 
 | App                     | Root Directory         | Production URL                          |
 | ----------------------- | ---------------------- | --------------------------------------- |
