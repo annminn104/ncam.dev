@@ -400,3 +400,46 @@ def bat_wing(membrane, bones, M, span, height, thick=0.006, r=0.0055, scallop=0.
     ellipsoid(bones, c, (1.6 * r,) * 3, rib, segs=10, rings=6)
     up = (M.to_3x3() @ Vector((0, 0, 1))).normalized()
     talon(bones, [c, c + up * 0.012 + X * 0.003, c + up * 0.022 - X * 0.002], 0.8 * r, slot=rib, n=10, k=6)
+
+
+# ---------------------------------------------------------------- fangs
+def fangs(bm, bvh, z, x=0.006, frame=None):
+    """Two small fangs under a chibi mouth, as the Fallen Queen has them: x either side of the middle,
+    each a white triangle on a slightly larger ink one (a white fang alone vanishes on the pale skin),
+    their tops at height z (the mouth line there) and their points 7 mm under it at the king's scale.
+    Painted into bm on bvh (the bare head) from frame (FR, the front, if None). Join their part into
+    the Face part (join_into), so the pack's lock keeps them."""
+    frame = frame or FR
+    for s in (-1, 1):
+        cx = s * x
+        decal_poly(bm, bvh, [(cx - 0.0035, z + 0.0008), (cx + 0.0035, z + 0.0008), (cx + s * 0.0006, z - 0.0071)],
+                   frame, 0.0019, 'ink', rings=1)
+        decal_poly(bm, bvh, [(cx - 0.0026, z + 0.0006), (cx + 0.0026, z + 0.0006), (cx + s * 0.0005, z - 0.0058)],
+                   frame, 0.0024, 'white', rings=1)
+
+
+def join_into(dst, src):
+    """Joins part src into part dst (dst keeps its name)."""
+    a, b = O(dst), O(src)
+    with bpy.context.temp_override(active_object=a, selected_editable_objects=[a, b]):
+        bpy.ops.object.join()
+
+
+# ---------------------------------------------------------------- tattered hems
+def tatter(u, pts):
+    """How far a tattered hem hangs at u (0..1 across it), read off its outline pts: (u, hang) pairs in
+    order of u from 0 to 1, straight between them; hang 0 is the top of the deepest tear, 1 the end of
+    the longest strip. A sheet's hem row lies at its cut line minus its depth times this."""
+    u = min(max(u, pts[0][0]), pts[-1][0])
+    for (u0, h0), (u1, h1) in zip(pts, pts[1:]):
+        if u <= u1:
+            return h0 + (h1 - h0) * (u - u0) / max(u1 - u0, 1e-9)
+    return pts[-1][1]
+
+
+def tatter_cols(pts, n, gap=0.006):
+    """The columns (u, 0..1) of a sheet whose hem follows the tattered outline pts (see tatter): n even
+    steps and every point of the outline, so each tear and each strip's end lands on a column; an even
+    step closer than gap to an outline point is left out."""
+    keys = [u for u, _ in pts]
+    return sorted(keys + [k / n for k in range(n + 1) if min(abs(k / n - q) for q in keys) >= gap])

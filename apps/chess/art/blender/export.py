@@ -31,6 +31,7 @@ PRESETS = {
     'dark-court': {
         'k': (('holy-order/patriarch', 'court', 'overlord'), 'build_k'),
         'q': (('holy-order/patriarch', 'holy-order/abbess', 'court', 'queen'), 'build_q'),
+        'r': (('holy-order/patriarch', 'holy-order/warden', 'court', 'deathknight'), 'build_r'),
     },
 }
 # Parts the low LOD leaves out (by name, after the prefix): the painted linework, which would
