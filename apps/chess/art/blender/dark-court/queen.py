@@ -19,7 +19,7 @@ BANG_LAYER = []
 TUFTS = []
 HEAD_SUFFIXES = ['Head', 'Face', 'Brows', 'HairCap', 'Bangs', 'HairLocks', 'HairCuffs', 'HairBack', 'HairBackClumps',
                  'HairClasp', 'LinesHair', 'Horns', 'Tiara', 'TiaraSpikes', 'TiaraGems', 'LinesHead']
-# (top, hem, flare past the gown at the hem, points round it, their depth, half a point's turn) of the skirt's tiers
+# the skirt's tiers: (top, hem, flare past the gown at the hem, points round it, their depth, their offset in points)
 TIERS = [(0.452, 0.318, 0.045, 16, 0.014, 0.0), (0.372, 0.222, 0.045, 16, 0.016, 0.5)]
 HORN = {'phi': 58.0, 'el': 40.0, 'turn': 52.0}
 PUFF_R, PUFF_ALPHA = 0.082, 54
@@ -303,7 +303,7 @@ def tiara_pt(phi, el, dr=0.0):
 
 
 def build_tiara():
-    """A metal band over the fringe from horn to horn, with slender blades rising from it, the front one
+    """A metal band over the fringe between the horns, with slender blades rising from it, the front one
     tallest, and gems at their feet."""
     bm = new_bm()
     sheet(bm, lambda i, j: tiara_pt(-48 + 96 * i / 40, 31.0 + 4.5 * j / 2), 40, 2, 0.004, 'trim', 'trim', 'trim',
@@ -468,7 +468,7 @@ def build_lines_fq():
                                curtain_pt(back_y, u, zh + (0.006 if tipline else 0.05), 0.004)], 0.0016, 'lhair', n=24)
     out(PFX + 'LinesHair', bm, 0, sharp=80, recalc=False)
 
-    # ---- metal curls either side of each of the upper tier's stars (tier_stars)
+    # ---- metal curls either side of each of the upper tier's stars (TIER_STARS, build_tiers)
     bm = new_bm()
     for a0 in TIER_STARS:
         for s in (-1, 1):
