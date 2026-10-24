@@ -33,6 +33,7 @@ PRESETS = {
         'q': (('holy-order/patriarch', 'holy-order/abbess', 'court', 'queen'), 'build_q'),
         'b': (('holy-order/patriarch', 'holy-order/bishop', 'court', 'necromancer'), 'build_b'),
         'r': (('holy-order/patriarch', 'holy-order/warden', 'court', 'deathknight'), 'build_r'),
+        'n': (('holy-order/patriarch', 'holy-order/warden', 'holy-order/paladin', 'court', 'bonerider'), 'build_n'),
     },
 }
 # Parts the low LOD leaves out (by name, after the prefix): the painted linework, which would

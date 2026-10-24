@@ -559,3 +559,27 @@ def skull(bm, c, r, slot='skin', face=None, pupils=None, hollow=False, rot=None,
         decal_poly(face, bvh, [m(x, z) for x, z in tooth], frame, off + 0.0006, 'white',
                    center=m(x0 + cw / 2, (z0 + z1) / 2), rings=2)
     return bvh
+
+
+# ---------------------------------------------------------------- ghost flames
+def flame_prof(t):
+    """A flame tongue's width at t along it (0 at its root, 1 at its tip), as a fraction of its widest: round at the
+    root, widest a quarter of the way up, then narrowing to a long sharp point."""
+    return (1 - t) ** 1.4 * (0.5 + 2.0 * t) / 0.6695
+
+
+def flame(bm, root, up, side, L, W, slot='glow', thick=0.5, sway=0.12, flick=0.3, lean=None, n=14, k=8):
+    """One ghost-flame tongue (a horse's mane or tail, a torch) into bm in slot, from root (set a little inside what
+    burns) along up for L: its spine sways in an S across it, first toward side then the other way, by sway x L, and
+    its tip flicks toward lean (side when None) by flick x L. Its section is a lens reaching W either side of the
+    spine along side and thick x W either side across that, swelling from the root to its widest a quarter of the
+    way up (flame_prof), then narrowing to a sharp point. up and side are directions at right angles (they need not
+    be unit length). Flames draw no outline: the caller sends their part out at width 0, so they glow clean. n, k:
+    the strand's rings along it and points round it. Returns the spine's control points, root first."""
+    up, side = Vector(up).normalized(), Vector(side).normalized()
+    lean = side if lean is None else Vector(lean).normalized()
+    deep = up.cross(side).normalized()
+    pts = [Vector(root) + up * (L * t) + side * (sway * L * math.sin(2 * math.pi * t) * (1 - 0.3 * t)) +
+           lean * (flick * L * t ** 3) for t in (q / 6 for q in range(7))]
+    strand(bm, pts, W, thick * W, slot, lambda c: c - deep, n=n, k=k, prof=flame_prof)
+    return pts
