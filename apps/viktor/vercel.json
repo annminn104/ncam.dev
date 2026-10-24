@@ -3,6 +3,7 @@
   "framework": "vite",
   "buildCommand": "pnpm build",
   "ignoreCommand": "npx turbo-ignore",
+  "git": { "deploymentEnabled": { "dependabot/**": false } },
   "outputDirectory": "dist",
   "headers": [
     {

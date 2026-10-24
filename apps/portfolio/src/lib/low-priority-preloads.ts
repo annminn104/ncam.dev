@@ -1,11 +1,13 @@
 /**
  * Rewrites the `<link rel="modulepreload">` tags of a streamed HTML response.
  *
- * TanStack Start preloads each matched route's chunks with plain modulepreload
- * links, which Chrome fetches at High priority. None of them blocks rendering
- * (the entry script is `async`), so by default they go to `fetchpriority="low"`,
- * as Next.js does for its script preloads: they still preload, behind the
- * document, its fonts and its images.
+ * TanStack Start preloads each matched route's chunks with modulepreload links,
+ * which Chrome fetches at High priority unless told otherwise. None of them
+ * blocks rendering (the entry script is `async`), so by default they go to
+ * `fetchpriority="low"`, as Next.js does for its script preloads: they still
+ * preload, behind the document, its fonts and its images. Since 1.169.3 Start
+ * renders them at `fetchPriority="low"` itself, so a link that already names a
+ * priority keeps it: a second attribute would only be a duplicate.
  *
  * A project page drops them instead. Its largest content is the remote's
  * (TOONHUB's figurine, a hero's poster), and on a slow phone every request in
@@ -16,12 +18,13 @@
  */
 const TAG = '<link rel="modulepreload"';
 const LOW = `${TAG} fetchpriority="low"`;
+/** A priority the link names itself (Start's own `fetchPriority="low"`). */
+const PRIORITY = /\sfetchpriority=/i;
 
 export type PreloadMode = 'lower' | 'drop';
 
 /** The same markup with every modulepreload link at low priority, or gone. */
 export function rewriteModulePreloads(html: string, mode: PreloadMode = 'lower'): string {
-  if (mode === 'lower') return html.replaceAll(TAG, LOW);
   let out = '';
   let from = 0;
   for (;;) {
@@ -31,6 +34,8 @@ export function rewriteModulePreloads(html: string, mode: PreloadMode = 'lower')
     // An unclosed tag at the very end is left as it is (never in a full page).
     if (end === -1) return out + html.slice(from);
     out += html.slice(from, start);
+    const tag = html.slice(start, end + 1);
+    if (mode === 'lower') out += PRIORITY.test(tag) ? tag : LOW + tag.slice(TAG.length);
     from = end + 1;
   }
 }

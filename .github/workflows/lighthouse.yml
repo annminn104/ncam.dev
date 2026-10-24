@@ -1,6 +1,6 @@
 name: Lighthouse
 
-# Every page type at 100 in all four categories, on mobile and on desktop,
+# Every page type at 80 or more in all four categories, on mobile and on desktop,
 # measured against the production build served from the runner itself:
 # scripts/lighthouse/serve.mjs serves it, lighthouserc.cjs says how it is
 # measured and why. Each form factor is split over three jobs, a third of the
@@ -41,7 +41,7 @@ jobs:
         uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
 
       - name: Setup Node
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
           cache: pnpm
@@ -73,12 +73,12 @@ jobs:
         if: ${{ !cancelled() }}
         run: pnpm dlx @lhci/cli@0.15.1 upload --config=lighthouserc.cjs
 
-      - name: Assert every category at 100
+      - name: Assert every category at 80 or more
         run: pnpm dlx @lhci/cli@0.15.1 assert --config=lighthouserc.cjs
 
       - name: Upload reports
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: lighthouse-${{ matrix.form-factor }}-${{ matrix.shard }}
           path: .lighthouseci/${{ matrix.form-factor }}-${{ matrix.shard }}

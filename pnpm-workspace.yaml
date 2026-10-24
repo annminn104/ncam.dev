@@ -15,37 +15,71 @@ allowBuilds:
   core-js-pure: true
   sharp: true
 # Security overrides: pin patched transitive versions (GitHub Dependabot / pnpm audit).
-# - h3: force the SSE-injection / request-smuggling / path-traversal-patched h3 v2
-#   (rc.16 -> rc.25). Safe as a global override because removing `vinxi` eliminated the
-#   only h3 v1 consumers, so the whole tree is on h3 v2 now. We do NOT bump
-#   @tanstack/start-server-core itself: its only patched release (1.167.30) is incompatible
-#   with the pinned 1.167.x Start family (the "#tanstack-start-plugin-adapters" import moved),
-#   which breaks the SSR build.
+# - h3: the host's nitro (3.0.260311-beta) is its only consumer. The TanStack Start
+#   family's start-server-core pulled it too, under the alias `h3-v2` with an override of
+#   its own, until 1.169.x dropped the dependency, so that override went with it. nitro asks
+#   for ^2.0.1-rc.16, a range that holds rc.16 and rc.17 (SSE injection, a mount() prefix
+#   bypass, an open redirect, a session-cookie DoS; all fixed by rc.18) and the stable 2.0.x
+#   line, which this nitro beta predates. The pin keeps it on rc.25, which has no advisory
+#   and is the h3 the host already runs on; revisit it with a nitro update.
 overrides:
   h3: '2.0.1-rc.25'
-  # start-server-core pulls h3 under the alias `h3-v2: npm:h3@...`, so it needs its own
-  # override entry — a plain `h3` override does not reach an aliased dependency.
-  h3-v2: 'npm:h3@2.0.1-rc.25'
-  # High-severity advisories in transitive deps (`pnpm audit --audit-level high` gates CI).
+  # Advisories in transitive deps (`pnpm audit --audit-level high` gates CI; a moderate or
+  # low one is patched here too when its package has a fixed release in the same major).
   # Each override is scoped to the affected major so unrelated majors keep their own range.
   'js-yaml@4': '4.3.2' # GHSA-5p4m-2wfm-xmqj, GHSA-2883-xcg3-v3hh (commitlint, tanstack start)
   'nanoid@3': '3.3.18' # GHSA-2v37-7h3g-55p8 (postcss via vite / vitest)
-  'brace-expansion@5': '5.0.9' # GHSA-mh99-v99m-4gvg, GHSA-rgw5-rvv9-x895 (eslint / minimatch)
+  'brace-expansion@5': '5.0.12' # GHSA-mh99-v99m-4gvg, GHSA-rgw5-rvv9-x895, GHSA-6j4f-fj2g-mc7p, GHSA-qhr7-859c-m2p7, GHSA-q2hr-2g5m-vwhr (eslint / minimatch)
+  'brace-expansion@1': '1.1.21' # GHSA-6j4f-fj2g-mc7p, GHSA-qhr7-859c-m2p7, GHSA-q2hr-2g5m-vwhr (@strapi/admin via react-query / rimraf / glob / minimatch 3)
+  'source-map-js@1': '1.2.2' # GHSA-68fv-2mgg-jv7q (@tailwindcss/node)
   'browserslist@4': '4.28.9' # GHSA-c83g-rgw3-j3cx, GHSA-73wf-gq98-2v4g (babel, tanstack start)
-  'fast-uri@3': '3.1.7' # GHSA-v2hh-gcrm-f6hx … GHSA-jqff-g426-hqxp (commitlint)
-  'undici@7': '7.29.1' # GHSA-4cwx-7wf7-3272 (@module-federation/dts-plugin)
+  'fast-uri@3': '3.1.9' # GHSA-v2hh-gcrm-f6hx … GHSA-jqff-g426-hqxp, GHSA-hrr3-gc8f-f4qj, GHSA-w74x-v6f9-j3xg, GHSA-wjr9-j795-jxcr, GHSA-xhq7-xmqj-769h, GHSA-333x-w4r6-6crp (commitlint, tanstack start)
+  'undici@7': '7.30.1' # GHSA-4cwx-7wf7-3272, GHSA-xjj6-f33q-929c, GHSA-4qv8-2p9j-2685, GHSA-f72v-6w45-q472 (@module-federation/dts-plugin pin 7.29.1)
+  'undici@6': '6.29.1' # GHSA-xjj6-f33q-929c, GHSA-4qv8-2p9j-2685 (@ai-sdk/provider-utils under @strapi/content-type-builder)
   adm-zip: '0.6.1' # GHSA-xcpc-8h2w-3j85, GHSA-vwc7-r8mq-g2x9 (@module-federation/dts-plugin)
-  'sharp@0.35': '0.35.4' # GHSA-rgj7-g3m4-5g8c (@strapi/upload)
-  'nodemailer@9': '9.1.1' # GHSA-2x7j-588g-ccc2, GHSA-8m3c-c648-2xjj (@strapi/provider-email-sendmail)
+  'sharp@0.35': '0.35.5' # GHSA-rgj7-g3m4-5g8c, GHSA-wq5f-xc86-pv6w (@strapi/upload, toonhub, tanstack start's webpack minimizer)
+  'zod@4': '4.6.7' # GHSA-mrhx-c7xc-m3w5 (@strapi/utils pin 4.4.3, @modelcontextprotocol/*, tanstack router plugin, eslint-plugin-react-hooks)
+  'handlebars@4': '4.7.10' # GHSA-8r5x-fm3f-whwj, GHSA-p8wg-vrv2-v86f, GHSA-xw65-4hp5-5hc7 (@strapi/generators pin 4.7.9, node-plop)
+  'axios@1': '1.20.0' # GHSA-3pq3-5fj3-cg6v, GHSA-542g-h47m-68v8, GHSA-mghh-pgcx-3jjj, GHSA-x97p-jq2g-jp4f, GHSA-m8m8-qj5v-23w3, GHSA-c29m-xwm3-cm6r, GHSA-r4gj-5m52-g5wh, GHSA-vh66-26gq-q6x8, GHSA-9fr6-4gfg-395g, GHSA-j8rh-479h-cp32, GHSA-4hqw-qxg8-jxx2, GHSA-44g4-m2mj-wpvx (@strapi/admin, @strapi/cloud-cli pin 1.19.0)
+  'follow-redirects@1': '1.16.1' # GHSA-8r9p-f939-6h3c, GHSA-q3jh-wrc6-jgq8 (axios)
+  'dompurify@3': '3.4.17' # GHSA-cg2g-xh64-v4q7, GHSA-mrv2-3pqr-j5jr, GHSA-p98j-92pf-mc4p, GHSA-6688-9rhm-gjv2, GHSA-c6gr-qvv4-5v3f (@strapi/content-manager pin 3.4.13)
+  'markdown-it@14': '14.3.3' # GHSA-r7fv-28h4-cvq7, GHSA-gfr2-rv44-r23c, GHSA-253c-mchw-3w2r, GHSA-vfgh-jcmw-g37q (typedoc under @strapi/types)
+  # @strapi/core 5.55.1 pins the MCP SDK at 2.0.0. Strapi itself moved to server 2.3.1 with
+  # node 2.1.1 (the node release written against server ^2.3) in 5.57, a package-only change
+  # (strapi/strapi#27996), so both move to that pair here.
+  '@modelcontextprotocol/server@2': '2.3.1' # GHSA-jm63-cq47-j5jp, GHSA-46jr-4wx8-v453, GHSA-rvq5-wwqv-78pq (@strapi/core)
+  '@modelcontextprotocol/node@2': '2.1.1'
+  'hono@4': '4.13.11' # GHSA-5r4p-p66f-jhc7 (@modelcontextprotocol/node under @strapi/core)
+  # No 9.x release fixes GHSA-v53p-9fqp-m79j / GHSA-prgh-xp8r-p3m5 (addressparser DoS), so
+  # the sendmail provider's nodemailer 9 moves to 10, to the last 10.1.x: 10.1.4 fixed the
+  # newest addressparser advisories and 10.1.5 to 10.1.7 are fixes to the same parser.
+  # 10.x keeps a CommonJS build (main: dist/cjs) and the createTransport API the provider uses.
+  'nodemailer@9': '10.1.7' # GHSA-2x7j-588g-ccc2, GHSA-8m3c-c648-2xjj, GHSA-v53p-9fqp-m79j, GHSA-prgh-xp8r-p3m5, GHSA-6vj9-mwq6-2f5v, GHSA-8vvx-rff5-p5rq, GHSA-g57g-f23g-4646, GHSA-39m8-27wv-hr27, GHSA-8c8m-p3m8-cjg8, GHSA-m943-m63m-w62w, GHSA-85x2-q946-cp5h (@strapi/provider-email-sendmail)
+  # No 6.x release fixes GHSA-g84c-rxfj-3j2c (path traversal). Only @strapi/strapi's opt-in
+  # webpack bundler (`strapi develop --bundler=webpack`) loads it; the default is vite.
+  'webpack-dev-middleware@6': '7.4.6' # GHSA-g84c-rxfj-3j2c (@strapi/strapi)
   'qs@6': '6.16.0' # GHSA-4mjr-xmp4-gh2g, GHSA-x5fp-wj9c-mxmx (@strapi/* pin 6.15.3; koa via co-body / formidable)
   # Strapi pins vite 5.4.21 for its admin build, and the 5.x line no longer receives these
   # fixes (all land in 6.4.x). @vitejs/plugin-react-swc 3.11 accepts vite ^6, and
-  # `strapi build` + `strapi start` were smoke-tested on 6.4.3. Scoped with `parent>child`
+  # `strapi build` + `strapi start` were smoke-tested on 6.4.5. Scoped with `parent>child`
   # so it only rewrites @strapi/strapi's own dependency: a bare `vite@5` selector also
   # matched the root plugins' `^5 || ^6 || …` peer ranges and detached them from vite 8.
-  # Brings esbuild ^0.25 (GHSA-67mh-4wv8-2f99) along.
-  '@strapi/strapi>vite': '6.4.3' # GHSA-4w7w-66w2-5vf9, GHSA-v6wh-96g9-6wx3, GHSA-fx2h-pf6j-xcff
+  # Brings esbuild ^0.25 (GHSA-67mh-4wv8-2f99) along. 6.4.5, the last 6.4.x, also checks
+  # server.fs after stripping a query.
+  '@strapi/strapi>vite': '6.4.5' # GHSA-4w7w-66w2-5vf9, GHSA-v6wh-96g9-6wx3, GHSA-fx2h-pf6j-xcff, GHSA-587h-7wmj-h5pm, GHSA-698v-4r3x-3vcv, GHSA-r825-w8mm-5pxw, GHSA-rq7h-c2jc-7f22, GHSA-9jrq-w75r-8gcw
 
+# High advisories with no patched release that reaches the code, accepted until one does.
+# Dismiss a matching Dependabot alert with the same reasoning:
+# - zod 3.25.76 (koa-body 6 and koa-session 7, under @strapi/core): GHSA-mrhx-c7xc-m3w5's
+#   range covers every 3.x and only 4.6.6 fixes it; the flaw is zod 4's $ZodArray issue
+#   accumulation on a large array. Both packages parse only their own middleware options
+#   with zod (developer config, read at boot), never request data, and koa-session's
+#   options schema uses z.function().args().returns(), which zod 4 dropped, so they cannot
+#   be moved onto 4.x. Every zod 4 in the tree is on 4.6.7 ('zod@4' above), so the ignore
+#   only covers that 3.x copy. Drop it once both move to zod 4 or Strapi drops them.
+auditConfig:
+  ignoreGhsas:
+    - GHSA-mrhx-c7xc-m3w5
 
 # Moderate advisories left open on purpose (`pnpm audit --audit-level high` gates CI, so
 # they do not block). Dismiss the matching Dependabot alerts with the same reasoning:
@@ -53,5 +87,7 @@ overrides:
 #   GHSA-337j-9hxr-rhxg are fixed only in 7.18, which Strapi 5 does not support. The admin is
 #   a CSR app (no SSR hydration path) behind an authenticated session. Waits on Strapi.
 # - stream-json 1.9.1 (@strapi/data-transfer): GHSA-528h-pc64-c93x is in the path filters
-#   (pick / ignore / filter / replace); data-transfer only uses jsonl/Parser and
-#   jsonl/Stringer. The patched 3.x line is ESM-only (node >= 22) — not a drop-in override.
+#   (pick / ignore / filter / replace), GHSA-hqr4-qq8f-hg3x in the JSONC parser and
+#   verifier, GHSA-mjw6-4jj6-33hc in Assembler; data-transfer only uses jsonl/Parser (a
+#   JSON.parse per line) and jsonl/Stringer. The patched 3.x line is ESM-only (node >= 22)
+#   — not a drop-in override.
