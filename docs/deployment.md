@@ -14,9 +14,14 @@ The variables mentioned here are described in the
 Remotes are static Vite builds, and the host is a Nitro server. Each app has its
 own `vercel.json`: build command, output directory, the CORS header the remotes
 need, and `ignoreCommand: npx turbo-ignore`, so that a push rebuilds only the
-apps it touched. Create **one Vercel project per app** from this repo, each with
-the matching **Root Directory**. The live ones, and Chess, whose project is yet
-to be created ([the order](#adding-a-remote-to-the-live-site) matters):
+apps it touched. Each also sets `"git": { "deploymentEnabled": { "dependabot/**": false } }`,
+so Vercel never deploys a Dependabot branch (`**` because those branch names hold
+slashes, `dependabot/npm_and_yarn/…`); GitHub Actions still checks their pull
+requests. Vercel reads the rule from the commit it would deploy, so it holds for
+a Dependabot branch cut from, or rebased on, a `main` that has it, and a new
+app's `vercel.json` needs it too. Create **one Vercel project per app** from this
+repo, each with the matching **Root Directory**. The live ones, and Chess, whose
+project is yet to be created ([the order](#adding-a-remote-to-the-live-site) matters):
 
 | App                     | Root Directory         | Production URL                          |
 | ----------------------- | ---------------------- | --------------------------------------- |
@@ -160,26 +165,37 @@ empty.
 
 Strapi needs a long-lived process, a real database and somewhere durable for
 uploads, so it runs on Render while the frontends stay on Vercel.
-[`render.yaml`](../render.yaml) at the repo root is the Blueprint: the
-`ncam-cms` Docker web service and its `ncam-cms-db` Postgres.
+[`render.yaml`](../render.yaml) at the repo root is the Blueprint for the
+`ncam-cms` Docker web service. Its database is a free **Supabase** project: a
+free Render Postgres expires 30 days after creation (the first one did, on
+2026-10-20), a free Supabase project does not.
 
-1. In the Render Dashboard, choose **New → Blueprint** and pick this repo.
-   Render reads `render.yaml` and creates both resources. Leave the Docker
-   context at the repo root: the Dockerfile copies `pnpm-workspace.yaml` and
-   `pnpm-lock.yaml` from there, so a narrower context cannot install.
-2. Apply. The Blueprint generates the six Strapi secrets once and keeps them
-   across syncs, and wires `DATABASE_URL` from the database over the private
-   network. Nothing needs pasting.
-3. Open `<service-url>/admin` and register the first admin user. The database
-   starts empty: posts written against the local SQLite do not come along.
-4. On the Vercel host project, set `STRAPI_URL` and `STRAPI_PUBLIC_URL` to the
+1. In Supabase, create a project in **Southeast Asia (Singapore)**, the service's
+   region, with a strong database password. Copy **Connect → Session pooler**
+   (fill in the password; add no `sslmode`), and download the root certificate
+   (**Database Settings → SSL → Download certificate**). Use the session pooler:
+   the direct connection is IPv6-only on the free plan, which Render cannot
+   reach, and unlike the transaction pooler it keeps what a long-lived server
+   uses (prepared statements, session state).
+2. In the Render Dashboard, choose **New → Blueprint** and pick this repo.
+   Render reads `render.yaml` and asks for the two `sync: false` values:
+   `DATABASE_URL` (the session pooler string) and `DATABASE_SSL_CA` (the
+   certificate file's text). Leave the Docker context at the repo root: the
+   Dockerfile copies `pnpm-workspace.yaml` and `pnpm-lock.yaml` from there, so a
+   narrower context cannot install.
+3. Apply. The Blueprint generates the six Strapi secrets once and keeps them
+   across syncs; a sync never overwrites the two pasted values.
+4. Open `<service-url>/admin` and register the first admin user. The database
+   starts empty: posts written against the local SQLite do not come along (to
+   bring an existing database, see [Moving the database](#moving-the-database)).
+5. On the Vercel host project, set `STRAPI_URL` and `STRAPI_PUBLIC_URL` to the
    service URL. Both are read at runtime, so no rebuild is needed.
 
 `PUBLIC_URL` is deliberately unset: `apps/strapi/config/server.ts` falls back to
 `RENDER_EXTERNAL_URL`, which Render injects. Set it only for a custom domain.
 Render injects `PORT` too, and the server already binds it.
 
-Until step 4, `/blog` renders its empty state and the home page's blog section
+Until step 5, `/blog` renders its empty state and the home page's blog section
 shows placeholders. That is by design: the site degrades rather than failing.
 
 ### Keeping the free service awake
@@ -215,7 +231,7 @@ until the next month. If more free services appear, keep only one of them awake.
 
 ### Free-plan limits
 
-Three free-plan limits hit a CMS specifically, so read these before treating it
+These free-plan limits hit a CMS specifically, so read them before treating it
 as production:
 
 - A free web service **sleeps after 15 minutes idle** and takes about a minute
@@ -227,5 +243,27 @@ as production:
   `render.yaml` is commented out for that reason; uncomment it on a paid plan.
   The fix that keeps the free plan is an external upload provider (S3,
   Cloudinary).
-- A **free Postgres database expires 30 days after creation**, with a 14-day
-  grace period before deletion.
+- A free Supabase project **pauses after a week without activity**; it can be
+  restored from the Supabase dashboard for a year. The health check above queries
+  the database, so a CMS that is kept awake keeps its project active.
+
+### Moving the database
+
+To move the CMS to another Postgres without losing posts, copy the database while
+nothing writes to it, then point `DATABASE_URL` at the new one. With Docker
+running, `postgres:17`'s client tools do it (`SOURCE_URL` and `TARGET_URL` are the
+two connection strings, exported in your own shell; Render's external URL and
+Supabase's session pooler both need `PGSSLMODE=require`):
+
+```bash
+docker run --rm -e PGSSLMODE=require -e URL="$SOURCE_URL" -v "$PWD":/dump -w /dump postgres:17 \
+  sh -c 'pg_dump --format=custom --no-owner --no-privileges --file=strapi.dump --dbname="$URL"'
+docker run --rm -e PGSSLMODE=require -e URL="$TARGET_URL" -v "$PWD":/dump -w /dump postgres:17 \
+  sh -c 'pg_restore --no-owner --no-privileges --dbname="$URL" strapi.dump'
+```
+
+Restore only into an empty `public` schema, compare row counts table by table
+afterwards, and keep `strapi.dump` until the CMS runs on the new database: it is
+a full backup. An expired free Render database answers again once it is
+upgraded to a paid plan (within its 14-day grace period), so it can still be
+copied out that way.

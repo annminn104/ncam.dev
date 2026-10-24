@@ -263,7 +263,8 @@ Re-run it whenever a remote's first screen changes rather than editing an image.
 - **CI** (`.github/workflows/ci.yml`) runs lint, format check, typecheck, test
   and build on every push to `main` and on every pull request, keeping the Turbo
   cache between runs. It also audits dependencies
-  (`pnpm audit --audit-level high`) and lints a pull request's commit messages.
+  (`pnpm audit --audit-level high`) and lints a pull request's commit messages
+  (not Dependabot's, which writes its own).
 - **CodeQL** scans on push, on pull requests and weekly. **Dependabot** opens
   weekly update pull requests for npm (grouped), GitHub Actions and Docker.
 - Open pull requests against `main`, and run `pnpm run ci` first. Read the

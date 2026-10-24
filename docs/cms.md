@@ -17,7 +17,8 @@ pnpm --filter @ncam/strapi dev         # http://localhost:1337/admin; register t
 
 `pnpm dev` at the root starts it too, and its first run creates
 `apps/strapi/.env` when the file is missing. Development uses SQLite; Docker
-and Render use Postgres.
+uses a Postgres container, and production (Render) a free Supabase Postgres
+(see [deployment](deployment.md#render-the-cms)).
 
 ## Content model
 

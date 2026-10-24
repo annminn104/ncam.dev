@@ -8,6 +8,8 @@ import {
 
 const LINK = '<link rel="modulepreload" href="/assets/index.js"/>';
 const LOW = '<link rel="modulepreload" fetchpriority="low" href="/assets/index.js"/>';
+/** As TanStack Start renders them since 1.169.3: at low priority already. */
+const START_LOW = '<link rel="modulepreload" href="/assets/index.js" fetchPriority="low"/>';
 
 /** Runs `chunks` through the stream and joins what comes out. */
 async function streamed(chunks: string[], mode: PreloadMode = 'lower'): Promise<string> {
@@ -33,11 +35,16 @@ describe('lowerModulePreloads', () => {
       `<head>${LOW}${LOW}<link rel="stylesheet" href="/a.css"/></head>`,
     );
   });
+
+  it('leaves a link that names its own priority as it is, rather than doubling the attribute', () => {
+    const html = `<head>${START_LOW}${LINK}</head>`;
+    expect(lowerModulePreloads(html)).toBe(`<head>${START_LOW}${LOW}</head>`);
+  });
 });
 
 describe('lowerModulePreloadsStream', () => {
   it('matches the one-shot result however the tag is split across chunks', async () => {
-    const html = `<!DOCTYPE html><html><head>${LINK}<title>x</title>${LINK}</head><body></body></html>`;
+    const html = `<!DOCTYPE html><html><head>${LINK}<title>x</title>${START_LOW}${LINK}</head><body></body></html>`;
     const expected = lowerModulePreloads(html);
     // Every split point, so a tag cut anywhere is still found.
     for (let at = 1; at < html.length; at++) {
@@ -51,7 +58,7 @@ describe('lowerModulePreloadsStream', () => {
 });
 
 describe('dropping the preloads (a project page)', () => {
-  const html = `<!DOCTYPE html><html><head>${LINK}<title>x</title>${LINK}</head><body><img src="/a.webp"/></body></html>`;
+  const html = `<!DOCTYPE html><html><head>${LINK}<title>x</title>${START_LOW}</head><body><img src="/a.webp"/></body></html>`;
   const expected =
     '<!DOCTYPE html><html><head><title>x</title></head><body><img src="/a.webp"/></body></html>';
 

@@ -161,6 +161,9 @@ pnpm thumbnails <id>  # regenerates a gallery thumbnail (needs `pnpm dev` runnin
 ## Verification
 
 `pnpm run ci` must pass; the pre-push hook runs `turbo run typecheck build`.
+Dependabot's pull requests are checked by GitHub Actions alone: every
+`apps/*/vercel.json` sets `git.deploymentEnabled` to `{ "dependabot/**": false }`
+(a new app's too), so Vercel never deploys their branches (`docs/deployment.md`).
 
 Lighthouse (`.github/workflows/lighthouse.yml`) holds every page type (home,
 blog, a post, each project) at 80 or more in all four categories, mobile and desktop,
