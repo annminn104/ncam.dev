@@ -20,20 +20,21 @@ slashes, `dependabot/npm_and_yarn/…`); GitHub Actions still checks their pull
 requests. Vercel reads the rule from the commit it would deploy, so it holds for
 a Dependabot branch cut from, or rebased on, a `main` that has it, and a new
 app's `vercel.json` needs it too. Create **one Vercel project per app** from this
-repo, each with the matching **Root Directory**. The live ones, and Chess, whose
-project is yet to be created ([the order](#adding-a-remote-to-the-live-site) matters):
+repo, each with the matching **Root Directory**. The live ones, and Chess and Mini Store, whose
+projects are yet to be created ([the order](#adding-a-remote-to-the-live-site) matters):
 
-| App                     | Root Directory         | Production URL                          |
-| ----------------------- | ---------------------- | --------------------------------------- |
-| Host                    | `apps/portfolio`       | https://ncam-profile.vercel.app         |
-| TOONHUB                 | `apps/toonhub`         | https://ncam-toonhub.vercel.app         |
-| Mindloop                | `apps/mindloop`        | https://ncam-mindloop.vercel.app        |
-| Immersive Ocean         | `apps/immersive-ocean` | https://ncam-immersive-ocean.vercel.app |
-| Viktor.                 | `apps/viktor`          | https://ncam-viktor.vercel.app          |
-| Bali Adventure          | `apps/bali`            | https://ncam-bali.vercel.app            |
-| Profile (home sections) | `apps/profile`         | https://ncam-sections.vercel.app        |
-| Holodex                 | `apps/holodex`         | https://ncam-holodex.vercel.app         |
-| Cultivation Chess       | `apps/chess`           | https://ncam-chess.vercel.app (planned) |
+| App                     | Root Directory         | Production URL                               |
+| ----------------------- | ---------------------- | -------------------------------------------- |
+| Host                    | `apps/portfolio`       | https://ncam-profile.vercel.app              |
+| TOONHUB                 | `apps/toonhub`         | https://ncam-toonhub.vercel.app              |
+| Mindloop                | `apps/mindloop`        | https://ncam-mindloop.vercel.app             |
+| Immersive Ocean         | `apps/immersive-ocean` | https://ncam-immersive-ocean.vercel.app      |
+| Viktor.                 | `apps/viktor`          | https://ncam-viktor.vercel.app               |
+| Bali Adventure          | `apps/bali`            | https://ncam-bali.vercel.app                 |
+| Profile (home sections) | `apps/profile`         | https://ncam-sections.vercel.app             |
+| Holodex                 | `apps/holodex`         | https://ncam-holodex.vercel.app              |
+| Cultivation Chess       | `apps/chess`           | https://ncam-chess.vercel.app (planned)      |
+| Mini Store              | `apps/mini-store`      | https://ncam-mini-store.vercel.app (planned) |
 
 1. **Remotes first.** Pick the Vite framework preset; everything else comes
    from `vercel.json`. Deploy each remote and note its production URL.
@@ -58,6 +59,7 @@ project is yet to be created ([the order](#adding-a-remote-to-the-live-site) mat
    PROFILE_REMOTE_URL=https://ncam-sections.vercel.app/remoteEntry.js
    HOLODEX_REMOTE_URL=https://ncam-holodex.vercel.app/remoteEntry.js
    CHESS_REMOTE_URL=https://ncam-chess.vercel.app/remoteEntry.js
+   MINI_STORE_REMOTE_URL=https://ncam-mini-store.vercel.app/remoteEntry.js
    NODE_OPTIONS=--experimental-vm-modules
    ```
 
@@ -97,7 +99,7 @@ falls back to the `.env` default, `http://localhost:<port>/remoteEntry.js`. The
 project registry lists the project as soon as it is merged, so the home page's
 gallery (the profile remote bundles the registry), the host's sitemap and its
 `llms.txt` would all send visitors to a page whose remote cannot load. A new
-remote (Chess, today) therefore goes live in this order:
+remote (Chess and Mini Store, today) therefore goes live in this order:
 
 1. Create its Vercel project (Root Directory `apps/<id>`, the Vite preset; for
    Chess `apps/chess`, named `ncam-chess`) and deploy it.
@@ -117,7 +119,7 @@ One multi-stage image builds the whole monorepo, and `docker-compose.yml` runs
 the SSR host and each remote (as a static preview) from that same image:
 
 ```bash
-docker compose up --build                     # host http://localhost:9000, remotes :9001–:9008
+docker compose up --build                     # host http://localhost:9000, remotes :9001–:9009
 docker compose --profile gateway up --build   # + nginx on :80 → http://ncam.localhost
 ```
 

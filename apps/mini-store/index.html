@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Mini Store — a rainy night on the corner</title>
+    <meta
+      name="description"
+      content="A hand-built WebGL2 diorama of a Saigon corner store on a rainy night: PBR, shadowed spotlights, volumetric fog, wet-road reflections, SSAO and bloom, no three.js."
+    />
+    <meta name="robots" content="index,follow" />
+    <meta name="theme-color" content="#05060a" />
+    <!-- The host's project page is the canonical copy; defineRemote() fills in its origin. -->
+    <link rel="canonical" href="%SITE_URL%/projects/mini-store" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Mini Store" />
+    <meta property="og:title" content="Mini Store — a rainy night on the corner" />
+    <meta
+      property="og:description"
+      content="A hand-built WebGL2 diorama of a corner store in the rain."
+    />
+    <meta property="og:url" content="%SITE_URL%/projects/mini-store" />
+    <meta property="og:image" content="%SITE_URL%/thumbnails/mini-store.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Mini Store — a rainy night on the corner" />
+    <meta
+      name="twitter:description"
+      content="A hand-built WebGL2 diorama of a corner store in the rain."
+    />
+    <meta name="twitter:image" content="%SITE_URL%/thumbnails/mini-store.jpg" />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "WebSite",
+            "name": "Mini Store",
+            "url": "%SITE_URL%/projects/mini-store",
+            "description": "A hand-built WebGL2 diorama of a Saigon corner store on a rainy night."
+          }
+        ]
+      }
+    </script>
+    <style>
+      html,
+      body {
+        margin: 0;
+        background: #05060a;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/standalone.tsx"></script>
+  </body>
+</html>

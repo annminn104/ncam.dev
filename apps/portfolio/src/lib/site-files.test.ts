@@ -95,6 +95,7 @@ describe('sitemapXml', () => {
       'https://ncam.dev/projects/holodex',
       'https://ncam.dev/projects/holodex/sets',
       'https://ncam.dev/projects/chess',
+      'https://ncam.dev/projects/mini-store',
     ]);
     expect(xml).not.toContain('<lastmod>');
     expect(xml).not.toMatch(/changefreq|priority/);
@@ -203,7 +204,10 @@ describe('llmsTxt', () => {
     expect(text).toContain(
       '- [Cultivation Chess](https://ncam.dev/projects/chess): 3D xianxia chess',
     );
-    expect(text.match(/^- \[.+\]\(https:\/\/ncam\.dev\/projects\//gm)).toHaveLength(7);
+    expect(text).toContain(
+      '- [Mini Store](https://ncam.dev/projects/mini-store): Rainy-night corner store diorama',
+    );
+    expect(text.match(/^- \[.+\]\(https:\/\/ncam\.dev\/projects\//gm)).toHaveLength(8);
   });
 
   it('lists the newest indexable posts on one line each, and omits the section with none', () => {

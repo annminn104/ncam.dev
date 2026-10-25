@@ -22,6 +22,7 @@ const BALI_REMOTE = env('BALI_REMOTE_URL', 'http://localhost:9005/remoteEntry.js
 const PROFILE_REMOTE = env('PROFILE_REMOTE_URL', 'http://localhost:9006/remoteEntry.js');
 const HOLODEX_REMOTE = env('HOLODEX_REMOTE_URL', 'http://localhost:9007/remoteEntry.js');
 const CHESS_REMOTE = env('CHESS_REMOTE_URL', 'http://localhost:9008/remoteEntry.js');
+const MINI_STORE_REMOTE = env('MINI_STORE_REMOTE_URL', 'http://localhost:9009/remoteEntry.js');
 const PORTFOLIO_PORT = Number(env('PORTFOLIO_PORT', '9000'));
 
 /**
@@ -185,6 +186,11 @@ export default defineConfig({
           type: 'module',
           name: 'chess',
           entry: CHESS_REMOTE,
+        },
+        mini_store: {
+          type: 'module',
+          name: 'mini_store',
+          entry: MINI_STORE_REMOTE,
         },
       },
       shared: {
