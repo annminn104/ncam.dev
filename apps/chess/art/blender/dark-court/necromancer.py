@@ -198,10 +198,11 @@ def build_staff_nc():
     C = catmull(path, 48)
 
     def hook_r(t):
-        """The hook's radius at t along it: as thick as the top band, thinning toward its end."""
+        """The hook's radius at t along it (0 at the shaft, 1 at its end): 0.0115, a little thicker than the shaft
+        (0.0105; the top band is 0.0165), thinning to 60% of that at its end."""
         return 0.0115 * (1 - 0.4 * t)
     bm = new_bm()
-    tube(bm, path, 0.0115, 'trim', n=48, k=10, radius=hook_r)
+    tube(bm, path, 0.0115, 'trim', n=48, k=10, radius=hook_r)    # kit's tube ignores r (0.0115) given a radius
     ellipsoid(bm, C[-1], (0.0085,) * 3, 'trim', segs=12, rings=8)
     Y = Vector((0.0, 1.0, 0.0))
     for t, L in HOOK_BARBS:

@@ -8,6 +8,7 @@ from mathutils import Matrix, Vector
 
 PFX = 'FQ_'
 COLL = 'FallenQueen'
+# the head rolls -5 degrees, the Abbess's -6: the top (1.285) is the left horn's curl, so it moves with the roll
 POSE = {'head_roll': -5.0, 'head_pitch': 4.0, 'cape_flare': 0.0}
 SCALE = 0.92
 # sleeves with a plum (crimson) band between the silver (gold) cuffs, as the Overlord's
@@ -190,8 +191,9 @@ def rose_frame():
 
 
 def petal(bm, M, th0, width, h, r0, r1, flare, slot='coat', nu=4, nv=3):
-    """One cupped petal in the rose's frame M, spanning the turn th0 ± width / 2 about its axis: it rises h
-    from radius r0 to r1, its lip flaring out by flare, its top rounded."""
+    """One cupped petal into bm, in slot, in the rose's frame M, spanning the turn from th0 - width / 2 to
+    th0 + width / 2 about its axis: it rises h from radius r0 to r1, its lip flaring out by flare, its top
+    rounded. nu, nv: its sheet's cells across and up."""
     def P(i, j):
         f, t = i / nu, j / nv
         th = th0 + width * (f - 0.5)

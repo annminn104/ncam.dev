@@ -80,12 +80,13 @@ def dress_r(z):
 
 def skirt_r(z):
     """The dress's radius at height z swelled by the depth of robe_r's folds there: what lies on the skirt clears it."""
+    # robe_r's own fold constants, repeated (acolyte.py is frozen): from z = 0.42 down, 0.013 deeper per 0.34
     return dress_r(z) + 0.013 * max(0.0, 0.42 - z) / 0.34
 
 
 def skirt_pt(a, z, off):
-    """A point off the dress at lathe angle a (radians; -pi/2 is the front) and height z: off out along the dress's
-    normal from skirt_r's surface, so nothing laid on it dips into a fold."""
+    """A point over the dress at lathe angle a (radians; -pi/2 is the front) and height z, lifted off (a distance)
+    out along the dress's normal from skirt_r's surface, so nothing laid on it dips into a fold."""
     r = skirt_r(z)
     n = Vector((SY * math.cos(a), math.sin(a), 0.0)).normalized()
     return Vector((r * math.cos(a), SY * r * math.sin(a), z)) + n * off
@@ -462,6 +463,8 @@ def build_hair_bm():
     for phi, tip, w in BANGS:
         strand(bm, bang_pts(phi, tip), w, 0.009, 'hair', HC, n=12, k=8, prof=bang_prof)
     out(PFX + 'Bangs', bm, MID, sharp=70)
+    # A near-copy of the Acolyte's locks (acolyte.py's build_hood, at k=8 here): her builder makes her hood with
+    # them, and the Holy Order freeze keeps it whole, so they are copied rather than called.
     bm = new_bm()
     for s in (-1, 1):
         strand(bm, [surf(s * 58, 24, 0.006, RH), surf(s * 64, -6, 0.016, RH), surf(s * 61, -30, 0.026, RH),
@@ -489,8 +492,8 @@ def band_dir(u, w):
 
 
 def on_hair(hb, d, off):
-    """Where the direction d from the head's centre meets the hair (hb: its bvh), lifted off along the hair's normal
-    there, and that normal."""
+    """Where the direction d from the head's centre meets the hair (hb: its bvh), lifted off it by the distance off
+    along the hair's normal there; and that normal."""
     loc, nrm, _, _ = hb.ray_cast(HC + d * 0.6, -d)
     return loc + nrm * off, nrm
 
@@ -578,6 +581,9 @@ def build_lines_bm():
     stitch across them."""
     K = 1.5
     rb = bvh_of(O(PFX + 'Robe'))
+    # The hem band and the dress's folds are near-copies of the Acolyte's (the start of acolyte.py's build_lines_p,
+    # the folds under the apron left out): her builder paints all her linework at once, and the Holy Order freeze
+    # keeps it whole, so they are copied rather than called.
     bm = new_bm()
     pts = [p for p in (ray_in(rb, 2 * math.pi * q / 240, 0.147 + 0.011 * math.sin(26 * 2 * math.pi * q / 240))
                        for q in range(241)) if p is not None]

@@ -77,6 +77,10 @@ def collar_P(i, j, nu=32, nv=6):
 
 
 def build_robe_k():
+    """The Patriarch's robe (build_robe) on the Overlord's fuller ROBE, its lace in accent as the Court has it, and
+    his over-skirt (build_overskirt, through overskirt_P above); between the over-skirts and over the chest above the
+    belt, a plum (crimson) panel edged in metal, a metal star with a gem on the chest and three more down the skirt,
+    two metal studs between those; on the belt a metal buckle (BKL) with a gem."""
     build_robe()
     reslot(PFX + 'Alb', 'white', 'accent')
     build_overskirt()
@@ -122,6 +126,8 @@ def build_robe_k():
 
 
 def build_sleeves_k():
+    """The Patriarch's sleeves on the Overlord's arms (ARMS, SLEEVE, SLEEVE_SLOT, DROOP: bell sleeves, a plum
+    (crimson) band between the silver (gold) cuffs), their lace frills in accent."""
     build_sleeves()
     reslot(PFX + 'Frills', 'white', 'accent')
 
@@ -130,6 +136,10 @@ SIGIL_Z = 0.31
 
 
 def build_cape_k():
+    """The Patriarch's cape and collar (build_cape, through cape_P and collar_P above: the cape a little fuller, its
+    hem in five points; the collar a high neckband) without his orphrey, medallion and cross; on its back the Court's
+    seal instead (SIGIL_Z): a crown of five metal blades on its band, in a ring (an accent disc rimmed in metal and
+    main), three gems on the band."""
     build_cape()
     # the Patriarch's cross and orphrey off the back; the Court's seal instead: a crown of blades in a ring
     for n in ('CapeOrphrey', 'CapeMedallion', 'CapeEmblem'):
@@ -157,6 +167,9 @@ def build_cape_k():
 
 # ================================================================== hands
 def build_hands_k():
+    """Bone hands (court.finger, court.bone): the right's four fingers curled round the staff, the thumb over them,
+    its palm's bones back to the wrist; the left resting on the belt, its fingers laid down over the robe along the
+    belly (on the robe, the sash and the over-skirt), its thumb along the belt's top."""
     bm = new_bm()
     S = Vector((SX, SYY, 0.0))
     # right: four finger bones round the staff, the thumb over them, the palm's bones to the wrist
@@ -207,6 +220,9 @@ def build_hands_k():
 
 # ================================================================== mantle, chest and the high collar
 def build_chest():
+    """The brooch at the capelet's front: a six-pointed metal star, long up and longest down, ringed in metal, a big
+    gem at its heart and three small ones round it; and from it, chains of metal beads over the capelet to a clasp on
+    each shoulder, a metal rose with a gem."""
     capb = bvh_of(O(PFX + 'Capelet'))
     loc, _ = on_surf(capb, 0.0, 0.648, 0.0)
     CC = Vector((0.0, loc.y - 0.011, 0.648))
@@ -282,6 +298,9 @@ def collar_at(s, u, v, face=1, lift=0.0):
 
 
 def build_high_collar():
+    """The high collar behind the skull: its two flared panels (high_collar_P), coat outside and accent inside, metal
+    at the rim and the edges, piped in metal along the rim and down the front end, and three gems inside under each
+    panel's point (collar_at)."""
     bm, bp = new_bm(), new_bm()
     for s in (-1, 1):
         P = high_collar_P(s)
@@ -306,6 +325,9 @@ def build_high_collar():
 
 # ================================================================== skull and crown
 def build_skull():
+    """The Overlord's head, a skull: the cranium and upper jaw (court.skull_mesh, the part Head), the small lower jaw
+    (court.skull_jaw, Jaw) and the face painted on both (court.skull_face: ink sockets with glowing pupils, the nasal
+    cavity, two rows of teeth), the part Face, which the pack locks."""
     bm = new_bm()
     skull_mesh(bm)
     head = out(PFX + 'Head', bm, BIG, sharp=80)
@@ -340,6 +362,9 @@ BAND = [(-0.005, -0.019), (0.012, -0.024), (0.0175, -0.017), (0.0185, 0.0), (0.0
 
 
 def build_crown():
+    """The crown, tilted back on the skull (CROWN_TILT, crown_frames): a metal band of section BAND lying snug along
+    the skull's slope, seven blades standing on it (CROWN_SPIKES, court.spike), each with a small one either side,
+    and a gem at each blade's foot, the front one biggest."""
     at = crown_frames()
     segs = 72
     bm = new_bm()
@@ -373,6 +398,8 @@ def build_crown():
 
 # ================================================================== staff
 def build_staff_k():
+    """The staff in the right hand (SX, SYY): a leather shaft with five metal bands, a metal head whose four claws
+    (court.talon) curl up round a glowing orb (ORB, ORB_R), and three glowing shards floating round the orb."""
     M = Matrix.Translation((SX, SYY, 0))
     bm = new_bm()
     lathe(bm, [(0.0, 0.082), (0.0105, 0.082), (0.0105, 1.2), (0.0, 1.2)], 16, 'leather', xform=M)
@@ -405,6 +432,10 @@ def build_staff_k():
 
 # ================================================================== drawn lines
 def build_lines_k():
+    """The painted linework: engravings on the metal (the robe's hem band, the capelet's band, the cuffs, the
+    over-skirts' borders, a line inside the buckle's edge) and the crown's filigree; an old crack in the skull above
+    the crown; cloth folds on the cape, the sleeves, the capelet and the over-skirts, and the high collar's stays on
+    both its faces; metal scrolls on the cape's back, the over-skirts and inside the collar."""
     K = 1.5
     rb = bvh_of(O(PFX + 'Robe'))
     capb = bvh_of(O(PFX + 'Capelet'))
@@ -539,6 +570,9 @@ def build_lines_k():
 
 
 def build_k():
+    """The Undead Overlord, the king: the Patriarch's body in a fuller robe, a mantle and a cape, a brooch with
+    chains, bone hands, the right on a staff holding a glowing orb, and a high flared collar behind a skull crowned
+    in blades; the head posed (POSE), and no scale_figure: the king keeps the Patriarch's size."""
     build_base()
     build_robe_k()
     build_mantle()

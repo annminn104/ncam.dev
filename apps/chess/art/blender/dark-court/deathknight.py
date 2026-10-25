@@ -414,6 +414,10 @@ def build_lines_dk():
 
 
 def build_r():
+    """The Death Knight: the Warden's body in a steel cuirass and tassets under spiked pauldrons and a tattered cape,
+    a tower shield with a skull emblem on the left arm, a serrated sword in the right fist and the Warden's open helm,
+    horned, over an undead face; the head tilted toward the shield (POSE), then the whole scaled by SCALE, as the
+    Warden is."""
     build_base()
     build_body_dk()
     build_mantle()

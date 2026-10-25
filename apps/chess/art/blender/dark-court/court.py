@@ -176,7 +176,7 @@ JAW_MOUTH = 0.84  # where the jaw meets the skull in front, at the Overlord's si
 
 
 def jaw_pt(phi, v, C=None, R=None, half=42.0):
-    """A point on the outer face of skull_jaw's jaw at azimuth phi (within ±half), from its top edge
+    """A point on the outer face of skull_jaw's jaw at azimuth phi (from -half to half), from its top edge
     (v = 0) to its bottom edge under the chin (v = 1). The top edge lies over the skull's line at
     height JAW_MOUTH along the mouth and curves down from each corner of it; the jaw stands 6.5 mm
     proud of the skull, so in front that edge runs about 4 mm under JAW_MOUTH. The lower teeth hang
@@ -319,10 +319,10 @@ def undead_face(ob):
 # ---------------------------------------------------------------- horns and wings
 def horn(bm, M, r, rise, curl, turns=0.85, lean=0.25, splay=0.1, drift=0.03, tip=0.35, ridges=6,
          rings=(0.04, 0.2), slot='second', ring_slot='trim', n=48, k=10):
-    """A curled ram's horn from M's origin (the root, a little inside the head), laid out in M's
-    frame (basis(): local x the side it grows toward, y back, z up). It rises `rise` along z,
-    bending back by lean × rise and out by splay × rise, then curls on back over the top and down
-    round an axis along x for `turns` turns, the curl's radius shrinking from `curl` to tip × curl
+    """A curled ram's horn into bm, in slot, from M's origin (the root, a little inside the head), laid
+    out in M's frame (basis(): local x the side it grows toward, y back, z up). It rises `rise` along z,
+    bending back by lean x rise and out by splay x rise, then curls on back over the top and down
+    round an axis along x for `turns` turns, the curl's radius shrinking from `curl` to tip x curl
     (slowly at first, then faster) while it drifts `drift` out along x, clear of the head. Its
     section is round: radius r at the root narrowing to a point, swelling in `ridges` low ridges
     across it like a ram's. A band in ring_slot circles it at each fraction of its length in
@@ -365,13 +365,13 @@ def bat_wing(membrane, bones, M, span, height, thick=0.006, r=0.0055, scallop=0.
              slot='coat', rib='second'):
     """One small bat wing in M's frame (local x out along the span, z up; the membrane lies in the xz
     plane, its outer face toward -y). The arm rises from the root (M's origin) to the wrist, the
-    wing's peak, at wrist × (span, height); the fingers fan from the wrist to the tips (fractions of
-    span and height, outermost first); the membrane spans them and its body edge, from the last tip
-    to the body point and up to the root. Its trailing edge dips by scallop × the gap between two
-    tips, and it billows `cup` toward +y between the bones. The membrane is a slab `thick` thick in
-    `slot` on both faces, so it shades and outlines like a cape (into bmesh membrane); the bones,
-    in `rib` (into bmesh bones), are tubes of radius r tapering to the finger tips, with a knob and a
-    small claw at the wrist. nu, nv: the membrane's grid per gap and along a bone."""
+    wing's peak, at wrist (fractions of span and height); the fingers fan from the wrist to the tips
+    (fractions of span and height, outermost first); the membrane spans them and its body edge, from
+    the last tip to the body point and up to the root. Its trailing edge dips by scallop x the gap
+    between two tips, and it billows `cup` toward +y between the bones. The membrane is a slab `thick`
+    thick in `slot` on both faces, so it shades and outlines like a cape (into bmesh membrane); the
+    bones, in `rib` (into bmesh bones), are tubes of radius r tapering to the finger tips, with a knob
+    and a small claw at the wrist. nu, nv: the membrane's grid per gap and along a bone."""
     X, Y = (M.to_3x3() @ Vector((1, 0, 0))).normalized(), (M.to_3x3() @ Vector((0, 1, 0))).normalized()
     W = Vector((wrist[0] * span, 0.0, wrist[1] * height))
     edge = [Vector((x * span, 0.0, z * height)) for x, z in tips] + [Vector((body[0] * span, 0.0, body[1] * height)),
@@ -578,6 +578,7 @@ def skull(bm, c, r, slot='skin', face=None, pupils=None, hollow=False, rot=None,
 def flame_prof(t):
     """A flame tongue's width at t along it (0 at its root, 1 at its tip), as a fraction of its widest: round at the
     root, widest a quarter of the way up, then narrowing to a long sharp point."""
+    # 0.6695: the numerator's peak (0.6694 at t = 13/48, rounded up), so the profile peaks at 1
     return (1 - t) ** 1.4 * (0.5 + 2.0 * t) / 0.6695
 
 
