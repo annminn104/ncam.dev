@@ -183,6 +183,10 @@
 .ms-fps {
   font-variant-numeric: tabular-nums;
 }
+/* Phones only (the media query below): the panel folds into this button. */
+.ms-panel-toggle {
+  display: none;
+}
 
 .is-hidden .ms-hud,
 .is-hidden .ms-help,
@@ -205,10 +209,65 @@
   .ms-gate {
     bottom: 88px;
   }
+  /* Folded, the panel is just its toggle, clear of the diorama; open, the toggle heads it (in
+     place of the title row) and the controls grow upward from the same spot. */
   .ms-panel {
     top: auto;
     right: 16px;
     bottom: 88px;
+    min-width: 0;
+    padding: 0;
+  }
+  .ms-panel.is-open {
+    min-width: 200px;
+  }
+  .ms-panel-toggle {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    min-height: 40px;
+    padding: 8px 12px;
+    border: 0;
+    border-radius: inherit;
+    background: none;
+    color: var(--ms-fg);
+    font: inherit;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+  .ms-panel-toggle .ms-fps {
+    margin-left: auto;
+    color: var(--ms-dim);
+    font-weight: 400;
+  }
+  /* A chevron: up to open the panel, down to close it. */
+  .ms-panel-toggle::after {
+    content: '';
+    width: 6px;
+    height: 6px;
+    margin: 3px 2px 0;
+    border-right: 1.5px solid currentColor;
+    border-bottom: 1.5px solid currentColor;
+    transform: rotate(-135deg);
+  }
+  .ms-panel-toggle[aria-expanded='true']::after {
+    margin-top: -3px;
+    transform: rotate(45deg);
+  }
+  .ms-panel-toggle:focus-visible {
+    outline: 2px solid var(--ms-org);
+    outline-offset: 2px;
+  }
+  .ms-panel-body {
+    padding: 0 12px 10px;
+  }
+  .ms-panel:not(.is-open) .ms-panel-body,
+  .ms-panel-title {
+    display: none;
   }
 }
 
