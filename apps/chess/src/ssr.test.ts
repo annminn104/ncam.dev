@@ -44,6 +44,7 @@ describe('renderHeroSSR', () => {
     expect(html).toContain('Piece set');
     expect(html).toContain('Cultivation Treasures');
     expect(html).toContain('Holy Order');
+    expect(html).toContain('Dark Overlord Court');
     expect(html).toContain('https://chess.example.dev/presets/holy-order-640.avif');
     expect(html).toContain('https://chess.example.dev/presets/dark-court-640.avif');
     expect(html).toContain('https://chess.example.dev/presets/treasures-640.avif');
