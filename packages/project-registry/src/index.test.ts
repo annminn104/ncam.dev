@@ -11,6 +11,7 @@ describe('project-registry', () => {
       'bali',
       'holodex',
       'chess',
+      'mini-store',
     ]);
   });
 
