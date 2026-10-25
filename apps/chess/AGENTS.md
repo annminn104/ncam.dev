@@ -37,7 +37,8 @@ host's `MountConfig`; only `assetBase` is read. Not route-aware.
   sun or moon is in frame), no quality decline (SwiftShader draws it, the same on any machine),
   and `window.__chessReady` after 30 frames. Change a view, re-run it, look at the lobby.
 - `public/presets/` holds the figure sets' GLBs (`<preset>/<type>.glb`, `<type>-low.glb`, built
-  by `pnpm --filter @ncam/chess art:holy-order`) and the piece-set previews
+  by each set's own script, `pnpm --filter @ncam/chess art:<preset>`: `art:holy-order`,
+  `art:dark-court`) and the piece-set previews
   (`<id>-{640,320}.avif`, `pnpm --filter @ncam/chess capture:presets`). Both are committed; see
   "Figures (GLB presets)".
 - Arena cards: the caption carries its own scrim (`.chess-arena__caption`), as tall as its text
@@ -177,7 +178,9 @@ host's `MountConfig`; only `assetBase` is read. Not route-aware.
 - A `'figure'` preset (Holy Order, the Dark Overlord Court) is drawn from GLBs built in Blender by
   scripts: `art/blender/kit.py` (shared helpers, the `SLOTS` order, preview palettes and materials)
   and `art/blender/<preset>/*.py` (the piece builders, chained as `export.py`'s `PRESETS` says; an
-  entry `<preset>/<script>` borrows another set's script, which that set's GLBs never notice).
+  entry `<preset>/<script>` borrows another set's script, which that set's GLBs never notice; the
+  other way round, an edit to a Holy Order script changes the Dark Court's next rebuild too, since
+  every Dark Court piece chains Holy Order scripts).
   `.blend` files are scratch: never committed. CI never runs Blender; the GLBs are committed.
 - `pnpm --filter @ncam/chess art:holy-order` runs `scripts/build-figures.mjs holy-order`, which
   runs `art/blender/export.py` headless (Blender 5.2: `$BLENDER`, else `blender` on PATH). That
@@ -195,7 +198,10 @@ host's `MountConfig`; only `assetBase` is read. Not route-aware.
 
   The dark court's pawn caps (14000/4600) and knight low cap (7800) exceed Holy Order's
   (13000/4000, 7500): the owner raised them on 2026-10-24, after the pawn stopped at its
-  error ceiling.
+  error ceiling. Both pawn packs (high and low) still finish at about 99.7% of their error
+  ceiling, so a pawn rebuild after a `court.py` or `maid.py` change may fail the pack. It fails
+  loudly (the simplifier stops over the cap, and the script throws), and new caps are the owner's
+  call.
 
 - `export.py -- <preset> <outDir> [types] --sheet` renders each piece's review sheet instead
   (`<type>-sheet.png`: white and black from the front and the back, a face close-up, game size),
@@ -224,9 +230,10 @@ host's `MountConfig`; only `assetBase` is read. Not route-aware.
   the high one is loaded, a battle that starts low fetches only the low files, and a low file
   that fails leaves the high figure.
 
-  Figures face the other end of the board while their bases face their owner, and the capture's
-  lineup turns every figure to the camera (`facing.ts`: `figureTurn` is the half turn inside the
-  side's group, `FigureFacingContext` is what Battle sets to `'owner'` for the lineup).
+  In a game each figure gets a half turn inside its side's group (`facing.ts`: `figureTurn`), so it
+  faces the other end of the board while its base faces its owner. For the capture's lineup Battle
+  sets `FigureFacingContext` to `'owner'` (no inner turn) and turns black's pieces round in a
+  wrapper group (`renderPiece`), so every figure faces the camera.
 
 - The shader hooks inject at three's chunk anchors (`inject()`), which throws if three renames
   one; `material.test.ts` runs them over three's own sources.
@@ -254,7 +261,11 @@ host's `MountConfig`; only `assetBase` is read. Not route-aware.
   - decal ray casts must use the bare mesh, because an outline shell catches the rays;
   - lathe poles skip `rmod`/`zmod`;
   - sun shadows stripe a toon ramp, so keep them off in the previews;
-  - simplifying unlocked face decals turns the eyes into faceted diamonds.
+  - simplifying unlocked face decals turns the eyes into faceted diamonds;
+  - a thin plate with an outline hull folds inside out at the low LOD's error ceiling, and its hull
+    inks the exposed back faces as dark blotches: give that part `_line` 0 and paint its outline as
+    strokes in a `Lines*` part, which the low LOD drops (the Battle Maid's crown locks: `maid.py`'s
+    `HairCrown`, outlined in `LinesHair`).
 
 ## Commands
 
