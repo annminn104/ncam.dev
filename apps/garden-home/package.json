@@ -1,0 +1,51 @@
+{
+  "name": "@ncam/garden-home",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Garden Home — a glass villa and its garden island built from Blender modules, drawn with React Three Fiber and cut away floor by floor, packaged as a self-contained React Module Federation remote.",
+  "scripts": {
+    "assets": "node scripts/copy-basis.mjs",
+    "predev": "node scripts/copy-basis.mjs",
+    "prebuild": "node scripts/copy-basis.mjs",
+    "dev": "vite",
+    "build": "vite build --app",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "art:models": "node art/pipeline/models.mjs",
+    "art:assets": "node art/pipeline/build.mjs",
+    "test:art": "python3 -m unittest discover -s art/blender/tests && vitest run --root art/pipeline",
+    "e2e": "playwright test",
+    "capture:poster": "node scripts/capture-poster.mjs"
+  },
+  "dependencies": {
+    "@ncam/logger": "workspace:*",
+    "@react-three/fiber": "9.8.1",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "three": "0.186.1",
+    "zod": "4.6.5",
+    "zustand": "5.0.15"
+  },
+  "devDependencies": {
+    "@gltf-transform/cli": "4.5.1",
+    "@gltf-transform/core": "4.5.1",
+    "@gltf-transform/extensions": "4.5.1",
+    "@gltf-transform/functions": "4.5.1",
+    "@ncam/mf-remote": "workspace:*",
+    "@ncam/tsconfig": "workspace:*",
+    "@playwright/test": "1.64.0",
+    "@types/node": "^26.6.5",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@types/three": "0.186.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "meshoptimizer": "1.2.0",
+    "playwright": "1.64.0",
+    "pngjs": "7.0.0",
+    "sharp": "^0.35.5",
+    "typescript": "^5.9.0",
+    "vite": "^8.3.4",
+    "vitest": "^5.0.5"
+  }
+}

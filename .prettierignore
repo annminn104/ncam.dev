@@ -51,3 +51,7 @@ LICENSE
 # Mini Store reference material (apps/mini-store/AGENTS.md): Blender scene + the old JS build
 apps/mini-store/art
 apps/mini-store/legacy
+
+# Garden Home: the Blender build (Python, fixtures) and the pipeline's generated scene.json + GLBs
+apps/garden-home/art/blender
+apps/garden-home/public/assets

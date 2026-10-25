@@ -41,3 +41,7 @@ apps/strapi/public/uploads/*
 # Mini Store reference material, not part of any build (apps/mini-store/AGENTS.md)
 apps/mini-store/art
 apps/mini-store/legacy
+
+# Garden Home: the Blender build and the e2e specs, not part of any image build (apps/garden-home/AGENTS.md)
+apps/garden-home/art
+apps/garden-home/e2e

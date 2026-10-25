@@ -23,6 +23,8 @@ export default tseslint.config(
       // Mini Store reference material: the Blender scene and the old single-file JS build.
       'apps/mini-store/art/**',
       'apps/mini-store/legacy/**',
+      // Garden Home's Blender build: Python and fixtures (its pipeline in art/pipeline is linted).
+      'apps/garden-home/art/blender/**',
       // Strapi (apps/strapi): generated types, admin build context, local SQLite dir.
       'apps/strapi/types/generated/**',
       'apps/strapi/.strapi/**',
