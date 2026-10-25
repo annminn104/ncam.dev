@@ -14,7 +14,7 @@ from garden import shapes  # noqa: E402
 from siteplan import zones  # noqa: E402
 from carport import interact, kennel_layout, layout_check  # noqa: E402
 
-DOG = {"interact": "dog", "label": "Bé Akita", "clip": "act_dog_happy"}
+DOG = {"interact": "dog", "label": "Akita pup", "clip": "act_dog_happy"}
 
 
 def copy(layout, **overrides):

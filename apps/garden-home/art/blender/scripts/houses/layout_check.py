@@ -8,7 +8,7 @@ for a doorway.
 
 A furniture entry is (kind, name, room, (x, y), rot) with an optional sixth element: builder options such as
 {"variant": 3}, which the checks ignore except for "wind", which only the plants in catalog.WIND_SPANS take, and "on",
-the name of the piece it stands on (the decor pass, villa v2 spec §12 "Rèm và phụ kiện"): it must lie inside one of that
+the name of the piece it stands on (the decor pass, villa v2 spec §12 "Curtains and accessories"): it must lie inside one of that
 host's catalog.SURFACES tops (top_under), and so stands clear of the floor's rules. A room with
 "interior": True needs 2–4 downlights from the DOWNLIGHTS groups whose "level" matches its own. The resort groups are
 optional too: STRING_LIGHTS anchors, REFLECTING_POOLS and WALL_FOUNTAINS must stay inside the footprint, and nothing may

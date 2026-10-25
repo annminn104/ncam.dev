@@ -124,7 +124,7 @@ test('hovering the grill names it; a click at noon lights its coals and a second
   expect(grill, 'the grill on screen').not.toBeNull();
   const { x, y } = grill!;
   await page.mouse.move(x, y, { steps: 4 });
-  await expect(page.getByTestId('hover-label')).toContainText('Bếp nướng');
+  await expect(page.getByTestId('hover-label')).toContainText('Barbecue');
   await expect(canvas).toHaveCSS('cursor', 'pointer');
   const coals = async () => boxLuma(await canvas.screenshot(), x, y - 4, 16, 12);
   const cold = await coals();

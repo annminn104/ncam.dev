@@ -85,7 +85,7 @@ describe('pickable', () => {
     expect(pickable(hit(door, [0, 1, 0], 1))).toBe(false);
   });
 
-  it('looks through the curtains\' voile like a pane (villa v2 spec §12 "Rèm và phụ kiện"): a click reaches the room behind', () => {
+  it('looks through the curtains\' voile like a pane (villa v2 spec §12 "Curtains and accessories"): a click reaches the room behind', () => {
     const decor = new Mesh(new BoxGeometry(), [
       new MeshStandardMaterial({ name: 'M_drape' }),
       new MeshStandardMaterial({ name: 'M_sheer' }),
@@ -114,10 +114,10 @@ describe('pickable', () => {
       new MeshStandardMaterial({ name: 'M_frame' }),
       new MeshStandardMaterial({ name: 'GLASS_clear' }),
     ]);
-    door.userData = { name: 'Door_main', interact: 'door:main', label: 'Cửa chính' };
+    door.userData = { name: 'Door_main', interact: 'door:main', label: 'Front door' };
     expect(pickable(hit(door, [0, 1, 0], 1))).toBe(true);
     const shower = new Group();
-    shower.userData = { name: 'Shower_shared', interact: 'shower:Shower_shared', label: 'Vòi sen' };
+    shower.userData = { name: 'Shower_shared', interact: 'shower:Shower_shared', label: 'Shower' };
     const enclosure = new Mesh(
       new BoxGeometry(),
       new MeshStandardMaterial({ name: 'GLASS_clear' }),
@@ -339,7 +339,7 @@ describe('filterRaycasts', () => {
 
   it('keeps the glass of an interactive item, which is that item', () => {
     const shower = new Group();
-    shower.userData = { name: 'Shower_shared', interact: 'shower:Shower_shared', label: 'Vòi sen' };
+    shower.userData = { name: 'Shower_shared', interact: 'shower:Shower_shared', label: 'Shower' };
     shower.add(storeys(new MeshStandardMaterial({ name: 'GLASS_clear', side: DoubleSide })));
     filterRaycasts(shower);
     expect(heights(reached(shower))).toEqual([7]);

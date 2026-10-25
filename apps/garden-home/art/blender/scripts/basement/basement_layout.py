@@ -1,4 +1,4 @@
-"""The basement (villa v2 spec §12 "Tầng hầm") as plain data. Pure Python: build_basement.py turns it into geometry,
+"""The basement (villa v2 spec §12 "Basement") as plain data. Pure Python: build_basement.py turns it into geometry,
 layout_check.py sanity-checks it.
 
 A module of its own, so the house keeps its triangle budget, standing in the house's slot: module space is the
@@ -7,13 +7,13 @@ are shared. Level -1 lies under the ground slab, 3.2 m clear: retaining walls st
 outline of the pit the lawn has a hole for (PIT), and inside them six rooms tile the plan round a hall that runs east
 from the foot of the spiral stair (the house's, continued down its column): the wine cellar behind a glass wall along
 the hall's back, the karaoke lounge at its east end, and along the front the shower room, the spa (with its sauna
-cabin and hot tub) and the gym, the spa looking through a glass wall into the light well (giếng trời) sunk into the lawn
+cabin and hot tub) and the gym, the spa looking through a glass wall into the light well sunk into the lawn
 in front of the plinth's front face, left of the walk (the zone `lightwell`, siteplan/zones.py).
 
 The tables follow the house's (houses/house_parts): ROOMS, PARTITIONS with their doors, PASSAGES, DOWNLIGHTS (split into
 one LT_down_<room> per room) and FURNITURE entries (kind, object name, room, (x, y), rotation[, builder options]), whose
 "into" option names the object a piece is merged into (OBJECTS, one draw call per material) and "on" the piece it stands
-on (the decor pass's few accents, villa v2 spec §12 "Rèm và phụ kiện": on a catalog.SURFACES top of the host,
+on (the decor pass's few accents, villa v2 spec §12 "Curtains and accessories": on a catalog.SURFACES top of the host,
 houses/layout_check.top_under): the website draws an object "buried" only while it cuts the house down to the
 basement, so on the wallpaper only the spa behind the light well, the hall under the stair's hole, the walls and floors
 round them and the light well are drawn; an "uncut" object stands whole under that cut (the retaining walls, the light
@@ -46,7 +46,7 @@ WALL = 0.2
 INSIDE = ((LEFT + WALL, TERRACE + WALL), (RIGHT - WALL, BACK - WALL))
 (_IX0, _IY0), (_IX1, _IY1) = INSIDE
 
-# The light well (giếng trời): a sunken court open to the sky, the outer faces of its walls ((x0, y0), (x1, y1)); its
+# The light well: a sunken court open to the sky, the outer faces of its walls ((x0, y0), (x1, y1)); its
 # back is the basement's front wall, under the plinth's front face, where a glass wall looks into the spa.
 WELL = {"min": (-5.5, -11.1), "max": (-0.3, TERRACE)}
 _WX0, _WY0 = WELL["min"]
@@ -94,8 +94,8 @@ ROOMS = [
     {"name": "spa", "level": LEVEL, "min": (_SHOWERS_SPA, _IY0), "max": (_EAST, _HALL_FRONT), "interior": True},
     {"name": "gym", "level": LEVEL, "min": (_EAST, _IY0), "max": (_IX1, _HALL_FRONT), "interior": True},
 ]
-ROOM_LABELS = {"basement_hall": "sảnh hầm", "wine_cellar": "hầm rượu", "karaoke": "phòng karaoke", "spa": "spa",
-               "gym": "phòng gym", "shower_room": "phòng tắm hầm"}
+ROOM_LABELS = {"basement_hall": "Basement lobby", "wine_cellar": "Wine cellar", "karaoke": "Karaoke room", "spa": "Spa",
+               "gym": "Gym", "shower_room": "Basement bathroom"}
 FLOOR_Z = {room["name"]: FLOOR for room in ROOMS}
 # Each room's floor finish, by palette key, and the object it is built into: travertine through the hall, the cellar,
 # the shower room and the spa (drawn always: the spa shows behind the light well, the hall under the stair's hole),

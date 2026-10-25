@@ -48,7 +48,7 @@ export interface CursorOrbit {
    * A floor button, the one already on too: the cut follows `mode` from the next frame on, and the camera eases where
    * floorPose says (to the house from afar, or up to the floor of what it shows next) over FLOOR_VIEW.time; meanwhile
    * the level shown waits for the camera to clear the next one's floor, even once a press, a zoom or a drag has ended the
-   * ease, so leaving a low "Hầm" view never shows the whole house in between nor jumps up the polar limit.
+   * ease, so leaving a low "Basement" view never shows the whole house in between nor jumps up the polar limit.
    */
   choose(mode: CutMode): void;
   /** Whether a floor button's ease is under way (OrbitRig keeps drawing until it ends). */

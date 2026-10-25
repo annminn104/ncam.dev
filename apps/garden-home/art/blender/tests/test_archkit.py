@@ -1117,9 +1117,9 @@ EXPECTED_NIGHT_KINDS = ["ac_split", "bar_cabinet", "bbq_coals", "candle_set", "c
 EXPECTED_WALL_MOUNTED = {"painting_l": 1.2, "painting_m": 1.4, "wall_shelf": 1.5, "laundry_shelf": 1.4,
                          "fern_hanging": 2.1, "rattan_pendant": 2.3, "light_switch": 1.15, "crystal_chandelier": 3.0,
                          "ac_split": 2.4, "ac_remote": 1.15,
-                         # the basement (villa v2 spec §12 "Tầng hầm")
+                         # the basement (villa v2 spec §12 "Basement")
                          "disco_ball": 2.1, "oil_shelf": 0.95, "mirror_wall": 0.25,
-                         # the decor pass (villa v2 spec §12 "Rèm và phụ kiện")
+                         # the decor pass (villa v2 spec §12 "Curtains and accessories")
                          "art_print": 1.1, "mirror_round": 1.2, "towel_bar": 0.85}
 
 

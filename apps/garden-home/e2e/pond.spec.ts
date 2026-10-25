@@ -93,7 +93,7 @@ test('a click on the waterfall stops it, a second on the rockery behind starts i
   expect(sheet, 'the waterfall on screen').not.toBeNull();
   const { x, y } = sheet!;
   await page.mouse.move(x, y, { steps: 4 });
-  await expect(page.getByTestId('hover-label')).toContainText('Thác nước');
+  await expect(page.getByTestId('hover-label')).toContainText('Waterfall');
   await expect(canvas).toHaveCSS('cursor', 'pointer');
   expect(await hovered(page)).toBe('WATER_waterfall_sheet');
   // the streaks slide down the sheet, so its luma flickers by a few levels: compare running with stopped, not frames
@@ -127,8 +127,8 @@ test('hovering the pond offers to feed the koi; a click drops the food and toggl
   const x = pond!.x + 30;
   const y = pond!.y - 12;
   await page.mouse.move(x, y, { steps: 4 });
-  await expect(page.getByTestId('hover-label')).toContainText('Cho cá ăn');
-  await expect(page.getByTestId('hover-label')).toContainText('Bấm để cho cá ăn');
+  await expect(page.getByTestId('hover-label')).toContainText('Feed the koi');
+  await expect(page.getByTestId('hover-label')).toContainText('Click to feed the koi');
   await page.mouse.click(x, y);
   const fed = await page.evaluate(() =>
     (

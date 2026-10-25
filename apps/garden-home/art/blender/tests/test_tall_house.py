@@ -1,4 +1,4 @@
-"""The tall house (villa v2 spec §12 "Nhà cao + thông tầng"): every storey of the villa 30 % taller over the same plinth,
+"""The tall house (villa v2 spec §12 "Tall house + double height"): every storey of the villa 30 % taller over the same plinth,
 both storeys grown to 23 x 15 m, a double-height living room under a gallery with a glass balustrade, an open spiral stair
 up to it and a tiered crystal ring chandelier in the void. Pure Python."""
 import math
@@ -157,7 +157,7 @@ class DoubleHeightLivingRoomTest(unittest.TestCase):
         self.assertEqual(gallery["min"][1], VOID[3])
         self.assertTrue(gallery["min"][0] <= VOID[0] and gallery["max"][0] > VOID[2], gallery)
         self.assertGreaterEqual(gallery["max"][1] - gallery["min"][1], 1.5)
-        self.assertEqual(house_layout.ROOM_LABELS["gallery"], "hành lang")
+        self.assertEqual(house_layout.ROOM_LABELS["gallery"], "Hallway")
 
     def test_a_glass_balustrade_guards_the_void_along_the_gallery_but_where_the_stair_arrives(self):
         cx, cy = shell.STAIR["center"]
@@ -190,7 +190,7 @@ class DoubleHeightLivingRoomTest(unittest.TestCase):
         master = rooms()["master"]
         self.assertGreater(master["min"][0], VOID[2])  # off the void, at the front
         self.assertEqual(master["min"][1], common.FRONT)
-        self.assertEqual(house_layout.ROOM_LABELS["gaming"], "góc máy tính")
+        self.assertEqual(house_layout.ROOM_LABELS["gaming"], "Computer corner")
         kinds = {kind for kind, _name, room, *_ in house_layout.FURNITURE if rooms()[room]["level"] == 1}
         self.assertLessEqual({"bed_king", "bed_double", "bed_single", "gaming_desk", "gaming_chair", "bathtub", "shower",
                               "closet_rack", "vanity_double", "tv_cabinet", "egg_chair"}, kinds)
@@ -420,7 +420,7 @@ class RoofAccessTest(unittest.TestCase):
         self.assertGreaterEqual(gap, 1.0)
 
 
-AC_ROOMS = {"master": "phòng master", "bedroom2": "phòng ngủ 2", "bedroom3": "phòng ngủ 3"}
+AC_ROOMS = {"master": "Master bedroom", "bedroom2": "Bedroom 2", "bedroom3": "Bedroom 3"}
 
 
 class AirConditionerTest(unittest.TestCase):

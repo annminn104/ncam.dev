@@ -98,7 +98,7 @@ def _stack(mb, mat, edge, side, y, rows, folds):
 
 
 def curtain(mb, m, w, d, h, width=None, drop=None, ends="both", layers=CURTAIN_LAYERS, stack=CURTAIN["stack"]):
-    """A curtain run (villa v2 spec §12 "Rèm và phụ kiện"): a slim dark bronze ceiling track as wide as the glazing
+    """A curtain run (villa v2 spec §12 "Curtains and accessories"): a slim dark bronze ceiling track as wide as the glazing
     (`width`, along X) with its top at `drop` over the floor, the room's height under its ceiling; at its `ends` ("both",
     "left" for -X, "right" for +X) a gathered stack of soft wave folds (catalog.CURTAIN, folds a metre) from 2 cm over the
     floor up to the track: an off-white voile on the glass side (+Y at rot 0), hanging straight, and in front of it a

@@ -28,7 +28,7 @@ export interface AppState {
   cutMode: CutMode;
   /**
    * How many times a floor button was pressed, the one already on too: OrbitRig moves the camera for each press (a
-   * press on "Hầm" while it is on eases a camera that left the house back to it), which cutMode alone cannot tell.
+   * press on "Basement" while it is on eases a camera that left the house back to it), which cutMode alone cannot tell.
    */
   floorPress: number;
   /** Click toggles per interact group (interaction spec §3.2); a group missing here is on 'auto'. */

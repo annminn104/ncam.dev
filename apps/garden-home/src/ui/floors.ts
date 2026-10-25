@@ -9,15 +9,15 @@ export interface FloorButton {
 
 /**
  * The floor buttons, top to bottom (interaction spec §2): the cut by the camera's distance, as before; the whole house
- * with its roof; the upper floor; the ground floor; the basement (villa v2 spec §12 "Tầng hầm"), which only a button
+ * with its roof; the upper floor; the ground floor; the basement (villa v2 spec §12 "Basement"), which only a button
  * shows.
  */
 export const FLOOR_BUTTONS: readonly FloorButton[] = [
-  { mode: 'auto', label: 'Tự động', title: 'Cắt nhà theo khoảng cách camera' },
-  { mode: 'none', label: 'Mái', title: 'Xem cả ngôi nhà, có mái' },
-  { mode: 'upper', label: 'Tầng 2', title: 'Xem tầng 2 (bỏ mái)' },
-  { mode: 'ground', label: 'Tầng 1', title: 'Xem tầng 1 (bỏ tầng 2)' },
-  { mode: 'basement', label: 'Hầm', title: 'Xem tầng hầm (bỏ cả ngôi nhà)' },
+  { mode: 'auto', label: 'Auto', title: "Cut the house by the camera's distance" },
+  { mode: 'none', label: 'Roof', title: 'The whole house, roof on' },
+  { mode: 'upper', label: 'Upper floor', title: 'The upper floor, roof off' },
+  { mode: 'ground', label: 'Ground floor', title: 'The ground floor, upper floor off' },
+  { mode: 'basement', label: 'Basement', title: 'The basement, the whole house off' },
 ];
 
 /** Whether the button of `mode` shows pressed while `current` is picked. */

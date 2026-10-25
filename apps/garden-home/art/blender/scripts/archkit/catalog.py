@@ -5,8 +5,8 @@ Villa v2 spec §5.1 adds the pieces below the v1 ones; the resort deco adds the 
 (interaction spec §3.1) the wall switch, the garden (villa v2 part 2) the beds, pots, vegetable garden and barbecue
 pieces, the koi pond (part 3) the tea corner, lotus, koi and rockery pieces, the carport (part 4) the cars and the
 dog's corner, the tall house the spiral stair, the crystal chandelier, the roof's stair pavilion and the air
-conditioning, the basement (villa v2 spec §12 "Tầng hầm") its rooms' pieces and its light well's, and the decor pass
-(§12 "Rèm và phụ kiện") the curtains as tall as their room, the roller blind and the accessories at the end.
+conditioning, the basement (villa v2 spec §12 "Basement") its rooms' pieces and its light well's, and the decor pass
+(§12 "Curtains and accessories") the curtains as tall as their room, the roller blind and the accessories at the end.
 """
 FURNITURE = {
     "sofa_l": (2.8, 2.2, 0.85),
@@ -35,7 +35,7 @@ FURNITURE = {
     "plant_small": (0.4, 0.4, 0.8),
     "painting_l": (1.6, 0.05, 1.0),
     "painting_m": (0.9, 0.05, 0.7),
-    # the decor pass (villa v2 spec §12 "Rèm và phụ kiện"): a curtain run, its track as wide as the glazing (the
+    # the decor pass (villa v2 spec §12 "Curtains and accessories"): a curtain run, its track as wide as the glazing (the
     # builder's `width`) and as high over the floor as the room is tall (`drop`), the sizes here its defaults
     "curtain": (2.4, 0.22, 3.0),
     "dining_set_8": (2.8, 2.1, 0.9),
@@ -140,7 +140,7 @@ FURNITURE = {
     "ac_remote": (0.08, 0.02, 0.12),
     "ac_condenser": (0.8, 0.3, 0.6),
     "teak_screen": (2.6, 0.06, 0.9),
-    # the basement (villa v2 spec §12 "Tầng hầm"), merged per material into a few objects like the garden's pieces:
+    # the basement (villa v2 spec §12 "Basement"), merged per material into a few objects like the garden's pieces:
     # the wine cellar's wall racks of bottles (their ends rows of glass on the rack's front), a barrel lying on its
     # cradle along Y and the high tasting table with a bar stool at either end; the karaoke lounge's U-shaped velvet
     # sofa round its coffee table (open to the front), the big TV on its low unit, a tower speaker, a stand with two
@@ -169,7 +169,7 @@ FURNITURE = {
     "yoga_mat": (0.65, 1.8, 0.01),
     "palm_courtyard": (2.6, 2.6, 5.5),
     "uplight": (0.14, 0.14, 0.12),
-    # the decor pass (villa v2 spec §12 "Rèm và phụ kiện"), built into the interior module: the roller blind of a
+    # the decor pass (villa v2 spec §12 "Curtains and accessories"), built into the interior module: the roller blind of a
     # ribbon window (its `width` and `drop` the window's, like a curtain's); the accessories (furniture/interior.py):
     # throw cushions leaning on a sofa's or a bed's back (three, or a pair), a folded throw, the coffee table's tray of
     # candles with a bowl and books, a stack of books, a vase of leafy branches, a stone bowl, a terracotta floor vase

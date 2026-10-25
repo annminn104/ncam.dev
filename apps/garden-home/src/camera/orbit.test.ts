@@ -529,7 +529,7 @@ describe("nearFor: the camera near the house, close enough to make out the inter
   ];
 
   it("measures from the house focus like cutFor, but whatever the camera's height and the cut", () => {
-    expect(nearFor(at(20, 0.1), HOUSE, false)).toBe(true); // 2 m up: the house whole ("Mái" or too low to cut), still near
+    expect(nearFor(at(20, 0.1), HOUSE, false)).toBe(true); // 2 m up: the house whole ("Roof" or too low to cut), still near
     expect(nearFor(at(20), HOUSE, false)).toBe(true);
     expect(nearFor([-30, 14, 30], HOUSE, false)).toBe(false); // by the vegetable garden, far from the house
     expect(nearFor(scene.camera.idle.position, HOUSE, false)).toBe(false); // the site's first view
@@ -544,7 +544,7 @@ describe("nearFor: the camera near the house, close enough to make out the inter
   });
 });
 
-describe('the floor buttons and the basement\'s cut (villa v2 spec §12 "Tầng hầm")', () => {
+describe('the floor buttons and the basement\'s cut (villa v2 spec §12 "Basement")', () => {
   it('cutFor takes the mode: a level picked holds whatever the distance, as long as the camera clears its cut', () => {
     const [fx, fy, fz] = HOUSE.focus;
     expect(cutFor([fx + 60, fy + 40, fz + 60], HOUSE, 'none', 'ground')).toBe('ground');
@@ -556,7 +556,7 @@ describe('the floor buttons and the basement\'s cut (villa v2 spec §12 "Tầng 
   });
 
   it("keeps the camera over the house under the basement's cut as high as under the ground floor's: leaving it never jumps", () => {
-    // 5.55 m over the house's ground near it, the ground floor cut's floor: "Tầng 1" takes over from a low "Hầm" view
+    // 5.55 m over the house's ground near it, the ground floor cut's floor: "Ground floor" takes over from a low "Basement" view
     // where it stands; it may still look down into the pit from there
     const floor = cutHeight('ground')! + CUT_CAMERA_CLEAR + ORBIT_CLEARANCE.cutClear;
     expect(floor).toBeCloseTo(5.55, 9);
@@ -621,7 +621,7 @@ describe('floorPose: where a floor button takes the camera (interaction spec §2
     );
   });
 
-  it('leaves a camera that already looks down at the house from near enough where it is, and "Mái" and "Tự động" from afar', () => {
+  it('leaves a camera that already looks down at the house from near enough where it is, and "Roof" and "Auto" from afar', () => {
     const near = over(HOUSE.focus, 30, 30 * Math.sin(60 * DEG));
     for (const mode of ['basement', 'ground', 'upper', 'none', 'auto'] as const) {
       expect(floorPose(mode, near, HOUSE.focus, HOUSE, 'ground'), mode).toBeNull();

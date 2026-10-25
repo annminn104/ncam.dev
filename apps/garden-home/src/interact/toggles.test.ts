@@ -42,7 +42,7 @@ describe('isOn', () => {
     }
     expect(glowFactor('on', 0, 'bbq')).toBe(1); // coals glow in full by day: they are not a screen
     expect(glowFactor('auto', 0.3, 'bbq')).toBe(0.3);
-    expect(hintFor('bbq', true)).toBe('Bấm để tắt');
+    expect(hintFor('bbq', true)).toBe('Click to switch off');
   });
 
   it('keeps showers off and the door shut, and the jacuzzi and the fountain running, while auto', () => {
@@ -55,8 +55,8 @@ describe('isOn', () => {
   });
 
   it('offers to feed the koi: a click on the pond is no toggle', () => {
-    expect(hintFor('koi', false)).toBe('Bấm để cho cá ăn');
-    expect(hintFor('koi', true)).toBe('Bấm để cho cá ăn');
+    expect(hintFor('koi', false)).toBe('Click to feed the koi');
+    expect(hintFor('koi', true)).toBe('Click to feed the koi');
     expect(isToggled('koi')).toBe(false);
     expect(isToggled('waterfall')).toBe(true);
   });
@@ -66,8 +66,8 @@ describe('isOn', () => {
     expect(playsOnce('dog')).toBe(true);
     expect(playsOnce('koi')).toBe(false); // the pond's water feeds the koi
     expect(playsOnce('door')).toBe(false); // the door's act_ clip runs forwards and back with its toggle
-    expect(hintFor('dog', false)).toBe('Bấm để chơi với bé');
-    expect(hintFor('dog', true)).toBe('Bấm để chơi với bé');
+    expect(hintFor('dog', false)).toBe('Click to play with the pup');
+    expect(hintFor('dog', true)).toBe('Click to play with the pup');
     expect(isOn('dog', 'auto', 1)).toBe(false);
   });
 
@@ -105,12 +105,12 @@ describe("the air conditioners (ac:<room>, the tall house's bedrooms)", () => {
       expect(glowFactor('on', night, 'ac')).toBe(1);
       expect(glowFactor('off', night, 'ac')).toBe(0);
     }
-    expect(hintFor('ac', false)).toBe('Bấm để bật');
-    expect(hintFor('ac', true)).toBe('Bấm để tắt');
+    expect(hintFor('ac', false)).toBe('Click to switch on');
+    expect(hintFor('ac', true)).toBe('Click to switch off');
   });
 });
 
-describe('the basement\'s groups (villa v2 spec §12 "Tầng hầm")', () => {
+describe('the basement\'s groups (villa v2 spec §12 "Basement")', () => {
   it("keep the karaoke's party mode and the sauna off while auto, day and night, and a click turns one on", () => {
     for (const kind of ['party', 'sauna']) {
       expect(GLOW_KINDS.has(kind)).toBe(true);
@@ -127,7 +127,7 @@ describe('the basement\'s groups (villa v2 spec §12 "Tầng hầm")', () => {
   it("let the spa's hot tub run on auto, like the roof's jacuzzi (jacuzzi:spa)", () => {
     expect(isOn('jacuzzi', 'auto', 0)).toBe(true);
     expect(isOn('jacuzzi', 'off', 0)).toBe(false);
-    expect(hintFor('party', false)).toBe('Bấm để bật');
+    expect(hintFor('party', false)).toBe('Click to switch on');
   });
 });
 
@@ -168,11 +168,11 @@ describe('glowFactor', () => {
 });
 
 describe('hintFor', () => {
-  it('says in Vietnamese what a click will do', () => {
-    expect(hintFor('tv', false)).toBe('Bấm để bật');
-    expect(hintFor('light', true)).toBe('Bấm để tắt');
-    expect(hintFor('door', false)).toBe('Bấm để mở');
-    expect(hintFor('door', true)).toBe('Bấm để đóng');
+  it('says in English what a click will do', () => {
+    expect(hintFor('tv', false)).toBe('Click to switch on');
+    expect(hintFor('light', true)).toBe('Click to switch off');
+    expect(hintFor('door', false)).toBe('Click to open');
+    expect(hintFor('door', true)).toBe('Click to close');
   });
 });
 

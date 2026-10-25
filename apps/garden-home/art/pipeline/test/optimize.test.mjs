@@ -26,7 +26,7 @@ describe('optimizeModule (Blender + KTX-Software)', () => {
   beforeAll(async () => {
     if (!isKtxSupported(ktxVersion())) {
       throw new Error(
-        'KTX-Software >= 4.4.0 not found: install it before running this test (see plan "Chuẩn bị")',
+        'KTX-Software >= 4.4.0 not found: install it before running this test (see plan "Preparation")',
       );
     }
     tmp = mkdtempSync(join(tmpdir(), 'garden-opt-'));
@@ -57,7 +57,7 @@ describe('optimizeModule (Blender + KTX-Software)', () => {
       'EXT_meshopt_compression',
     );
     const hotspot = root.listNodes().find((n) => n.getName() === 'HS_pond');
-    expect(hotspot?.getExtras()).toEqual({ action: 'focus', label: 'Ao cá', radius: 4.5 });
+    expect(hotspot?.getExtras()).toEqual({ action: 'focus', label: 'Koi pond', radius: 4.5 });
     const colored = root
       .listMeshes()
       .filter((m) => m.listPrimitives().some((p) => p.getAttribute('COLOR_0')));

@@ -6,7 +6,7 @@ actually built has another size (make_placeholders --yard-size): zones, trees an
 in zone island.ISLAND_WIDE spreads a garden module over the whole island in site space: it stands at the centre (0, 0),
 unturned, with the planned island's size (zones.ISLAND, whatever island is built) as its footprint, and the module's own
 layout check places its content. A zone holds one slot, but for a slot of ZONE_SHARED (optional), which stands in the
-place of the slot it names, in its zone: the basement under the house (villa v2 spec §12 "Tầng hầm").
+place of the slot it names, in its zone: the basement under the house (villa v2 spec §12 "Basement").
 """
 import math
 

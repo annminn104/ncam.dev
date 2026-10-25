@@ -22,7 +22,7 @@ UPPER_FLOOR = 5.26
 UPPER_CEIL = 9.29
 ROOF_TOP = 9.68
 DOOR_TOP = 3.57
-# The basement (villa v2 spec §12 "Tầng hầm") lies under the ground slab: the plinth grows down into a slab GROUND_SLAB
+# The basement (villa v2 spec §12 "Basement") lies under the ground slab: the plinth grows down into a slab GROUND_SLAB
 # thick, whose underside is the basement's ceiling (BASEMENT_CEIL = PLINTH - GROUND_SLAB), 3.2 m over the finish of its
 # floor, which lies 2 cm over BASEMENT_FLOOR as a storey's over its slab. Literal, like the heights above: cutaway.test.ts
 # reads them.

@@ -51,7 +51,7 @@ class ExportModuleTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr[-2000:])
         gltf = read_glb_json(os.path.join(out, "koi_pond.raw.glb"))
         nodes = {n["name"]: n for n in gltf["nodes"]}
-        self.assertEqual(nodes["HS_pond"]["extras"], {"action": "focus", "label": "Ao cá", "radius": 4.5})
+        self.assertEqual(nodes["HS_pond"]["extras"], {"action": "focus", "label": "Koi pond", "radius": 4.5})
         self.assertNotIn("animations", gltf)  # the koi swim in the website's vertex shader, not in clips
         lotus = gltf["meshes"][nodes["Lotus"]["mesh"]]
         self.assertIn("COLOR_0", lotus["primitives"][0]["attributes"])

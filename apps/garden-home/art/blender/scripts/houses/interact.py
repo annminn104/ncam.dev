@@ -1,7 +1,7 @@
 """What a click toggles on the website (interaction spec §3.1). Pure Python.
 
 build_house.py tags objects with custom properties that the glTF export carries as node extras: `interact`, the group
-a click on the object toggles, `label`, the Vietnamese name the website shows on hover, and for the door and the
+a click on the object toggles, `label`, the name the website shows on hover, and for the door and the
 jacuzzi the `clip` they play. The groups:
 
 - light:<room>, every light of a room: its point lights and downlights (one LT_down_<room> object per room, see
@@ -36,19 +36,17 @@ EPS = 1e-6
 
 # Catalog kinds that light the room they stand in, and the screens with the group they start.
 LAMP_KINDS = frozenset({"rattan_pendant", "floor_lamp", "nightstand_lamp", "crystal_chandelier"})
-# Lamps with a hover label of their own rather than their room's light ("Đèn phòng khách"), by kind.
-LAMP_LABELS = {"crystal_chandelier": "Đèn chùm pha lê"}
+# Lamps with a hover label of their own rather than their room's light ("Living room lights"), by kind.
+LAMP_LABELS = {"crystal_chandelier": "Crystal chandelier"}
 # Kinds the dollhouse cut clips at the void's plane rather than at their storey's cut (uncut), and how far over a
 # piece's top (its crown) that plane runs under the ground floor's cut: the stub of its cord that shows.
 UNCUT_KINDS = frozenset({"crystal_chandelier"})
 CUT_TOP_STUB = 0.05
 SCREEN_GROUPS = {"tv_wall": "tv", "tv_cabinet": "tv", "gaming_desk": "pc"}
 # Hover labels per group kind; {room} is the room's ROOM_LABELS entry.
-LABELS = {"light": "Đèn {room}", "switch": "Công tắc đèn {room}", "tv": "TV {room}", "pc": "Máy tính", "shower": "Vòi sen {room}",
-          "door": "Cửa chính", "jacuzzi": "Bể sục", "fountain": "Tường nước", "lights": "Dây đèn", "ac": "Máy lạnh {room}",
-          "ac_remote": "Điều khiển máy lạnh {room}"}
-# An air conditioner names its room shorter than the room's lights do: "Máy lạnh phòng master".
-AC_ROOM_NAMES = {"master": "phòng master"}
+LABELS = {"light": "{room} lights", "switch": "{room} light switch", "tv": "{room} TV", "pc": "Computer", "shower": "{room} shower",
+          "door": "Front door", "jacuzzi": "Hot tub", "fountain": "Water wall", "lights": "String lights", "ac": "{room} AC",
+          "ac_remote": "{room} AC remote"}
 DOOR_CLIP = "act_door_open"  # archkit.glazing.sliding_door's action
 BUBBLE_GROUPS = "abc"  # archkit.rooftop.GROUPS: the jacuzzi's bubbles are <name>_bubbles_a, _b and _c
 
@@ -148,8 +146,7 @@ def tags(layout):
         elif kind == "shower":
             tag([name, f"WATER_{name}_flow"], "shower", f"shower:{name}", room)
         elif kind in ("ac_split", "ac_remote"):
-            label = LABELS["ac" if kind == "ac_split" else "ac_remote"].format(
-                room=AC_ROOM_NAMES.get(room, names.get(room, room)))
+            label = LABELS["ac" if kind == "ac_split" else "ac_remote"].format(room=names.get(room, room))
             for part in ([name] if kind == "ac_remote" else [name, f"{name}_flap"]):
                 found[part] = {"interact": f"ac:{room}", "label": label}
             if kind == "ac_split":

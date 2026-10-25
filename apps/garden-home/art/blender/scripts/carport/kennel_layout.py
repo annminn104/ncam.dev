@@ -9,7 +9,7 @@ out on the grass and a small bush by the house (Dog_corner: low things, which ca
 The Akita is three objects (build_kennel.py): Akita, its body, which breathes (BREATHE, ambient_dog_breathe: it swells a
 little across and up), with its head (Akita_head) and its tail (Akita_tail) for children, their origins on the pivots of
 catalog.AKITA_PIVOTS; the tail wags slowly (WAG, ambient_dog_tail); a click on the dog plays HAPPY (act_dog_happy, the
-click group dog "Bé Akita", carport/interact.py) once: two hops with a wiggle, the head tilted and turned, the tail
+click group dog "Akita pup", carport/interact.py) once: two hops with a wiggle, the head tilted and turned, the tail
 wagging fast, then back to rest. Frames at FPS (the glTF exporter writes frame / fps); every key list starts at frame 0,
 so no clip holds its first frame.
 """

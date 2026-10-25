@@ -68,7 +68,7 @@ class ExportLayoutTest(unittest.TestCase):
                                          "garden_paths_01", "house_01", "interior_01", "kennel_01", "koi_pond_01",
                                          "pool_01", "tea_garden_01", "veg_garden_01", "yard_01"])
         # the basement under the tall house and its curtains and accessories in it, in its place (villa v2 spec §12
-        # "Tầng hầm", "Rèm và phụ kiện")
+        # "Basement", "Curtains and accessories")
         for slot, module in (("basement_01", "basement"), ("interior_01", "interior")):
             self.assertEqual(slots[slot]["module"], module)
             self.assertVecAlmostEqual(slots[slot]["position"], [-1.5, 0.0, -9.5])

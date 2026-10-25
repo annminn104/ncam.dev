@@ -1,19 +1,19 @@
 """What a click toggles at the carport and what it does to the dog (interaction spec §3.1, villa v2 part 4). Pure
 Python.
 
-The carport's downlights are the group lights:carport "Đèn nhà xe": their object and the carport itself (its roof,
+The carport's downlights are the group lights:carport "Carport lights": their object and the carport itself (its roof,
 posts and wall), since the downlights hang under the roof's beams out of sight from above, so a click on the roof
-switches them. Each car's head and tail lights are a group of their own, lights:car_pickup "Đèn xe bán tải" and
-lights:car_super "Đèn siêu xe", on the car's body and on its lights' object: a click on the car switches its lights,
+switches them. Each car's head and tail lights are a group of their own, lights:car_pickup "Pickup truck lights" and
+lights:car_super "Supercar lights", on the car's body and on its lights' object: a click on the car switches its lights,
 which glow softly at night on auto like the garden's lights (the website's light groups, src/interact). The Akita is
-the group dog "Bé Akita", which a click does not toggle: it plays the dog's happy clip once (act_dog_happy, its
+the group dog "Akita pup", which a click does not toggle: it plays the dog's happy clip once (act_dog_happy, its
 `clip`), on top of its breathing and its slow wag.
 """
 from houses.interact import GROUP_RE  # noqa: F401  (the website reads carport, garden and house ids alike)
 
-CARPORT, CARPORT_LABEL = "lights:carport", "Đèn nhà xe"
-CAR_LABELS = {"lights:car_pickup": "Đèn xe bán tải", "lights:car_super": "Đèn siêu xe"}
-DOG, DOG_LABEL = "dog", "Bé Akita"
+CARPORT, CARPORT_LABEL = "lights:carport", "Carport lights"
+CAR_LABELS = {"lights:car_pickup": "Pickup truck lights", "lights:car_super": "Supercar lights"}
+DOG, DOG_LABEL = "dog", "Akita pup"
 
 
 def tags(layout):

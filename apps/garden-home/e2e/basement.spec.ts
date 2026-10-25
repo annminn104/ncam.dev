@@ -13,7 +13,7 @@ import {
   zoomTo,
 } from './helpers';
 
-// The basement (villa v2 spec §12 "Tầng hầm") and the floor buttons (interaction spec §2): each test turns the camera,
+// The basement (villa v2 spec §12 "Basement") and the floor buttons (interaction spec §2): each test turns the camera,
 // zooms and waits for it, a minute or two on SwiftShader, longer under load.
 test.describe.configure({ timeout: 240_000 });
 
@@ -157,7 +157,7 @@ async function onScreen(page: Page, name: string): Promise<Region | null> {
 
 /** The floor button labelled `label`. */
 const floorButton = (page: Page, label: string) =>
-  page.getByRole('group', { name: 'Xem tầng' }).getByRole('button', { name: label, exact: true });
+  page.getByRole('group', { name: 'Floors' }).getByRole('button', { name: label, exact: true });
 
 /**
  * Picks a floor button and waits for the cut to follow it (a frame to read it, a React effect to apply it) and for the
@@ -208,20 +208,20 @@ function regionDifference(
   return Math.abs(one[0] - two[0]) + Math.abs(one[1] - two[1]) + Math.abs(one[2] - two[2]);
 }
 
-test('the floor buttons hold a level of the cut whatever the distance, and Tự động gives it back to the distance', async ({
+test('the floor buttons hold a level of the cut whatever the distance, and Auto gives it back to the distance', async ({
   page,
 }) => {
   const errors = collectErrors(page);
   await page.goto('/?t=12:00');
   await waitForScene(page);
-  await expect(page.getByRole('group', { name: 'Xem tầng' }).getByRole('button')).toHaveText([
-    'Tự động',
-    'Mái',
-    'Tầng 2',
-    'Tầng 1',
-    'Hầm',
+  await expect(page.getByRole('group', { name: 'Floors' }).getByRole('button')).toHaveText([
+    'Auto',
+    'Roof',
+    'Upper floor',
+    'Ground floor',
+    'Basement',
   ]);
-  await expect(floorButton(page, 'Tự động')).toHaveAttribute('aria-pressed', 'true');
+  await expect(floorButton(page, 'Auto')).toHaveAttribute('aria-pressed', 'true');
   await lookDown(page, 80); // well down onto the house, so no clearance holds the camera and only the cut changes the view
   await zoomTo(page, 44);
   await settle(page);
@@ -233,16 +233,16 @@ test('the floor buttons hold a level of the cut whatever the distance, and Tự 
   const whole = await canvas.screenshot();
   const shots: Record<string, Buffer> = {};
   for (const [label, cut] of [
-    ['Tầng 2', 'upper'],
-    ['Tầng 1', 'ground'],
-    ['Hầm', 'basement'],
-    ['Mái', 'none'],
+    ['Upper floor', 'upper'],
+    ['Ground floor', 'ground'],
+    ['Basement', 'basement'],
+    ['Roof', 'none'],
   ] as const) {
     await pickFloor(page, label);
     const state = await camera(page);
     expect(state.cut, label).toBe(cut);
     expect(state.mode, label).toBe(cut);
-    for (const other of ['Tự động', 'Mái', 'Tầng 2', 'Tầng 1', 'Hầm']) {
+    for (const other of ['Auto', 'Roof', 'Upper floor', 'Ground floor', 'Basement']) {
       await expect(floorButton(page, other)).toHaveAttribute(
         'aria-pressed',
         String(other === label),
@@ -253,11 +253,11 @@ test('the floor buttons hold a level of the cut whatever the distance, and Tự 
     );
     shots[label] = await canvas.screenshot();
   }
-  expect(meanDifference(whole, shots['Tầng 2'])).toBeGreaterThan(2); // the roof goes
-  expect(meanDifference(shots['Tầng 2'], shots['Tầng 1'])).toBeGreaterThan(2); // the upper floor goes
-  expect(meanDifference(shots['Tầng 1'], shots['Hầm'])).toBeGreaterThan(2); // the house goes, the basement shows
-  expect(meanDifference(whole, shots['Mái'])).toBeLessThan(3); // the whole house again, up to the water and the palms
-  await pickFloor(page, 'Tự động');
+  expect(meanDifference(whole, shots['Upper floor'])).toBeGreaterThan(2); // the roof goes
+  expect(meanDifference(shots['Upper floor'], shots['Ground floor'])).toBeGreaterThan(2); // the upper floor goes
+  expect(meanDifference(shots['Ground floor'], shots['Basement'])).toBeGreaterThan(2); // the house goes, the basement shows
+  expect(meanDifference(whole, shots['Roof'])).toBeLessThan(3); // the whole house again, up to the water and the palms
+  await pickFloor(page, 'Auto');
   expect((await camera(page)).cut).toBe('none');
   await zoomTo(page, 24); // and the distance cuts it again
   await settle(page);
@@ -266,7 +266,9 @@ test('the floor buttons hold a level of the cut whatever the distance, and Tự 
   expect(errors).toEqual([]);
 });
 
-test('"Hầm" takes the house away and shows the basement\'s rooms from above', async ({ page }) => {
+test('"Basement" takes the house away and shows the basement\'s rooms from above', async ({
+  page,
+}) => {
   await watchThree(page);
   const errors = collectErrors(page);
   await page.goto('/?t=12:00');
@@ -282,7 +284,7 @@ test('"Hầm" takes the house away and shows the basement\'s rooms from above', 
   expect(await drawn(page, ['Spa', 'Hot_tub'])).toEqual([]);
   const canvas = page.locator('canvas');
   const before = await canvas.screenshot();
-  await pickFloor(page, 'Hầm');
+  await pickFloor(page, 'Basement');
   expect((await camera(page)).cut).toBe('basement');
   expect(await drawn(page, BURIED)).toEqual(BURIED);
   expect(await drawn(page, THROUGH)).toEqual(THROUGH); // the pit open to the sky
@@ -322,7 +324,7 @@ test("a click on the karaoke's TV starts the party: its LEDs light and turn thro
   const errors = collectErrors(page);
   await page.goto('/?t=21:00');
   await waitForScene(page);
-  await pickFloor(page, 'Hầm');
+  await pickFloor(page, 'Basement');
   await lookDown(page, 300);
   await zoomTo(page, 18, KARAOKE);
   await settle(page);
@@ -346,7 +348,7 @@ test("a click on the karaoke's TV starts the party: its LEDs light and turn thro
         }
       ).__interact.state().hover,
   );
-  expect(hover).toEqual(expect.objectContaining({ group: 'party', label: 'Chế độ tiệc' }));
+  expect(hover).toEqual(expect.objectContaining({ group: 'party', label: 'Party mode' }));
   await page.mouse.move(1279, 1); // off the scene: no hover frame in the shots
   await frames(page, 4);
   const off = await canvas.screenshot();
@@ -471,7 +473,7 @@ test('the light well shows from the wallpaper camera by day and glows at night',
   expect(errors).toEqual([]);
 });
 
-test('"Hầm" from the site\'s first view eases the camera to the house, where the basement\'s rooms fill the view', async ({
+test('"Basement" from the site\'s first view eases the camera to the house, where the basement\'s rooms fill the view', async ({
   page,
 }) => {
   await watchThree(page);
@@ -485,7 +487,7 @@ test('"Hầm" from the site\'s first view eases the camera to the house, where t
   expect((await camera(page)).cut).toBe('none');
   expect(await drawn(page, WELL_SIDES)).toEqual(WELL_SIDES);
   await page.mouse.move(1279, 1);
-  await floorButton(page, 'Hầm').click();
+  await floorButton(page, 'Basement').click();
   await frames(page, 2);
   expect((await camera(page)).easing).toBe(true); // it moves over a few frames
   await settle(page);
@@ -521,8 +523,8 @@ test('"Hầm" from the site\'s first view eases the camera to the house, where t
   };
   expect((rooms.x1 - rooms.x0) * (rooms.y1 - rooms.y0), JSON.stringify(rooms)).toBeGreaterThan(0.3);
   const basement = await canvas.screenshot();
-  // "Mái" from there leaves the camera where it is: the house stands where the rooms showed
-  await pickFloor(page, 'Mái');
+  // "Roof" from there leaves the camera where it is: the house stands where the rooms showed
+  await pickFloor(page, 'Roof');
   const roofed = await camera(page);
   expect(Math.hypot(...roofed.position.map((v, k) => v - state.position[k]))).toBeLessThan(0.01);
   const whole = await canvas.screenshot();
@@ -530,13 +532,13 @@ test('"Hầm" from the site\'s first view eases the camera to the house, where t
   expect(errors).toEqual([]);
 });
 
-test('"Hầm" pressed again once the camera has left the house eases it back, though the button is on already', async ({
+test('"Basement" pressed again once the camera has left the house eases it back, though the button is on already', async ({
   page,
 }) => {
   const errors = collectErrors(page);
   await page.goto('/?t=12:00');
   await waitForScene(page);
-  await pickFloor(page, 'Hầm');
+  await pickFloor(page, 'Basement');
   expect(Math.abs(overHouse(await camera(page)).distance - 35)).toBeLessThan(0.5);
   await zoomTo(page, 60); // past FLOOR_VIEW.far (45 m): from here a floor button eases the camera to the house
   await settle(page);
@@ -544,25 +546,25 @@ test('"Hầm" pressed again once the camera has left the house eases it back, th
   expect([away.cut, away.mode]).toEqual(['basement', 'basement']);
   expect(overHouse(away).distance).toBeGreaterThan(45);
   await page.mouse.move(1279, 1);
-  await floorButton(page, 'Hầm').click();
+  await floorButton(page, 'Basement').click();
   await frames(page, 2);
   expect((await camera(page)).easing).toBe(true);
   await settle(page);
   const back = overHouse(await camera(page));
   expect(Math.abs(back.distance - 35)).toBeLessThan(0.5);
   expect(Math.abs(back.down - 55)).toBeLessThan(1);
-  await expect(floorButton(page, 'Hầm')).toHaveAttribute('aria-pressed', 'true');
+  await expect(floorButton(page, 'Basement')).toHaveAttribute('aria-pressed', 'true');
   expect(errors).toEqual([]);
 });
 
-test('leaving a low "Hầm" view for "Tầng 1", "Tầng 2" and "Tự động" never brings the whole house back in between', async ({
+test('leaving a low "Basement" view for "Ground floor", "Upper floor" and "Auto" never brings the whole house back in between', async ({
   page,
 }) => {
   await watchThree(page);
   const errors = collectErrors(page);
   await page.goto('/?t=12:00');
   await waitForScene(page);
-  await pickFloor(page, 'Hầm');
+  await pickFloor(page, 'Basement');
   await zoomTo(page, 20);
   await settle(page);
   // a drag up tips the camera towards the horizon until the clearance holds it: low over the pit
@@ -612,9 +614,9 @@ test('leaving a low "Hầm" view for "Tầng 1", "Tầng 2" and "Tự động" n
     };
   }, ROOF);
   for (const [label, cut] of [
-    ['Tầng 1', 'ground'],
-    ['Tầng 2', 'upper'],
-    ['Tự động', null],
+    ['Ground floor', 'ground'],
+    ['Upper floor', 'upper'],
+    ['Auto', null],
   ] as const) {
     await pickFloor(page, label);
     await frames(page, 4);

@@ -22,10 +22,10 @@ GENERATORS = {"carport": "build_carport.py", "kennel": "build_kennel.py"}
 TRIS_AIM = {"carport": (2000, 9000), "kennel": (1000, 5000)}  # readable, and low-poly
 PRIMITIVES_AIM = {"carport": 23, "kennel": 16}
 DRAW_CALLS_BUDGET = 40
-LIGHTS = {"interact": "lights:carport", "label": "Đèn nhà xe"}
-PICKUP = {"interact": "lights:car_pickup", "label": "Đèn xe bán tải"}
-SUPERCAR = {"interact": "lights:car_super", "label": "Đèn siêu xe"}
-DOG = {"interact": "dog", "label": "Bé Akita", "clip": "act_dog_happy"}
+LIGHTS = {"interact": "lights:carport", "label": "Carport lights"}
+PICKUP = {"interact": "lights:car_pickup", "label": "Pickup truck lights"}
+SUPERCAR = {"interact": "lights:car_super", "label": "Supercar lights"}
+DOG = {"interact": "dog", "label": "Akita pup", "clip": "act_dog_happy"}
 CLIPS = {"ambient_dog_breathe": {"Akita": ["scale"]}, "ambient_dog_tail": {"Akita_tail": ["rotation"]},
          "act_dog_happy": {"Akita": ["rotation", "translation"], "Akita_head": ["rotation"],
                            "Akita_tail": ["rotation"]}}

@@ -12,9 +12,9 @@ from garden import paths_layout, shapes  # noqa: E402
 from siteplan import zones  # noqa: E402
 from carport import carport_layout, interact, layout_check  # noqa: E402
 
-LIGHTS = {"interact": "lights:carport", "label": "Đèn nhà xe"}
-PICKUP = {"interact": "lights:car_pickup", "label": "Đèn xe bán tải"}
-SUPERCAR = {"interact": "lights:car_super", "label": "Đèn siêu xe"}
+LIGHTS = {"interact": "lights:carport", "label": "Carport lights"}
+PICKUP = {"interact": "lights:car_pickup", "label": "Pickup truck lights"}
+SUPERCAR = {"interact": "lights:car_super", "label": "Supercar lights"}
 
 
 def copy(layout, **overrides):

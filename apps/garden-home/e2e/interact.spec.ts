@@ -96,7 +96,7 @@ test('hovering the TV names it; a click at noon lights its screen as a blue-ish 
   const canvas = page.locator('canvas');
   const tv = await at(page, 'TV_wall');
   await page.mouse.move(tv.x, tv.y, { steps: 4 });
-  await expect(page.getByTestId('hover-label')).toContainText('TV phòng khách');
+  await expect(page.getByTestId('hover-label')).toContainText('Living room TV');
   await expect(canvas).toHaveCSS('cursor', 'pointer');
   const screen = async () => boxLuma(await canvas.screenshot(), tv.x, tv.y, 24, 12);
   const dark = await screen();
@@ -121,7 +121,7 @@ test('a click on the floor lamp at noon lights the living room', async ({ page }
   const lamp = await at(page, 'Floor_lamp');
   const rug = await at(page, 'Rug_living');
   await page.mouse.move(lamp.x, lamp.y, { steps: 4 });
-  await expect(page.getByTestId('hover-label')).toContainText('Đèn phòng khách');
+  await expect(page.getByTestId('hover-label')).toContainText('Living room lights');
   const room = async () => boxLuma(await canvas.screenshot(), rug.x, rug.y, 120, 60);
   const before = await room();
 
@@ -142,7 +142,7 @@ test('hovering the wall switch of the living room names it; a click at noon ligh
   const wall = await at(page, 'Switch_living');
   const rug = await at(page, 'Rug_living');
   await page.mouse.move(wall.x, wall.y, { steps: 4 });
-  await expect(page.getByTestId('hover-label')).toContainText('Công tắc đèn phòng khách');
+  await expect(page.getByTestId('hover-label')).toContainText('Living room light switch');
   await expect(canvas).toHaveCSS('cursor', 'pointer');
   const room = async () => boxLuma(await canvas.screenshot(), rug.x, rug.y, 120, 60);
   const before = await room();
@@ -204,7 +204,7 @@ test('the label goes when the cut takes the item from under a pointer that rests
   // the master bedroom's light switch, on the wall between it and its closet, faces this side: upstairs, under the cut
   const spot = await at(page, 'Switch_master');
   await page.mouse.move(spot.x, spot.y, { steps: 4 });
-  await expect(page.getByTestId('hover-label')).toContainText('Công tắc đèn phòng ngủ master');
+  await expect(page.getByTestId('hover-label')).toContainText('Master bedroom light switch');
   const item = (await hover(page))!.node;
   await page.mouse.wheel(0, -1200); // zoom in with the mouse where it is: no pointer event follows
   await settle(page);
@@ -212,7 +212,7 @@ test('the label goes when the cut takes the item from under a pointer that rests
   // the zoom went towards the switch and the ground floor cut took the upper floor away from under the pointer
   expect((await camera(page)).cut).toBe('ground');
   expect((await hover(page))?.node).not.toBe(item);
-  await expect(page.getByTestId('hover-label').filter({ hasText: 'phòng ngủ master' })).toHaveCount(
+  await expect(page.getByTestId('hover-label').filter({ hasText: 'Master bedroom' })).toHaveCount(
     0,
   );
   expect(errors).toEqual([]);
@@ -273,7 +273,7 @@ test('the label follows what the camera alone turns under a pointer that rests',
     ).toBeGreaterThan(20);
   const rest = await hover(page);
   expect(rest?.node ?? null).not.toBe('TV_wall');
-  await expect(page.getByTestId('hover-label').filter({ hasText: 'TV phòng khách' })).toHaveCount(
+  await expect(page.getByTestId('hover-label').filter({ hasText: 'Living room TV' })).toHaveCount(
     0,
   );
   // and it names what a fresh look under the pointer finds (a pixel's move makes R3F look again)
@@ -288,7 +288,7 @@ test('the label goes when the door slides from under the pointer', async ({ page
   await closeUp(page);
   const door = await at(page, 'Door_main');
   await page.mouse.move(door.x, door.y, { steps: 4 });
-  await expect(page.getByTestId('hover-label')).toContainText('Cửa chính');
+  await expect(page.getByTestId('hover-label')).toContainText('Front door');
   await page.mouse.click(door.x, door.y); // the leaf slides a full width aside
   await expect
     .poll(async () => (await hover(page))?.group ?? null, { timeout: 20_000 })

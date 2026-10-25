@@ -1,6 +1,6 @@
 """Koi pond and tea corner pieces (villa v2 part 3): the round stone tea table, its drum stools and the tea set on it,
 bonsai on a stone pedestal or in a glazed pot and the stone lantern of the tea corner; the lotus pads and flowers, the
-koi and the rock peaks of the rockery (hòn non bộ) in the pond.
+koi and the rock peaks of the rockery in the pond.
 
 Low-poly like the garden kit: faceted rocks of jittered rings stacked into a closed lump (MeshBuilder.faces), paler
 facets where they face the sky; clouds of leaves as squashed lumps on a crooked trunk; leaf-blade petals; a koi of

@@ -13,8 +13,8 @@ from siteplan import island, zones  # noqa: E402
 from garden import fence_layout, interact, layout_check, paths_layout, shapes  # noqa: E402
 
 RIM = island.outline(zones.ISLAND)
-LIGHTS = {"interact": "lights:garden", "label": "Đèn sân vườn"}
-BBQ = {"interact": "bbq", "label": "Bếp nướng"}
+LIGHTS = {"interact": "lights:garden", "label": "Garden lights"}
+BBQ = {"interact": "bbq", "label": "Barbecue"}
 
 
 def rim_distance(point):

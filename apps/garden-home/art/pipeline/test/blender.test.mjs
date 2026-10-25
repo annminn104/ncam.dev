@@ -4,9 +4,9 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { runBlender } from '../src/blender.mjs';
 
-// Stands in for Blender: writes a contract line to stderr, cut in the middle of the two UTF-8 bytes of "á".
+// Stands in for Blender: writes a contract line to stderr, cut in the middle of the two UTF-8 bytes of "ë".
 const FAKE_BLENDER = `#!/usr/bin/env node
-const bytes = Buffer.from('CONTRACT pond: Ao cá\\n');
+const bytes = Buffer.from('CONTRACT pond: Zoë\\n');
 const cut = bytes.indexOf(0xc3) + 1;
 process.stderr.write(bytes.subarray(0, cut));
 setTimeout(() => process.stderr.write(bytes.subarray(cut)), 100);
@@ -43,7 +43,7 @@ describe('runBlender', () => {
       scriptsDir: dir,
     });
     expect(code).toBe(0);
-    expect(stderr).toBe('CONTRACT pond: Ao cá\n');
+    expect(stderr).toBe('CONTRACT pond: Zoë\n');
   });
 
   it('opens the .blend when given and starts from an empty scene otherwise', async () => {

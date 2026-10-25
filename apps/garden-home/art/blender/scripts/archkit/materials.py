@@ -157,7 +157,7 @@ def palette():
         # the split air conditioner's louvre flap, its status light: white like the unit, a soft cool glow while it runs
         "ac_light": principled("M_ac_light", (0.9, 0.9, 0.88), roughness=0.55, emission=(0.45, 0.78, 1.0),
                                strength=0.8),
-        # the basement (villa v2 spec §12 "Tầng hầm"), opaque flat colours: the karaoke sofa's plum velvet, the dark
+        # the basement (villa v2 spec §12 "Basement"), opaque flat colours: the karaoke sofa's plum velvet, the dark
         # green glass of the bottle ends in the wine racks and the red wine of others, the karaoke's dark carpet, the
         # concrete edge of the ground slab round the basement's pit (it shows when the website cuts the house down to
         # it); and the karaoke's party LEDs with the light they cast on its carpet, a magenta the website cycles through
@@ -187,7 +187,7 @@ def palette():
         # the frameless railing round the light well's top: fainter than the house's panes (half the alpha, contract
         # glass-*), so its edge-on panes do not frame the well in the sky's reflection
         "glass_rail": principled("GLASS_rail", (0.82, 0.9, 0.94), roughness=0.05, alpha=0.1),
-        # the decor pass (villa v2 spec §12 "Rèm và phụ kiện"): the curtains' ivory voile, paler than the linen drape in
+        # the decor pass (villa v2 spec §12 "Curtains and accessories"): the curtains' ivory voile, paler than the linen drape in
         # front of it and see-through, the interior's one blended primitive (opaque, it showed from outside at night as
         # moonlit navy panels in front of the warm rooms, where a real sheer lets the room's light through: the website
         # lights it from both sides, prepareModule; gathered at the ends of the glass, it never hides the view); and the

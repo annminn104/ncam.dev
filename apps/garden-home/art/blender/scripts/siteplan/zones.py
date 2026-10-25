@@ -35,7 +35,7 @@ ZONES = {
     "path_gate": ((-1.0, -20.0), (1.0, -3.0)),  # stone path from the main gate (part 2)
     "path_turn": ((-1.0, -3.0), (7.0, -1.0)),  # ... turning towards the door
     "path_door": ((5.0, -1.0), (7.0, 2.0)),  # ... up to the front porch
-    # the basement's light well (villa v2 spec §12 "Tầng hầm"), sunk into the lawn in front of the living room's tall
+    # the basement's light well (villa v2 spec §12 "Basement"), sunk into the lawn in front of the living room's tall
     # glass, between the pool and the walk; its back edge is the house zone's front, the basement's front wall
     "lightwell": ((-7.5, -2.0), (-1.5, 2.0)),
 }
@@ -46,7 +46,7 @@ ZONES = {
 # 3), the carport and the dog's corner (part 4) fill their zones unturned: their layout checks place them in site space
 # so, and the yard's lawn has the koi pond's hole. The basement (villa v2 spec §12) shares the house's slot: ZONE_SHARED
 # lets it, its layout puts its light well in the `lightwell` zone, and the lawn has the hole of its pit. So does the
-# interior (§12 "Rèm và phụ kiện"), the house's curtains and accessories in a module of their own.
+# interior (§12 "Curtains and accessories"), the house's curtains and accessories in a module of their own.
 # The garden's fence, paths and flower beds spread over the whole island (zone ISLAND_WIDE): they stand at its centre
 # unturned with its size as footprint, in site space, and garden/layout_check.py keeps their content on the island and
 # out of the zones they do not use.

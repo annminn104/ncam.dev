@@ -12,8 +12,8 @@ from archkit import catalog  # noqa: E402
 from siteplan import zones  # noqa: E402
 from pond import basin, interact, koi_layout, layout_check, swim  # noqa: E402
 
-WATERFALL = {"interact": "waterfall", "label": "Thác nước"}
-FEED = {"interact": "koi", "label": "Cho cá ăn"}
+WATERFALL = {"interact": "waterfall", "label": "Waterfall"}
+FEED = {"interact": "koi", "label": "Feed the koi"}
 
 
 def copy(layout, **overrides):
@@ -258,7 +258,7 @@ class KoiPondLayoutTest(unittest.TestCase):
 
     def test_the_hotspot_focuses_the_pond(self):
         self.assertEqual(self.K.HOTSPOT, {"name": "HS_pond", "pos": (0.0, 0.0, 0.6), "action": "focus",
-                                          "label": "Ao cá", "radius": 4.5})
+                                          "label": "Koi pond", "radius": 4.5})
 
     def test_a_click_on_the_rockery_its_water_or_its_foam_toggles_the_waterfall_one_on_the_pond_feeds_the_koi(self):
         self.assertEqual(interact.tags(self.K), {"Rockery": WATERFALL, "WATER_waterfall_sheet": WATERFALL,
@@ -351,7 +351,7 @@ class KoiPondCheckTest(unittest.TestCase):
                          ["Pots #1 (flower_pot) (beds) comes within 0.3 m of the pond"])
 
 
-LIGHTS = {"interact": "lights:garden", "label": "Đèn sân vườn"}
+LIGHTS = {"interact": "lights:garden", "label": "Garden lights"}
 
 
 class TeaGardenLayoutTest(unittest.TestCase):

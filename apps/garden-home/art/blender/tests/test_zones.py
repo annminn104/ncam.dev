@@ -75,10 +75,10 @@ class ZonesCheckTest(unittest.TestCase):
                            "footprint": (8.0, 7.0)},
             "kennel_01": {"module": "kennel", "zone": "kennel", "pos": (22.0, 12.5), "yaw": 0.0,
                           "footprint": (3.0, 3.0)},
-            # the basement under the tall house, in the house's zone and place (villa v2 spec §12 "Tầng hầm")
+            # the basement under the tall house, in the house's zone and place (villa v2 spec §12 "Basement")
             "basement_01": {"module": "basement", "zone": "house", "pos": (-1.5, 9.5), "yaw": 0.0,
                             "footprint": (23.0, 15.0)},
-            # the house's curtains and accessories, in its zone and place too (villa v2 spec §12 "Rèm và phụ kiện")
+            # the house's curtains and accessories, in its zone and place too (villa v2 spec §12 "Curtains and accessories")
             "interior_01": {"module": "interior", "zone": "house", "pos": (-1.5, 9.5), "yaw": 0.0,
                             "footprint": (23.0, 15.0)},
         })
@@ -255,7 +255,7 @@ class ZonesCheckTest(unittest.TestCase):
         self.assertEqual(zones_check.check(pond_slot(yaw=30.0)), ["slot 'pond_01' (pond) sticks out of zone 'pond'"])
 
     def test_a_zone_holds_one_slot_but_for_a_slot_zone_shared_lets_share_the_place_of_another(self):
-        # The basement stands where the house does, a storey under it (villa v2 spec §12 "Tầng hầm"): ZONE_SHARED names
+        # The basement stands where the house does, a storey under it (villa v2 spec §12 "Basement"): ZONE_SHARED names
         # it and the slot whose place it shares, and nothing else may double up in a zone.
         slots = dict(site().SLOTS)
         slots["cellar_01"] = dict(slots["house_01"], module="cellar")

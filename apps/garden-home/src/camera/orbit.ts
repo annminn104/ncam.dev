@@ -172,7 +172,7 @@ function houseFloor(level: CutLevel, reach: number): number {
   const { roofClear } = ORBIT_CLEARANCE;
   if (level === 'none') return roofClear;
   // the basement's cut lies under the lawn and only a button holds it, whatever the distance: its floor is the ground
-  // floor cut's own (5.55 m), so "Tầng 1" takes over from a low "Hầm" view where the camera is (it looks down into the
+  // floor cut's own (5.55 m), so "Ground floor" takes over from a low "Basement" view where the camera is (it looks down into the
   // pit from there)
   if (level === 'basement') return cutFloor('ground');
   const upper =
@@ -306,11 +306,11 @@ export interface OrbitPose {
 /**
  * Where a floor button picking `mode` takes the camera at `camera`, orbiting `target`, the cut showing `level`; null to
  * leave it where it is:
- * - a level of the house ("Tầng 2", "Tầng 1", "Hầm") from afar or from low down (FLOOR_VIEW.far, FLOOR_VIEW.steep): to
+ * - a level of the house ("Upper floor", "Ground floor", "Basement") from afar or from low down (FLOOR_VIEW.far, FLOOR_VIEW.steep): to
  *   the house focus, FLOOR_VIEW.distance from it and FLOOR_VIEW.down onto it, the camera's azimuth round the focus kept;
- * - otherwise, a camera under the floor of what `mode` shows (maxPolarFor; on "Tự động" the level its distance calls for
+ * - otherwise, a camera under the floor of what `mode` shows (maxPolarFor; on "Auto" the level its distance calls for
  *   once the camera clears its cut) goes up round its target, at the same distance and azimuth, to just inside that
- *   level's limit: from a low "Hầm" view "Mái" lifts it over the roof line before the roof comes back.
+ *   level's limit: from a low "Basement" view "Roof" lifts it over the roof line before the roof comes back.
  * cursorOrbit eases the camera there, and holds the level it shows until the camera clears the next one's floor.
  */
 export function floorPose(

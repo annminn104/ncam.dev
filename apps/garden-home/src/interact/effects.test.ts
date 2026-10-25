@@ -45,7 +45,7 @@ function house() {
   const screen = glowing();
   const tv = node(new Group(), 'TV_wall', {
     interact: 'tv:TV_wall',
-    label: 'TV phòng khách',
+    label: 'Living room TV',
     night_light: true,
   });
   const tvScreen = new Mesh(new BoxGeometry(), screen);
@@ -58,37 +58,37 @@ function house() {
   const led = node(new Mesh(new BoxGeometry(), glowing()), 'LT_led_plinth', { night_light: true });
   const light = node(new PointLight(0xffaa66, 80), 'L_living', {
     interact: 'light:living',
-    label: 'Đèn',
+    label: 'Lights',
     night_light: true,
   });
   const lamp = node(new Mesh(new BoxGeometry(), glowing()), 'Floor_lamp', {
     interact: 'light:living',
-    label: 'Đèn',
+    label: 'Lights',
     night_light: true,
   });
   const shower = node(new Mesh(new BoxGeometry()), 'Shower_master', {
     interact: 'shower:Shower_master',
-    label: 'Vòi sen',
+    label: 'Shower',
   });
   const flow = node(new Mesh(new BoxGeometry()), 'WATER_Shower_master_flow', {
     interact: 'shower:Shower_master',
-    label: 'Vòi sen',
+    label: 'Shower',
   });
   const fountain = node(new Mesh(new BoxGeometry()), 'fountain', {
     interact: 'fountain',
-    label: 'Tường nước',
+    label: 'Water wall',
   });
   const sheet = node(new Mesh(new BoxGeometry()), 'WATER_fountain_sheet', {
     interact: 'fountain',
-    label: 'Tường nước',
+    label: 'Water wall',
   });
   const basin = node(new Mesh(new BoxGeometry()), 'WATER_fountain', {
     interact: 'fountain',
-    label: 'Tường nước',
+    label: 'Water wall',
   });
   const door = node(new Mesh(new BoxGeometry()), 'Door_main', {
     interact: 'door:main',
-    label: 'Cửa chính',
+    label: 'Front door',
     clip: 'act_door_open',
   });
   const root = new Group();
@@ -196,19 +196,19 @@ describe('applyToggles', () => {
 function garden() {
   const lanterns = node(new Mesh(new BoxGeometry(), glowing()), 'Gate_lamps', {
     interact: 'lights:garden',
-    label: 'Đèn sân vườn',
+    label: 'Garden lights',
     night_light: true,
   });
   const fence = new Group();
   fence.add(lanterns);
   const strings = node(new Mesh(new BoxGeometry(), glowing()), 'String_lights_bbq', {
     interact: 'lights:garden',
-    label: 'Đèn sân vườn',
+    label: 'Garden lights',
     night_light: true,
   });
   const grill = node(new Mesh(new BoxGeometry(), glowing()), 'BBQ_grill', {
     interact: 'bbq',
-    label: 'Bếp nướng',
+    label: 'Barbecue',
     night_light: true,
   });
   const bbq = new Group();
@@ -241,7 +241,7 @@ describe('the garden groups', () => {
     pool.name = 'GLOW_pool';
     const bollards = node(new Group(), 'Garden_lamps', {
       interact: 'lights:garden',
-      label: 'Đèn sân vườn',
+      label: 'Garden lights',
       night_light: true,
     });
     const disc = new Mesh(new BoxGeometry(), pool);
@@ -267,15 +267,15 @@ describe('the garden groups', () => {
 function pond() {
   const rockery = node(new Mesh(new BoxGeometry()), 'Rockery', {
     interact: 'waterfall',
-    label: 'Thác nước',
+    label: 'Waterfall',
   });
   const sheet = node(new Mesh(new BoxGeometry()), 'WATER_waterfall_sheet', {
     interact: 'waterfall',
-    label: 'Thác nước',
+    label: 'Waterfall',
   });
   const foam = node(new Mesh(new BoxGeometry()), 'Waterfall_foam', {
     interact: 'waterfall',
-    label: 'Thác nước',
+    label: 'Waterfall',
   });
   const water = node(new Mesh(new BoxGeometry()), 'WATER_surface');
   const root = new Group();
@@ -307,12 +307,12 @@ describe('an air conditioner', () => {
     const led = glowing();
     const body = node(new Mesh(new BoxGeometry(), [new MeshStandardMaterial(), led]), 'AC_master', {
       interact: 'ac:master',
-      label: 'Máy lạnh phòng master',
+      label: 'Master bedroom AC',
       night_light: true,
     });
     const flap = node(new Mesh(new BoxGeometry()), 'AC_master_flap', {
       interact: 'ac:master',
-      label: 'Máy lạnh phòng master',
+      label: 'Master bedroom AC',
       clip: 'act_ac_master',
     });
     body.add(flap);
@@ -335,7 +335,7 @@ describe('an air conditioner', () => {
   });
 });
 
-describe('the karaoke\'s party mode (party, villa v2 spec §12 "Tầng hầm")', () => {
+describe('the karaoke\'s party mode (party, villa v2 spec §12 "Basement")', () => {
   function karaoke() {
     const leds = node(
       new Mesh(new BoxGeometry(), [
@@ -347,7 +347,7 @@ describe('the karaoke\'s party mode (party, villa v2 spec §12 "Tầng hầm")',
         }),
       ]),
       'LED_party',
-      { interact: 'party', label: 'Chế độ tiệc', night_light: true },
+      { interact: 'party', label: 'Party mode', night_light: true },
     );
     const tv = node(
       new Mesh(
@@ -355,16 +355,16 @@ describe('the karaoke\'s party mode (party, villa v2 spec §12 "Tầng hầm")',
         new MeshStandardMaterial({ name: 'M_screen_on', emissive: 0x8cbfff }),
       ),
       'Karaoke_party',
-      { interact: 'party', label: 'Chế độ tiệc', night_light: true },
+      { interact: 'party', label: 'Party mode', night_light: true },
     );
     const ball = node(
       new Mesh(new BoxGeometry(), new MeshStandardMaterial({ name: 'M_chrome' })),
       'Disco_ball',
-      { interact: 'party', label: 'Chế độ tiệc', clip: 'ambient_disco_ball' },
+      { interact: 'party', label: 'Party mode', clip: 'ambient_disco_ball' },
     );
     const lamp = node(new Mesh(new BoxGeometry(), glowing()), 'LT_down_karaoke', {
       interact: 'light:karaoke',
-      label: 'Đèn',
+      label: 'Lights',
       night_light: true,
     });
     const root = new Group();
@@ -428,7 +428,7 @@ describe('the karaoke\'s party mode (party, villa v2 spec §12 "Tầng hầm")',
     const cap = new MeshStandardMaterial({ name: 'M_chrome', metalness: 1 });
     const ball = node(new Group(), 'Disco_ball', {
       interact: 'party',
-      label: 'Chế độ tiệc',
+      label: 'Party mode',
       clip: 'ambient_disco_ball',
       night_light: true,
     });
@@ -462,11 +462,11 @@ describe("the sauna and the spa's hot tub (sauna, jacuzzi:spa)", () => {
         new MeshStandardMaterial({ name: 'M_ember', emissive: 0xff3308, emissiveIntensity: 1.6 }),
       ),
       'Sauna_stove',
-      { interact: 'sauna', label: 'Phòng xông hơi', night_light: true },
+      { interact: 'sauna', label: 'Sauna', night_light: true },
     );
     const tub = node(new Mesh(new BoxGeometry()), 'Hot_tub', {
       interact: 'jacuzzi:spa',
-      label: 'Bể ngâm',
+      label: 'Soaking tub',
       clip: 'ambient_hot_tub',
     });
     const root = new Group();

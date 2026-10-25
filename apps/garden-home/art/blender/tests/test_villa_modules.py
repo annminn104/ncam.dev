@@ -162,29 +162,29 @@ class VillaModulesTest(unittest.TestCase):
         self.assertEqual(sorted(a["name"] for a in house["animations"]),
                          ["act_ac_bedroom2", "act_ac_bedroom3", "act_ac_master", "act_door_open", "ambient_jacuzzi"])
         hotspot = next(n for n in house["nodes"] if n["name"] == "HS_door")
-        self.assertEqual(hotspot["extras"], {"action": "toggle", "clip": "act_door_open", "label": "Cửa chính",
+        self.assertEqual(hotspot["extras"], {"action": "toggle", "clip": "act_door_open", "label": "Front door",
                                              "radius": 0.8})
 
     def test_house_items_carry_their_click_group_and_label(self):
         # interaction spec §3.1, §4: the website toggles a group when any of its nodes is clicked
         nodes = {n["name"]: n for n in self.exports["house"]["nodes"]}
         expected = {
-            "L_living": ("light:living", "Đèn phòng khách"), "LT_down_living": ("light:living", "Đèn phòng khách"),
-            "Floor_lamp": ("light:living", "Đèn phòng khách"), "Pendant_island_1": ("light:kitchen", "Đèn bếp"),
-            "Switch_living": ("light:living", "Công tắc đèn phòng khách"),
-            "Switch_master": ("light:master", "Công tắc đèn phòng ngủ master"),
-            "Nightstand_master_l": ("light:master", "Đèn phòng ngủ master"),
-            "Chandelier": ("light:living", "Đèn chùm pha lê"),
-            "TV_wall": ("tv:TV_wall", "TV phòng khách"), "TV_master": ("tv:TV_master", "TV phòng ngủ master"),
-            "Gaming_desk": ("pc:Gaming_desk", "Máy tính"),
-            "Shower_master": ("shower:Shower_master", "Vòi sen phòng tắm master"),
-            "WATER_Shower_master_flow": ("shower:Shower_master", "Vòi sen phòng tắm master"),
-            "Shower_shared": ("shower:Shower_shared", "Vòi sen phòng tắm chung"),
-            "WATER_Shower_shared_flow": ("shower:Shower_shared", "Vòi sen phòng tắm chung"),
-            "Door_main": ("door:main", "Cửa chính"), "jacuzzi": ("jacuzzi", "Bể sục"),
-            "jacuzzi_bubbles_a": ("jacuzzi", "Bể sục"), "fountain": ("fountain", "Tường nước"),
-            "WATER_fountain_sheet": ("fountain", "Tường nước"), "String_lights_trellis": ("lights:string", "Dây đèn"),
-            "String_lights_railing": ("lights:string", "Dây đèn"),
+            "L_living": ("light:living", "Living room lights"), "LT_down_living": ("light:living", "Living room lights"),
+            "Floor_lamp": ("light:living", "Living room lights"), "Pendant_island_1": ("light:kitchen", "Kitchen lights"),
+            "Switch_living": ("light:living", "Living room light switch"),
+            "Switch_master": ("light:master", "Master bedroom light switch"),
+            "Nightstand_master_l": ("light:master", "Master bedroom lights"),
+            "Chandelier": ("light:living", "Crystal chandelier"),
+            "TV_wall": ("tv:TV_wall", "Living room TV"), "TV_master": ("tv:TV_master", "Master bedroom TV"),
+            "Gaming_desk": ("pc:Gaming_desk", "Computer"),
+            "Shower_master": ("shower:Shower_master", "Master bathroom shower"),
+            "WATER_Shower_master_flow": ("shower:Shower_master", "Master bathroom shower"),
+            "Shower_shared": ("shower:Shower_shared", "Shared bathroom shower"),
+            "WATER_Shower_shared_flow": ("shower:Shower_shared", "Shared bathroom shower"),
+            "Door_main": ("door:main", "Front door"), "jacuzzi": ("jacuzzi", "Hot tub"),
+            "jacuzzi_bubbles_a": ("jacuzzi", "Hot tub"), "fountain": ("fountain", "Water wall"),
+            "WATER_fountain_sheet": ("fountain", "Water wall"), "String_lights_trellis": ("lights:string", "String lights"),
+            "String_lights_railing": ("lights:string", "String lights"),
         }
         got = {name: (nodes[name].get("extras", {}).get("interact"), nodes[name].get("extras", {}).get("label"))
                for name in expected if name in nodes}
@@ -211,21 +211,21 @@ class VillaModulesTest(unittest.TestCase):
         nodes = {n["name"]: n for n in house["nodes"]}
         rooms = ("living", "dining", "kitchen", "hall", "foyer", "wc", "laundry", "master", "bath_master", "closet",
                  "gallery", "gaming", "bedroom2", "bedroom3", "bath_shared", "balcony")
-        labels = {"living": "phòng khách", "bath_master": "phòng tắm master", "balcony": "ban công",
-                  "gallery": "hành lang", "gaming": "góc máy tính", "foyer": "tiền sảnh"}
+        labels = {"living": "Living room", "bath_master": "Master bathroom", "balcony": "Balcony",
+                  "gallery": "Hallway", "gaming": "Computer corner", "foyer": "Entrance hall"}
         for room in rooms:
             node = nodes.get(f"Switch_{room}")
             self.assertIsNotNone(node, f"Switch_{room}")
             extras = node["extras"]
             self.assertEqual(extras["interact"], f"light:{room}", room)
-            self.assertRegex(extras["label"], r"^Công tắc đèn .+", room)
+            self.assertRegex(extras["label"], r"^.+ light switch$", room)
             self.assertNotIn("night_light", extras, room)  # the switch itself never glows
             self.assertIs(extras["cast_shadow"], False, room)  # a 9 x 12 cm plate: no shadow pass for it
             self.assertNotIn("clip", extras, room)
             primitives = house["meshes"][node["mesh"]]["primitives"]
             self.assertEqual(sum(house["accessors"][p["indices"]]["count"] // 3 for p in primitives), 24, room)
         for room, label in labels.items():
-            self.assertEqual(nodes[f"Switch_{room}"]["extras"]["label"], f"Công tắc đèn {label}")
+            self.assertEqual(nodes[f"Switch_{room}"]["extras"]["label"], f"{label} light switch")
         # at switch height over the floor of its level (glTF Y is up): ground floor top 0.47, upper floor top 5.28
         self.assertAlmostEqual(nodes["Switch_living"]["translation"][1], 0.47 + 1.15, places=4)
         self.assertAlmostEqual(nodes["Switch_master"]["translation"][1], 5.28 + 1.15, places=4)
@@ -252,7 +252,7 @@ class VillaModulesTest(unittest.TestCase):
         # (uncut), at its crown (cut_top, module space) under the ground floor's cut
         house = self.exports["house"]
         node = next(n for n in house["nodes"] if n["name"] == "Chandelier")
-        self.assertEqual(node["extras"], {"night_light": True, "interact": "light:living", "label": "Đèn chùm pha lê",
+        self.assertEqual(node["extras"], {"night_light": True, "interact": "light:living", "label": "Crystal chandelier",
                                           "uncut": True, "cut_top": 5.72})
         primitives = house["meshes"][node["mesh"]]["primitives"]
         self.assertEqual(sorted(house["materials"][p["material"]]["name"] for p in primitives),
@@ -293,17 +293,17 @@ class VillaModulesTest(unittest.TestCase):
     def test_each_bedrooms_air_conditioner_opens_its_louvre_flap_with_its_group(self):
         house = self.exports["house"]
         nodes = {n["name"]: n for n in house["nodes"]}
-        labels = {"master": "phòng master", "bedroom2": "phòng ngủ 2", "bedroom3": "phòng ngủ 3"}
+        labels = {"master": "Master bedroom", "bedroom2": "Bedroom 2", "bedroom3": "Bedroom 3"}
         animations = {a["name"]: a for a in house["animations"]}
         for room, label in labels.items():
             unit, flap, remote = nodes[f"AC_{room}"], nodes[f"AC_{room}_flap"], nodes[f"AC_remote_{room}"]
             # none of them casts a shadow worth its draw call; the flap is the unit's status light, the night light
-            self.assertEqual(unit["extras"], {"interact": f"ac:{room}", "label": f"Máy lạnh {label}",
+            self.assertEqual(unit["extras"], {"interact": f"ac:{room}", "label": f"{label} AC",
                                               "cast_shadow": False})
             self.assertEqual(flap["extras"], {"night_light": True, "interact": f"ac:{room}",
-                                              "label": f"Máy lạnh {label}", "clip": f"act_ac_{room}",
+                                              "label": f"{label} AC", "clip": f"act_ac_{room}",
                                               "cast_shadow": False})
-            self.assertEqual(remote["extras"], {"interact": f"ac:{room}", "label": f"Điều khiển máy lạnh {label}",
+            self.assertEqual(remote["extras"], {"interact": f"ac:{room}", "label": f"{label} AC remote",
                                                 "cast_shadow": False})
             # one material each: two draw calls a unit, one a remote
             for node, material in ((unit, "M_white"), (flap, "M_ac_light"), (remote, "M_screen")):

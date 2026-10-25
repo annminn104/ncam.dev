@@ -1,7 +1,7 @@
 import { expect, type Page, test } from '@playwright/test';
 import { camera, collectErrors, frames, settle, waitForScene, zoomTo } from './helpers';
 
-// The interior (villa v2 spec §12 "Rèm và phụ kiện"): the house's curtains and accessories, a module of its own in the
+// The interior (villa v2 spec §12 "Curtains and accessories"): the house's curtains and accessories, a module of its own in the
 // house's slot, which the dollhouse cut cuts with the house. Each test waits on floor buttons, a minute or two on
 // SwiftShader under load.
 test.describe.configure({ timeout: 240_000 });
@@ -88,7 +88,7 @@ async function look(page: Page, names: readonly string[]): Promise<Record<string
 /** The floor button labelled `label`, clicked, and the cut and the camera given time to follow it. */
 async function pickFloor(page: Page, label: string): Promise<void> {
   await page
-    .getByRole('group', { name: 'Xem tầng' })
+    .getByRole('group', { name: 'Floors' })
     .getByRole('button', { name: label, exact: true })
     .click();
   await frames(page, 6);
@@ -96,7 +96,7 @@ async function pickFloor(page: Page, label: string): Promise<void> {
   await frames(page, 4);
 }
 
-test('the interior is cut with the house: its decor at the storey\'s cut, hidden with the house under "Hầm"', async ({
+test('the interior is cut with the house: its decor at the storey\'s cut, hidden with the house under "Basement"', async ({
   page,
 }) => {
   await watchThree(page);
@@ -111,7 +111,7 @@ test('the interior is cut with the house: its decor at the storey\'s cut, hidden
   expect(whole[DECOR].planes.length).toBe(1);
   expect(whole[DECOR].planes[0]).toBeGreaterThan(1000);
 
-  await pickFloor(page, 'Tầng 1');
+  await pickFloor(page, 'Ground floor');
   const ground = await look(page, [DECOR, DETAILS, LAMP_UPSTAIRS, HOUSE_WALLS]);
   expect(ground[DECOR].drawn).toBe(true);
   expect(ground[DETAILS].drawn).toBe(true);
@@ -121,32 +121,32 @@ test('the interior is cut with the house: its decor at the storey\'s cut, hidden
   expect(ground[DECOR].planes.length).toBe(1);
   expect(ground[LAMP_UPSTAIRS].drawn).toBe(false); // a bedroom's lamps, wholly over the cut
 
-  await pickFloor(page, 'Tầng 2');
+  await pickFloor(page, 'Upper floor');
   const upper = await look(page, [DECOR, LAMP_UPSTAIRS, HOUSE_WALLS]);
   expect(upper[DECOR].planes).toEqual(upper[HOUSE_WALLS].planes);
   // 1.6 m over the upper floor: a storey (5.26 - 0.45 m) over the ground floor's cut
   expect(upper[DECOR].planes[0] - ground[DECOR].planes[0]).toBeCloseTo(4.81, 2);
   expect(upper[LAMP_UPSTAIRS].drawn).toBe(true); // on its nightstand, under the upper floor's cut
 
-  await pickFloor(page, 'Hầm');
+  await pickFloor(page, 'Basement');
   const basement = await look(page, [DECOR, DETAILS, LAMP_UPSTAIRS, HOUSE_WALLS]);
   expect(basement[HOUSE_WALLS].drawn).toBe(false);
   expect(basement[DECOR].drawn).toBe(false);
   expect(basement[DETAILS].drawn).toBe(false);
   expect(basement[LAMP_UPSTAIRS].drawn).toBe(false);
 
-  await pickFloor(page, 'Tự động');
+  await pickFloor(page, 'Auto');
   expect(errors).toEqual([]);
 });
 
-test('near the house its small things show with the house whole ("Mái" at 20 m), and go again from afar', async ({
+test('near the house its small things show with the house whole ("Roof" at 20 m), and go again from afar', async ({
   page,
 }) => {
   await watchThree(page);
   const errors = collectErrors(page);
   await page.goto('/?t=12:00');
   await waitForScene(page);
-  await pickFloor(page, 'Mái'); // from the site's first view the camera stays where it is, 110 m out
+  await pickFloor(page, 'Roof'); // from the site's first view the camera stays where it is, 110 m out
   expect((await camera(page)).near).toBe(false);
   expect((await look(page, [DETAILS]))[DETAILS].drawn).toBe(false);
 
@@ -165,7 +165,7 @@ test('near the house its small things show with the house whole ("Mái" at 20 m)
   await frames(page, 4);
   expect((await camera(page)).near).toBe(false);
   expect((await look(page, [DETAILS]))[DETAILS].drawn).toBe(false);
-  await pickFloor(page, 'Tự động');
+  await pickFloor(page, 'Auto');
   expect(errors).toEqual([]);
 });
 

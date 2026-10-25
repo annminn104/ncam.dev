@@ -17,7 +17,7 @@ import { cutTop, isBuried, isDetail, isPunctualLight, isUncut, openingOf } from 
 
 /**
  * How much of the house shows on the site route (interaction spec §2): all of it, up to the upper floor, the ground
- * floor, or nothing of it over the basement (villa v2 spec §12 "Tầng hầm"), which only the floor buttons show.
+ * floor, or nothing of it over the basement (villa v2 spec §12 "Basement"), which only the floor buttons show.
  */
 export type CutLevel = 'none' | 'upper' | 'ground' | 'basement';
 /** What the floor buttons pick (ui/FloorSelector): the cut by the camera's distance ('auto'), or a level held. */
@@ -70,7 +70,7 @@ const DEPTH: Record<CutLevel, number> = { none: 0, upper: 1, ground: 2, basement
 
 /**
  * The modules the site route cuts away like a dollhouse, with the levels each of them is cut at: the house at every
- * level, and the interior with it (villa v2 spec §12 "Rèm và phụ kiện": the house's curtains and accessories, a module
+ * level, and the interior with it (villa v2 spec §12 "Curtains and accessories": the house's curtains and accessories, a module
  * of its own in the house's place), the basement only at its own (under the ground slab the storeys' cuts leave it
  * whole).
  */
@@ -149,7 +149,7 @@ export function forcedCut(level: CutLevel, cameraY: number, previous: CutLevel):
  * Whether a camera `distance` metres from the house focus (orbit.ts nearFor) is near the house, close enough to make out
  * the interior's small things (its details, applyCut), given whether it was so far: within CUT_DISTANCES.upper, starting
  * CUT_DISTANCES.hysteresis inside it and holding as far past it, like the upper cut, so a zoom that stops there cannot
- * flicker. Whatever the cut and the camera's height: on "Mái" at 20 m, or low by the house on auto, the house is whole and
+ * flicker. Whatever the cut and the camera's height: on "Roof" at 20 m, or low by the house on auto, the house is whole and
  * its rooms are near.
  */
 export function nearHouse(distance: number, wasNear: boolean): boolean {
@@ -496,14 +496,14 @@ export function applyCut(
   }
 }
 
-/** Whether warmCut has logged a compile that failed: once is enough (all it costs is a hitch on the first "Hầm"). */
+/** Whether warmCut has logged a compile that failed: once is enough (all it costs is a hitch on the first "Basement"). */
 let warmFailed = false;
 
 function warmFailure(error: unknown): void {
   if (warmFailed) return;
   warmFailed = true;
   console.warn(
-    'Compiling the basement\'s cut look ahead failed; the first "Hầm" compiles it.',
+    'Compiling the basement\'s cut look ahead failed; the first "Basement" compiles it.',
     error,
   );
 }
@@ -522,7 +522,7 @@ function tryCompile(compile: () => void | Promise<unknown>): void {
  * Has `compile` compile what the module looks like at `level` while it is drawn whole: the planes back on the materials
  * of a module only a floor button cuts, the opaque ones double-sided; then puts its look back as it was. ModuleInstance
  * runs renderer.compileAsync in it while the site route is idle after the basement loads, and again once the night
- * lights come on or go off (the light count is part of every program), so the first "Hầm" finds its shaders compiled
+ * lights come on or go off (the light count is part of every program), so the first "Basement" finds its shaders compiled
  * instead of compiling all of them in one frame. What the cut shows or hides is left alone: compile takes every mesh,
  * drawn or not. A compile that fails (a lost context) only costs that: logged once, never thrown.
  */

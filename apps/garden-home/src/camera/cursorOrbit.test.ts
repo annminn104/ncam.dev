@@ -58,7 +58,7 @@ const frames = (cursor: { frame(): void }, count: number) => {
 };
 
 /**
- * A camera at `position` low over the basement's pit under "Hầm", orbiting `target`: it gets there from high up once the
+ * A camera at `position` low over the basement's pit under "Basement", orbiting `target`: it gets there from high up once the
  * basement's cut holds (whole, the house's roof line would lift it at once).
  */
 function inThePit(position: [number, number, number], target: [number, number, number]) {
@@ -342,7 +342,7 @@ describe('createCursorOrbit', () => {
     expect(before - orbit.getDistance()).toBeLessThan(0.1 * (before - FLOOR_VIEW.distance));
   });
 
-  it('leaves the camera where it is for "Mái" and "Tự động", and for a level when it already looks down at the house', () => {
+  it('leaves the camera where it is for "Roof" and "Auto", and for a level when it already looks down at the house', () => {
     const idle = scene.camera.idle;
     const far = setup({
       position: [...idle.position] as [number, number, number],
@@ -384,9 +384,9 @@ describe('createCursorOrbit', () => {
     }
   });
 
-  it('never shows the whole house between "Hầm", "Tầng 1", "Tầng 2" and "Tự động" from a low view into the pit, nor jumps', () => {
+  it('never shows the whole house between "Basement", "Ground floor", "Upper floor" and "Auto" from a low view into the pit, nor jumps', () => {
     const [fx, fy, fz] = HOUSE.focus;
-    // "Hầm" zoomed in low: 18 m from the house focus, on the basement's camera floor, 18 degrees down
+    // "Basement" zoomed in low: 18 m from the house focus, on the basement's camera floor, 18 degrees down
     const low = inThePit([fx, fy + 5.6, fz + Math.sqrt(18 * 18 - 5.6 * 5.6)], [fx, fy, fz]);
     const { cursor } = low;
     expect(cursor.level).toBe('basement');
@@ -454,8 +454,8 @@ describe('createCursorOrbit', () => {
   it('keeps the level it shows when a press, a zoom or a drag ends a lift midway: never the whole house, never a jump', () => {
     const [fx, fy, fz] = HOUSE.focus;
     for (const interrupt of ['press', 'zoomed', 'start'] as const) {
-      // low over the pit under "Hầm", then "Tầng 2", whose floor lies some 5 m higher, interrupted 0.3 s into the lift
-      // (the camera some 7 m up, under the upper floor's cut and the roof's clearance), and "Tầng 2" again
+      // low over the pit under "Basement", then "Upper floor", whose floor lies some 5 m higher, interrupted 0.3 s into the lift
+      // (the camera some 7 m up, under the upper floor's cut and the roof's clearance), and "Upper floor" again
       const low = inThePit([fx - 4, fy + 5.6, fz], [fx + 10, fy, fz]);
       const { camera, orbit, cursor } = low;
       expect(cursor.level).toBe('basement');

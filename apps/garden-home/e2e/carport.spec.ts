@@ -349,7 +349,7 @@ test('at night a click on the pickup switches its head and tail lights off, and 
     return brightFraction(await canvas.screenshot(), LIT, region);
   };
   await page.mouse.move(x, y, { steps: 4 });
-  await expect(page.getByTestId('hover-label')).toContainText('Đèn xe bán tải');
+  await expect(page.getByTestId('hover-label')).toContainText('Pickup truck lights');
   await expect(canvas).toHaveCSS('cursor', 'pointer');
   const on = await lit();
   // its head and tail lights glow and the light they cast lies on the ground, the supercar's too
@@ -392,8 +392,8 @@ test("from a raised view the pointer finds each car through the carport's glass 
   await turnRoundTarget(page, RAISED.drag.x, RAISED.drag.y);
   await frames(page, 4);
   for (const [name, label] of [
-    ['Pickup', 'Đèn xe bán tải'],
-    ['Supercar', 'Đèn siêu xe'],
+    ['Pickup', 'Pickup truck lights'],
+    ['Supercar', 'Supercar lights'],
   ]) {
     const car = await at(page, name);
     expect(car, `the ${name} on screen`).not.toBeNull();
@@ -440,8 +440,8 @@ test('a click on the Akita plays its happy clip once: its head turns and comes b
   const dog = await at(page, 'Akita');
   expect(dog, 'the Akita on screen').not.toBeNull();
   await page.mouse.move(dog!.x, dog!.y, { steps: 4 });
-  await expect(page.getByTestId('hover-label')).toContainText('Bé Akita');
-  await expect(page.getByTestId('hover-label')).toContainText('Bấm để chơi với bé');
+  await expect(page.getByTestId('hover-label')).toContainText('Akita pup');
+  await expect(page.getByTestId('hover-label')).toContainText('Click to play with the pup');
   const rest = await rotation(page, 'Akita_head');
   expect(rest, 'the head on the scene').not.toBeNull();
   await frames(page, 10);

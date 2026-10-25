@@ -74,7 +74,7 @@ class LayoutCheckTest(unittest.TestCase):
         self.assertEqual(layout_check.check(layout(FURNITURE=pieces)), ["Chair_a overlaps Chair_b"])
 
     def test_a_piece_on_a_host_sits_on_its_top_rather_than_beside_it(self):
-        # the decor pass (villa v2 spec §12 "Rèm và phụ kiện"): a piece put "on" another stands on one of the host's
+        # the decor pass (villa v2 spec §12 "Curtains and accessories"): a piece put "on" another stands on one of the host's
         # catalog.SURFACES tops, so it does not clash with it; off every top of its host, on no piece of the layout or on
         # one without a top, it is reported
         sofa = ("sofa_l", "Sofa", "living", (0.0, 0.0), 0)
@@ -482,7 +482,7 @@ def interactive(points=((-3.0, 0.0), (-1.0, 0.0)), **overrides):
     """lit() made interactive: ROOM_LABELS names its rooms, so layout_check checks the click groups too. The lit room has
     its wall switch, whose top is 1.27 m over the floor, under the 1.6 m cut of level 0 that the layout names."""
     base = lit(list(points))
-    base.ROOM_LABELS = {"bath": "phòng tắm", "porch": "hiên"}
+    base.ROOM_LABELS = {"bath": "Bathroom", "porch": "Porch"}
     base.FURNITURE = [SWITCH]
     base.FLOOR_Z = {"bath": 0.0, "porch": 0.0}
     base.CUT_HEIGHTS = {0: 1.6}
@@ -500,16 +500,16 @@ class InteractionCheckTest(unittest.TestCase):
 
     def test_a_lit_room_needs_a_label_for_its_light_group(self):
         problem = "room 'bath' has lights but no label in ROOM_LABELS for its light:bath group"
-        self.assertEqual(layout_check.check(interactive(ROOM_LABELS={"porch": "hiên"})), [problem])
-        self.assertEqual(layout_check.check(interactive(ROOM_LABELS={"bath": " ", "porch": "hiên"})), [problem])
+        self.assertEqual(layout_check.check(interactive(ROOM_LABELS={"porch": "Porch"})), [problem])
+        self.assertEqual(layout_check.check(interactive(ROOM_LABELS={"bath": " ", "porch": "Porch"})), [problem])
 
     def test_an_unlit_room_needs_no_label(self):
-        self.assertEqual(layout_check.check(interactive(ROOM_LABELS={"bath": "phòng tắm"})), [])
+        self.assertEqual(layout_check.check(interactive(ROOM_LABELS={"bath": "Bathroom"})), [])
 
     def test_lamps_and_point_lights_light_their_room_too(self):
         lamp = [SWITCH, ("floor_lamp", "Lamp", "porch", (2.0, 0.0), 0)]
         switch = ("light_switch", "Switch_porch", "porch", (3.99, 1.0), 270)
-        self.assertEqual(layout_check.check(interactive(FURNITURE=lamp, ROOM_LABELS={"bath": "phòng tắm"})),
+        self.assertEqual(layout_check.check(interactive(FURNITURE=lamp, ROOM_LABELS={"bath": "Bathroom"})),
                          ["room 'porch' has lights but no label in ROOM_LABELS for its light:porch group",
                           "room 'porch' has lights but no light_switch for its light:porch group"])
         self.assertEqual(layout_check.check(interactive(FURNITURE=[*lamp, switch])), [])

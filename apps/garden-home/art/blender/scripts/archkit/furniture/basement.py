@@ -1,4 +1,4 @@
-"""The basement's pieces (villa v2 spec §12 "Tầng hầm"): the wine cellar's racks of bottles, barrels and tasting table;
+"""The basement's pieces (villa v2 spec §12 "Basement"): the wine cellar's racks of bottles, barrels and tasting table;
 the karaoke lounge's U-shaped velvet sofa, TV, tower speakers, microphones and disco ball; the spa's sauna cabin (built
 whole or as its cabin and the stones of its stove, part=), massage bed, small stone-edged hot tub, shelf of oils and
 candles; the gym's treadmill, squat rack, dumbbell rack, mirror and yoga mat; the light well's palm and uplights.

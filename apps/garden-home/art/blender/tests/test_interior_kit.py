@@ -1,4 +1,4 @@
-"""The decor pass's kit (villa v2 spec §12 "Rèm và phụ kiện"): the curtains, soft wave-fold drapes on a slim bronze
+"""The decor pass's kit (villa v2 spec §12 "Curtains and accessories"): the curtains, soft wave-fold drapes on a slim bronze
 ceiling track as tall as the room they hang in (an off-white sheer behind a linen drape tied back at both ends, so the
 glass stays open), the roller blind of the kitchen's and the gaming corner's ribbon windows, and the colours they are
 made of; the accessories that furnish the rooms (cushions, throws, table decor, lamps, plants, art, a buffet, a console,

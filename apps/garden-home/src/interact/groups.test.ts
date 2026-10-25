@@ -23,7 +23,7 @@ describe('groupKind', () => {
 
 describe('interactiveNode', () => {
   it('walks up from what the pointer hit to the node whose extras name a group', () => {
-    const tv = node(new Group(), 'TV_wall', { interact: 'tv:TV_wall', label: 'TV phòng khách' });
+    const tv = node(new Group(), 'TV_wall', { interact: 'tv:TV_wall', label: 'Living room TV' });
     const screen = new Mesh(); // a primitive of a multi-material mesh: no extras of its own
     const inner = new Group(); // gltf-transform moves an animated node's mesh into an unnamed child
     tv.add(inner);
@@ -46,16 +46,16 @@ describe('collectGroups', () => {
     const root = new Group();
     const light = node(new PointLight(), 'L_living', {
       interact: 'light:living',
-      label: 'Đèn phòng khách',
+      label: 'Living room lights',
       night_light: true,
     });
     const lamp = node(new Mesh(undefined, new MeshStandardMaterial()), 'Floor_lamp', {
       interact: 'light:living',
-      label: 'Đèn phòng khách',
+      label: 'Living room lights',
     });
     const door = node(new Mesh(), 'Door_main', {
       interact: 'door:main',
-      label: 'Cửa chính',
+      label: 'Front door',
       clip: 'act_door_open',
     });
     root.add(light, lamp, door, node(new Mesh(), 'Sofa'));
@@ -64,13 +64,13 @@ describe('collectGroups', () => {
     expect(groups.get('light:living')).toEqual({
       id: 'light:living',
       kind: 'light',
-      label: 'Đèn phòng khách',
+      label: 'Living room lights',
       nodes: [light, lamp],
       clip: null,
     });
     expect(groups.get('door:main')).toMatchObject({
       kind: 'door',
-      label: 'Cửa chính',
+      label: 'Front door',
       nodes: [door],
       clip: 'act_door_open',
     });

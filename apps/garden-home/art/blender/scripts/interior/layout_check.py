@@ -1,4 +1,4 @@
-"""Sanity checks on the interior's layout before any geometry is built (villa v2 spec §12 "Rèm và phụ kiện"). Pure
+"""Sanity checks on the interior's layout before any geometry is built (villa v2 spec §12 "Curtains and accessories"). Pure
 Python.
 
 check(layout) returns human-readable problems; an empty list means the decor is buildable. `layout` gives the data

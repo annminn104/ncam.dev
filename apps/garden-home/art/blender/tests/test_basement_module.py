@@ -1,4 +1,4 @@
-"""Villa v2 spec §12 "Tầng hầm": the committed basement module, its export and its generator (basement/
+"""Villa v2 spec §12 "Basement": the committed basement module, its export and its generator (basement/
 build_basement.py)."""
 import math
 import os

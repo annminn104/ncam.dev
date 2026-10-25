@@ -3,13 +3,13 @@ import { useAppStore } from '../state/store';
 import { FLOOR_BUTTONS, isPressed } from './floors';
 
 describe('the floor buttons (interaction spec §2)', () => {
-  it('offer auto, the whole house, the two storeys and the basement, in Vietnamese, top to bottom', () => {
+  it('offer auto, the whole house, the two storeys and the basement, in English, top to bottom', () => {
     expect(FLOOR_BUTTONS.map(({ mode, label }) => [mode, label])).toEqual([
-      ['auto', 'Tự động'],
-      ['none', 'Mái'],
-      ['upper', 'Tầng 2'],
-      ['ground', 'Tầng 1'],
-      ['basement', 'Hầm'],
+      ['auto', 'Auto'],
+      ['none', 'Roof'],
+      ['upper', 'Upper floor'],
+      ['ground', 'Ground floor'],
+      ['basement', 'Basement'],
     ]);
     for (const button of FLOOR_BUTTONS)
       expect(button.title.length).toBeGreaterThan(button.label.length);

@@ -24,9 +24,9 @@ ROOMS = [
     # stone front's outer face (FACADE), and its floor is the plinth top, 2 cm under the interior one (LEVEL_Z[0])
     {"name": "terrace", "level": 0, "min": (LEFT, TERRACE), "max": (RIGHT, FACADE), "floor": PLINTH},
 ]
-# What the website calls each room on hover (interaction spec §3.1): "Đèn phòng khách", "TV phòng khách".
-ROOM_LABELS = {"living": "phòng khách", "dining": "phòng ăn", "kitchen": "bếp", "hall": "sảnh", "foyer": "tiền sảnh",
-               "wc": "phòng vệ sinh khách", "laundry": "phòng giặt", "terrace": "hiên trước"}
+# What the website calls each room on hover (interaction spec §3.1): "Living room lights", "Living room TV".
+ROOM_LABELS = {"living": "Living room", "dining": "Dining room", "kitchen": "Kitchen", "hall": "Hall", "foyer": "Entrance hall",
+               "wc": "Guest WC", "laundry": "Laundry room", "terrace": "Front porch"}
 
 # the sofa group in the middle of the void, and the crystal chandelier over the front of its rug: from the wallpaper's
 # camera (siteplan.zones CAM_idle) the stair, behind it, shows some 8 degrees off it rather than lined up with it

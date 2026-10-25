@@ -1,4 +1,4 @@
-"""Villa v2 spec §12 "Rèm và phụ kiện": the committed interior module, its export and its generator (interior/
+"""Villa v2 spec §12 "Curtains and accessories": the committed interior module, its export and its generator (interior/
 build_interior.py), and the house without its old curtain."""
 import os
 import shutil
@@ -211,7 +211,7 @@ class InteriorModuleTest(unittest.TestCase):
 
 @unittest.skipUnless(blender_available(), "Blender not found (set BLENDER_BIN)")
 class HouseWithoutItsCurtainTest(unittest.TestCase):
-    """The old fixed 3 m curtain left the house for the interior's (villa v2 spec §12 "Rèm và phụ kiện")."""
+    """The old fixed 3 m curtain left the house for the interior's (villa v2 spec §12 "Curtains and accessories")."""
 
     def test_the_committed_house_has_no_curtain_of_its_own(self):
         tmp = tempfile.mkdtemp()

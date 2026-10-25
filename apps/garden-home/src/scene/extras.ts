@@ -88,7 +88,7 @@ export function isGlass(material: Material): boolean {
 }
 
 /**
- * M_sheer (villa v2 spec §12 "Rèm và phụ kiện"): the curtains' see-through voile, which a click goes through like a pane
+ * M_sheer (villa v2 spec §12 "Curtains and accessories"): the curtains' see-through voile, which a click goes through like a pane
  * and which prepareModule draws in one pass, lit from both sides.
  */
 export function isSheer(material: Material): boolean {
@@ -120,7 +120,7 @@ export function isBuried(object: Object3D): boolean {
 }
 
 /**
- * Objects the interior tags detail (interior/interior_layout.py DETAILS, villa v2 spec §12 "Rèm và phụ kiện"): its small
+ * Objects the interior tags detail (interior/interior_layout.py DETAILS, villa v2 spec §12 "Curtains and accessories"): its small
  * things, a pixel or two from afar, which the website draws only while the camera is near the house (cutaway.ts
  * applyCut), never on the wallpaper.
  */

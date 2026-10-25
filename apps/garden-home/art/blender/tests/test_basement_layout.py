@@ -1,4 +1,4 @@
-"""The basement's plan (villa v2 spec §12 "Tầng hầm"): under the tall house's ground slab, round a hall at the foot of
+"""The basement's plan (villa v2 spec §12 "Basement"): under the tall house's ground slab, round a hall at the foot of
 the spiral stair, a wine cellar behind a glass wall, a karaoke lounge, a spa with its sauna and hot tub, a gym and a
 shower room, each with its furniture, lights and a wall switch under the website's cut. Pure Python."""
 import copy
@@ -16,8 +16,8 @@ from houses import house_layout  # noqa: E402
 from houses.house_parts import common  # noqa: E402
 
 EPS = 1e-6
-ROOMS = {"basement_hall": "sảnh hầm", "wine_cellar": "hầm rượu", "karaoke": "phòng karaoke", "spa": "spa",
-         "gym": "phòng gym", "shower_room": "phòng tắm hầm"}
+ROOMS = {"basement_hall": "Basement lobby", "wine_cellar": "Wine cellar", "karaoke": "Karaoke room", "spa": "Spa",
+         "gym": "Gym", "shower_room": "Basement bathroom"}
 
 
 def layout(**changes):
@@ -146,7 +146,7 @@ class BasementPlanTest(unittest.TestCase):
         self.assertLessEqual({"shower", "toilet", "vanity_single"}, set(kinds("shower_room")))
 
     def test_a_few_accents_where_the_rooms_looked_bare_stand_on_their_hosts_tops(self):
-        # the decor pass (villa v2 spec §12 "Rèm và phụ kiện"): the cellar's decanter and glasses on the tasting table,
+        # the decor pass (villa v2 spec §12 "Curtains and accessories"): the cellar's decanter and glasses on the tasting table,
         # a pair of cushions on the karaoke's sofa, rolled towels on a massage bed, a towel and bottles by the gym's
         # dumbbells (the basement keeps within its 15k triangles)
         from houses import layout_check as house_check
@@ -412,7 +412,7 @@ class OpeningsTest(unittest.TestCase):
 
 
 class LightWellTest(unittest.TestCase):
-    """The light well (giếng trời): a court sunk to the basement's floor in the lawn in front of the house, left of the
+    """The light well: a court sunk to the basement's floor in the lawn in front of the house, left of the
     walk, that lights the spa through its glass wall: travertine walls, pebbles, a palm whose crown shows over the lawn,
     planters, a frameless glass railing round its top and warm uplights washing its walls at night."""
 

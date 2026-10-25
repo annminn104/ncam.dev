@@ -63,36 +63,36 @@ class HouseTagsTest(unittest.TestCase):
         self.assertEqual(self.group("fountain"), {"fountain", "WATER_fountain", "WATER_fountain_sheet"})
         self.assertEqual(self.group("lights:string"), {"String_lights_trellis", "String_lights_railing"})
 
-    def test_labels_are_vietnamese_and_shared_by_a_group(self):
+    def test_labels_are_english_and_shared_by_a_group(self):
         labels = {}
         for name, props in self.tags.items():
             if not name.startswith(("Switch_", "AC_remote_")) and name != "Chandelier":  # labels of their own
                 labels.setdefault(props["interact"], set()).add(props["label"])
         self.assertEqual({group: names for group, names in labels.items() if len(names) != 1}, {})
         label = {group: names.pop() for group, names in labels.items()}
-        self.assertEqual(self.tags["Switch_living"]["label"], "Công tắc đèn phòng khách")
-        self.assertEqual(self.tags["Switch_bath_master"]["label"], "Công tắc đèn phòng tắm master")
-        self.assertEqual(self.tags["Switch_balcony"]["label"], "Công tắc đèn ban công")
-        self.assertEqual(self.tags["Chandelier"]["label"], "Đèn chùm pha lê")
-        self.assertEqual(label["light:living"], "Đèn phòng khách")
-        self.assertEqual(label["light:master"], "Đèn phòng ngủ master")
-        self.assertEqual(label["tv:TV_wall"], "TV phòng khách")
-        self.assertEqual(label["tv:TV_master"], "TV phòng ngủ master")
-        self.assertEqual(label["pc:Gaming_desk"], "Máy tính")
-        self.assertEqual(label["shower:Shower_master"], "Vòi sen phòng tắm master")
-        self.assertEqual(label["shower:Shower_shared"], "Vòi sen phòng tắm chung")
-        self.assertEqual(label["door:main"], "Cửa chính")
-        self.assertEqual(label["jacuzzi"], "Bể sục")
-        self.assertEqual(label["fountain"], "Tường nước")
-        self.assertEqual(label["lights:string"], "Dây đèn")
+        self.assertEqual(self.tags["Switch_living"]["label"], "Living room light switch")
+        self.assertEqual(self.tags["Switch_bath_master"]["label"], "Master bathroom light switch")
+        self.assertEqual(self.tags["Switch_balcony"]["label"], "Balcony light switch")
+        self.assertEqual(self.tags["Chandelier"]["label"], "Crystal chandelier")
+        self.assertEqual(label["light:living"], "Living room lights")
+        self.assertEqual(label["light:master"], "Master bedroom lights")
+        self.assertEqual(label["tv:TV_wall"], "Living room TV")
+        self.assertEqual(label["tv:TV_master"], "Master bedroom TV")
+        self.assertEqual(label["pc:Gaming_desk"], "Computer")
+        self.assertEqual(label["shower:Shower_master"], "Master bathroom shower")
+        self.assertEqual(label["shower:Shower_shared"], "Shared bathroom shower")
+        self.assertEqual(label["door:main"], "Front door")
+        self.assertEqual(label["jacuzzi"], "Hot tub")
+        self.assertEqual(label["fountain"], "Water wall")
+        self.assertEqual(label["lights:string"], "String lights")
 
     def test_each_bedrooms_air_conditioner_its_flap_and_its_remote_toggle_together(self):
-        labels = {"master": "phòng master", "bedroom2": "phòng ngủ 2", "bedroom3": "phòng ngủ 3"}
+        labels = {"master": "Master bedroom", "bedroom2": "Bedroom 2", "bedroom3": "Bedroom 3"}
         for room, label in labels.items():
             self.assertEqual(self.group(f"ac:{room}"), {f"AC_{room}", f"AC_{room}_flap", f"AC_remote_{room}"})
-            self.assertEqual(self.tags[f"AC_{room}"]["label"], f"Máy lạnh {label}")
-            self.assertEqual(self.tags[f"AC_{room}_flap"]["label"], f"Máy lạnh {label}")
-            self.assertEqual(self.tags[f"AC_remote_{room}"]["label"], f"Điều khiển máy lạnh {label}")
+            self.assertEqual(self.tags[f"AC_{room}"]["label"], f"{label} AC")
+            self.assertEqual(self.tags[f"AC_{room}_flap"]["label"], f"{label} AC")
+            self.assertEqual(self.tags[f"AC_remote_{room}"]["label"], f"{label} AC remote")
         self.assertEqual(interact.ac_flaps(house_layout), [(f"AC_{room}_flap", f"AC_{room}", room)
                                                             for room in ("master", "bedroom2", "bedroom3")])
 

@@ -368,7 +368,7 @@ describe('applyCut', () => {
   });
 });
 
-describe('the basement (villa v2 spec §12 "Tầng hầm")', () => {
+describe('the basement (villa v2 spec §12 "Basement")', () => {
   it('is cut 1.6 m over its floor, which houses/house_parts/common.py puts under the ground slab', () => {
     expect(HOUSE_LEVELS.basementFloor).toBe(pyConstant('BASEMENT_FLOOR'));
     expect(cutHeight('basement')).toBeCloseTo(
@@ -408,7 +408,7 @@ describe('the basement (villa v2 spec §12 "Tầng hầm")', () => {
   });
 });
 
-describe('the interior (villa v2 spec §12 "Rèm và phụ kiện")', () => {
+describe('the interior (villa v2 spec §12 "Curtains and accessories")', () => {
   /** A mesh from `bottom` to `top` metres over the slot (module space), standing at the house's middle. */
   function slab(bottom: number, top: number, name: string): Mesh {
     const mesh = new Mesh(new BoxGeometry(2, top - bottom, 2), new MeshStandardMaterial());
@@ -422,11 +422,11 @@ describe('the interior (villa v2 spec §12 "Rèm và phụ kiện")', () => {
       expect(moduleCut('interior', level)).toBe(level);
     expect(cutOnlyByButton('interior')).toBe(false);
     expect(cutOnlyByButton('house')).toBe(false);
-    expect(cutOnlyByButton('basement')).toBe(true); // only "Hầm" cuts the basement: whole, its shaders go unclipped
+    expect(cutOnlyByButton('basement')).toBe(true); // only "Basement" cuts the basement: whole, its shaders go unclipped
     expect(cutOnlyByButton('pool')).toBe(false);
   });
 
-  it('clips its decor at the storey\'s cut, leaves out what hangs wholly over it and hides with the house under "Hầm"', () => {
+  it('clips its decor at the storey\'s cut, leaves out what hangs wholly over it and hides with the house under "Basement"', () => {
     // the decor (curtains up the void to 9.25 m, accessories on both floors) and a bedroom's lamp shades upstairs
     const decor = slab(0.47, 9.25, 'Interior_decor');
     const lamp = slab(5.9, 6.4, 'LT_lamp_bedroom2');
@@ -488,7 +488,7 @@ describe("the interior's details: drawn only while the camera is near the house"
     ]);
   });
 
-  it('leaves the small things out from afar, whole or cut, and draws them near, the house whole ("Mái") or cut', () => {
+  it('leaves the small things out from afar, whole or cut, and draws them near, the house whole ("Roof") or cut', () => {
     // the decor (curtains, chairs, trees) and the details (books, cushions, the table laid), both floors
     const decor = piece(0.47, 9.25, false);
     const details = piece(0.9, 6.4, true);
@@ -498,7 +498,7 @@ describe("the interior's details: drawn only while the camera is near the house"
     applyCut(cut, moduleCut('interior', 'none'), 0, 'none', false); // the site's first view
     expect([drawn(decor), drawn(details)]).toEqual([true, false]);
     expect(details.layers.isEnabled(HIDDEN_LAYER)).toBe(true);
-    // "Mái" at 20 m, or close by on auto with the camera too low for a cut: the house whole, its rooms near
+    // "Roof" at 20 m, or close by on auto with the camera too low for a cut: the house whole, its rooms near
     applyCut(cut, moduleCut('interior', 'none'), 0, 'none', true);
     expect([drawn(decor), drawn(details)]).toEqual([true, true]);
     for (const level of ['upper', 'ground'] as const) {

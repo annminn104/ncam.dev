@@ -121,7 +121,7 @@ test('at 21:00 the crystal chandelier lights the double-height living room, and 
   // its crystals and the walls round it: 157 lit, 58 with the room's lights out (box luma)
   const region = async () => boxLuma(await canvas.screenshot(), centre.x, centre.y + 6, 12, 12);
   const lit = await region();
-  const point = await pointAt(page, centre, 'Đèn chùm pha lê');
+  const point = await pointAt(page, centre, 'Crystal chandelier');
   expect((await hover(page))?.group).toBe('light:living');
   await page.mouse.click(point.x, point.y);
   await page.mouse.move(1270, 790);
@@ -138,7 +138,7 @@ test('zoomed into the living room under the ground floor cut, the chandelier sti
   await zoomOnto(page, '21:00', 22, CHANDELIER);
   expect((await camera(page)).cut).toBe('ground');
   // the pointer only finds what the cut leaves (interact/pick): the chandelier, up to its crown, over the cut walls
-  const point = await pointAt(page, (await project(page, CHANDELIER))!, 'Đèn chùm pha lê');
+  const point = await pointAt(page, (await project(page, CHANDELIER))!, 'Crystal chandelier');
   await page.mouse.click(point.x, point.y);
   await expect
     .poll(async () => (await toggles(page))['light:living'], { timeout: 20_000 })
@@ -159,8 +159,8 @@ test("a click on the master bedroom's air conditioner remote at noon starts it: 
     ),
   );
   expect(near, 'the remote on screen').not.toBeNull();
-  const point = await pointAt(page, near!, 'Điều khiển máy lạnh phòng master', 9);
-  await expect(page.getByTestId('hover-label')).toContainText('Bấm để bật'); // auto is off, day or night
+  const point = await pointAt(page, near!, 'Master bedroom AC remote', 9);
+  await expect(page.getByTestId('hover-label')).toContainText('Click to switch on'); // auto is off, day or night
   expect(await rotationX(page, 'AC_master_flap')).toBeCloseTo(0, 3);
   await page.mouse.click(point.x, point.y);
   // its act_ac_master clip turns the flap -60 degrees (-1.05 rad) about X

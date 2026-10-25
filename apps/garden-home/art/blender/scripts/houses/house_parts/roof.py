@@ -18,7 +18,7 @@ ROOF = LEVEL_Z[2]
 ROOMS = [
     {"name": "roof", "level": 2, "min": (LEFT + 0.1, EDGE + 0.1), "max": (UPPER_RIGHT - 0.1, BACK - 0.1)},
 ]
-ROOM_LABELS = {"roof": "sân thượng"}
+ROOM_LABELS = {"roof": "Roof terrace"}
 
 # archkit.rooftop.jacuzzi: the deck spans x -10.5..-6.9, y -6.0..-2.4 with its step on the -Y side. The name stays
 # lower case: it names the clip ambient_jacuzzi too.

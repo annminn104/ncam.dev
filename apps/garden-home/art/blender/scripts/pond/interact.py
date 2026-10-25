@@ -1,15 +1,15 @@
 """What a click toggles at the koi pond (interaction spec §3.1, villa v2 part 3). Pure Python.
 
-The waterfall is the group waterfall "Thác nước": the rockery it falls from, the falling sheet of water and the foam at
+The waterfall is the group waterfall "Waterfall": the rockery it falls from, the falling sheet of water and the foam at
 its foot. Like the house's wall fountain it runs while on auto, and a click stops it (the website hides the sheet and
-the foam) or starts it again. The pond's water is the group koi "Cho cá ăn", which a click does not toggle: it feeds the
+the foam) or starts it again. The pond's water is the group koi "Feed the koi", which a click does not toggle: it feeds the
 koi, which gather where it fell for a few seconds (src/systems/koi.ts). The stone lantern of the tea corner joins
 the garden's lights (lights:garden, garden/interact.py).
 """
 from houses.interact import GROUP_RE  # noqa: F401  (the website reads pond, garden and house ids alike)
 
-GROUP, LABEL = "waterfall", "Thác nước"
-FEED, FEED_LABEL = "koi", "Cho cá ăn"
+GROUP, LABEL = "waterfall", "Waterfall"
+FEED, FEED_LABEL = "koi", "Feed the koi"
 ROCKERY, SHEET, FOAM, WATER = "Rockery", "WATER_waterfall_sheet", "Waterfall_foam", "WATER_surface"
 
 

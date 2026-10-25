@@ -438,7 +438,7 @@ describe('prepareModule on GLTFLoader output', () => {
   });
 });
 
-describe('prepareModule: the curtains\' voile (villa v2 spec §12 "Rèm và phụ kiện")', () => {
+describe('prepareModule: the curtains\' voile (villa v2 spec §12 "Curtains and accessories")', () => {
   function decor(): {
     root: Group;
     mesh: Mesh;

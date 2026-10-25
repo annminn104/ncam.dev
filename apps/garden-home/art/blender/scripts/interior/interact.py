@@ -1,4 +1,4 @@
-"""What a click toggles in the interior (interaction spec §3.1, villa v2 spec §12 "Rèm và phụ kiện"). Pure Python.
+"""What a click toggles in the interior (interaction spec §3.1, villa v2 spec §12 "Curtains and accessories"). Pure Python.
 
 The decor is not interactive: a click on a cushion or a curtain does nothing, like one on a wall. Only the table lamps
 glow, and their shades (one LT_lamp_<room> object per lit room, interior_layout.LAMPS) join the room's light:<room>

@@ -1,4 +1,4 @@
-"""The decor pass's plan (villa v2 spec §12 "Rèm và phụ kiện"): curtains along the tall house's glazing, as tall as the
+"""The decor pass's plan (villa v2 spec §12 "Curtains and accessories"): curtains along the tall house's glazing, as tall as the
 rooms they hang in, and the accessories that furnish its rooms, in a module of their own standing in the house's slot.
 Pure Python."""
 import copy
@@ -135,9 +135,9 @@ class InteriorModuleTest(unittest.TestCase):
 
     def test_a_lamps_shade_joins_its_rooms_light_group(self):
         self.assertEqual(interact.tags(L), {
-            "LT_lamp_dining": {"interact": "light:dining", "label": "Đèn phòng ăn"},
-            "LT_lamp_bedroom2": {"interact": "light:bedroom2", "label": "Đèn phòng ngủ 2"},
-            "LT_lamp_bedroom3": {"interact": "light:bedroom3", "label": "Đèn phòng ngủ 3"},
+            "LT_lamp_dining": {"interact": "light:dining", "label": "Dining room lights"},
+            "LT_lamp_bedroom2": {"interact": "light:bedroom2", "label": "Bedroom 2 lights"},
+            "LT_lamp_bedroom3": {"interact": "light:bedroom3", "label": "Bedroom 3 lights"},
         })
         lamps = {entry[2] for entry in L.FURNITURE if entry[0] == "table_lamp"}
         self.assertEqual(lamps, LAMP_ROOMS)

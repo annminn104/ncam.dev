@@ -72,7 +72,7 @@ describe('parseParams', () => {
       '%2e%2e%2fa.jpg',
       'a\\b.png',
       'a.JPGG',
-      'é.jpg',
+      'ü.jpg',
     ];
     for (const bg of bad) expect(parseParams(`?${new URLSearchParams({ bg })}`).bg).toBeNull();
     expect(parseParams('?bg=%2e%2e%2fa.jpg').bg).toBeNull(); // decoded to ../a.jpg

@@ -16,7 +16,7 @@ GENERATORS = {"fence": "build_fence.py", "garden_paths": "build_paths.py", "flow
 TRIS_AIM = {"fence": 7000, "garden_paths": 5000, "flower_beds": 12000, "veg_garden": 7000, "bbq_area": 6000}
 PRIMITIVES_AIM = {"fence": 6, "garden_paths": 6, "flower_beds": 11, "veg_garden": 16, "bbq_area": 20}
 DRAW_CALLS_BUDGET = 120
-LIGHTS = {"interact": "lights:garden", "label": "Đèn sân vườn"}
+LIGHTS = {"interact": "lights:garden", "label": "Garden lights"}
 
 
 def run_generator(script, *args):
@@ -100,9 +100,9 @@ class GardenModulesTest(unittest.TestCase):
         # the grill is still and casts its shadow by day; only its coals are a night light; a click toggles both
         grill, coals = nodes["BBQ_grill"]["extras"], nodes["BBQ_coals"]["extras"]
         self.assertEqual({key: grill.get(key) for key in ("interact", "label", "night_light")},
-                         {"interact": "bbq", "label": "Bếp nướng", "night_light": None})
+                         {"interact": "bbq", "label": "Barbecue", "night_light": None})
         self.assertEqual({key: coals.get(key) for key in ("interact", "label", "night_light")},
-                         {"interact": "bbq", "label": "Bếp nướng", "night_light": True})
+                         {"interact": "bbq", "label": "Barbecue", "night_light": True})
         string = nodes["String_lights_bbq"]["extras"]
         self.assertEqual({key: string.get(key) for key in ("interact", "label", "night_light")},
                          {**LIGHTS, "night_light": True})

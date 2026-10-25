@@ -19,7 +19,7 @@ BALCONY_X0 = -2.8
 # quarter, behind the column, from the west wall's inner face. Its upper flight climbs on from that landing round the
 # same column to the roof (archkit.spiral.flights), through a hole in the roof slab over the whole of its square but
 # the quarter one steps onto off its top tread (towards -Y, its front left), inside the stair pavilion (roof.py). The
-# basement's flight (basement/basement_layout.py, villa v2 spec §12 "Tầng hầm") comes up the same column the same way:
+# basement's flight (basement/basement_layout.py, villa v2 spec §12 "Basement") comes up the same column the same way:
 # its top tread ends on the -X axis flush with the ground floor, so the ground slab (the plinth, grown down to the
 # basement's ceiling) keeps that same quarter as the landing both flights leave from and is holed over the rest of the
 # square, a balustrade on the hole's open sides (Columns): steel, but glass where the house's flight climbs over it.
@@ -44,7 +44,7 @@ def _round_the_roof_hole(key, x0, y0, x1, y1, z0, z1):
 DOOR = {"name": "Door_main", "x0": 7.0, "x1": 8.2, "y": FRONT, "z0": PLINTH, "z1": DOOR_TOP, "slide": 1.2}
 HOTSPOTS = [
     {"name": "HS_door", "location": ((DOOR["x0"] + DOOR["x1"]) / 2, FRONT - 0.6, 1.6),
-     "props": {"action": "toggle", "clip": "act_door_open", "label": "Cửa chính", "radius": 0.8}},
+     "props": {"action": "toggle", "clip": "act_door_open", "label": "Front door", "radius": 0.8}},
 ]
 
 # Window openings for the frosted panels, (start, end) along the wall and (bottom, top): the WC in the stone wall at

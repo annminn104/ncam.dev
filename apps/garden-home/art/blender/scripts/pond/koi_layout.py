@@ -4,8 +4,8 @@ Module space: the origin is the centre of the 11 x 8 m footprint (the zone), fro
 (the yard's grass top has a hole of OUTLINE, make_placeholders): a smooth irregular blob about 9 x 6 m (basin.blob)
 whose bank falls along PROFILE from the grass to a floor 0.65 m deep in the middle, a green band down to the water and
 mud below it, the dark floor in the middle; the water stands WATER_Z below the lawn. A ring of grey stones lines the
-edge, with gaps where the grass meets the water. In the north-west corner, partly in the water, the rockery (hòn non
-bộ): four peaks of limestone with shrubs on their ledges and a waterfall falling from the tallest into the pond, foam at
+edge, with gaps where the grass meets the water. In the north-west corner, partly in the water, the
+rockery: four peaks of limestone with shrubs on their ledges and a waterfall falling from the tallest into the pond, foam at
 its foot (the click group waterfall). Fourteen koi swim their loops under the surface (swim.py), and three clusters of
 lotus pads float on it with their flowers and buds.
 
@@ -124,4 +124,4 @@ FLOWERS = [(2.75, -1.3, 0), (3.35, -0.9, 1), (3.05, -1.05, 2), (-1.9, -1.95, 1),
            (0.1, 1.75, 0)]
 LOTUS_Z = WATER_Z + 0.002  # pads and flowers float on the water
 
-HOTSPOT = {"name": "HS_pond", "pos": (0.0, 0.0, 0.6), "action": "focus", "label": "Ao cá", "radius": 4.5}
+HOTSPOT = {"name": "HS_pond", "pos": (0.0, 0.0, 0.6), "action": "focus", "label": "Koi pond", "radius": 4.5}

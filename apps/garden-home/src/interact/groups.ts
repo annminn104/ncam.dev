@@ -11,7 +11,7 @@ export interface InteractGroup {
   id: string;
   /** light, lights, tv, pc, bbq, shower, door, jacuzzi, fountain or waterfall: what a toggle does to the group. */
   kind: string;
-  /** Vietnamese name shown on hover. */
+  /** Name shown on hover. */
   label: string;
   /** The glTF nodes that carry the group's extras. */
   nodes: Object3D[];

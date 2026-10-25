@@ -121,7 +121,7 @@ const FRONT_NORMAL = ShaderChunk.normal_fragment_begin.replace(
 );
 
 /**
- * The curtains' voile (M_sheer, villa v2 spec §12 "Rèm và phụ kiện"), a thin see-through fabric whose ribbons turn their
+ * The curtains' voile (M_sheer, villa v2 spec §12 "Curtains and accessories"), a thin see-through fabric whose ribbons turn their
  * front to the room: drawn in one pass (a ribbon of folds in one colour looks the same, at half the draw calls of three's
  * back-then-front pair for a transparent DoubleSide material), and lit from both sides as a voile is, by the light that
  * falls on its room side: seen from outside at night it shows the warm room's lights rather than the moon (three would

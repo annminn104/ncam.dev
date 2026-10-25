@@ -34,8 +34,8 @@ for polygon in ground.data.polygons:
 ends = sorted({{v for key, n in uses.items() if n == 1 for v in key}})
 print("GROUND " + json.dumps([list((ground.matrix_world @ ground.data.vertices[v].co).xy) for v in ends]))
 """
-LIGHTS = {"interact": "lights:garden", "label": "Đèn sân vườn"}
-WATERFALL = {"interact": "waterfall", "label": "Thác nước"}
+LIGHTS = {"interact": "lights:garden", "label": "Garden lights"}
+WATERFALL = {"interact": "waterfall", "label": "Waterfall"}
 KOI = {"M_koi_orange", "M_koi_white", "M_koi_black", "M_koi_gold"}
 
 
@@ -139,7 +139,7 @@ class PondModulesTest(unittest.TestCase):
         self.assertEqual(sorted(self.nodes("koi_pond")),
                          ["HS_pond", "Koi", "Lotus", "Pond_bank", "Pond_stones", "Rockery", "WATER_surface",
                           "WATER_waterfall_sheet", "Waterfall_foam"])
-        self.assertEqual(self.extras("koi_pond", "HS_pond"), {"action": "focus", "label": "Ao cá", "radius": 4.5})
+        self.assertEqual(self.extras("koi_pond", "HS_pond"), {"action": "focus", "label": "Koi pond", "radius": 4.5})
 
     def test_the_bank_falls_from_the_lawn_through_a_green_band_and_mud_to_the_dark_floor(self):
         self.assertEqual(self.materials("koi_pond", "Pond_bank"), ["M_moss", "M_pond_bank", "M_pond_floor"])
@@ -174,7 +174,7 @@ class PondModulesTest(unittest.TestCase):
     def test_a_click_on_the_pond_feeds_the_koi(self):
         extras = self.extras("koi_pond", "WATER_surface")
         self.assertEqual({key: extras.get(key) for key in ("interact", "label")},
-                         {"interact": "koi", "label": "Cho cá ăn"})
+                         {"interact": "koi", "label": "Feed the koi"})
 
     def test_stones_line_the_edge(self):
         self.assertEqual(self.materials("koi_pond", "Pond_stones"), ["M_rock", "M_rock_light"])

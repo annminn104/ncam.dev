@@ -1,19 +1,19 @@
-"""What a click toggles in the basement (interaction spec §3.1, villa v2 spec §12 "Tầng hầm") and what the website's
+"""What a click toggles in the basement (interaction spec §3.1, villa v2 spec §12 "Basement") and what the website's
 cut does to its objects. Pure Python.
 
 The groups, like the house's (houses/interact.py), on the objects build_basement.py makes:
 
 - light:<room>, every room's lights: its downlights with the pools of light they cast on the floor (LT_down_<room>; the
   spa's candles are in its object too) and its wall switch (Switch_<room>), which hangs under the cut;
-- party "Chế độ tiệc", the karaoke's party mode: the TV with the speakers and the microphones (Karaoke_party, whose
+- party "Party mode", the karaoke's party mode: the TV with the speakers and the microphones (Karaoke_party, whose
   screen lights up), the LED strips round the room with the light they cast on the carpet (LED_party, whose colours the
   website cycles while it is on) and the disco ball (Disco_ball), whose clip ambient_disco_ball turns it while it is on;
   on auto it is off, whatever the hour;
-- sauna "Phòng xông hơi": the stove's stones and the warm strip under the bench (Sauna_stove), which glow while it
+- sauna "Sauna": the stove's stones and the warm strip under the bench (Sauna_stove), which glow while it
   runs; off on auto;
-- jacuzzi:spa "Bể ngâm", the spa's hot tub: the tub, its water and its bubbles, which bob in ambient_hot_tub while it
+- jacuzzi:spa "Soaking tub", the spa's hot tub: the tub, its water and its bubbles, which bob in ambient_hot_tub while it
   runs, like the roof's jacuzzi; on auto it runs;
-- lights:garden "Đèn sân vườn": the light well's uplights and the light they wash its walls with, the garden's lights.
+- lights:garden "Garden lights": the light well's uplights and the light they wash its walls with, the garden's lights.
 
 uncut(layout) names what stands whole under the basement's cut, with its top (build_basement tags it `uncut` and
 `cut_top`): the retaining walls and the slab's edge round the pit, the light well and the disco ball, which hangs from
@@ -27,9 +27,9 @@ from archkit.catalog import FURNITURE, WALL_MOUNTED
 from garden.interact import LABELS as GARDEN_LABELS
 from houses.interact import CUT_TOP_STUB, GROUP_RE  # noqa: F401  (the website reads basement and house ids alike)
 
-PARTY, PARTY_LABEL = "party", "Chế độ tiệc"
-SAUNA, SAUNA_LABEL = "sauna", "Phòng xông hơi"
-TUB, TUB_LABEL = "jacuzzi:spa", "Bể ngâm"
+PARTY, PARTY_LABEL = "party", "Party mode"
+SAUNA, SAUNA_LABEL = "sauna", "Sauna"
+TUB, TUB_LABEL = "jacuzzi:spa", "Soaking tub"
 GARDEN = "lights:garden"
 DISCO_CLIP = "ambient_disco_ball"
 BUBBLES = "a"  # the hot tub's one group of bubbles, <tub>_bubbles_a (archkit.rooftop)
@@ -47,10 +47,10 @@ def tags(layout):
     found = {}
     for group in layout.DOWNLIGHTS:
         room = group["room"]
-        found[group["name"]] = {"interact": f"light:{room}", "label": f"Đèn {labels[room]}"}
+        found[group["name"]] = {"interact": f"light:{room}", "label": f"{labels[room]} lights"}
     for kind, name, room, *_ in layout.FURNITURE:
         if kind == "light_switch":
-            found[name] = {"interact": f"light:{room}", "label": f"Công tắc đèn {labels[room]}"}
+            found[name] = {"interact": f"light:{room}", "label": f"{labels[room]} light switch"}
     for name in (layout.PARTY, layout.LEDS):
         found[name] = {"interact": PARTY, "label": PARTY_LABEL}
     found[layout.DISCO] = {"interact": PARTY, "label": PARTY_LABEL, "clip": DISCO_CLIP}

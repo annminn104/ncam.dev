@@ -1,4 +1,4 @@
-"""What a click toggles in the basement (interaction spec §3.1, villa v2 spec §12 "Tầng hầm") and what the website's cut
+"""What a click toggles in the basement (interaction spec §3.1, villa v2 spec §12 "Basement") and what the website's cut
 does to its objects: each room's lights and wall switch, the karaoke's party mode, the sauna, the spa's hot tub and the
 light well's lights, which join the garden's; what shows only under the basement's cut and what stands whole under it.
 Pure Python."""
@@ -22,24 +22,24 @@ class BasementTagsTest(unittest.TestCase):
 
     def test_every_room_has_a_light_group_its_downlights_and_its_switch_named_after_the_room(self):
         for room, label in L.ROOM_LABELS.items():
-            self.assertEqual(self.tags[f"LT_down_{room}"], {"interact": f"light:{room}", "label": f"Đèn {label}"})
+            self.assertEqual(self.tags[f"LT_down_{room}"], {"interact": f"light:{room}", "label": f"{label} lights"})
             self.assertEqual(self.tags[f"Switch_{room}"], {"interact": f"light:{room}",
-                                                          "label": f"Công tắc đèn {label}"})
-        self.assertEqual(self.tags["LT_down_wine_cellar"]["label"], "Đèn hầm rượu")
-        self.assertEqual(self.tags["LT_down_basement_hall"]["label"], "Đèn sảnh hầm")
+                                                          "label": f"{label} light switch"})
+        self.assertEqual(self.tags["LT_down_wine_cellar"]["label"], "Wine cellar lights")
+        self.assertEqual(self.tags["LT_down_basement_hall"]["label"], "Basement lobby lights")
 
     def test_the_karaoke_tv_speakers_leds_and_disco_ball_are_the_party_mode(self):
         for name in (L.PARTY, L.LEDS):
-            self.assertEqual(self.tags[name], {"interact": "party", "label": "Chế độ tiệc"}, name)
-        self.assertEqual(self.tags[L.DISCO], {"interact": "party", "label": "Chế độ tiệc", "clip": "ambient_disco_ball"})
+            self.assertEqual(self.tags[name], {"interact": "party", "label": "Party mode"}, name)
+        self.assertEqual(self.tags[L.DISCO], {"interact": "party", "label": "Party mode", "clip": "ambient_disco_ball"})
 
     def test_the_sauna_the_hot_tub_and_the_light_well(self):
-        self.assertEqual(self.tags[L.SAUNA], {"interact": "sauna", "label": "Phòng xông hơi"})
-        tub = {"interact": "jacuzzi:spa", "label": "Bể ngâm"}
+        self.assertEqual(self.tags[L.SAUNA], {"interact": "sauna", "label": "Sauna"})
+        tub = {"interact": "jacuzzi:spa", "label": "Soaking tub"}
         self.assertEqual(self.tags[L.TUB], dict(tub, clip="ambient_hot_tub"))
         self.assertEqual(self.tags[L.TUB_WATER["name"]], tub)
         self.assertEqual(self.tags["Hot_tub_bubbles_a"], tub)
-        self.assertEqual(self.tags[L.WELL_LIGHTS], {"interact": "lights:garden", "label": "Đèn sân vườn"})
+        self.assertEqual(self.tags[L.WELL_LIGHTS], {"interact": "lights:garden", "label": "Garden lights"})
 
     def test_every_group_id_is_one_the_website_reads(self):
         for name, props in self.tags.items():

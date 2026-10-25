@@ -1,4 +1,4 @@
-"""Sanity checks on the basement's layout before any geometry is built (villa v2 spec §12 "Tầng hầm"). Pure Python.
+"""Sanity checks on the basement's layout before any geometry is built (villa v2 spec §12 "Basement"). Pure Python.
 
 check(layout) returns human-readable problems; an empty list means the basement is buildable. It runs the house's
 checks first (houses/layout_check.py: rooms in the footprint, furniture in its rooms and clear of each other, of the

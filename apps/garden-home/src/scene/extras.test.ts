@@ -45,7 +45,7 @@ describe('extractHotspots', () => {
   it('reads HS_* extras and fills defaults', () => {
     const root = new Group();
     root.add(
-      node('HS_pond', { action: 'focus', label: 'Ao cá', radius: 1.5 }),
+      node('HS_pond', { action: 'focus', label: 'Koi pond', radius: 1.5 }),
       node('HS_door', { action: 'toggle', clip: 'act_door_open' }),
       node('Tree'),
     );
@@ -59,7 +59,7 @@ describe('extractHotspots', () => {
         radius: h.radius,
       })),
     ).toEqual([
-      { name: 'pond', action: 'focus', clip: null, label: 'Ao cá', radius: 1.5 },
+      { name: 'pond', action: 'focus', clip: null, label: 'Koi pond', radius: 1.5 },
       { name: 'door', action: 'toggle', clip: 'act_door_open', label: 'door', radius: 0.5 },
     ]);
     expect(hotspots[0].object.name).toBe('HS_pond');

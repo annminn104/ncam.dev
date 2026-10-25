@@ -1,4 +1,4 @@
-"""The decor pass's accessories (villa v2 spec §12 "Rèm và phụ kiện"): what furnishes the rooms and makes them look
+"""The decor pass's accessories (villa v2 spec §12 "Curtains and accessories"): what furnishes the rooms and makes them look
 lived in. Throw cushions, throws, the coffee table's tray, books, vases, bowls, a floor vase of dried pampas, a
 travertine drum table, a fiddle-leaf fig and small potted plants, framed abstract prints, a round mirror, a towel bar, a
 teak and cane buffet, a slim console, a bench, the table lamp, the dining table laid for eight, the kitchen counter's

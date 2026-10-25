@@ -217,7 +217,7 @@ class PlaceholderYardTest(unittest.TestCase):
             self.assertTrue(on_top((cx + (x - cx) * 1.03, cy + (y - cy) * 1.03)), (x, y))  # outside: the lawn
 
     def test_the_lawn_has_a_hole_where_the_basement_is_dug_under_the_house_and_its_light_well(self):
-        """The basement's pit (villa v2 spec §12 "Tầng hầm"): the house's plinth covers the part under the house, so the
+        """The basement's pit (villa v2 spec §12 "Basement"): the house's plinth covers the part under the house, so the
         lawn does not hide the basement when the website cuts the house down to it, and the light well in front of the
         house opens to the sky. Just inside each edge of its outline is no lawn, just outside it is."""
         (primitive,) = self.primitives(self.node("Ground"))

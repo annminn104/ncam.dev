@@ -145,8 +145,8 @@ export function ModuleInstance({
     if (cut) applyCut(cut, moduleCut(module, cutLevel), baseY, cutLevel, near);
   }, [cut, module, cutLevel, baseY, near]);
 
-  // The basement, which only "Hầm" cuts: its cut look's shaders compile while the site is idle after it loads (warmCut),
-  // not all in the frame of the first "Hầm"; and again once the night lights come on at dusk or go off at dawn (they are
+  // The basement, which only "Basement" cuts: its cut look's shaders compile while the site is idle after it loads (warmCut),
+  // not all in the frame of the first "Basement"; and again once the night lights come on at dusk or go off at dawn (they are
   // visible while the night factor is over 0, interact/effects applyToggles), since the light count is part of every
   // program.
   const gl = useThree((state) => state.gl);

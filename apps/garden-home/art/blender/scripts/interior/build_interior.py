@@ -1,4 +1,4 @@
-"""Generate blender/modules/interior.blend from interior/interior_layout.py (villa v2 spec §12 "Rèm và phụ kiện") with
+"""Generate blender/modules/interior.blend from interior/interior_layout.py (villa v2 spec §12 "Curtains and accessories") with
 the archkit builders, tagging the lamps' shades with their rooms' light groups (interior/interact.py).
 
 Like the basement's pieces, everything is merged per object (furniture.place_into, one draw call per material): the

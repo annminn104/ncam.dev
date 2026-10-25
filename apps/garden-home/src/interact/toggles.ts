@@ -92,8 +92,8 @@ export function glowFactor(
 
 /** The hover hint under an item's label: what a click will do. */
 export function hintFor(kind: string, on: boolean): string {
-  if (kind === 'koi') return 'Bấm để cho cá ăn';
-  if (kind === 'dog') return 'Bấm để chơi với bé';
-  if (kind === 'door') return on ? 'Bấm để đóng' : 'Bấm để mở';
-  return on ? 'Bấm để tắt' : 'Bấm để bật';
+  if (kind === 'koi') return 'Click to feed the koi';
+  if (kind === 'dog') return 'Click to play with the pup';
+  if (kind === 'door') return on ? 'Click to close' : 'Click to open';
+  return on ? 'Click to switch off' : 'Click to switch on';
 }

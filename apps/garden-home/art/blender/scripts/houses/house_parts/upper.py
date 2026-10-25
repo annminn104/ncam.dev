@@ -22,9 +22,9 @@ ROOMS = [
     {"name": "gaming", "level": 1, "min": (-1.8, 3.1), "max": (2.5, 7.3), "interior": True},
     {"name": "balcony", "level": 1, "min": (BALCONY_X0, EDGE + 0.1), "max": (UPPER_RIGHT, FRONT)},
 ]
-ROOM_LABELS = {"gallery": "hành lang", "master": "phòng ngủ master", "bath_master": "phòng tắm master",
-               "closet": "phòng thay đồ", "bedroom2": "phòng ngủ 2", "bedroom3": "phòng ngủ 3",
-               "bath_shared": "phòng tắm chung", "gaming": "góc máy tính", "balcony": "ban công"}
+ROOM_LABELS = {"gallery": "Hallway", "master": "Master bedroom", "bath_master": "Master bathroom",
+               "closet": "Dressing room", "bedroom2": "Bedroom 2", "bedroom3": "Bedroom 3",
+               "bath_shared": "Shared bathroom", "gaming": "Computer corner", "balcony": "Balcony"}
 
 FURNITURE = [
     # master: king bed against the east wall facing the TV, dresser on the closet wall, reading chair and a bird of

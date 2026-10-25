@@ -10,8 +10,8 @@ const ASSETS = join(REPO, '../public/assets');
 const GARDEN = ['bbq_area', 'fence', 'flower_beds', 'garden_paths', 'veg_garden'];
 const POND = ['koi_pond', 'tea_garden']; // part 3: the koi pond and the tea corner, in place of the placeholder pond
 const CARPORT = ['carport', 'kennel']; // part 4: the carport with its two cars, the dog's corner with the Akita
-const BASEMENT = ['basement']; // villa v2 spec §12 "Tầng hầm": the basement under the tall house, a module of its own
-const INTERIOR = ['interior']; // §12 "Rèm và phụ kiện": the house's curtains and accessories, a module of its own
+const BASEMENT = ['basement']; // villa v2 spec §12 "Basement": the basement under the tall house, a module of its own
+const INTERIOR = ['interior']; // §12 "Curtains and accessories": the house's curtains and accessories, a module of its own
 
 describe('pnpm --filter @ncam/garden-home art:assets', () => {
   it('--check validates every module without writing', () => {
@@ -48,7 +48,7 @@ describe('pnpm --filter @ncam/garden-home art:assets', () => {
       'veg_garden_01',
       'yard_01',
     ]);
-    // the basement and the interior stand in the house's slot (villa v2 spec §12 "Tầng hầm", "Rèm và phụ kiện")
+    // the basement and the interior stand in the house's slot (villa v2 spec §12 "Basement", "Curtains and accessories")
     const slot = (id) => scene.slots.find((s) => s.id === id);
     for (const id of ['basement_01', 'interior_01']) {
       expect(slot(id).position).toEqual(slot('house_01').position);

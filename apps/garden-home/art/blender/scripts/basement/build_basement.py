@@ -1,4 +1,4 @@
-"""Generate blender/modules/basement.blend from basement/basement_layout.py (villa v2 spec §12 "Tầng hầm") with the
+"""Generate blender/modules/basement.blend from basement/basement_layout.py (villa v2 spec §12 "Basement") with the
 archkit builders, tagging what a click toggles (basement/interact.py) and what the website's cut does to each object.
 
 Like the garden's modules, the pieces are merged per object (furniture.place_into, one draw call per material): the
