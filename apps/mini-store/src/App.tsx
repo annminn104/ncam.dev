@@ -9,16 +9,22 @@ import { SceneCanvas } from './components/SceneCanvas';
 import { SettingsPanel } from './components/SettingsPanel';
 import type { Engine } from './engine/engine';
 import { DEFAULT_SETTINGS, type Settings } from './engine/settings';
+import { takesText } from './keys';
 
 const log = createLogger({ scope: 'mini-store' });
 
 /** The canvas's fade-in over the poster: `.ms-scene`'s transition in styles/globals.css. */
 const FADE_MS = 600;
 
+/** Typing in a text field; a slider or checkbox in the settings panel is not. */
 function isTyping(target: EventTarget | null): boolean {
   return (
     target instanceof HTMLElement &&
-    (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName))
+    takesText(
+      target.tagName,
+      target instanceof HTMLInputElement ? target.type : null,
+      target.isContentEditable,
+    )
   );
 }
 
