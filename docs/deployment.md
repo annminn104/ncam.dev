@@ -99,7 +99,7 @@ falls back to the `.env` default, `http://localhost:<port>/remoteEntry.js`. The
 project registry lists the project as soon as it is merged, so the home page's
 gallery (the profile remote bundles the registry), the host's sitemap and its
 `llms.txt` would all send visitors to a page whose remote cannot load. A new
-remote (Chess, today) therefore goes live in this order:
+remote (Chess and Mini Store, today) therefore goes live in this order:
 
 1. Create its Vercel project (Root Directory `apps/<id>`, the Vite preset; for
    Chess `apps/chess`, named `ncam-chess`) and deploy it.

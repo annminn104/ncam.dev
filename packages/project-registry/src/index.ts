@@ -146,7 +146,7 @@ export const projects: ProjectEntry[] = [
     name: 'Mini Store',
     tagline: 'Rainy-night corner store diorama',
     description:
-      'A Saigon street corner on a rainy night and its convenience store, built as a miniature diorama — a hand-written WebGL2 renderer with PBR, shadowed spotlights, volumetric fog, wet-road reflections, SSAO and bloom. Open the sliding door, orbit the block, watch the scooters pass. React + TypeScript, no three.js.',
+      'A Saigon street corner on a rainy night, built as a miniature diorama with a hand-written WebGL2 renderer: PBR, shadowed spotlights, volumetric fog, wet-road reflections, SSAO and bloom. No three.js.',
     accent: '#E4211B',
     thumbnail: '/thumbnails/mini-store.jpg',
     // MF remote name must be a valid identifier → underscore (route id stays kebab).

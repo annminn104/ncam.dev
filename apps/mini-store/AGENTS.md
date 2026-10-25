@@ -5,9 +5,8 @@
 **Mini Store**: a Saigon street corner on a rainy night and its convenience store, built as a
 miniature diorama. A hand-written WebGL2 renderer (no three.js) inside a small React 19 shell,
 packaged as a self-contained Module Federation remote (`mini_store`, :9009) that the host mounts
-at `/projects/mini-store`. Ported on 2026-10-25 from the standalone project
-`Mason_Workspace/mini-store` (React 18 + Vite 5, single-file build); this copy is the source of
-truth now.
+at `/projects/mini-store`. Ported on 2026-10-25 from a standalone project (React 18 + Vite 5,
+single-file build); this copy is the source of truth now.
 
 ## Commands
 
@@ -27,8 +26,9 @@ pnpm --filter @ncam/mini-store capture:poster  # needs the dev server; rewrites 
   `takesText`: text-like inputs, textarea, select, contenteditable). A slider, checkbox or button,
   the settings panel's own controls, does not suppress them.
 - Settings panel, once live: rain, exposure, fog, bloom, SSAO, traffic, auto-orbit. On a desktop
-  it stays open. On a phone (≤ 640px) it folds into a **Settings · fps** button at the bottom
-  right that opens it, so it does not cover the diorama; CSS alone decides which applies
+  it stays open. On a phone (≤ 640px) it folds into a **Settings** button (with the live fps and a
+  chevron) at the bottom right that opens it, so it does not cover the diorama; CSS alone decides
+  which applies
   (`src/components/SettingsPanel.tsx`, `src/styles/globals.css`).
 
 ## The engine starts on the first interaction — keep it that way
@@ -69,8 +69,8 @@ elsewhere the fade hides a slight zoom.
 
 Rerun the capture after any change to the scene, camera, lighting or post-processing: start the
 dev server, then `pnpm --filter @ncam/mini-store capture:poster`. It loads `?capture=<shape>`
-(`src/capture-view.ts`: the engine alone, auto-orbit off, the clock pinned at `POSTER_TIME` = 7 s,
-when all four rides are on screen, full quality) in Playwright's Chromium on SwiftShader and waits
+(`src/capture-view.ts`: the engine alone, auto-orbit off, the clock pinned at `POSTER_TIME` = 7 s
+from `src/capture.ts`, when all four rides are on screen, full quality) in Playwright's Chromium on SwiftShader and waits
 for `window.__miniStoreReady`.
 
 ## Engine layout (src/engine)
@@ -84,7 +84,8 @@ for `window.__miniStoreReady`.
   `materials.ts`, `constants.ts`, `math.ts` (a seeded RNG: the builders' call order is behaviour).
 - `people.ts` articulated figures and poses; `vehicles.ts` scooters, e-bikes and cars;
   `traffic.ts` the moving rides; `audio.ts` the WebAudio door chime.
-- `scene/` storefront · interior · houses · street → `getScene()`, built once per page.
+- `scene/` storefront · interior · houses · street → `getScene()`, built once per mount and
+  dropped by `releaseScene()` when `Engine.dispose()` runs.
 
 Text inside the scene (the atlas) stays Vietnamese on purpose; the UI around it is English.
 
