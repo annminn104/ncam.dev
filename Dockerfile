@@ -58,7 +58,7 @@ ENV NODE_ENV=production
 # `vite preview` for the static remotes).
 COPY --from=build /app ./
 # host (SSR) + remotes (static)
-EXPOSE 9000 9001 9002 9003 9004 9005 9006 9007 9008
+EXPOSE 9000 9001 9002 9003 9004 9005 9006 9007 9008 9009
 # Default: run the portfolio SSR host. docker-compose overrides the command
 # for the remote services (see docker-compose.yml).
 CMD ["node", "apps/portfolio/.output/server/index.mjs"]

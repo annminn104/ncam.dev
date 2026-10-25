@@ -80,18 +80,21 @@
 .ms-hud p {
   margin: 2px 0 0;
   color: var(--ms-dim);
-  font-size: 11.5px;
+  font-size: 12px;
 }
 
+/* One line while it fits; wraps, centred, when it would run past the edges. */
 .ms-help {
   position: absolute;
   left: 50%;
   bottom: 14px;
+  width: max-content;
+  max-width: calc(100% - 32px);
   margin: 0;
   transform: translateX(-50%);
   color: var(--ms-dim);
-  font-size: 11.5px;
-  white-space: nowrap;
+  font-size: 12px;
+  text-align: center;
   pointer-events: none;
   text-shadow: 0 1px 6px #000;
   transition: opacity 0.4s;
@@ -200,11 +203,6 @@
   /* Below the host's centred back button. */
   .ms-hud {
     top: 4.25rem;
-  }
-  .ms-help {
-    width: calc(100% - 32px);
-    white-space: normal;
-    text-align: center;
   }
   .ms-gate {
     bottom: 88px;
