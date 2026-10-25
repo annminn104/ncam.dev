@@ -47,3 +47,7 @@ LICENSE
 
 # Vendored agent skills (scripts/add-agent-skills.sh) — third-party, not ours to format
 .claude
+
+# Mini Store reference material (apps/mini-store/AGENTS.md): Blender scene + the old JS build
+apps/mini-store/art
+apps/mini-store/legacy

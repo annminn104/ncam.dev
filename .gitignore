@@ -79,3 +79,5 @@ Desktop.ini
 .mf/
 # Cultivation Chess: Stockfish files copied from node_modules by `pnpm assets`
 apps/chess/public/stockfish/
+# Mini Store: Blender's editor backups next to the .blend
+apps/mini-store/art/**/*.blend1

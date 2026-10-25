@@ -20,6 +20,9 @@ export default tseslint.config(
       '**/routeTree.gen.ts',
       '**/*.gen.ts',
       'apps/*/public/**',
+      // Mini Store reference material: the Blender scene and the old single-file JS build.
+      'apps/mini-store/art/**',
+      'apps/mini-store/legacy/**',
       // Strapi (apps/strapi): generated types, admin build context, local SQLite dir.
       'apps/strapi/types/generated/**',
       'apps/strapi/.strapi/**',

@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>Đêm mưa · Góc phố Circle K</title>
+<style>
+:root{--fg:#f4efe6;--dim:rgba(244,239,230,.55);--red:#e3241b;--org:#f7941d}
+html,body{margin:0;height:100%;background:#05060a;overflow:hidden;color:var(--fg);
+  font:13px/1.45 -apple-system,"Helvetica Neue","Segoe UI",Roboto,Arial,sans-serif}
+canvas{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+canvas:active{cursor:grabbing}
+#hud{position:fixed;left:18px;top:16px;pointer-events:none;text-shadow:0 1px 8px #000;transition:opacity .4s}
+#hud h1{margin:0;font-size:15px;font-weight:600;letter-spacing:.04em}
+#hud h1 b{color:var(--red)}#hud h1 i{font-style:normal;color:var(--org)}
+#hud p{margin:2px 0 0;color:var(--dim);font-size:11.5px}
+#help{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);color:var(--dim);font-size:11.5px;
+  white-space:nowrap;pointer-events:none;text-shadow:0 1px 6px #000;transition:opacity .4s}
+#panel{position:fixed;right:14px;top:14px;background:rgba(10,12,18,.62);backdrop-filter:blur(8px);
+  -webkit-backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:10px 12px;
+  min-width:178px;transition:opacity .4s}
+#panel label{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:3px 0;font-size:12px;color:#d9d3c8}
+#panel input[type=range]{width:92px;accent-color:var(--red)}
+#panel input[type=checkbox]{accent-color:var(--red)}
+#panel .t{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);margin-bottom:4px;display:flex;justify-content:space-between}
+#fps{font-variant-numeric:tabular-nums}
+.hide #hud,.hide #help,.hide #panel{opacity:0;pointer-events:none}
+#err{position:fixed;inset:0;display:none;align-items:center;justify-content:center;text-align:center;padding:24px;color:#fbb}
+@media (max-width:640px){#help{white-space:normal;width:calc(100% - 32px);text-align:center}#panel{top:auto;bottom:52px;right:16px}}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="hud"><h1><b>CIRCLE</b> <i>K</i> · Góc phố đêm mưa</h1><p>Mô hình thu nhỏ · WebGL2 · PBR · SSAO · Bloom · ACES</p></div>
+<div id="panel">
+  <div class="t"><span>Thiết lập</span><span id="fps">-- fps</span></div>
+  <label>Mưa <input id="uiRain" type="range" min="0" max="1.5" step="0.01" value="1"></label>
+  <label>Phơi sáng <input id="uiExp" type="range" min="0.3" max="2.5" step="0.01" value="1.25"></label>
+  <label>Sương mù <input id="uiFog" type="range" min="0" max="2.5" step="0.01" value="0.35"></label>
+  <label>Bloom <input id="uiBloom" type="range" min="0" max="2" step="0.01" value="1"></label>
+  <label>SSAO <input id="uiAO" type="checkbox" checked></label>
+  <label>Xe chạy <input id="uiBike" type="checkbox" checked></label>
+  <label>Tự xoay (C) <input id="uiCruise" type="checkbox"></label>
+</div>
+<div id="help"><b style="color:#fff">Nhấp cửa kính để mở cửa tự động (O)</b> · Kéo: xoay · Shift/chuột phải: di chuyển · Cuộn: zoom · Nhấp đúp: đặt lại · C: tự xoay · H: ẩn giao diện</div>
+<div id="err"></div>
+<script>
+'use strict';

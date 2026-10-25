@@ -37,3 +37,7 @@ README.md
 **/.strapi
 apps/strapi/public/uploads/*
 !apps/strapi/public/uploads/.gitkeep
+
+# Mini Store reference material, not part of any build (apps/mini-store/AGENTS.md)
+apps/mini-store/art
+apps/mini-store/legacy
