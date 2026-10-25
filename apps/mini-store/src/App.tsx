@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import { createLogger } from '@ncam/logger';
+import { readAutoplaySignals, shouldAutoplay, whenSettled } from './autoplay';
 import { bootReducer, failureMessage, INITIAL_BOOT, type EngineKey } from './boot';
 import { EnterButton } from './components/EnterButton';
 import { HelpBar } from './components/HelpBar';
@@ -49,6 +50,16 @@ export default function App() {
     if (key === 'door') engineRef.current?.openDoor();
     else setSettings((s) => ({ ...s, cruise: !s.cruise }));
   }, []);
+
+  // On a hardware GPU the store opens by itself once the page has settled; elsewhere the poster
+  // waits for the visitor (src/autoplay.ts). `autostart` only ever leaves the poster.
+  useEffect(
+    () =>
+      whenSettled(() => {
+        if (shouldAutoplay(readAutoplaySignals())) dispatch({ type: 'autostart' });
+      }),
+    [],
+  );
 
   // Shortcuts pressed while the engine booted run once it is live.
   useEffect(() => {

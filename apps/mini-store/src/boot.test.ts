@@ -25,6 +25,22 @@ describe('bootReducer', () => {
     }
   });
 
+  it('boots on autostart from the poster', () => {
+    expect(bootReducer(INITIAL_BOOT, { type: 'autostart' })).toEqual({
+      phase: 'booting',
+      error: null,
+      queued: [],
+    });
+  });
+
+  it('never autostarts over a failure, a boot under way or the live scene', () => {
+    // Retrying after an error is the visitor's call (Try again), not the page's.
+    for (const phase of ['booting', 'live', 'error'] as const) {
+      const state = at(phase, phase === 'error' ? { error: 'No WebGL2.' } : {});
+      expect(bootReducer(state, { type: 'autostart' })).toBe(state);
+    }
+  });
+
   it('ignores a second start while booting or live', () => {
     for (const phase of ['booting', 'live'] as const) {
       const state = at(phase);

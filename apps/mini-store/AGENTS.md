@@ -25,21 +25,31 @@ pnpm --filter @ncam/mini-store capture:poster  # needs the dev server; rewrites 
   The single-key shortcuts stand aside while a text-entry control has focus (`src/keys.ts`,
   `takesText`: text-like inputs, textarea, select, contenteditable). A slider, checkbox or button,
   the settings panel's own controls, does not suppress them.
-- Settings panel, once live: rain, exposure, fog, bloom, SSAO, traffic, auto-orbit. On a desktop
-  it stays open. On a phone (≤ 640px) it folds into a **Settings** button (with the live fps and a
+- Settings panel, once live: rain, exposure, fog, bloom, SSAO, traffic, auto-orbit; its rows and
+  controls keep WCAG's 24px minimum target size (Lighthouse audits the live page now that it can
+  open by itself). On a desktop it stays open. On a phone (≤ 640px) it folds into a **Settings** button (with the live fps and a
   chevron) at the bottom right that opens it, so it does not cover the diorama; CSS alone decides
   which applies
   (`src/components/SettingsPanel.tsx`, `src/styles/globals.css`).
 
-## The engine starts on the first interaction — keep it that way
+## The engine starts by itself only on a hardware GPU
 
 The server render and the first paint are a poster (the scene itself, captured), the HUD, the
-help bar and an **Enter the store** button. The engine boots only on that button, a pointerdown
-or wheel on the poster, or the O / C keys (`src/boot.ts`, `src/App.tsx`); its code is a lazy
-chunk (`src/components/SceneCanvas.tsx` imports `../engine/engine`) and never in the first
-bundle. Measured on SwiftShader, as on the Lighthouse runner: ~100 ms building the geometry
-plus ~2.6 s compiling shaders and drawing the first frame, on the main thread. Booted on load,
-that lands inside Lighthouse's window and freezes mid-range phones.
+help bar and an **Enter the store** button. The engine's code is a lazy chunk
+(`src/components/SceneCanvas.tsx` imports `../engine/engine`) and never in the first bundle.
+
+Once the page has loaded and the main thread is idle (`whenSettled`, `src/autoplay.ts`), the
+store opens by itself (`autostart` in `src/boot.ts`) when `shouldAutoplay` says so: WebGL2 runs
+on a hardware GPU (a context with `failIfMajorPerformanceCaveat`, and a renderer name that is
+not SwiftShader, llvmpipe, softpipe or Microsoft Basic Render) and the visitor has not asked for
+reduced motion. Everywhere else the poster waits, as it always did, for the Enter button, a
+pointerdown or wheel on the poster, or the O / C keys. Keep the software-rasteriser branch:
+measured on SwiftShader, as on the Lighthouse runner, the engine spends ~100 ms building the
+geometry plus ~2.6 s compiling shaders and drawing the first frame, on the main thread. Booted
+there on load, that lands inside Lighthouse's window and freezes the page. On a hardware GPU
+the boot is a ~100–300 ms task after the page settles: Lighthouse measured 98–100 performance
+with it (TBT 0 mobile, ~70 ms desktop). `autostart` only ever leaves the poster: after a failed
+boot, retrying is the visitor's call.
 
 Nothing that `App` imports may touch WebGL, `document` or `window` at import time or during
 render: the SSR entry renders `App`. `src/engine/settings.ts` keeps `Settings` and
@@ -101,7 +111,8 @@ them.
 
 ## Tests
 
-`src/boot.test.ts` (phases, retries, queued shortcuts, failure text), `src/keys.test.ts` (`takesText`:
+`src/boot.test.ts` (phases, autostart, retries, queued shortcuts, failure text),
+`src/autoplay.test.ts` (`shouldAutoplay`, `isSoftwareRenderer`), `src/keys.test.ts` (`takesText`:
 which focused elements suppress the shortcuts), `src/components/SettingsPanel.test.ts` (the panel's
 toggle markup), `src/ssr.test.ts` (the poster as the one high-priority image, HUD, Enter button,
 no canvas or settings in the server markup, the CSS shipping with the render), `src/capture.test.ts`,
