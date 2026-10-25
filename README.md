@@ -45,6 +45,10 @@ deployed on its own.
       <a href="https://ncam-profile.vercel.app/projects/chess"><img src="apps/portfolio/public/thumbnails/chess.jpg" alt="Cultivation Chess"></a>
       <br><sub><b>Cultivation Chess</b> · 3D xianxia chess</sub>
     </td>
+    <td align="center" width="33%">
+      <a href="https://ncam-profile.vercel.app/projects/mini-store"><img src="apps/portfolio/public/thumbnails/mini-store.jpg" alt="Mini Store"></a>
+      <br><sub><b>Mini Store</b> · Rainy-night corner store diorama</sub>
+    </td>
   </tr>
 </table>
 
@@ -77,6 +81,7 @@ A Turborepo monorepo on pnpm workspaces, TypeScript everywhere.
 | `apps/profile`         | The home page's six sections (hero, stacks, experience, projects, blog, contact), one federated module each.                                        | 9006     |
 | `apps/holodex`         | Holodex: a Pokémon TCG explorer on the TCGdex API, with nested URLs of its own and three.js holo foil cards. React 19, Tailwind v4, TanStack Query. | 9007     |
 | `apps/chess`           | Cultivation Chess: chess with cultivation-treasure pieces in three 3D arenas, vs a friend or Stockfish. React 19, React Three Fiber, chess.js.      | 9008     |
+| `apps/mini-store`      | Mini Store: a rainy-night corner store diorama with a hand-written WebGL2 renderer (no three.js), booted on the first interaction. React 19.        | 9009     |
 | `apps/strapi`          | Strapi 5 headless CMS for the blog, with a public read-only REST API. A backend service, not a remote.                                              | 1337     |
 
 | Package                  | What it is                                                                                                   |
@@ -140,14 +145,14 @@ flowchart LR
 
 ## Tech stack
 
-| Area       | Tools                                                                                                                                                                    |
-| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Host       | TanStack Start and TanStack Router, React 19, Nitro                                                                                                                      |
-| Federation | `@module-federation/vite`, with server-side remote entries                                                                                                               |
-| Remotes    | Vite 8, React 19 or plain TypeScript, Tailwind CSS v4, GSAP, framer-motion, hls.js, three.js, React Three Fiber, drei, TanStack Query, chess.js, Stockfish (WebAssembly) |
-| CMS        | Strapi 5: SQLite in development, Postgres in Docker and on Render                                                                                                        |
-| Tooling    | pnpm workspaces, Turborepo, TypeScript, Vitest, ESLint (flat config), Prettier, Husky, lint-staged, commitlint                                                           |
-| Hosting    | Vercel (the host and the remotes), Render (the CMS), Docker Compose (the whole stack)                                                                                    |
+| Area       | Tools                                                                                                                                                                                           |
+| ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Host       | TanStack Start and TanStack Router, React 19, Nitro                                                                                                                                             |
+| Federation | `@module-federation/vite`, with server-side remote entries                                                                                                                                      |
+| Remotes    | Vite 8, React 19 or plain TypeScript, Tailwind CSS v4, GSAP, framer-motion, hls.js, three.js, React Three Fiber, drei, TanStack Query, chess.js, Stockfish (WebAssembly), WebGL2 (hand-written) |
+| CMS        | Strapi 5: SQLite in development, Postgres in Docker and on Render                                                                                                                               |
+| Tooling    | pnpm workspaces, Turborepo, TypeScript, Vitest, ESLint (flat config), Prettier, Husky, lint-staged, commitlint                                                                                  |
+| Hosting    | Vercel (the host and the remotes), Render (the CMS), Docker Compose (the whole stack)                                                                                                           |
 
 ## Getting started
 
@@ -158,7 +163,7 @@ later) and pnpm, which `corepack enable` installs at the version pinned in
 ```bash
 corepack enable
 pnpm install
-pnpm dev        # host :9000, remotes :9001–:9008, Strapi :1337
+pnpm dev        # host :9000, remotes :9001–:9009, Strapi :1337
 ```
 
 Open http://localhost:9000 and pick a project. The host loads that remote at
@@ -178,20 +183,20 @@ pnpm --filter @ncam/portfolio dev   # the host alone; projects fail to load unti
 
 Run from the repo root.
 
-| Command                        | Does                                                                                                     |
-| ------------------------------ | -------------------------------------------------------------------------------------------------------- |
-| `pnpm dev`                     | Every dev server, through Turbo.                                                                         |
-| `pnpm build`                   | Builds every workspace: the host to `.output/` (a Nitro server), the remotes to `dist/`.                 |
-| `pnpm preview`                 | Serves the production builds locally.                                                                    |
-| `pnpm typecheck`               | `tsc --noEmit` in every workspace.                                                                       |
-| `pnpm lint` / `lint:fix`       | ESLint (flat config).                                                                                    |
-| `pnpm format` / `format:check` | Prettier.                                                                                                |
-| `pnpm test` / `test:watch`     | Vitest over the shared packages, Strapi, Holodex, Chess, the host's `src/lib` and the apps' scripts.     |
-| `pnpm run ci`                  | Lint, format check, typecheck, test and build, as CI runs them. (`pnpm ci` is pnpm's own clean install.) |
-| `pnpm assets`                  | Fetches and derives self-hosted assets where an app defines them (TOONHUB's figurines).                  |
-| `pnpm thumbnails [id...]`      | Regenerates gallery thumbnails; see [Adding a project](#adding-a-project).                               |
-| `pnpm lighthouse`              | Lighthouse CI over every page type against the production build (`pnpm build` first); CI's own check.    |
-| `pnpm skills:add`              | Installs the agent skills listed in `scripts/add-agent-skills.sh`.                                       |
+| Command                        | Does                                                                                                             |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------------------- |
+| `pnpm dev`                     | Every dev server, through Turbo.                                                                                 |
+| `pnpm build`                   | Builds every workspace: the host to `.output/` (a Nitro server), the remotes to `dist/`.                         |
+| `pnpm preview`                 | Serves the production builds locally.                                                                            |
+| `pnpm typecheck`               | `tsc --noEmit` in every workspace.                                                                               |
+| `pnpm lint` / `lint:fix`       | ESLint (flat config).                                                                                            |
+| `pnpm format` / `format:check` | Prettier.                                                                                                        |
+| `pnpm test` / `test:watch`     | Vitest over the shared packages, Strapi, Holodex, Chess, Mini Store, the host's `src/lib` and the apps' scripts. |
+| `pnpm run ci`                  | Lint, format check, typecheck, test and build, as CI runs them. (`pnpm ci` is pnpm's own clean install.)         |
+| `pnpm assets`                  | Fetches and derives self-hosted assets where an app defines them (TOONHUB's figurines).                          |
+| `pnpm thumbnails [id...]`      | Regenerates gallery thumbnails; see [Adding a project](#adding-a-project).                                       |
+| `pnpm lighthouse`              | Lighthouse CI over every page type against the production build (`pnpm build` first); CI's own check.            |
+| `pnpm skills:add`              | Installs the agent skills listed in `scripts/add-agent-skills.sh`.                                               |
 
 ## Configuration
 
@@ -202,7 +207,7 @@ exception: the built server reads them from the real environment only. Never
 put secrets in `.env`.
 
 Below, `<NAME>` stands for `TOONHUB`, `MINDLOOP`, `IMMERSIVE_OCEAN`, `VIKTOR`,
-`BALI`, `PROFILE`, `HOLODEX` or `CHESS`.
+`BALI`, `PROFILE`, `HOLODEX`, `CHESS` or `MINI_STORE`.
 
 | Variable                          | Purpose                                                                                                                                                                                           |
 | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

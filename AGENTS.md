@@ -26,6 +26,9 @@ apps/
   chess/            Cultivation Chess remote (:9008). React 19 + React Three
                     Fiber; chess.js rules, Stockfish WASM opponent (GPLv3);
                     piece sets as Blender-built GLBs (art/, built locally).
+  mini-store/       Mini Store diorama remote (:9009). React 19 shell around a
+                    hand-written WebGL2 renderer (no three.js) that boots on
+                    the first interaction; art/blender + legacy are reference.
   strapi/           Strapi 5 headless CMS for the blog (:1337): a backend
                     service, not a federation remote.
 packages/
@@ -58,7 +61,7 @@ Commands (from the root):
 
 ```bash
 pnpm install
-pnpm dev              # every dev server (host :9000, remotes :9001–:9008, strapi :1337)
+pnpm dev              # every dev server (host :9000, remotes :9001–:9009, strapi :1337)
 pnpm build            # builds every app
 pnpm typecheck
 pnpm lint             # ESLint; `pnpm format:check` for Prettier
