@@ -296,13 +296,9 @@ def build_sword():
 # ================================================================== face and helm
 def build_face_dk():
     """The Patriarch's chibi face (build_head) made undead: glowing irises and two small fangs under the mouth
-    (court.fangs), joined into the Face part so the pack's lock keeps them."""
+    (court.undead_fangs), joined into the Face part so the pack's lock keeps them."""
     build_head()
-    bm = new_bm()
-    fangs(bm, bvh_of(O(PFX + 'Head')), FANG_Z)
-    out(PFX + 'Fangs', bm, 0, sharp=80, recalc=False)
-    join_into(PFX + 'Face', PFX + 'Fangs')
-    undead_face(O(PFX + 'Face'))
+    undead_fangs(FANG_Z)
 
 
 def helm_edge(phi):

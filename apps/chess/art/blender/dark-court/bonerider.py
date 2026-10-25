@@ -81,17 +81,13 @@ def build_rider_br():
     """The Paladin's rider (build_rider): his capelet, pauldrons, arms, gauntlets, tabard, head, helm and brows. His
     sword, the cross on his tabard, his cape and his helm's plume and wings make way for the pennant lance
     (build_lance_br), a cape cut into points (build_cape_br) and small bat wings and a longer comb on the helm
-    (build_helm_br); his pauldrons turn steel, and his face undead (court.fangs joined into Face, court.undead_face)."""
+    (build_helm_br); his pauldrons turn steel, and his face undead (court.undead_fangs)."""
     build_rider()
     for n in ('SwordGrip', 'SwordGuard', 'Blade', 'SwordGem', 'BladeGlow', 'TabardCross', 'Cape', 'Plume',
               'HelmWings'):
         drop(PFX + n)
     reslot(PFX + 'Pauldrons', 'trim', 'second')
-    bm = new_bm()
-    fangs(bm, bvh_of(O(PFX + 'Head')), FANG_Z)
-    out(PFX + 'Fangs', bm, 0, sharp=80, recalc=False)
-    join_into(PFX + 'Face', PFX + 'Fangs')
-    undead_face(O(PFX + 'Face'))
+    undead_fangs(FANG_Z)
     build_lance_br()
     build_cape_br()
     build_helm_br()
@@ -258,7 +254,7 @@ def build_skull_br():
             face(bm, [rows[j][i], rows[j][i2], rows[j + 1][i2], rows[j + 1][i]], 'fur')
     out(PFX + 'Skull', bm, BIG, sharp=70)
     sb = bvh_of(O(PFX + 'Skull'))
-    F, U, X, L = skull_br_frame()
+    F, U, X, _ = skull_br_frame()
     bm = new_bm()
     for s in (-1, 1):
         t, l = math.radians(SOCKET['turn']), math.radians(SOCKET['lift'])
@@ -301,16 +297,20 @@ def build_spine_br():
     bone rod with a bead for each vertebra, the neck's the biggest, and short spines up from the withers and the
     croup."""
     bm = new_bm()
-    tube(bm, SPINE, 0.016, 'fur', n=60, k=8, radius=lambda t: 0.016 - 0.009 * t)
-    C = catmull(SPINE, 60)
+    steps = 60                                         # along the column: the rod's, and C's (steps + 1 points)
+    tube(bm, SPINE, 0.016, 'fur', n=steps, k=8, radius=lambda t: 0.016 - 0.009 * t)
+    C = catmull(SPINE, steps)
+
+    def tangent(i):
+        """The column's direction at its point i of C."""
+        return (C[min(i + 1, steps)] - C[max(i - 1, 0)]).normalized()
     for t, r in SPINE_BEADS:
-        i = round(t * 60)
-        tng = (C[min(i + 1, 60)] - C[max(i - 1, 0)]).normalized()
+        i = round(t * steps)
         ellipsoid(bm, C[i], (r, r * 0.72, r * 0.9), 'fur', segs=12, rings=8,
-                  rot=Vector((0.0, 1.0, 0.0)).rotation_difference(tng).to_matrix())
+                  rot=Vector((0.0, 1.0, 0.0)).rotation_difference(tangent(i)).to_matrix())
     for t in SPINE_SPIKES:
-        i = round(t * 60)
-        tng = (C[min(i + 1, 60)] - C[max(i - 1, 0)]).normalized()
+        i = round(t * steps)
+        tng = tangent(i)
         up = (Vector((0.0, 0.0, 1.0)) - tng * tng.z).normalized()
         spike(bm, basis(C[i], Vector((1.0, 0.0, 0.0)), up.cross(Vector((1.0, 0.0, 0.0))), up + tng * 0.4), 0.03,
               0.008, 0.006, slot='fur')

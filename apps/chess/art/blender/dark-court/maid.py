@@ -397,13 +397,9 @@ def build_broom_bm():
 # ================================================================== face and hair
 def build_face_bm():
     """The Acolyte's chibi face (build_face_p) made undead: glowing irises, and two small fangs in her open smile
-    (court.fangs), joined into the Face part so the pack's lock keeps them."""
+    (court.undead_fangs), joined into the Face part so the pack's lock keeps them."""
     build_face_p()
-    bm = new_bm()
-    fangs(bm, bvh_of(O(PFX + 'Head')), FANG_Z)
-    out(PFX + 'Fangs', bm, 0, sharp=80, recalc=False)
-    join_into(PFX + 'Face', PFX + 'Fangs')
-    undead_face(O(PFX + 'Face'))
+    undead_fangs(FANG_Z)
 
 
 def cap_off(phi, el):

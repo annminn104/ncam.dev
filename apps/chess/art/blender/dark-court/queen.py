@@ -4,7 +4,6 @@
 import math
 
 import bmesh
-import bpy
 from mathutils import Matrix, Vector
 
 PFX = 'FQ_'
@@ -20,7 +19,8 @@ TUFTS = []
 HEAD_SUFFIXES = ['Head', 'Face', 'Brows', 'HairCap', 'Bangs', 'HairLocks', 'HairCuffs', 'HairBack', 'HairBackClumps',
                  'HairClasp', 'LinesHair', 'Horns', 'Tiara', 'TiaraSpikes', 'TiaraGems', 'LinesHead']
 # the skirt's tiers: (top, hem, flare past the gown at the hem, points round it, their depth, their offset in points)
-TIERS = [(0.452, 0.318, 0.045, 16, 0.014, 0.0), (0.372, 0.222, 0.045, 16, 0.016, 0.5)]
+FQ_TIERS = [(0.452, 0.318, 0.045, 16, 0.014, 0.0), (0.372, 0.222, 0.045, 16, 0.016, 0.5)]
+FANG_Z = 0.8634                                      # the Abbess's smile line at x = 0.006 either side (build_head_q)
 HORN = {'phi': 58.0, 'el': 40.0, 'turn': 52.0}
 PUFF_R, PUFF_ALPHA = 0.082, 54
 # the upper tier's metal stars: on the gown's fold crests (robe_r), between its fold lines
@@ -63,13 +63,6 @@ def curtain_pt(back_y, u, z, extra=0.0):
     return Vector((x, back_y(x, z) + TH + GAP + extra, z))
 
 
-def join_into(dst, src):
-    """Joins part src into part dst (dst keeps its name)."""
-    a, b = O(dst), O(src)
-    with bpy.context.temp_override(active_object=a, selected_editable_objects=[a, b]):
-        bpy.ops.object.join()
-
-
 def robe_at(z):
     """The gown's radius at height z, read off ROBE between its points (before robe_r's folds)."""
     for (r0, z0), (r1, z1) in zip(ROBE[1:], ROBE[2:]):
@@ -105,7 +98,7 @@ def build_tiers():
     into points at the hem; they ripple with the gown's own folds."""
     bm = new_bm()
     rows = (0.0, 0.2, 0.4, 0.6, 0.72, 0.9, 1.0)     # down the outer face: coat, an accent band, a thin metal edge
-    for z0, z1, flare, points, depth, phase in TIERS:
+    for z0, z1, flare, points, depth, phase in FQ_TIERS:
         No, Ni, th = len(rows), 4, 0.006
 
         def gap(z):
@@ -236,20 +229,11 @@ def build_rose():
 
 # ================================================================== face, horns, tiara
 def build_face_fq():
-    """The Abbess's chibi face made undead: glowing irises, and two small fangs under her smile, joined
-    into the Face part so the pack's lock keeps them."""
+    """The Abbess's chibi face made undead: glowing irises, and two small fangs under her smile, each a
+    white triangle on a thin ink one (court.undead_fangs), joined into the Face part so the pack's lock
+    keeps them."""
     build_head_q()
-    bvh = bvh_of(O(PFX + 'Head'))
-    bm = new_bm()
-    for s in (-1, 1):             # each white fang on a thin ink edge, or it vanishes on the pale skin
-        x, z = s * 0.006, 0.8634
-        decal_poly(bm, bvh, [(x - 0.0035, z + 0.0008), (x + 0.0035, z + 0.0008), (x + s * 0.0006, z - 0.0071)], FR,
-                   0.0019, 'ink', rings=1)
-        decal_poly(bm, bvh, [(x - 0.0026, z + 0.0006), (x + 0.0026, z + 0.0006), (x + s * 0.0005, z - 0.0058)], FR,
-                   0.0024, 'white', rings=1)
-    out(PFX + 'Fangs', bm, 0, sharp=80, recalc=False)
-    join_into(PFX + 'Face', PFX + 'Fangs')
-    undead_face(O(PFX + 'Face'))
+    undead_fangs(FANG_Z)
 
 
 def build_hair_fq():
@@ -302,7 +286,7 @@ def tiara_pt(phi, el, dr=0.0):
     return surf(phi, el, 0.011 + dr, RH)
 
 
-def build_tiara():
+def build_tiara_fq():
     """A metal band over the fringe between the horns, with slender blades rising from it, the front one
     tallest, and gems at their feet."""
     bm = new_bm()
@@ -327,7 +311,7 @@ def build_tiara():
 
 
 # ================================================================== wings
-def wing_frame(s, back):
+def wing_frame_fq(s, back):
     """A wing's root on the hair's back fall at the shoulder blade, standing off the outermost strand
     under the wing's inner half so none pokes through it: x out and back, z up, leaning back clear of
     the head."""
@@ -345,7 +329,7 @@ def build_wings():
     back = bvh_of(O(PFX + 'HairBack'), O(PFX + 'HairBackClumps'))
     bm, bb = new_bm(), new_bm()
     for s in (-1, 1):
-        M = wing_frame(s, back)
+        M = wing_frame_fq(s, back)
         bat_wing(bm, bb, M, 0.155, 0.24, wrist=(0.3, 1.0), tips=((1.0, 0.55), (0.9, 0.1), (0.6, -0.22)),
                  body=(0.08, -0.16))
         root = M.translation
@@ -492,7 +476,7 @@ def build_q():
     build_hair_fq()
     build_brows_q()
     build_horns()
-    build_tiara()
+    build_tiara_fq()
     build_wings()
     build_lines_fq()
     pose_head()

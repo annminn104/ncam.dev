@@ -409,7 +409,7 @@ def fangs(bm, bvh, z, x=0.006, frame=None):
     each a white triangle on a slightly larger ink one (a white fang alone vanishes on the pale skin),
     their tops at height z (the mouth line there) and their points 7 mm under it at the king's scale.
     Painted into bm on bvh (the bare head) from frame (FR, the front, if None). Join their part into
-    the Face part (join_into), so the pack's lock keeps them."""
+    the Face part (join_into), so the pack's lock keeps them: undead_fangs does all of that."""
     frame = frame or FR
     for s in (-1, 1):
         cx = s * x
@@ -424,6 +424,19 @@ def join_into(dst, src):
     a, b = O(dst), O(src)
     with bpy.context.temp_override(active_object=a, selected_editable_objects=[a, b]):
         bpy.ops.object.join()
+
+
+def undead_fangs(z):
+    """Makes a piece's chibi face undead once its head and face are built, as every Court face but the Overlord's
+    skull is: the two fangs (fangs) painted on its bare head (the part PFX + 'Head'), their tops at height z (the
+    piece's FANG_Z: its mouth line at x = 0.006 either side), sent out as the part PFX + 'Fangs' and joined into PFX +
+    'Face' (join_into), so the pack's lock keeps them; then the face's irises glow (undead_face). PFX is the calling
+    piece's own, read from the namespace the scripts share."""
+    bm = new_bm()
+    fangs(bm, bvh_of(O(PFX + 'Head')), z)
+    out(PFX + 'Fangs', bm, 0, sharp=80, recalc=False)
+    join_into(PFX + 'Face', PFX + 'Fangs')
+    undead_face(O(PFX + 'Face'))
 
 
 # ---------------------------------------------------------------- tattered hems

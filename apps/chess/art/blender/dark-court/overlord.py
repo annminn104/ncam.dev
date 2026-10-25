@@ -29,6 +29,7 @@ CROWN_SPIKES = [(0, 0.29, 0.031)] + [(s * a, L, W) for a, L, W in ((51.4, 0.215,
 COL_NU, COL_NV, COL_TIP = 26, 14, 11
 ORB = Vector((SX, SYY, 1.29))
 ORB_R = 0.041
+BKL = Vector((0.0, -0.9 * 0.177 - 0.006, 0.455))    # the belt buckle's centre (the Patriarch's): buckle, engraving
 
 
 # ================================================================== robe layers (the Patriarch's builders)
@@ -110,7 +111,6 @@ def build_robe_k():
         decal_poly(bm, rb, ellipse(0, cz, r, r, 14), FR, 0.0045, 'gem', rings=1)
     out(PFX + 'PanelGems', bm, 0, sharp=80, recalc=False)
     # the belt's buckle
-    BKL = Vector((0.0, -0.9 * 0.177 - 0.006, 0.455))
     bm = new_bm()
     slab(bm, [(-0.026, -0.024), (0.026, -0.024), (0.036, 0.0), (0.026, 0.024), (-0.026, 0.024), (-0.036, 0.0)],
          Matrix.Translation(BKL), 0.009, bevel=0.0022, seg=2)
@@ -433,7 +433,6 @@ def build_lines_k():
         Pf = overskirt_P(rb, s)
         border = [Pf(2.4, j) for j in (0.5, 4, 8, 11.4)] + [Pf(i, 11.4) for i in range(4, OS_NU + 1)]
         line3d(bm, osb, border, 0.0011 * K, 'lgold', n=120, taper='none')
-    BKL = Vector((0.0, -0.9 * 0.177 - 0.006, 0.455))
     outl = [(-0.026, -0.024), (0.026, -0.024), (0.036, 0.0), (0.026, 0.024), (-0.026, 0.024), (-0.036, 0.0)]
     flat_line(bm, Matrix.Translation(BKL), [(x * 0.72, z * 0.72) for x, z in outl], -1, 0.0012 * K, 'lgold', closed=True,
               half=0.0045, n=60)
@@ -495,28 +494,27 @@ def build_lines_k():
         Pf = overskirt_P(rb, s)
         for ui in (5, 10, 15, 20):
             line3d(bm, osb, [Pf(ui + 0.3 * q, j) for q, j in enumerate((2, 5, 8, 10.5))], 0.0022, 'lcoat', n=24)
-        for face in (1, -1):
+        for side in (1, -1):
             for u in range(3, COL_NU - 2, 3):
-                line3d(bm, colb, [collar_at(s, u, v, face, 0.003)[0] for v in (1.2, 5.0, 8.5, COL_NV - 3.6)], 0.0017,
+                line3d(bm, colb, [collar_at(s, u, v, side, 0.003)[0] for v in (1.2, 5.0, 8.5, COL_NV - 3.6)], 0.0017,
                        'lcoat', n=20, taper='start')
     out(PFX + 'LinesCloth', bm, 0, sharp=80, recalc=False)
 
     # ---- metal scrolls on the cape's back, the over-skirt and the inside of the collar
     bm = new_bm()
-    cb = bvh_of(O(PFX + 'Cape'))
     EZ = SIGIL_Z
     for s in (-1, 1):
         p = [(s * 0.035, 0.2), (s * 0.075, 0.21), (s * 0.11, 0.25), (s * 0.122, 0.31)] + \
             scroll_pts(s * 0.15, 0.335, s, 0.034, turns=1.25, n=18)[1:]
-        decal_band(bm, cb, p, [0.0018, 0.0036, 0.0042, 0.0042] + [0.0042 * (1 - 0.7 * k / 18) for k in range(19)], BACK,
-                   0.0028, 'trim', n=80)
+        decal_band(bm, capeb, p, [0.0018, 0.0036, 0.0042, 0.0042] + [0.0042 * (1 - 0.7 * k / 18) for k in range(19)],
+                   BACK, 0.0028, 'trim', n=80)
         p = [(s * 0.11, 0.25), (s * 0.15, 0.235)] + scroll_pts(s * 0.17, 0.25, -s, 0.017, turns=1.15, n=12)[1:]
-        decal_band(bm, cb, p, [0.0018, 0.0032] + [0.0032 * (1 - 0.7 * k / 12) for k in range(13)], BACK, 0.0028, 'trim',
-                   n=40)
+        decal_band(bm, capeb, p, [0.0018, 0.0032] + [0.0032 * (1 - 0.7 * k / 12) for k in range(13)], BACK, 0.0028,
+                   'trim', n=40)
         p = [(s * 0.03, EZ + 0.105), (s * 0.07, EZ + 0.11), (s * 0.1, EZ + 0.135)] + \
             scroll_pts(s * 0.118, EZ + 0.15, s, 0.02, turns=1.2, n=12)[1:]
-        decal_band(bm, cb, p, [0.0016, 0.003, 0.0034] + [0.0034 * (1 - 0.7 * k / 12) for k in range(13)], BACK, 0.0028,
-                   'trim', n=50)
+        decal_band(bm, capeb, p, [0.0016, 0.003, 0.0034] + [0.0034 * (1 - 0.7 * k / 12) for k in range(13)], BACK,
+                   0.0028, 'trim', n=50)
         Pf = overskirt_P(rb, s)
         ctrl = [Pf(5.0, 2.5), Pf(7.5, 4.4), Pf(10.0, 5.4)]
         for k in range(1, 13):
@@ -527,9 +525,9 @@ def build_lines_k():
         line3d(bm, osb, ctrl, 0.0032, 'trim', n=80, lift=0.0016)
         line3d(bm, osb, [Pf(9.0, 7.6), Pf(11.0, 9.0), Pf(14.0, 9.6), Pf(16.0, 8.6), Pf(15.4, 7.6)], 0.0024, 'trim', n=40,
                lift=0.0016)
-        for face in (1, -1):      # a metal border inside the collar's rim, both sides
-            path = [collar_at(s, u, COL_NV - 2.2, face, 0.004)[0] for u in range(1, COL_NU - 1, 2)]
-            path += [collar_at(s, COL_NU - 2.0, v, face, 0.004)[0] for v in (COL_NV - 3.5, COL_NV - 7, 3, 0.6)]
+        for side in (1, -1):      # a metal border inside the collar's rim, both sides
+            path = [collar_at(s, u, COL_NV - 2.2, side, 0.004)[0] for u in range(1, COL_NU - 1, 2)]
+            path += [collar_at(s, COL_NU - 2.0, v, side, 0.004)[0] for v in (COL_NV - 3.5, COL_NV - 7, 3, 0.6)]
             line3d(bm, colb, path, 0.0026, 'trim', n=90, lift=0.0016, taper='none')
         stem = [(COL_TIP + 7.0, 1.5), (COL_TIP + 5.0, 3.8), (COL_TIP + 2.4, 6.4)]
         curl = scroll_pts(COL_TIP - 0.4, 7.0, -1, 2.4, turns=1.2, n=14, start=180.0)

@@ -319,13 +319,9 @@ def build_tome():
 # ================================================================== face and hair
 def build_face_nc():
     """The Patriarch's chibi face (build_head) made undead: glowing irises and two small fangs under the mouth
-    (court.fangs), joined into the Face part so the pack's lock keeps them."""
+    (court.undead_fangs), joined into the Face part so the pack's lock keeps them."""
     build_head()
-    bm = new_bm()
-    fangs(bm, bvh_of(O(PFX + 'Head')), FANG_Z)
-    out(PFX + 'Fangs', bm, 0, sharp=80, recalc=False)
-    join_into(PFX + 'Face', PFX + 'Fangs')
-    undead_face(O(PFX + 'Face'))
+    undead_fangs(FANG_Z)
 
 
 def fringe_pts(phi, tip):
@@ -439,9 +435,9 @@ def build_hood_nc():
                                                       for m in range(NL)] + [cowl_pt(phi, e)])
     rows = len(P[0]) - 1
     bm = new_bm()
-    O, I = [], []
+    outer, lining = [], []                           # each column's vertices: outside, and lining by row from j0
     for i in range(cols):
-        O.append([bm.verts.new(p) for p in P[i]])
+        outer.append([bm.verts.new(p) for p in P[i]])
         col = {}
         for j in range(j0, rows + 1):
             a = P[(i + 1) % cols][j] - P[i - 1][j]
@@ -450,18 +446,19 @@ def build_hood_nc():
             if n.dot(P[i][j] - ref[j]) < 0:
                 n = -n
             col[j] = bm.verts.new(P[i][j] - n * HOOD_THICK)
-        I.append(col)
+        lining.append(col)
     tip = bm.verts.new(point_spine(J, 1.0)[0])
     cap = bm.verts.new(ref[j0])
     for i in range(cols):
         i2 = (i + 1) % cols
         for j in range(rows):
-            face(bm, [O[i][j], O[i][j + 1], O[i2][j + 1], O[i2][j]], 'trim' if j == rows - 1 else 'coat')
+            face(bm, [outer[i][j], outer[i][j + 1], outer[i2][j + 1], outer[i2][j]],
+                 'trim' if j == rows - 1 else 'coat')
             if j >= j0:
-                face(bm, [I[i][j], I[i2][j], I[i2][j + 1], I[i][j + 1]], 'accent')
-        face(bm, [O[i][rows], O[i2][rows], I[i2][rows], I[i][rows]], 'trim')
-        face(bm, [O[i2][0], tip, O[i][0]], 'coat')
-        face(bm, [I[i][j0], cap, I[i2][j0]], 'accent')
+                face(bm, [lining[i][j], lining[i2][j], lining[i2][j + 1], lining[i][j + 1]], 'accent')
+        face(bm, [outer[i][rows], outer[i2][rows], lining[i2][rows], lining[i][rows]], 'trim')
+        face(bm, [outer[i2][0], tip, outer[i][0]], 'coat')
+        face(bm, [lining[i][j0], cap, lining[i2][j0]], 'accent')
     out(PFX + 'Hood', bm, BIG, sharp=60)
     c = cowl_pt(0, HOOD_EDGE['front'] + HOOD_BAND / 2, 0.0035)
     n = (c - HC).normalized()
