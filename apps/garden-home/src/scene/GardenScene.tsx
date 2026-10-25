@@ -11,7 +11,7 @@ import { HoverLabel } from '../ui/HoverLabel';
 import { hasWebGL2 } from '../ui/webgl';
 import { setTranscoderPath } from './loader';
 import { loadScene, SCENE_PATH } from './loadScene';
-import { releaseGardenScene } from './release-scene';
+import { releaseGardenScene, startCleanScene } from './release-scene';
 import { SceneRoot } from './SceneRoot';
 import type { SceneConfig } from './schema';
 
@@ -39,6 +39,8 @@ export function GardenScene({ route, assetBase, ui, search, onReady, onFail }: G
   const [config, setConfig] = useState<SceneConfig | null>(null);
 
   useEffect(() => {
+    // A remount that beat the last scene's release (it waits for R3F's unmount) still starts clean.
+    startCleanScene();
     if (!hasWebGL2()) {
       onFail(new GardenStartError(NO_WEBGL2));
       return;

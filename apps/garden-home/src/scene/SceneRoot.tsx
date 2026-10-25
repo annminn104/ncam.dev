@@ -20,6 +20,7 @@ import { moduleUrl } from './loadScene';
 import { ModuleBoundary } from './ModuleBoundary';
 import { ModuleInstance } from './ModuleInstance';
 import { ReadyProbe } from './ReadyProbe';
+import { ReleaseGate } from './release-scene';
 import type { SceneConfig } from './schema';
 
 interface Props {
@@ -88,6 +89,7 @@ export function SceneRoot({ config, sceneUrl, runtime, params, onFatal, onReady 
       style={!sky && params.bg ? backdropStyle(params.bg) : undefined}
       onCreated={handleCreated}
     >
+      <ReleaseGate />
       <FrameLimiter fps={runtime.fps} />
       {params.debug && <FrameCounter />}
       {sky && <Sky />}
