@@ -1,7 +1,9 @@
 import { z } from 'zod';
 import { type SceneConfig, sceneSchema } from './schema';
 
-export const SCENE_URL = '/assets/scene.json';
+/** scene.json beside the modules in public/assets, resolved against the remote's origin (lib/asset-url). */
+export const SCENE_PATH = 'assets/scene.json';
+export const SCENE_URL = `/${SCENE_PATH}`;
 
 export class SceneError extends Error {
   constructor(message: string) {
@@ -37,7 +39,12 @@ export async function loadScene(
   return parseScene(json);
 }
 
-/** Module paths in scene.json are relative to scene.json itself. */
-export function assetUrl(src: string, sceneUrl: string = SCENE_URL): string {
-  return new URL(src, new URL(sceneUrl, 'http://local')).pathname;
+/**
+ * Module paths in scene.json are relative to scene.json itself. An absolute sceneUrl (the remote's
+ * origin, which the host page does not share) gives absolute module URLs; a root-relative one,
+ * root-relative URLs.
+ */
+export function moduleUrl(src: string, sceneUrl: string = SCENE_URL): string {
+  const url = new URL(src, new URL(sceneUrl, 'http://local'));
+  return url.origin === 'http://local' ? url.pathname : url.href;
 }

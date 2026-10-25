@@ -94,6 +94,12 @@ export function glowFalloff(): DataTexture {
   return falloff;
 }
 
+/** Frees the shared falloff texture (the mount's release); the next glowFalloff() makes a new one. */
+export function releaseGlowFalloff(): void {
+  falloff?.dispose();
+  falloff = null;
+}
+
 /**
  * A light pool's night clone: added onto what is behind it (the lawn), never hiding it, faded out from its centre. The
  * night factor (and its group's toggle) drives its opacity at its full exported emission (interact/effects); it starts

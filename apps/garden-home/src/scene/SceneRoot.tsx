@@ -16,7 +16,7 @@ import { Sky } from '../systems/Sky';
 import { backdropStyle, showsSky, useBackdrop } from '../ui/backdrop';
 import { FrameCounter } from '../ui/DebugOverlay';
 import { CUTAWAY_MODULES } from './cutaway';
-import { assetUrl } from './loadScene';
+import { moduleUrl } from './loadScene';
 import { ModuleBoundary } from './ModuleBoundary';
 import { ModuleInstance } from './ModuleInstance';
 import { ReadyProbe } from './ReadyProbe';
@@ -24,16 +24,18 @@ import type { SceneConfig } from './schema';
 
 interface Props {
   config: SceneConfig;
+  sceneUrl: string;
   runtime: RuntimeConfig;
   params: Params;
   onFatal: (error: Error) => void;
+  onReady: () => void;
 }
 
 const CONTEXT_RESTORE_MS = 3000;
 /** The module the camera keeps out of and whose focus the dollhouse cut measures from (interaction spec §2). */
 const HOUSE_MODULE = 'house';
 
-export function SceneRoot({ config, runtime, params, onFatal }: Props) {
+export function SceneRoot({ config, sceneUrl, runtime, params, onFatal, onReady }: Props) {
   const markSlotSettled = useAppStore((s) => s.markSlotSettled);
   const backdrop = useBackdrop(params.bg);
   const sky = showsSky(backdrop);
@@ -99,7 +101,7 @@ export function SceneRoot({ config, runtime, params, onFatal }: Props) {
                 <ModuleInstance
                   slotId={slot.id}
                   module={slot.module}
-                  src={assetUrl(config.modules[slot.module].src[runtime.quality])}
+                  src={moduleUrl(config.modules[slot.module].src[runtime.quality], sceneUrl)}
                   cutaway={site && Object.hasOwn(CUTAWAY_MODULES, slot.module)}
                   baseY={slot.position[1]}
                   interactive={site}
@@ -109,7 +111,7 @@ export function SceneRoot({ config, runtime, params, onFatal }: Props) {
           </ModuleBoundary>
         ))}
       </group>
-      <ReadyProbe total={config.slots.length} />
+      <ReadyProbe total={config.slots.length} onReady={onReady} />
     </Canvas>
   );
 }

@@ -12,6 +12,12 @@ const HOVER_COLOR = '#ffd98a';
 
 /** The node under the pointer, kept beside the store's hover (Object3D is not plain data). */
 let hovered: Object3D | null = null;
+
+/** Forgets the hovered node (the mount's release): it belonged to the scene that went. */
+export function resetHover(): void {
+  hovered = null;
+}
+
 /** How far the press before the next click strayed (InteractionLayer feeds it from the canvas). */
 const drag = createDragWatch();
 

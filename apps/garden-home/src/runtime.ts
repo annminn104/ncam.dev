@@ -1,7 +1,9 @@
 import type { Align, Params, Quality } from './params';
 
+export type Route = 'site' | 'wallpaper';
+
 export interface RuntimeConfig {
-  route: 'site' | 'wallpaper';
+  route: Route;
   quality: Quality;
   fps: number;
   dpr: number;
@@ -10,14 +12,17 @@ export interface RuntimeConfig {
   align: Align;
 }
 
-/** Per-route render settings (spec §10). URL params override quality, fps and align. */
+/**
+ * Per-route render settings (spec §10). URL params override quality, fps and align. The host always
+ * renders the site route; the standalone page picks the route from its path (src/routes.ts).
+ */
 export function resolveRuntime(
-  pathname: string,
+  route: Route,
   params: Params,
   devicePixelRatio: number,
   coarsePointer: boolean,
 ): RuntimeConfig {
-  const wallpaper = pathname.replace(/\/+$/, '') === '/wallpaper';
+  const wallpaper = route === 'wallpaper';
   return {
     route: wallpaper ? 'wallpaper' : 'site',
     quality: params.quality ?? (wallpaper || coarsePointer ? 'medium' : 'high'),

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { assetUrl, loadScene, parseScene, SceneError } from './loadScene';
+import { loadScene, moduleUrl, parseScene, SceneError } from './loadScene';
 
 const VALID = {
   version: 1,
@@ -77,10 +77,16 @@ describe('loadScene', () => {
   });
 });
 
-describe('assetUrl', () => {
+describe('moduleUrl', () => {
   it('resolves module paths next to scene.json', () => {
-    expect(assetUrl('modules/pond.high.glb', '/assets/scene.json')).toBe(
+    expect(moduleUrl('modules/pond.high.glb', '/assets/scene.json')).toBe(
       '/assets/modules/pond.high.glb',
+    );
+  });
+
+  it("stays on the remote's origin when scene.json came from there", () => {
+    expect(moduleUrl('modules/pond.high.glb', 'https://garden.example/assets/scene.json')).toBe(
+      'https://garden.example/assets/modules/pond.high.glb',
     );
   });
 });

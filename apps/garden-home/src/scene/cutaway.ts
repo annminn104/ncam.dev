@@ -508,6 +508,11 @@ function warmFailure(error: unknown): void {
   );
 }
 
+/** Lets the next mount log its own failed warm-up (the mount's release). */
+export function resetWarmCut(): void {
+  warmFailed = false;
+}
+
 /** Runs `compile`, logging (once) what it throws, or what the promise it returns rejects with, instead of passing it on. */
 function tryCompile(compile: () => void | Promise<unknown>): void {
   try {
