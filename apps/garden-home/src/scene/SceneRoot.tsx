@@ -1,5 +1,5 @@
 import { Canvas, type RootState } from '@react-three/fiber';
-import { Suspense, useMemo } from 'react';
+import { Suspense, useEffect, useMemo, useRef } from 'react';
 import { CameraRig } from '../camera/CameraRig';
 import { houseBounds } from '../camera/orbit';
 import { MODULES_GROUP, OrbitRig } from '../camera/OrbitRig';
@@ -50,15 +50,31 @@ export function SceneRoot({ config, sceneUrl, runtime, params, onFatal, onReady 
     [house, config],
   );
 
+  const restoreTimer = useRef(0);
+  const disposed = useRef(false);
+  useEffect(() => {
+    disposed.current = false;
+    return () => {
+      disposed.current = true;
+      window.clearTimeout(restoreTimer.current);
+    };
+  }, []);
+
   // three calls preventDefault on contextlost, so the browser may restore; give it 3 s.
   const handleCreated = ({ gl }: RootState) => {
     // Per-material clipping planes cut the house on the site route; the wallpaper never clips.
     gl.localClippingEnabled = site;
-    let timer = 0;
     gl.domElement.addEventListener('webglcontextlost', () => {
-      timer = window.setTimeout(() => onFatal(new Error('WebGL context lost')), CONTEXT_RESTORE_MS);
+      // R3F forces a context loss while it tears the canvas down, after React's cleanup: that is no failure.
+      if (disposed.current) return;
+      restoreTimer.current = window.setTimeout(
+        () => onFatal(new Error('WebGL context lost')),
+        CONTEXT_RESTORE_MS,
+      );
     });
-    gl.domElement.addEventListener('webglcontextrestored', () => window.clearTimeout(timer));
+    gl.domElement.addEventListener('webglcontextrestored', () =>
+      window.clearTimeout(restoreTimer.current),
+    );
   };
 
   return (
