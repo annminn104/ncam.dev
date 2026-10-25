@@ -146,9 +146,9 @@ function colours(preset: FigurePresetId, side: Side): Color[] {
 
 function createPaint(palette: Color[], metal: Metal): MeshToonMaterial {
   const material = new MeshToonMaterial({ gradientMap: toonRamp() });
-  const ramp = METAL_RAMPS[metal];
-  const colors = ramp.map(([, hex]) => new Color(hex));
-  const stops = ramp.map(([at]) => at);
+  const metalRamp = METAL_RAMPS[metal];
+  const colors = metalRamp.map(([, hex]) => new Color(hex));
+  const stops = metalRamp.map(([at]) => at);
   material.onBeforeCompile = (shader) => {
     shader.uniforms.figurePalette = { value: palette };
     shader.uniforms.figureMetal = { value: colors };
