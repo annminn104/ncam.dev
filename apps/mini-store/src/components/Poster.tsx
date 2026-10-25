@@ -1,9 +1,10 @@
 import { poster } from '../assets/poster';
 
 /**
- * The scene as a picture until the engine draws it live: the page's LCP. Portrait (1:2) at or
- * below a square viewport, landscape (2.4:1) above; `object-fit: cover` in globals.css. `sizes`
- * follows cover: a viewport wider than the picture fills its width, a narrower one its height.
+ * The scene as a picture: what the first paint shows until the engine draws it live. Portrait
+ * (1:2) at or below a square viewport, landscape (2.4:1) above; `object-fit: cover` in
+ * globals.css. `sizes` follows cover: a viewport wider than the picture fills its width, a
+ * narrower one its height.
  */
 export function Poster() {
   return (

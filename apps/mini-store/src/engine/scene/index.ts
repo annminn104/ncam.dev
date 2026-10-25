@@ -9,9 +9,18 @@ import type { Ctx, SceneData } from './types';
 
 export type { DoorDef, Light, SceneData, Spot } from './types';
 
+// Built once per mount and released on dispose (`releaseScene`, called by `Engine.dispose`): the
+// atlas canvas and the geometry would otherwise outlive the project inside the host. StrictMode's
+// double effect never constructs two engines, because SceneCanvas cancels the first boot before it
+// constructs.
 let cached: { scene: SceneData; atlas: HTMLCanvasElement } | null = null;
 
-/** Builds atlas + geometry once per page (React StrictMode mounts twice in dev). */
+/** Drops the cached atlas and geometry; the next `getScene()` builds them again. */
+export function releaseScene(): void {
+  cached = null;
+}
+
+/** Builds atlas + geometry once per mount: the first call builds, later calls reuse. */
 export function getScene(): { scene: SceneData; atlas: HTMLCanvasElement } {
   if (cached) return cached;
   const atlas = buildAtlas();

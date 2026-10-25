@@ -15,7 +15,7 @@ import {
   type Program,
 } from './gl';
 import { clamp, M4, type Mat4, type Vec3 } from './math';
-import { getScene, type SceneData } from './scene';
+import { getScene, releaseScene, type SceneData } from './scene';
 import { DEFAULT_SETTINGS, type Settings } from './settings';
 import * as SH from './shaders';
 import { RIDES, rideAhead, rideMatrix, ridePos } from './traffic';
@@ -298,6 +298,7 @@ export class Engine {
     cancelAnimationFrame(this.raf);
     for (const off of this.unlisten) off();
     this.gl.getExtension('WEBGL_lose_context')?.loseContext();
+    releaseScene();
   }
 
   // ---------------- GPU resources ----------------

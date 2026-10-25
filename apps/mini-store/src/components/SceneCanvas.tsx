@@ -68,6 +68,13 @@ export function SceneCanvas({
         });
         engineRef.current = engine;
       } catch (error) {
+        // A constructor that failed after creating its context (a shader the device refuses)
+        // leaves it alive until the page is collected; release it so retries do not pile up.
+        try {
+          canvas.getContext('webgl2')?.getExtension('WEBGL_lose_context')?.loseContext();
+        } catch {
+          // nothing to release, and the failure below is what the visitor needs to see
+        }
         if (!cancelled) callbacks.current.onFail(error);
       }
     })();

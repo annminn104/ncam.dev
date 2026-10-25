@@ -1,6 +1,6 @@
-/* Mini Store. Everything is scoped under .mini-store-root: the host inlines this stylesheet into
-   its own page, so no html/body/:root rules. Overlays are absolute inside the root (not fixed),
-   so they stay inside the host's stage. */
+/* Mini Store. Every rule sits under .mini-store-root or carries the ms- prefix: the host inlines
+   this stylesheet into its own page, so no html/body/:root rules. Overlays are absolute inside
+   the root (not fixed), so they stay inside the host's stage. */
 .mini-store-root {
   --ms-fg: #f4efe6;
   --ms-dim: rgb(244 239 230 / 0.62);

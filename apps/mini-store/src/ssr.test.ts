@@ -31,7 +31,9 @@ describe('renderHeroSSR', () => {
   });
 
   it('ships its css and names the page', async () => {
-    const { css, head } = await renderHeroSSR({ assetBase: 'https://ignored.example.test/' });
+    const { html, css, head } = await renderHeroSSR({ assetBase: 'https://ignored.example.test/' });
+    // the host's assetBase is TOONHUB's alone: this remote names its own origin
+    expect(html).not.toContain('ignored.example.test');
     expect(css).toContain('.mini-store-root');
     expect(head?.title).toBe('Mini Store — a rainy night on the corner');
     expect(head?.description).toMatch(/WebGL2 diorama/);
