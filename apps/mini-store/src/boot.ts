@@ -1,4 +1,5 @@
-// The page's phases: the poster until the visitor interacts, the engine booting over it, the live
+// The page's phases: the poster until the engine starts (by itself on a hardware GPU, see
+// src/autoplay.ts, else on the visitor's first interaction), the engine booting over it, the live
 // scene — or an error over the poster. Pure, so node tests can walk every path.
 
 export type Phase = 'poster' | 'booting' | 'live' | 'error';
@@ -17,6 +18,8 @@ export interface BootState {
 export type BootEvent =
   /** A boot trigger: the Enter button, a pointer or wheel on the poster, O or C. */
   | { type: 'start' }
+  /** The page settled on a device that may start the engine unasked; from the poster only. */
+  | { type: 'autostart' }
   /** The engine's first frame is on screen. */
   | { type: 'ready' }
   | { type: 'fail'; message: string }
@@ -32,6 +35,8 @@ export function bootReducer(state: BootState, event: BootEvent): BootState {
       return state.phase === 'poster' || state.phase === 'error'
         ? { ...state, phase: 'booting', error: null }
         : state;
+    case 'autostart':
+      return state.phase === 'poster' ? { ...state, phase: 'booting' } : state;
     case 'ready':
       return state.phase === 'booting' ? { ...state, phase: 'live' } : state;
     case 'fail':
