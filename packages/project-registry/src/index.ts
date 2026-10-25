@@ -128,6 +128,19 @@ export const projects: ProjectEntry[] = [
     // a sitemap should not ask to have indexed.
     sitemapPaths: ['sets'],
   },
+  {
+    id: 'chess',
+    name: 'Cultivation Chess',
+    tagline: '3D xianxia chess',
+    description:
+      'International chess where the pieces are floating cultivation treasures — seals, flying swords, cauldrons, mirrors, spirit bells and pearls — fought in three 3D arenas with a free camera. Play a friend on one device or Stockfish at five realms. React Three Fiber + drei + chess.js.',
+    accent: '#7FD6B5',
+    thumbnail: '/thumbnails/chess.jpg',
+    // Single-word name → already a valid identifier.
+    remote: 'chess',
+    module: './mount',
+    status: 'live',
+  },
 ];
 
 export function getProject(id: string): ProjectEntry | undefined {

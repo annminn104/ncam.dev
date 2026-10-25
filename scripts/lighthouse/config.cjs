@@ -19,6 +19,7 @@ const AUDITED_PATHS = [
   '/projects/viktor',
   '/projects/bali',
   '/projects/holodex',
+  '/projects/chess',
 ];
 
 /**
@@ -37,7 +38,7 @@ function auditedPaths() {
   return AUDITED_PATHS.filter((_, index) => index % of === n - 1);
 }
 
-/** The .env defaults (host 9000, remotes 9001-9007, CMS 1337), shifted by LH_PORT_OFFSET. */
+/** The .env defaults (host 9000, remotes 9001-9008, CMS 1337), shifted by LH_PORT_OFFSET. */
 function ports() {
   const offset = Number(process.env.LH_PORT_OFFSET ?? '0');
   if (!Number.isInteger(offset) || offset < 0)
@@ -56,6 +57,7 @@ function remotes() {
     { name: 'bali', pkg: '@ncam/bali', key: 'BALI', port: 9005 },
     { name: 'profile', pkg: '@ncam/profile', key: 'PROFILE', port: 9006 },
     { name: 'holodex', pkg: '@ncam/holodex', key: 'HOLODEX', port: 9007 },
+    { name: 'chess', pkg: '@ncam/chess', key: 'CHESS', port: 9008 },
   ].map((remote) => ({ ...remote, port: remote.port + offset }));
 }
 

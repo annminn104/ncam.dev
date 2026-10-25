@@ -55,6 +55,7 @@ services:
       - '9005:9005'
       - '9006:9006'
       - '9007:9007'
+      - '9008:9008'
 
   toonhub:
     image: ncam-monorepo:latest
@@ -100,6 +101,11 @@ services:
   holodex:
     image: ncam-monorepo:latest
     command: ['pnpm', '--filter', '@ncam/holodex', 'preview', '--host', '0.0.0.0', '--port', '9007']
+    network_mode: service:portfolio
+
+  chess:
+    image: ncam-monorepo:latest
+    command: ['pnpm', '--filter', '@ncam/chess', 'preview', '--host', '0.0.0.0', '--port', '9008']
     network_mode: service:portfolio
 
   # ── CMS (Strapi): own image + Postgres, in the `cms` profile so the default
@@ -172,6 +178,7 @@ services:
       - bali
       - profile
       - holodex
+      - chess
     networks:
       default:
         aliases:

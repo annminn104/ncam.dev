@@ -5,6 +5,7 @@ import type { SsrHead } from '@ncam/mf-remote';
 import { ProjectStagePage, loadSsrExports, ssrLoaders } from '../../components/ProjectStage';
 import { toRemoteRoute } from '../../lib/remote-route';
 import { projectHead, remoteHead, withStageExpect } from '../../lib/project-head';
+import { ssrAssetBase } from '../../lib/ssr-asset-base';
 
 const log = createLogger({ scope: 'portfolio' });
 
@@ -42,7 +43,8 @@ export const Route = createFileRoute('/projects/$projectId_/$')({
       const { renderHeroSSR } = await loadSsrExports(project, load);
       const { html, css, head } = await renderHeroSSR({
         config: { route },
-        assetBase: import.meta.env.VITE_TOONHUB_ORIGIN,
+        // TOONHUB's origin, for TOONHUB only: every other remote names its own.
+        assetBase: ssrAssetBase(project.remote),
       });
       log.debug('project.ssr', { id: project.id, route });
       return { html, css, head: remoteHead(head) };

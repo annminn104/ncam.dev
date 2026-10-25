@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Cultivation Chess — Treasures of the Nine Heavens</title>
+    <meta
+      name="description"
+      content="International chess with cultivation treasures for pieces, fought in 3D arenas — play a friend or Stockfish."
+    />
+    <meta name="robots" content="index,follow" />
+    <meta name="theme-color" content="#0b0f14" />
+    <!-- The host's project page is the canonical copy; defineRemote() fills in its origin. -->
+    <link rel="canonical" href="%SITE_URL%/projects/chess" />
+
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <!-- Standalone page only: no 8px white frame around the app. Not in globals.css, which the host also loads. -->
+    <style>
+      html,
+      body {
+        margin: 0;
+        background: #0b0f14;
+      }
+    </style>
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Cultivation Chess" />
+    <meta property="og:title" content="Cultivation Chess — Treasures of the Nine Heavens" />
+    <meta
+      property="og:description"
+      content="International chess with cultivation treasures for pieces, fought in 3D arenas — play a friend or Stockfish."
+    />
+    <meta property="og:url" content="%SITE_URL%/projects/chess" />
+    <meta property="og:image" content="%SITE_URL%/thumbnails/chess.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Cultivation Chess — Treasures of the Nine Heavens" />
+    <meta
+      name="twitter:description"
+      content="International chess with cultivation treasures for pieces, fought in 3D arenas — play a friend or Stockfish."
+    />
+    <meta name="twitter:image" content="%SITE_URL%/thumbnails/chess.jpg" />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "WebSite",
+            "name": "Cultivation Chess",
+            "url": "%SITE_URL%/projects/chess",
+            "description": "International chess with cultivation treasures for pieces, fought in 3D arenas."
+          },
+          {
+            "@type": "VideoGame",
+            "name": "Cultivation Chess",
+            "genre": "Chess",
+            "playMode": ["SinglePlayer", "MultiPlayer"],
+            "url": "%SITE_URL%/projects/chess"
+          }
+        ]
+      }
+    </script>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/standalone.tsx"></script>
+  </body>
+</html>

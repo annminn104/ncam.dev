@@ -13,6 +13,9 @@ apps/toonhub/public/figurines/*.avif
 apps/toonhub/public/figurines/*.webp
 # Holodex's first-screen gallery art, copied from TCGdex by `pnpm assets`
 apps/holodex/public/gallery/*.webp
+# apps/chess figures: raw Blender exports and review captures (scripts/build-figures.mjs,
+# scripts/capture-presets.mjs); the packed GLBs in public/presets/ are committed
+apps/chess/art/.out/
 # Lighthouse CI reports (lighthouserc.cjs)
 .lighthouseci/
 
@@ -24,6 +27,9 @@ apps/holodex/public/gallery/*.webp
 docs/superpowers/
 # Claude Code worktrees (EnterWorktree in the desktop app / CLI)
 .claude/worktrees/
+# autoharness plugin state (counters, ledger, staged intents); the skills it
+# lands go to .claude/skills/ and are committed or not by hand
+.claude/autoharness/
 .vite/
 .cache/
 *.tsbuildinfo
@@ -71,3 +77,5 @@ Desktop.ini
 .tanstack/
 .vercel/
 .mf/
+# Cultivation Chess: Stockfish files copied from node_modules by `pnpm assets`
+apps/chess/public/stockfish/

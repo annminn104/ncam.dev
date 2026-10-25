@@ -1,0 +1,309 @@
+.chess-root {
+  --chess-bg: #0b0f14;
+  --chess-ink: #e8f3ee;
+  --chess-muted: #9fb3ad;
+  --chess-jade: #7fd6b5;
+  --chess-crimson: #e0475b;
+  --chess-gold: #d8b45a;
+  --chess-panel: rgb(16 22 30 / 0.82);
+  --chess-line: rgb(232 243 238 / 0.14);
+  position: relative;
+  min-height: 100svh;
+  background: var(--chess-bg);
+  color: var(--chess-ink);
+  font-family: ui-serif, 'Songti SC', 'Noto Serif CJK SC', Georgia, 'Times New Roman', serif;
+  -webkit-font-smoothing: antialiased;
+}
+.chess-root *,
+.chess-root *::before,
+.chess-root *::after {
+  box-sizing: border-box;
+}
+
+.chess-lobby {
+  /* Full width and at least as tall as the root, so the ambient glows end at the page edge
+     rather than in a visible seam at a column edge or above a short lobby's bottom. The inline
+     padding keeps the content in the same 1040px column (16px gutters). */
+  min-height: 100svh;
+  padding: clamp(24px, 6vw, 64px) max(16px, calc((100% - 1008px) / 2)) 48px;
+  /* Inside the host its "← Projects" pill floats over the middle of the top edge, and on a phone
+     it sat on the kicker: the head starts below it (the host sets --stage-top-inset on its
+     stage; standalone it is unset and the clamp stands). */
+  padding-top: max(clamp(24px, 6vw, 64px), var(--stage-top-inset, 0px));
+  display: grid;
+  align-content: start;
+  gap: 24px;
+  background:
+    radial-gradient(120% 60% at 50% -10%, rgb(127 214 181 / 0.18), transparent 60%),
+    radial-gradient(80% 50% at 100% 100%, rgb(224 71 91 / 0.12), transparent 60%);
+}
+.chess-lobby__head {
+  animation: chess-rise 600ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+@keyframes chess-rise {
+  from {
+    transform: translateY(12px);
+  }
+  to {
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .chess-lobby__head {
+    animation: none;
+  }
+}
+.chess-lobby__kicker {
+  margin: 0;
+  color: var(--chess-gold);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  font-size: 0.8rem;
+}
+.chess-lobby__title {
+  margin: 8px 0;
+  font-size: clamp(2.4rem, 7vw, 4.5rem);
+  line-height: 1.05;
+  font-weight: 600;
+}
+.chess-lobby__lede,
+.chess-lobby__note {
+  margin: 0;
+  color: var(--chess-muted);
+  max-width: 60ch;
+  line-height: 1.55;
+}
+.chess-field {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+.chess-field legend {
+  padding: 0;
+  margin-bottom: 10px;
+  font-size: 0.85rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--chess-muted);
+}
+.chess-seg {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.chess-seg button,
+.chess-start,
+.chess-arena {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  border: 1px solid var(--chess-line);
+  background: var(--chess-panel);
+  border-radius: 999px;
+  padding: 10px 16px;
+  min-height: 44px;
+}
+.chess-seg button[aria-pressed='true'] {
+  border-color: var(--chess-jade);
+  box-shadow: inset 0 0 0 1px var(--chess-jade);
+}
+.chess-arenas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+}
+.chess-arena {
+  position: relative;
+  display: grid;
+  align-content: end;
+  text-align: left;
+  border-radius: 16px;
+  padding: 0;
+  overflow: hidden;
+  aspect-ratio: 16 / 10;
+  isolation: isolate;
+}
+.chess-arena__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: -1;
+}
+/* A preview that failed to load: the card's fallback gradient shows alone, with no broken-image icon. */
+.chess-arena__img[data-failed] {
+  visibility: hidden;
+}
+/* The caption carries its own scrim, so the scrim is exactly as tall as the text whatever number
+   of lines the card's width wraps the lore to, and the preview shows unshaded above it: a 2rem
+   fade, then from the top of the text down at least 66% black whatever the preview behind it is,
+   so even the dimmer lore keeps 4.5:1 over white (contrast.test.ts). */
+.chess-arena__caption {
+  display: grid;
+  gap: 4px;
+  padding-top: 2rem;
+  background: linear-gradient(180deg, transparent, rgb(0 0 0 / 0.66) 2rem, rgb(0 0 0 / 0.84));
+}
+.chess-arena__name {
+  padding: 0 16px;
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+.chess-arena__lore {
+  padding: 0 16px 14px;
+  font-size: 0.85rem;
+  color: rgb(232 243 238 / 0.8);
+  line-height: 1.4;
+}
+.chess-arena[aria-pressed='true'] {
+  border-color: var(--arena-accent);
+  box-shadow:
+    0 0 0 2px var(--arena-accent),
+    0 0 32px -8px var(--arena-accent);
+}
+.chess-start {
+  justify-self: start;
+  padding: 14px 28px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  background: linear-gradient(135deg, #267259, #1d5b4a);
+  border-color: var(--chess-jade);
+}
+.chess-start:hover,
+.chess-seg button:hover,
+.chess-arena:hover {
+  filter: brightness(1.12);
+}
+.chess-root :focus-visible {
+  outline: 2px solid var(--chess-gold);
+  outline-offset: 3px;
+}
+/* The two ways a battle can fail to open: no WebGL, or an error. Here rather than in battle.css,
+   because the battle's chunk is what may have failed to load. */
+.chess-fallback {
+  min-height: 100svh;
+  display: grid;
+  place-content: center;
+  gap: 16px;
+  padding: 16px;
+  text-align: center;
+}
+.chess-fallback h2,
+.chess-fallback p {
+  margin: 0;
+}
+.chess-fallback p {
+  max-width: 42ch;
+  line-height: 1.55;
+  color: var(--chess-muted);
+}
+.chess-fallback .chess-start {
+  justify-self: center;
+}
+/* Shown while the battle chunk (three, R3F) downloads after "Enter battle". */
+.chess-loading {
+  min-height: 100svh;
+  margin: 0;
+  display: grid;
+  place-content: center;
+  color: var(--chess-muted);
+}
+/* The piece-set picker: cards like the arena's, one radio group per row. Two to a row on a phone;
+   from 720px up as many as fit at 200px or more, so a card is wide enough for its caption. */
+.chess-presets {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+}
+@media (max-width: 720px) {
+  .chess-presets {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.chess-preset {
+  position: relative;
+  display: grid;
+  align-content: end;
+  align-self: stretch;
+  width: 100%;
+  min-width: 0;
+  text-align: left;
+  /* clip rather than hidden: the card keeps its caption's height as a minimum, so a caption that
+     wraps to more lines than 16:10 has room for makes the card taller instead of being cut off.
+     (A browser without clip keeps the hidden above it: rounded corners, a fixed 16:10.) */
+  overflow: hidden;
+  overflow: clip;
+  isolation: isolate;
+  aspect-ratio: 16 / 10;
+  padding: 0;
+  border-radius: 14px;
+  cursor: pointer;
+  font: inherit;
+  color: var(--chess-ink);
+  border: 1px solid var(--chess-line);
+}
+.chess-preset__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: -1;
+}
+/* A preview that failed to load: the card's swatch gradient shows alone, with no broken-image icon. */
+.chess-preset__img[data-failed] {
+  visibility: hidden;
+}
+/* The arena caption's scrim: as tall as the text whatever the card's width wraps it to, a 1.6rem
+   fade, then from the top of the text down at least 66% black whatever the preview behind it is,
+   so the name and the tagline keep 4.5:1 even over white (contrast.test.ts). */
+.chess-preset__caption {
+  display: grid;
+  gap: 2px;
+  padding: 1.6rem 12px 10px;
+  background: linear-gradient(180deg, transparent, rgb(0 0 0 / 0.66) 1.6rem, rgb(0 0 0 / 0.84));
+}
+.chess-preset__name {
+  font-weight: 600;
+  font-size: 0.98rem;
+}
+.chess-preset__tagline {
+  font-size: 0.78rem;
+  color: rgb(232 243 238 / 0.86);
+  line-height: 1.35;
+}
+.chess-preset[aria-checked='true'] {
+  border-color: var(--preset-accent);
+  box-shadow:
+    0 0 0 2px var(--preset-accent),
+    0 0 24px -8px var(--preset-accent);
+}
+.chess-preset:hover {
+  filter: brightness(1.1);
+}
+.chess-presets__side {
+  margin: 6px 0 0;
+  font-size: 0.85rem;
+  color: var(--chess-muted);
+}
+.chess-presets__note {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--chess-muted);
+}
+.chess-check {
+  display: inline-flex;
+  justify-self: start;
+  gap: 8px;
+  align-items: center;
+  min-height: 44px;
+  color: var(--chess-ink);
+  cursor: pointer;
+}
+.chess-check input {
+  accent-color: var(--chess-jade);
+}
