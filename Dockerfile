@@ -34,6 +34,7 @@ ARG BALI_REMOTE_URL=http://localhost:9005/remoteEntry.js
 ARG PROFILE_REMOTE_URL=http://localhost:9006/remoteEntry.js
 ARG HOLODEX_REMOTE_URL=http://localhost:9007/remoteEntry.js
 ARG CHESS_REMOTE_URL=http://localhost:9008/remoteEntry.js
+ARG MINI_STORE_REMOTE_URL=http://localhost:9009/remoteEntry.js
 ENV TOONHUB_REMOTE_URL=$TOONHUB_REMOTE_URL \
     MINDLOOP_REMOTE_URL=$MINDLOOP_REMOTE_URL \
     IMMERSIVE_OCEAN_REMOTE_URL=$IMMERSIVE_OCEAN_REMOTE_URL \
@@ -41,7 +42,8 @@ ENV TOONHUB_REMOTE_URL=$TOONHUB_REMOTE_URL \
     BALI_REMOTE_URL=$BALI_REMOTE_URL \
     PROFILE_REMOTE_URL=$PROFILE_REMOTE_URL \
     HOLODEX_REMOTE_URL=$HOLODEX_REMOTE_URL \
-    CHESS_REMOTE_URL=$CHESS_REMOTE_URL
+    CHESS_REMOTE_URL=$CHESS_REMOTE_URL \
+    MINI_STORE_REMOTE_URL=$MINI_STORE_REMOTE_URL
 COPY . .
 # Strapi (apps/strapi) ships in its own image (apps/strapi/Dockerfile): neither its
 # dependencies nor its admin build belong in the monorepo image.
