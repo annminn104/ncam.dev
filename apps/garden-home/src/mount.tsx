@@ -1,30 +1,51 @@
-import { createRoot } from 'react-dom/client';
+import { StrictMode } from 'react';
+import { createRoot, type Root } from 'react-dom/client';
 import type { MountConfig, MountHandle } from '@ncam/mf-remote';
+import App from './App';
 import { remoteBase } from './lib/asset-url';
 import { releaseAll } from './release';
-import { GardenScene } from './scene/GardenScene';
-import './styles.css';
+import css from './styles.css?inline';
 
-const noop = () => {};
-const fail = (error: Error) => console.error('[garden-home]', error);
+const STYLE_ID = 'garden-home-styles';
+const roots = new WeakMap<HTMLElement, Root>();
 
-/** Federated entry until the shell lands (Task 5): the scene at once, on the site route. */
+function injectStyles(doc: Document): void {
+  if (doc.getElementById(STYLE_ID)) return;
+  const el = doc.createElement('style');
+  el.id = STYLE_ID;
+  el.textContent = css;
+  doc.head.appendChild(el);
+}
+
+/** Federated entry: render Garden Home into `target` (CSR). Only `config.assetBase` is read. */
 export function mount(target: HTMLElement, config?: MountConfig): MountHandle {
+  injectStyles(target.ownerDocument ?? document);
+  const existing = roots.get(target);
+  if (existing) {
+    roots.delete(target);
+    existing.unmount();
+    releaseAll();
+  }
   const root = createRoot(target);
   root.render(
-    <GardenScene
-      route="site"
-      assetBase={remoteBase(config?.assetBase)}
-      ui
-      search={location.search}
-      onReady={noop}
-      onFail={fail}
-    />,
+    <StrictMode>
+      <App assetBase={remoteBase(config?.assetBase)} />
+    </StrictMode>,
   );
-  return () => {
+  roots.set(target, root);
+  return () => unmount(target);
+}
+
+export function unmount(target: HTMLElement): void {
+  const doc = target.ownerDocument ?? document;
+  const root = roots.get(target);
+  if (!root) return;
+  roots.delete(target);
+  queueMicrotask(() => {
     root.unmount();
     releaseAll();
-  };
+    doc.getElementById(STYLE_ID)?.remove();
+  });
 }
 
 export default mount;

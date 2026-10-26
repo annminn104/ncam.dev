@@ -9,6 +9,8 @@ export default defineRemote({
   baseEnv: 'GARDEN_HOME_BASE',
   exposes: {
     './mount': './src/mount.tsx',
+    './ssr': './src/ssr.tsx',
+    './hydrate': './src/hydrate.tsx',
   },
   plugins: [react()],
 });
