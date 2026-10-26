@@ -4,6 +4,7 @@ import {
   camera,
   collectErrors,
   frames,
+  gotoSite,
   project,
   settle,
   waitForScene,
@@ -101,7 +102,7 @@ async function zoomOnto(
   distance: number,
   at: readonly number[],
 ): Promise<void> {
-  await page.goto(`/?t=${time}`);
+  await gotoSite(page, `/?t=${time}`);
   await waitForScene(page);
   await zoomTo(page, distance, at);
   await settle(page);

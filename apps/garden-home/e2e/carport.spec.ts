@@ -5,6 +5,7 @@ import {
   camera,
   collectErrors,
   frames,
+  gotoSite,
   luminance,
   pick,
   type Region,
@@ -308,7 +309,7 @@ test('the carport, its two cars and the Akita by its dog house stand on the isla
   page,
 }) => {
   const errors = collectErrors(page);
-  await page.goto('/?t=12:00');
+  await gotoSite(page, '/?t=12:00');
   await waitForScene(page);
   for (const name of CARPORT) expect(await at(page, name), name).not.toBeNull();
   expect(errors).toEqual([]);
@@ -326,7 +327,7 @@ test('at night a click on the pickup switches its head and tail lights off, and 
 }) => {
   await watchThree(page);
   const errors = collectErrors(page);
-  await page.goto('/?t=21:00');
+  await gotoSite(page, '/?t=21:00');
   await waitForScene(page);
   await zoomTo(page, CLOSE, CARPORT_AT);
   await settle(page);
@@ -386,7 +387,7 @@ test("from a raised view the pointer finds each car through the carport's glass 
   page,
 }) => {
   const errors = collectErrors(page);
-  await page.goto('/?t=12:00');
+  await gotoSite(page, '/?t=12:00');
   await waitForScene(page);
   await zoomTo(page, RAISED.distance, CARPORT_AT);
   await turnRoundTarget(page, RAISED.drag.x, RAISED.drag.y);
@@ -432,7 +433,7 @@ test('a click on the Akita plays its happy clip once: its head turns and comes b
 }) => {
   await watchThree(page);
   const errors = collectErrors(page);
-  await page.goto('/?t=12:00');
+  await gotoSite(page, '/?t=12:00');
   await waitForScene(page);
   await zoomTo(page, DOG_VIEW.distance, KENNEL_AT);
   await turnRoundTarget(page, DOG_VIEW.drag.x, DOG_VIEW.drag.y);

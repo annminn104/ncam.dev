@@ -18,6 +18,15 @@ export async function waitForScene(page: Page): Promise<void> {
   );
 }
 
+/**
+ * The site route waits behind the poster on SwiftShader (src/autoplay.ts): open it and press
+ * Enter, as a visitor would. The wallpaper boots by itself; open it with page.goto.
+ */
+export async function gotoSite(page: Page, url: string): Promise<void> {
+  await page.goto(url);
+  await page.getByRole('button', { name: 'Enter the garden' }).click();
+}
+
 /** A part of a screenshot, in shares of its width and height from the top left. */
 export interface Region {
   x0: number;

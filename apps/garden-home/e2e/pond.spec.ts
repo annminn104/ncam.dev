@@ -1,5 +1,14 @@
 import { expect, type Page, test } from '@playwright/test';
-import { boxLuma, collectErrors, frames, luminance, settle, waitForScene, zoomTo } from './helpers';
+import {
+  boxLuma,
+  collectErrors,
+  frames,
+  gotoSite,
+  luminance,
+  settle,
+  waitForScene,
+  zoomTo,
+} from './helpers';
 
 // Zooming in and waiting for the camera to settle takes a while when SwiftShader shares the machine with other workers.
 test.describe.configure({ timeout: 180_000 });
@@ -69,7 +78,7 @@ test('the koi pond and the tea corner stand on the island in the first view of t
   page,
 }) => {
   const errors = collectErrors(page);
-  await page.goto('/?t=12:00');
+  await gotoSite(page, '/?t=12:00');
   await waitForScene(page);
   for (const name of POND) expect(await at(page, name), name).not.toBeNull();
   expect(errors).toEqual([]);
@@ -83,7 +92,7 @@ test('a click on the waterfall stops it, a second on the rockery behind starts i
   page,
 }) => {
   const errors = collectErrors(page);
-  await page.goto('/?t=12:00');
+  await gotoSite(page, '/?t=12:00');
   await waitForScene(page);
   await zoomTo(page, CLOSE);
   await settle(page);
@@ -116,7 +125,7 @@ test('hovering the pond offers to feed the koi; a click drops the food and toggl
   page,
 }) => {
   const errors = collectErrors(page);
-  await page.goto('/?t=12:00');
+  await gotoSite(page, '/?t=12:00');
   await waitForScene(page);
   await zoomTo(page, CLOSE);
   await settle(page);

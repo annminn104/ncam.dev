@@ -1,14 +1,26 @@
 import { expect, test } from '@playwright/test';
-import { luminance, waitForScene } from './helpers';
+import { gotoSite, luminance, waitForScene } from './helpers';
 
 test('missing scene.json falls back to the poster in production builds', async ({ page }) => {
   await page.route('**/assets/scene.json', (route) =>
     route.fulfill({ status: 404, body: 'missing' }),
   );
   await page.goto('/wallpaper');
-  await expect(page.locator('img.poster')).toBeVisible();
-  // The poster has the island on the right: crop a narrow screen around it, not around the middle.
-  await expect(page.locator('img.poster')).toHaveCSS('object-position', '68% 50%');
+  await expect(page.locator('.gh-poster img')).toBeVisible();
+  await expect(page.locator('.gh-poster img')).toHaveCSS('object-fit', 'cover');
+});
+
+test('on the site route a missing scene.json says so over the poster and offers a retry', async ({
+  page,
+}) => {
+  await page.route('**/assets/scene.json', (route) =>
+    route.fulfill({ status: 404, body: 'missing' }),
+  );
+  await gotoSite(page, '/');
+  const gate = page.getByRole('alert');
+  await expect(gate).toContainText("The 3D garden couldn't start. Please try again.");
+  await expect(gate.getByRole('button', { name: 'Try again' })).toBeVisible();
+  await expect(page.locator('.gh-poster img')).toBeVisible();
 });
 
 test('a broken module only removes its own slot', async ({ page }) => {
@@ -34,7 +46,7 @@ test('losing the WebGL context for good shows the poster', async ({ page }) => {
     const gl = document.querySelector('canvas')?.getContext('webgl2');
     gl?.getExtension('WEBGL_lose_context')?.loseContext();
   });
-  await expect(page.locator('img.poster')).toBeVisible({ timeout: 6_000 });
+  await expect(page.locator('.gh-poster img')).toBeVisible({ timeout: 6_000 });
 });
 
 test('debug overlay reports fps and visibility', async ({ page }) => {

@@ -5,6 +5,7 @@ import {
   type CameraState,
   collectErrors,
   frames,
+  gotoSite,
   meanDifference,
   pick,
   project,
@@ -32,7 +33,7 @@ async function drag(page: Page): Promise<void> {
 
 test('the site route zooms with the wheel and orbits with a drag', async ({ page }) => {
   const errors = collectErrors(page);
-  await page.goto('/?t=12:00');
+  await gotoSite(page, '/?t=12:00');
   await waitForScene(page);
   const canvas = page.locator('canvas');
   const before = await canvas.screenshot();
@@ -87,7 +88,7 @@ test('a wheel zoom keeps the point under the cursor under it, zooming in and out
 }) => {
   test.setTimeout(240_000); // a look down and four zooms, each settled: 2.1 min under load 20 with the carport's louvres
   const errors = collectErrors(page);
-  await page.goto('/?t=12:00');
+  await gotoSite(page, '/?t=12:00');
   await waitForScene(page);
   await lookDown(page);
   // the lawn west of the pond, off the middle of the view, and the house's roof
@@ -149,7 +150,7 @@ test('a trackpad pinch (the wheel with ctrl held) zooms towards the point under 
 }) => {
   test.setTimeout(240_000); // a look down and two gestures, each settled: past 150 s at a load average of 40
   const errors = collectErrors(page);
-  await page.goto('/?t=12:00');
+  await gotoSite(page, '/?t=12:00');
   await waitForScene(page);
   await lookDown(page);
   const { x, y, point } = await lawnSpot(page);
@@ -174,7 +175,7 @@ test('a trackpad pinch (the wheel with ctrl held) zooms towards the point under 
 test('a middle-button drag zooms towards the point under where it started', async ({ page }) => {
   test.setTimeout(240_000); // a look down and two gestures, each settled: past 150 s at a load average of 40
   const errors = collectErrors(page);
-  await page.goto('/?t=12:00');
+  await gotoSite(page, '/?t=12:00');
   await waitForScene(page);
   await lookDown(page);
   const { x, y, point } = await lawnSpot(page);
@@ -198,7 +199,7 @@ test('a middle-button drag zooms towards the point under where it started', asyn
 test('a touch pinch zooms towards the point between the fingers', async ({ page }) => {
   test.setTimeout(240_000); // a look down and two gestures, each settled: past 150 s at a load average of 40
   const errors = collectErrors(page);
-  await page.goto('/?t=12:00');
+  await gotoSite(page, '/?t=12:00');
   await waitForScene(page);
   await lookDown(page);
   const { x, y, point } = await lawnSpot(page);
@@ -239,7 +240,7 @@ test('a drag that starts on the pond turns round it; one that starts on the sky 
 }) => {
   test.setTimeout(240_000); // two drags and a look down, each settled: past 150 s at a load average of 40
   const errors = collectErrors(page);
-  await page.goto('/?t=12:00');
+  await gotoSite(page, '/?t=12:00');
   await waitForScene(page);
   // over the sky at the top of the first view: round the target, which stays where it is
   expect(await pick(page, 640, 30), 'sky at the top').toBeNull();
@@ -292,7 +293,7 @@ function insideIsland([x, , z]: readonly number[]): boolean {
 test('zooming towards the rim keeps the target on the island', async ({ page }) => {
   test.setTimeout(150_000);
   const errors = collectErrors(page);
-  await page.goto('/?t=12:00');
+  await gotoSite(page, '/?t=12:00');
   await waitForScene(page);
   // the island's left end on its rim, and past it into the air, until the zoom takes it off the screen's edge
   let steps = 0;
@@ -333,7 +334,7 @@ test('the camera never ends up inside the rock, under the grass or in the house'
   // machine (load average over 20) once the koi pond and the tea corner joined the scene.
   test.setTimeout(120_000);
   const errors = collectErrors(page);
-  await page.goto('/?t=12:00');
+  await gotoSite(page, '/?t=12:00');
   await waitForScene(page);
 
   // At the closest zoom onto the house (14.5 m) it is cut down to its ground floor (interaction spec §2): the camera may
@@ -391,7 +392,7 @@ test('the camera stays out of the house and the rock round a target by the rim o
     [13, 0, -13],
     [-4, 0, 1],
   ] as const) {
-    await page.goto('/?t=12:00');
+    await gotoSite(page, '/?t=12:00');
     await waitForScene(page);
     await zoomTo(page, 12, at);
     await settle(page);

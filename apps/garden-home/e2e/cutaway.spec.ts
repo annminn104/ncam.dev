@@ -4,6 +4,7 @@ import {
   type CameraState,
   collectErrors,
   frames,
+  gotoSite,
   meanDifference,
   settle,
   waitForScene,
@@ -86,7 +87,7 @@ test('zooming in cuts the roof, then the upper floor, away; zooming out brings t
   // With the carport and the dog's corner (part 4) it took 3.3-4.0 min under load 20-40, at its four minutes' end.
   test.setTimeout(300_000);
   const errors = collectErrors(page);
-  await page.goto('/?t=12:00');
+  await gotoSite(page, '/?t=12:00');
   await waitForScene(page);
   const canvas = page.locator('canvas');
   // Look down on the house from about 50 degrees, so no clearance ever holds the camera: every visit to a distance
@@ -121,7 +122,7 @@ test('zooming in cuts the roof, then the upper floor, away; zooming out brings t
 test('only the house clips, and only on the site route', async ({ page }) => {
   await watchThree(page);
   const errors = collectErrors(page);
-  await page.goto('/?t=12:00');
+  await gotoSite(page, '/?t=12:00');
   await waitForScene(page);
   const site = await clipping(page);
   expect(site.local).toBe(true);

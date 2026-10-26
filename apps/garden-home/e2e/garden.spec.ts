@@ -5,6 +5,7 @@ import {
   brightFraction,
   collectErrors,
   frames,
+  gotoSite,
   luminance,
   settle,
   waitForScene,
@@ -68,7 +69,7 @@ test('the wallpaper draws the garden by day and by night without console errors'
 
 test('every garden module stands on the island in the first view of the site', async ({ page }) => {
   const errors = collectErrors(page);
-  await page.goto('/?t=12:00');
+  await gotoSite(page, '/?t=12:00');
   await waitForScene(page);
   for (const name of GARDEN) expect(await at(page, name), name).not.toBeNull();
   expect(errors).toEqual([]);
@@ -84,7 +85,7 @@ test('at night the garden lights pool on the lawn round the walk, and switching 
   page,
 }) => {
   const errors = collectErrors(page);
-  await page.goto('/?t=21:00');
+  await gotoSite(page, '/?t=21:00');
   await waitForScene(page);
   await frames(page, 4);
   const canvas = page.locator('canvas');
@@ -109,7 +110,7 @@ test('hovering the grill names it; a click at noon lights its coals and a second
   // once the carport and the dog's corner (part 4) joined the scene, so its three minutes ran out twice in three runs.
   test.setTimeout(240_000);
   const errors = collectErrors(page);
-  await page.goto('/?t=12:00');
+  await gotoSite(page, '/?t=12:00');
   await waitForScene(page);
   // from a little higher and further round than the first view, the coals show over the barbecue terrace's kitchen
   await zoomTo(page, 42);

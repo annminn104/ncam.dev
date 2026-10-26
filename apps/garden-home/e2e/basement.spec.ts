@@ -5,6 +5,7 @@ import {
   camera,
   collectErrors,
   frames,
+  gotoSite,
   meanDifference,
   project,
   type Region,
@@ -212,7 +213,7 @@ test('the floor buttons hold a level of the cut whatever the distance, and Auto 
   page,
 }) => {
   const errors = collectErrors(page);
-  await page.goto('/?t=12:00');
+  await gotoSite(page, '/?t=12:00');
   await waitForScene(page);
   await expect(page.getByRole('group', { name: 'Floors' }).getByRole('button')).toHaveText([
     'Auto',
@@ -271,7 +272,7 @@ test('"Basement" takes the house away and shows the basement\'s rooms from above
 }) => {
   await watchThree(page);
   const errors = collectErrors(page);
-  await page.goto('/?t=12:00');
+  await gotoSite(page, '/?t=12:00');
   await waitForScene(page);
   await lookDown(page, 300); // straight down
   await zoomTo(page, 40);
@@ -322,7 +323,7 @@ test("a click on the karaoke's TV starts the party: its LEDs light and turn thro
   page,
 }) => {
   const errors = collectErrors(page);
-  await page.goto('/?t=21:00');
+  await gotoSite(page, '/?t=21:00');
   await waitForScene(page);
   await pickFloor(page, 'Basement');
   await lookDown(page, 300);
@@ -478,7 +479,7 @@ test('"Basement" from the site\'s first view eases the camera to the house, wher
 }) => {
   await watchThree(page);
   const errors = collectErrors(page);
-  await page.goto('/?t=12:00');
+  await gotoSite(page, '/?t=12:00');
   await waitForScene(page);
   const first = overHouse(await camera(page));
   expect(first.distance).toBeGreaterThan(100); // 124 m out, 13.8 degrees down: the basement would be a pit
@@ -536,7 +537,7 @@ test('"Basement" pressed again once the camera has left the house eases it back,
   page,
 }) => {
   const errors = collectErrors(page);
-  await page.goto('/?t=12:00');
+  await gotoSite(page, '/?t=12:00');
   await waitForScene(page);
   await pickFloor(page, 'Basement');
   expect(Math.abs(overHouse(await camera(page)).distance - 35)).toBeLessThan(0.5);
@@ -562,7 +563,7 @@ test('leaving a low "Basement" view for "Ground floor", "Upper floor" and "Auto"
 }) => {
   await watchThree(page);
   const errors = collectErrors(page);
-  await page.goto('/?t=12:00');
+  await gotoSite(page, '/?t=12:00');
   await waitForScene(page);
   await pickFloor(page, 'Basement');
   await zoomTo(page, 20);

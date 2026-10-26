@@ -5,6 +5,7 @@ import {
   camera,
   collectErrors,
   frames,
+  gotoSite,
   pick,
   settle,
   waitForScene,
@@ -66,7 +67,7 @@ const TV_SIDE = 220;
  * with `turn`, a drag along the sky first turns the view round its target (TV_SIDE: from the south west).
  */
 async function closeUp(page: Page, turn = 0): Promise<void> {
-  await page.goto('/?t=12:00');
+  await gotoSite(page, '/?t=12:00');
   await waitForScene(page);
   if (turn) {
     let sky: Point | null = null;
@@ -194,7 +195,7 @@ test('the label goes when the cut takes the item from under a pointer that rests
   page,
 }) => {
   const errors = collectErrors(page);
-  await page.goto('/?t=12:00');
+  await gotoSite(page, '/?t=12:00');
   await waitForScene(page);
   // the roof is off, the upper floor shows: 40 m out the camera is high enough over the tall house's upper cut (8.86 m)
   await zoomTo(page, 40);

@@ -1,5 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
-import { camera, collectErrors, frames, settle, waitForScene, zoomTo } from './helpers';
+import { camera, collectErrors, frames, gotoSite, settle, waitForScene, zoomTo } from './helpers';
 
 // The interior (villa v2 spec §12 "Curtains and accessories"): the house's curtains and accessories, a module of its own in the
 // house's slot, which the dollhouse cut cuts with the house. Each test waits on floor buttons, a minute or two on
@@ -101,7 +101,7 @@ test('the interior is cut with the house: its decor at the storey\'s cut, hidden
 }) => {
   await watchThree(page);
   const errors = collectErrors(page);
-  await page.goto('/?t=12:00');
+  await gotoSite(page, '/?t=12:00');
   await waitForScene(page);
   const whole = await look(page, [DECOR, DETAILS, LAMP_UPSTAIRS, HOUSE_WALLS]);
   expect(whole[DECOR].drawn).toBe(true);
@@ -144,7 +144,7 @@ test('near the house its small things show with the house whole ("Roof" at 20 m)
 }) => {
   await watchThree(page);
   const errors = collectErrors(page);
-  await page.goto('/?t=12:00');
+  await gotoSite(page, '/?t=12:00');
   await waitForScene(page);
   await pickFloor(page, 'Roof'); // from the site's first view the camera stays where it is, 110 m out
   expect((await camera(page)).near).toBe(false);
