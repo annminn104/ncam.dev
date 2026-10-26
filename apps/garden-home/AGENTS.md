@@ -264,12 +264,13 @@ on :9010 (`src/routes.ts`, `standaloneView`):
 - `/wallpaper`: no poster, no gate, no HUD, no input: the scene boots at once, the island on the
   right, 30 fps, the sky following the clock (`src/wallpaper.tsx`). It is for **Plash** (a macOS
   wallpaper app): build the app and leave its preview running (the `build` script, then the
-  `preview` script, which serves on :4173), or use the deployed URL
-  (`https://ncam-garden-home.vercel.app/wallpaper`), then Plash → Add Website →
-  `http://localhost:4173/wallpaper`. Add `?fps=20` (or `&fps=20`) to save battery,
-  `&align=left` to move the island, and `?bg=<file>` for a photo from `public/backgrounds/` (drop
-  it there, rebuild; only `example.jpg` is tracked). If the scene cannot start, the poster is shown.
-  The host never mounts the wallpaper.
+  `preview` script, which serves on :9010 like the dev server: `defineRemote` takes the port from
+  `GARDEN_HOME_PORT`), then Plash → Add Website → `http://localhost:9010/wallpaper`; or, once
+  it is deployed, point Plash at `https://ncam-garden-home.vercel.app/wallpaper`. (:4173 is only
+  the e2e's own preview, which `playwright.config.ts` starts with `--port 4173`.) Add `?fps=20`
+  (or `&fps=20`) to save battery, `&align=left` to move the island, and `?bg=<file>` for a photo
+  from `public/backgrounds/` (drop it there, rebuild; only `example.jpg` is tracked). If the scene
+  cannot start, the poster is shown. The host never mounts the wallpaper.
 - `/?capture=landscape|portrait`: the poster capture view (below).
 
 ## Poster
