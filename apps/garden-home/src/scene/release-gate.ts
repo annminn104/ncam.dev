@@ -26,7 +26,13 @@ export function createReleaseGate(
         waiting = null;
         // A scene mounted since the request shares the caches: it owns them now, and its own disposer releases them.
         defer(() => {
-          if (live.size === 0) release();
+          if (live.size > 0) return;
+          // Runs on its own tick, outside any caller's try/catch: a throw would surface uncaught.
+          try {
+            release();
+          } catch (error) {
+            console.warn('[garden-home] a release failed', error);
+          }
         });
       };
     },

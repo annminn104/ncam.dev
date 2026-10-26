@@ -63,6 +63,23 @@ describe('createReleaseGate', () => {
     expect(release).toHaveBeenCalledOnce();
   });
 
+  it('catches a release that throws in the deferred run and warns', () => {
+    const failure = new Error('transcoder gone');
+    const release = vi.fn(() => {
+      throw failure;
+    });
+    const deferred: Array<() => void> = [];
+    const gate = createReleaseGate(release, (run) => deferred.push(run));
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const unmount = gate.mount();
+    gate.request();
+    unmount();
+    expect(() => deferred.shift()?.()).not.toThrow();
+    expect(release).toHaveBeenCalledOnce();
+    expect(warn).toHaveBeenCalledWith('[garden-home] a release failed', failure);
+    warn.mockRestore();
+  });
+
   it('starts afresh after a release: the next request releases at once again', () => {
     const { gate, release, flush } = setup();
     const unmount = gate.mount();
