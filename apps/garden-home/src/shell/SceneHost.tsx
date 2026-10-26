@@ -40,7 +40,8 @@ export function SceneHost({ assetBase, live, onReady, onFail }: Props) {
   }, [onFail]);
 
   return (
-    <div className={live ? 'gh-scene is-live' : 'gh-scene'}>
+    // Invisible while booting, so deaf too: no drag, wheel or focus reaches the hidden scene or its floor buttons.
+    <div className={live ? 'gh-scene is-live' : 'gh-scene'} inert={!live}>
       {Scene && (
         <Scene
           route="site"

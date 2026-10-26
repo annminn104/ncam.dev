@@ -10,9 +10,17 @@ export function collectErrors(page: Page): string[] {
   return errors;
 }
 
+/**
+ * The scene's first frames are on screen and, on the site route, its layer is live: `__sceneReady` is set a
+ * moment before React commits `is-live`, and until then the layer is inert (src/shell/SceneHost.tsx), so an action
+ * right after would hit a deaf scene. The wallpaper's and the capture view's layers are always live, so the second
+ * condition changes nothing there.
+ */
 export async function waitForScene(page: Page): Promise<void> {
   await page.waitForFunction(
-    () => (window as { __sceneReady?: boolean }).__sceneReady === true,
+    () =>
+      (window as { __sceneReady?: boolean }).__sceneReady === true &&
+      document.querySelector('.gh-scene:not(.is-live)') === null,
     null,
     { timeout: 45_000 },
   );
