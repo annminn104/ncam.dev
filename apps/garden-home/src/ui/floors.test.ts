@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { useAppStore } from '../state/store';
 import { FLOOR_BUTTONS, isPressed } from './floors';
 
-describe('the floor buttons (interaction spec §2)', () => {
+describe('the floor buttons (AGENTS.md, Controls)', () => {
   it('offer auto, the whole house, the two storeys and the basement, in English, top to bottom', () => {
     expect(FLOOR_BUTTONS.map(({ mode, label }) => [mode, label])).toEqual([
       ['auto', 'Auto'],

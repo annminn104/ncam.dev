@@ -16,8 +16,8 @@ import { applyWind } from '../systems/wind';
 import { cutTop, isBuried, isDetail, isPunctualLight, isUncut, openingOf } from './extras';
 
 /**
- * How much of the house shows on the site route (interaction spec §2): all of it, up to the upper floor, the ground
- * floor, or nothing of it over the basement (villa v2 spec §12 "Basement"), which only the floor buttons show.
+ * How much of the house shows on the site route (AGENTS.md, Controls): all of it, up to the upper floor, the ground
+ * floor, or nothing of it over the basement (art/README.md, Basement), which only the floor buttons show.
  */
 export type CutLevel = 'none' | 'upper' | 'ground' | 'basement';
 /** What the floor buttons pick (ui/FloorSelector): the cut by the camera's distance ('auto'), or a level held. */
@@ -70,8 +70,8 @@ const DEPTH: Record<CutLevel, number> = { none: 0, upper: 1, ground: 2, basement
 
 /**
  * The modules the site route cuts away like a dollhouse, with the levels each of them is cut at: the house at every
- * level, and the interior with it (villa v2 spec §12 "Curtains and accessories": the house's curtains and accessories, a module
- * of its own in the house's place), the basement only at its own (under the ground slab the storeys' cuts leave it
+ * level, and the interior with it (the house's curtains and accessories, a module of its own in the house's
+ * place; art/README.md, Interior), the basement only at its own (under the ground slab the storeys' cuts leave it
  * whole).
  */
 export const CUTAWAY_MODULES: Readonly<Record<string, readonly CutLevel[]>> = {
@@ -133,7 +133,7 @@ export function cutLevel(distance: number, cameraY: number, previous: CutLevel):
 }
 
 /**
- * The level a floor button holds (interaction spec §2), whatever the camera's distance: `level`, but the whole house
+ * The level a floor button holds (AGENTS.md, Controls), whatever the camera's distance: `level`, but the whole house
  * while the camera is not more than CUT_CAMERA_CLEAR above its cut (CUT_CAMERA_HYSTERESIS less while that cut is on),
  * as cutLevel's camera-height rule. The basement's cut lies under the lawn, so a camera over the island always clears
  * it.

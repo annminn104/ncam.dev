@@ -22,7 +22,7 @@ export function resetHover(): void {
 const drag = createDragWatch();
 
 /**
- * Pointer handlers for a module's root on the site route (interaction spec §3.2). R3F raycasts the roots that carry
+ * Pointer handlers for a module's root on the site route (AGENTS.md, Controls). R3F raycasts the roots that carry
  * them, nearest hit first (the meshes already dropped what the user cannot reach, filterRaycasts); the nearest hit
  * decides: an item with interact extras is hovered (label, pointer cursor, outline) and a click toggles its group,
  * anything else (a wall, the lawn) clears the hover; a click on the koi pond's water feeds the koi instead, and one on

@@ -25,7 +25,7 @@ def run_generator(script, *args):
 
 @unittest.skipUnless(blender_available(), "Blender not found (set BLENDER_BIN)")
 class VillaModulesTest(unittest.TestCase):
-    """Glass villa spec §11, villa v2 spec §10: the committed villa modules, their exports and the generators."""
+    """The committed villa modules, their exports and the generators."""
 
     @classmethod
     def setUpClass(cls):
@@ -95,7 +95,7 @@ class VillaModulesTest(unittest.TestCase):
     def test_house_is_furnished_within_the_hero_budget(self):
         house = self.exports["house"]
         tris = glb_triangle_count(house)
-        self.assertGreaterEqual(tris, 30000)  # villa v2 spec §5.5 estimated ~32k for the 20 x 13 m glass villa
+        self.assertGreaterEqual(tris, 30000)  # the 20 x 13 m glass villa was estimated at ~32k
         self.assertLessEqual(tris, 48000)  # the tall house keeps 2k of the hero's 50k free
         names = {n["name"] for n in house["nodes"]}
         self.assertGreaterEqual(sum(1 for name in names if name.startswith("GLASS_")), 40)
@@ -166,7 +166,7 @@ class VillaModulesTest(unittest.TestCase):
                                              "radius": 0.8})
 
     def test_house_items_carry_their_click_group_and_label(self):
-        # interaction spec §3.1, §4: the website toggles a group when any of its nodes is clicked
+        # The website toggles a group when any of its nodes is clicked
         nodes = {n["name"]: n for n in self.exports["house"]["nodes"]}
         expected = {
             "L_living": ("light:living", "Living room lights"), "LT_down_living": ("light:living", "Living room lights"),
@@ -205,7 +205,7 @@ class VillaModulesTest(unittest.TestCase):
         self.assertEqual([group for group, flags in lights.items() if not any(flags)], [])
 
     def test_every_lit_room_has_a_wall_switch_that_carries_its_light_group(self):
-        # interaction spec §3.1: the lamps and downlights hang above the dollhouse cut, so each room also gets a switch
+        # The lamps and downlights hang above the dollhouse cut, so each room also gets a switch
         # at 1.15 m, the click target of its light:<room> group
         house = self.exports["house"]
         nodes = {n["name"]: n for n in house["nodes"]}

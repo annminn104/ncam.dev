@@ -33,7 +33,7 @@ function rotates(event: PointerEvent): boolean {
  * (the pinch's centre), a drag turns round the point under the press; both move the orbit target, which stays on the
  * island. The polar limit follows the distance and the target (maxPolarFor) so the camera stays out of the island and
  * the house. Each frame also picks the dollhouse cut for the camera by its distance to the house, or the level a floor
- * button holds (cutFor, interaction spec §2): the house and the basement apply it, and while it is on the camera may
+ * button holds (cutFor): the house and the basement apply it, and while it is on the camera may
  * come lower than the roof line; and whether the camera is near the house (nearFor), which the interior's small things
  * show for, the house whole or cut. A floor button also eases the camera to the house from afar, or up to the floor of the
  * level it picks (createCursorOrbit's choose). The wallpaper keeps the non-interactive CameraRig.

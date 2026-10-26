@@ -21,7 +21,7 @@ export interface WaterStyle {
 
 /**
  * The styles a WATER_* node's extras may name (`water`): the pool's by default, also the jacuzzi, the wall fountain and
- * the showers; the koi pond's (villa v2 part 3) darker, greener and calmer, so the koi drawn over it read orange from
+ * the showers; the koi pond's (art/README.md, Koi pond) darker, greener and calmer, so the koi drawn over it read orange from
  * the wallpaper camera (systems/koi.ts tints them with it), and its waterfall whiter.
  */
 export const WATER_STYLES: Readonly<Record<'pool' | 'pond', WaterStyle>> = {
@@ -52,7 +52,7 @@ export function waterStyle(name: unknown): WaterStyle {
 /**
  * Stylised water for WATER_* meshes: moving ripples on level water, streaks sliding down a vertical sheet (a wall
  * fountain, a running shower, the pond's waterfall), darker at night, in a WaterStyle. It clips at the material's
- * clipping planes like the built-in materials (the house's dollhouse cutaway, interaction spec §2).
+ * clipping planes like the built-in materials (the house's dollhouse cutaway).
  */
 export function createWaterMaterial(style: WaterStyle = WATER_STYLES.pool): ShaderMaterial {
   return new ShaderMaterial({

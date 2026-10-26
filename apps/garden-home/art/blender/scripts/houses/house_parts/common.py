@@ -1,7 +1,7 @@
-"""Identity, heights and plan lines shared by every part of the villa v2 house (villa v2 spec §5). Pure Python.
+"""Identity, heights and plan lines shared by every part of the villa v2 house. Pure Python.
 
 Module space in metres with Blender axes: X right, Y back, Z up. The front faces -Y and the origin is the centre of
-the 23 x 15 m footprint at ground level (the tall house, villa v2 spec §12: both storeys 3 m wider to the left and 2 m
+the 23 x 15 m footprint at ground level (the tall house: both storeys 3 m wider to the left and 2 m
 deeper at the back than the glass villa's 20 x 13 m, which keeps its front line, its east wall and its door in site space).
 """
 from archkit.catalog import FURNITURE, WALL_MOUNTED
@@ -10,7 +10,7 @@ MODULE_ID = "house"
 ROLE = "hero"
 FOOTPRINT = (23.0, 15.0)
 
-# Heights. The tall house (villa v2 spec §12) keeps the glass villa's plinth and raises every storey over it by
+# Heights. The tall house (art/README.md, Glass villa) keeps the glass villa's plinth and raises every storey over it by
 # HEIGHT_SCALE: each height is PLINTH + (its glass villa value - PLINTH) * 1.3, rounded to the centimetre (ground
 # ceiling 3.85, upper floor 4.15, upper ceiling 7.25, roof 7.55, door head 2.85), so the storeys are 4.81 m floor to
 # floor and the glass walls, their mullions and the door grow with them. The numbers stay literal: cutaway.test.ts
@@ -22,7 +22,7 @@ UPPER_FLOOR = 5.26
 UPPER_CEIL = 9.29
 ROOF_TOP = 9.68
 DOOR_TOP = 3.57
-# The basement (villa v2 spec §12 "Basement") lies under the ground slab: the plinth grows down into a slab GROUND_SLAB
+# The basement (art/README.md, Basement) lies under the ground slab: the plinth grows down into a slab GROUND_SLAB
 # thick, whose underside is the basement's ceiling (BASEMENT_CEIL = PLINTH - GROUND_SLAB), 3.2 m over the finish of its
 # floor, which lies 2 cm over BASEMENT_FLOOR as a storey's over its slab. Literal, like the heights above: cutaway.test.ts
 # reads them.

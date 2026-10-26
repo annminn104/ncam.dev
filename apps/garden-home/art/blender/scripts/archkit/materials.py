@@ -1,5 +1,5 @@
-"""Material palette (glass villa spec §3: white + grey stone + wood, black frames, LED; GLASS_* per spec §6;
-villa v2 spec §6: FROSTED_bath, grape, bathroom tile and ceramic, brushed metal, cushion, lit screen, PC RGB, art;
+"""Material palette (white + grey stone + wood, black frames, LED; GLASS_*;
+FROSTED_bath, grape, bathroom tile and ceramic, brushed metal, cushion, lit screen, PC RGB, art;
 resort deco: travertine, teak, rattan, linen, terracotta and a dark tropical leaf; garden: four flower colours, cabbage,
 gravel, pebble, the glowing charcoal of the grill and GLOW_pool, the light the garden lamps cast on the lawn; the koi
 pond: granite, rock, moss, bark, glaze, lotus, the koi colours, the pond's bank and floor, foam; the carport: two car
@@ -29,7 +29,7 @@ def principled(name, color, roughness=0.6, metallic=0.0, alpha=1.0, emission=Non
     bsdf.inputs["Base Color"].default_value = (*color, 1.0)
     bsdf.inputs["Roughness"].default_value = roughness
     bsdf.inputs["Metallic"].default_value = metallic
-    bsdf.inputs["Alpha"].default_value = alpha  # alpha < 1 exports as alphaMode BLEND (spec §13 V1, verified)
+    bsdf.inputs["Alpha"].default_value = alpha  # alpha < 1 exports as alphaMode BLEND
     if emission is not None:
         bsdf.inputs["Emission Color"].default_value = (*emission, 1.0)
         bsdf.inputs["Emission Strength"].default_value = strength
@@ -89,7 +89,7 @@ def palette():
         "linen": principled("M_linen", (0.93, 0.9, 0.84), roughness=0.95),
         "terracotta": principled("M_terracotta", (0.72, 0.38, 0.24), roughness=0.9),
         "leaf_dark": principled("M_leaf_dark", (0.1, 0.3, 0.12), roughness=0.75),
-        # garden (villa v2 part 2): bougainvillea pink, marigold yellow, hibiscus red (the ripe tomatoes too) and
+        # garden (art/README.md, Garden): bougainvillea pink, marigold yellow, hibiscus red (the ripe tomatoes too) and
         # frangipani white, a pale cabbage green, warm grey path gravel (lighter read as white concrete at noon), grey
         # edge stones, and the charcoal of the grill, which glows like a lamp (night_light: by day it is cold unless a
         # click lights it)
@@ -104,7 +104,7 @@ def palette():
         # the pool of warm light a garden lamp casts on the ground (MeshBuilder.disc): black, so it only ever adds
         # light; the website draws GLOW_* additively, faded out from the centre and by the night (contract glow-*)
         "glow_pool": principled("GLOW_pool", (0.0, 0.0, 0.0), roughness=1.0, emission=(1.0, 0.6, 0.28), strength=2.2),
-        # koi pond and tea corner (villa v2 part 3), all flat colours: dark grey granite (the tea table, stools,
+        # koi pond and tea corner (art/README.md, Koi pond), all flat colours: dark grey granite (the tea table, stools,
         # pedestals and lantern), the grey limestone of the rockery and the pond's stones with paler facets, moss,
         # bonsai bark, a celadon pot glaze, lotus pink and a fresh pad green, the four koi colours (bright enough to
         # read through the water from the wallpaper camera), the muddy bank and the dark floor of the pond, white foam
@@ -123,7 +123,7 @@ def palette():
         "pond_bank": principled("M_pond_bank", (0.13, 0.12, 0.07), roughness=1.0),
         "pond_floor": principled("M_pond_floor", (0.03, 0.045, 0.035), roughness=1.0),
         "foam": principled("M_foam", (0.94, 0.97, 1.0), roughness=1.0),
-        # carport (villa v2 part 4): a deep forest green for the pickup and a bright red for the supercar, glossy with
+        # carport (art/README.md, Carport and dog): a deep forest green for the pickup and a bright red for the supercar, glossy with
         # a metallic flake (the green's light, so it does not mirror the dark night sky and still reads green under
         # the carport's roof at night); dark tinted glass (a GLASS_ pane of the contract), chrome, black rubber and
         # trim, tan leather; head and tail lights that glow like a lamp (the carport makes their object a night light,
@@ -157,7 +157,7 @@ def palette():
         # the split air conditioner's louvre flap, its status light: white like the unit, a soft cool glow while it runs
         "ac_light": principled("M_ac_light", (0.9, 0.9, 0.88), roughness=0.55, emission=(0.45, 0.78, 1.0),
                                strength=0.8),
-        # the basement (villa v2 spec §12 "Basement"), opaque flat colours: the karaoke sofa's plum velvet, the dark
+        # the basement (art/README.md, Basement), opaque flat colours: the karaoke sofa's plum velvet, the dark
         # green glass of the bottle ends in the wine racks and the red wine of others, the karaoke's dark carpet, the
         # concrete edge of the ground slab round the basement's pit (it shows when the website cuts the house down to
         # it); and the karaoke's party LEDs with the light they cast on its carpet, a magenta the website cycles through
@@ -187,7 +187,7 @@ def palette():
         # the frameless railing round the light well's top: fainter than the house's panes (half the alpha, contract
         # glass-*), so its edge-on panes do not frame the well in the sky's reflection
         "glass_rail": principled("GLASS_rail", (0.82, 0.9, 0.94), roughness=0.05, alpha=0.1),
-        # the decor pass (villa v2 spec §12 "Curtains and accessories"): the curtains' ivory voile, paler than the linen drape in
+        # the decor pass (art/README.md, Interior): the curtains' ivory voile, paler than the linen drape in
         # front of it and see-through, the interior's one blended primitive (opaque, it showed from outside at night as
         # moonlit navy panels in front of the warm rooms, where a real sheer lets the room's light through: the website
         # lights it from both sides, prepareModule; gathered at the ends of the glass, it never hides the view); and the

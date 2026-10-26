@@ -1,4 +1,4 @@
-"""Basement kit (villa v2 spec §12 "Basement"): the wine cellar's racks, barrels and tasting table, the karaoke lounge's
+"""Basement kit (art/README.md, Basement): the wine cellar's racks, barrels and tasting table, the karaoke lounge's
 U-shaped velvet sofa, TV, speakers, microphones and disco ball, the spa's sauna cabin (built whole or as its cabin and
 the stones of its stove, which glow), massage beds, small stone-edged hot tub, shelf of oils and candles, the gym's
 treadmill, squat rack, dumbbell rack, mirror and yoga mats, the light well's palm and uplights, and the colours they are

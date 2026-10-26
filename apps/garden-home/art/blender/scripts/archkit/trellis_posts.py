@@ -1,4 +1,4 @@
-"""Where the grape trellis stands on its posts (villa v2 spec §5.2). Pure Python: vines.py builds the posts from this
+"""Where the grape trellis stands on its posts. Pure Python: vines.py builds the posts from this
 list and the house layout (system Python) puts a planter at the foot of every one, so both read the same function.
 """
 

@@ -1,4 +1,4 @@
-"""Ground floor of the villa v2 house (level 0, villa v2 spec §5.1, §5.4; the tall house, §12): rooms, furniture, lights
+"""Ground floor of the villa v2 house (level 0; the tall house): rooms, furniture, lights
 and, since the resort deco, the reflecting pool along the terrace and the wall fountain beside the door. The living room
 is double height over its front part (common.VOID): the spiral stair climbs from it to the gallery and the crystal
 chandelier hangs in the void from the upper floor's ceiling. Pure Python.
@@ -24,7 +24,7 @@ ROOMS = [
     # stone front's outer face (FACADE), and its floor is the plinth top, 2 cm under the interior one (LEVEL_Z[0])
     {"name": "terrace", "level": 0, "min": (LEFT, TERRACE), "max": (RIGHT, FACADE), "floor": PLINTH},
 ]
-# What the website calls each room on hover (interaction spec §3.1): "Living room lights", "Living room TV".
+# What the website calls each room on hover (AGENTS.md, Art pipeline): "Living room lights", "Living room TV".
 ROOM_LABELS = {"living": "Living room", "dining": "Dining room", "kitchen": "Kitchen", "hall": "Hall", "foyer": "Entrance hall",
                "wc": "Guest WC", "laundry": "Laundry room", "terrace": "Front porch"}
 

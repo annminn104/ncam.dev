@@ -60,7 +60,7 @@ def main():
         export_all_vertex_colors=False,
         export_cameras=False,
         export_lights=True,
-        export_import_convert_lighting_mode="RAW",  # light energy reaches three.js unchanged (villa spec §13 V2)
+        export_import_convert_lighting_mode="RAW",  # light energy reaches three.js unchanged
         # Blender 5.2 labels RAW "Raw (Deprecated)"; if a later Blender drops it, rescale the light energies in
         # houses/house_layout.py POINT_LIGHTS.
         export_yup=True,

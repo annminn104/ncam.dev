@@ -1,5 +1,5 @@
 /**
- * What a click does to a group of house and garden items (interaction spec §3.2). Every group starts on 'auto', today's
+ * What a click does to a group of house and garden items (AGENTS.md, Controls). Every group starts on 'auto', today's
  * behaviour: lights, screens and the grill's coals follow the night, showers stay off, the door shut, the bedrooms' air
  * conditioners off, the jacuzzi (and the basement spa's hot tub, jacuzzi:spa), the fountain and the waterfall run, the
  * basement's karaoke party mode and its sauna stay off.

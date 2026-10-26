@@ -1,4 +1,4 @@
-"""Generate blender/modules/flower_beds.blend from garden/beds_layout.py (villa v2 part 2): the flower beds, pots,
+"""Generate blender/modules/flower_beds.blend from garden/beds_layout.py (art/README.md, Garden): the flower beds, pots,
 clipped shrubs and palms of the garden, merged into one swaying object (Flower_beds) that casts no shadow.
 
 Usage:

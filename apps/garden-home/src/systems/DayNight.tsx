@@ -48,7 +48,7 @@ const NIGHT_HEMI_FLOOR = 0.2;
 const DAY_GROUND = new Color('#3a2f25');
 const MOON_GROUND = new Color('#1a2038');
 
-/** Sun, hemisphere light, sky, fog and night factor from the clock (spec §9 TimeOfDay, §10 shadows). */
+/** Sun, hemisphere light, sky, fog and night factor from the clock. */
 export function TimeOfDay({ sky, override, shadowMapSize, shadowAutoUpdate, fog }: Props) {
   const sun = useRef<DirectionalLight>(null!);
   const hemi = useRef<HemisphereLight>(null!);

@@ -30,7 +30,7 @@ const smooth = (t: number) => t * t * (3 - 2 * t);
  */
 export type ScenePick = (x: number, y: number, origin?: Vector3) => Vector3 | null;
 
-/** What the site camera adds to OrbitControls so zoom and rotation follow the cursor (interaction spec §6). */
+/** What the site camera adds to OrbitControls so zoom and rotation follow the cursor (AGENTS.md, Controls). */
 export interface CursorOrbit {
   /**
    * A press at client (x, y): ends the pivot and a floor button's ease; a press that turns the camera (`rotates`) pivots

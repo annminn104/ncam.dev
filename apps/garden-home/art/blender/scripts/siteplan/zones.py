@@ -1,4 +1,4 @@
-"""Yard zones, module slots and placeholder props as plain data (villa v2 spec §4). Pure Python.
+"""Yard zones, module slots and placeholder props as plain data (art/README.md, Glass villa). Pure Python.
 
 Blender coordinates in metres: X to the right, Y towards the back, module fronts face -Y. The yard is centred on the
 origin; a zone is ((x0, y0), (x1, y1)). The yard module itself needs no slot: it sits at the origin.
@@ -35,7 +35,7 @@ ZONES = {
     "path_gate": ((-1.0, -20.0), (1.0, -3.0)),  # stone path from the main gate (part 2)
     "path_turn": ((-1.0, -3.0), (7.0, -1.0)),  # ... turning towards the door
     "path_door": ((5.0, -1.0), (7.0, 2.0)),  # ... up to the front porch
-    # the basement's light well (villa v2 spec §12 "Basement"), sunk into the lawn in front of the living room's tall
+    # the basement's light well (art/README.md, Basement), sunk into the lawn in front of the living room's tall
     # glass, between the pool and the walk; its back edge is the house zone's front, the basement's front wall
     "lightwell": ((-7.5, -2.0), (-1.5, 2.0)),
 }
@@ -44,9 +44,9 @@ ZONES = {
 # turning (the module's own, so the house, the pool, the zoned garden modules, the pond's and the carport's read theirs
 # from their layouts); the whole turned footprint must stay inside the slot's zone. The koi pond and the tea corner (part
 # 3), the carport and the dog's corner (part 4) fill their zones unturned: their layout checks place them in site space
-# so, and the yard's lawn has the koi pond's hole. The basement (villa v2 spec §12) shares the house's slot: ZONE_SHARED
+# so, and the yard's lawn has the koi pond's hole. The basement (art/README.md, Basement) shares the house's slot: ZONE_SHARED
 # lets it, its layout puts its light well in the `lightwell` zone, and the lawn has the hole of its pit. So does the
-# interior (§12 "Curtains and accessories"), the house's curtains and accessories in a module of their own.
+# interior (art/README.md, Interior), the house's curtains and accessories in a module of their own.
 # The garden's fence, paths and flower beds spread over the whole island (zone ISLAND_WIDE): they stand at its centre
 # unturned with its size as footprint, in site space, and garden/layout_check.py keeps their content on the island and
 # out of the zones they do not use.
@@ -82,7 +82,7 @@ ZONE_SHARED = {"basement_01": "house_01", "interior_01": "house_01"}
 TREES = ((-21.0, 17.0), (-11.0, 19.5), (11.0, 19.5), (21.5, 17.0), (-22.0, -7.5), (22.0, 6.0))
 LAMP = (-4.5, -3.0)  # on the lawn in front of the light well, 10.6 m left of the front door (x = 6.1), off the path
 
-# Cameras, tuned on wallpaper screenshots at 1280 x 800 and 1512 x 982 (spec §4 and risk R5). `pos` and `target` in
+# Cameras, tuned on wallpaper screenshots at 1280 x 800 and 1512 x 982. `pos` and `target` in
 # metres, `lens` is the focal length in mm (sensor_fit VERTICAL). The idle camera hangs far out at the front-right, 15.5
 # degrees above the target, low enough that the rock underside shows below the rim: with the wallpaper framed on the
 # right (?align=right puts the target at 68 % of the width) the whole floating island fills about 60 % of the width on

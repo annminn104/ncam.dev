@@ -1,4 +1,4 @@
-"""The barbecue terrace (villa v2 part 2) as plain data: a module of its own in the `bbq` zone. Pure Python.
+"""The barbecue terrace (art/README.md, Garden) as plain data: a module of its own in the `bbq` zone. Pure Python.
 
 Module space: the origin is the centre of the 8 x 6 m footprint (the zone), front to -Y. A travertine terrace; on its
 west half a teak pergola (archkit.structure.pergola) over a table for six, with string lights zig-zagging under the

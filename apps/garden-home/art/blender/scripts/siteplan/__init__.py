@@ -1,4 +1,4 @@
-"""Site plan of the garden-home yard (villa v2 spec §4): zones.py is data, zones_check.py its sanity checks. Both are
+"""Site plan of the garden-home yard (art/README.md, Glass villa): zones.py is data, zones_check.py its sanity checks. Both are
 pure Python.
 
 The package is not called `site` as the spec's file list has it: the standard library's site module is always

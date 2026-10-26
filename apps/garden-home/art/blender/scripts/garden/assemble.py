@@ -37,7 +37,7 @@ def pieces(col, layout, mats, builders=None):
 
 
 def tag(col, layout, tags=interact.tags):
-    """interaction spec §3.1: what a click toggles, as custom properties the glTF export carries as node extras; `tags`
+    """What a click toggles (AGENTS.md, Art pipeline), as custom properties the glTF export carries as node extras; `tags`
     reads them off the layout (the pond has its own, pond/interact.py)."""
     for name, props in tags(layout).items():
         ob = col.objects[name]

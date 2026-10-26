@@ -59,7 +59,7 @@ class ContractTest(unittest.TestCase):
 
     def test_tris_budget_depends_on_role(self):
         self.assertEqual(rules(contract.validate(facts(tris=15001))), ["tris-over-budget"])
-        # the hero (the house) has 50k since the tall house (villa v2 spec §12): 23 x 15 m on two 4.8 m storeys
+        # the hero (the house) has 50k since the tall house (art/README.md, Glass villa): 23 x 15 m on two 4.8 m storeys
         self.assertEqual(contract.validate(facts(collection=HERO, tris=50000)), [])
         self.assertEqual(rules(contract.validate(facts(collection=HERO, tris=50001))), ["tris-over-budget"])
         self.assertEqual(contract.BUDGETS["hero"], {"tris": 50000, "texture": 2048})
@@ -117,7 +117,7 @@ def light(name, kind="POINT", night=True):
 
 
 class VillaContractTest(unittest.TestCase):
-    """Glass villa spec §6: glass materials, night lights and texture count."""
+    """Glass materials, night lights and texture count."""
 
     def test_glass_alpha_must_stay_see_through_but_visible(self):
         for alpha in (0.05, 0.6, 1.0):
@@ -162,7 +162,7 @@ class VillaContractTest(unittest.TestCase):
 
 
 class FrostedContractTest(unittest.TestCase):
-    """Villa v2 spec §6: FROSTED_* materials stay translucent (alpha 0.4-0.85) and diffuse (roughness 0.3-0.8)."""
+    """FROSTED_* materials stay translucent (alpha 0.4-0.85) and diffuse (roughness 0.3-0.8)."""
 
     def test_valid_frosted_material_is_accepted(self):
         self.assertEqual(contract.validate(facts()), [])

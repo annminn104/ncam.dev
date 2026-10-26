@@ -1,4 +1,4 @@
-"""Generate blender/modules/koi_pond.blend from pond/koi_layout.py (villa v2 part 3): the pond's bank and floor
+"""Generate blender/modules/koi_pond.blend from pond/koi_layout.py (art/README.md, Koi pond): the pond's bank and floor
 (Pond_bank) and the stones along its edge (Pond_stones), both casting no shadow; the rockery with its moss and swaying
 shrubs (Rockery); the water (WATER_surface), the falling sheet of the waterfall (WATER_waterfall_sheet) and its foam
 (Waterfall_foam), which a click on any of the three toggles (the group waterfall), a click on the water feeding the koi

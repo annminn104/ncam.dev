@@ -12,8 +12,8 @@ const BARE_SIDE_EFFECT = /^\s*import\s+['"]([^'"]+)['"]/gm;
 const CHUNK_DIRS = ['scene', 'camera', 'systems', 'interact', 'state', 'ui'];
 const CHUNK_BARE = /^(three|three\/.*|@react-three\/.*|zustand(\/.*)?|zod(\/.*)?)$/;
 
-function resolve(from: string, spec: string): string | null {
-  const base = path.resolve(path.dirname(from), spec.replace(/\?.*$/, ''));
+function resolve(from: string, specifier: string): string | null {
+  const base = path.resolve(path.dirname(from), specifier.replace(/\?.*$/, ''));
   for (const ext of ['', '.ts', '.tsx', '/index.ts', '/index.tsx']) {
     const file = base + ext;
     if (existsSync(file) && /\.(tsx?|css)$/.test(file)) return file;
@@ -29,11 +29,11 @@ function graph(entry: string): { files: Set<string>; bare: Set<string> } {
     files.add(file);
     const text = readFileSync(file, 'utf8');
     for (const re of [STATIC, BARE_SIDE_EFFECT]) {
-      for (const [, spec] of text.matchAll(re)) {
-        if (spec.startsWith('.')) {
-          const next = resolve(file, spec);
+      for (const [, specifier] of text.matchAll(re)) {
+        if (specifier.startsWith('.')) {
+          const next = resolve(file, specifier);
           if (next) visit(next);
-        } else bare.add(spec);
+        } else bare.add(specifier);
       }
     }
   };
@@ -47,7 +47,7 @@ const inChunk = (file: string) =>
 describe('SSR import graph', () => {
   it('never statically reaches three, R3F, zustand, zod or the scene chunk', () => {
     const { files, bare } = graph(path.join(SRC, 'ssr.tsx'));
-    expect([...bare].filter((spec) => CHUNK_BARE.test(spec))).toEqual([]);
+    expect([...bare].filter((specifier) => CHUNK_BARE.test(specifier))).toEqual([]);
     expect([...files].filter(inChunk)).toEqual([]);
   });
 
@@ -85,7 +85,7 @@ describe('SSR import graph', () => {
     for (const entry of ['mount.tsx', 'hydrate.tsx']) {
       const { files, bare } = graph(path.join(SRC, entry));
       expect(
-        [...bare].filter((spec) => CHUNK_BARE.test(spec)),
+        [...bare].filter((specifier) => CHUNK_BARE.test(specifier)),
         entry,
       ).toEqual([]);
       expect([...files].filter(inChunk), entry).toEqual([]);

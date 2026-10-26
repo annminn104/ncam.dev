@@ -8,8 +8,8 @@ export interface FloorButton {
 }
 
 /**
- * The floor buttons, top to bottom (interaction spec §2): the cut by the camera's distance, as before; the whole house
- * with its roof; the upper floor; the ground floor; the basement (villa v2 spec §12 "Basement"), which only a button
+ * The floor buttons, top to bottom (AGENTS.md, Controls): the cut by the camera's distance, as before; the whole house
+ * with its roof; the upper floor; the ground floor; the basement (art/README.md, Basement), which only a button
  * shows.
  */
 export const FLOOR_BUTTONS: readonly FloorButton[] = [

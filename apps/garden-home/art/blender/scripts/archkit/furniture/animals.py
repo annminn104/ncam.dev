@@ -1,4 +1,4 @@
-"""The dog's corner (villa v2 part 4): an Akita sitting up, its dog house, its mat, a water and a food bowl and a ball.
+"""The dog's corner (art/README.md, Carport and dog): an Akita sitting up, its dog house, its mat, a water and a food bowl and a ball.
 
 The Akita is low-poly like the koi: faceted lumps (MeshBuilder.ellipsoid) and short limbs (stems) in a red-fawn coat,
 the cream "urajiro" of the breed on its muzzle, cheeks, chest and paws (palette materials, so the glTF needs no vertex

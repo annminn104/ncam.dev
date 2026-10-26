@@ -13,7 +13,7 @@ export interface RuntimeConfig {
 }
 
 /**
- * Per-route render settings (spec §10). URL params override quality, fps and align. The host always
+ * Per-route render settings. URL params override quality, fps and align. The host always
  * renders the site route; the standalone page picks the route from its path (src/routes.ts).
  */
 export function resolveRuntime(

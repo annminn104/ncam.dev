@@ -1,4 +1,4 @@
-"""The flower beds, pots, clipped shrubs and palms of the garden (villa v2 part 2) as plain data. Pure Python.
+"""The flower beds, pots, clipped shrubs and palms of the garden (art/README.md, Garden) as plain data. Pure Python.
 
 An island-wide module like the fence (module space is site space), checked with the fence and the paths so that nothing
 stands on them (layout_check.check_island). The travertine-edged flower beds stand end to end in borders, which read as

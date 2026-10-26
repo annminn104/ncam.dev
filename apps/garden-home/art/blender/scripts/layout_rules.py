@@ -1,4 +1,4 @@
-"""Layout export rules that need no bpy (spec §7 camera stops, §8.2 sky), so system Python can test them.
+"""Layout export rules that need no bpy (camera stops, sky), so system Python can test them.
 
 Both functions raise LayoutError with a message fit to print as-is; export_layout.py turns it into sys.exit.
 """

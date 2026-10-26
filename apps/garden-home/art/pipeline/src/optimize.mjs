@@ -8,7 +8,7 @@ import sharp from 'sharp';
 export const TIERS = ['high', 'medium'];
 export const TEXTURE_MAX = { hero: 2048, prop: 1024 };
 
-/** Max texture edge for a module role and quality tier (spec §6.2, §8.1). */
+/** Max texture edge for a module role and quality tier. */
 export function textureSizeFor(role, tier) {
   const max = TEXTURE_MAX[role];
   if (!max) throw new Error(`unknown role: ${role}`);

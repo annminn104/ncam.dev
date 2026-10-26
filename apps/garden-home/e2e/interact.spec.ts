@@ -63,7 +63,7 @@ const TV_SIDE = 220;
 
 /**
  * Close enough for the ground-floor cut (24 m from the house focus: it starts under 25 m), the living room and the front
- * door seen from above, at noon (interaction spec §2, §3). The zoom goes towards the house's middle, under the cursor;
+ * door seen from above, at noon (AGENTS.md, Controls). The zoom goes towards the house's middle, under the cursor;
  * with `turn`, a drag along the sky first turns the view round its target (TV_SIDE: from the south west).
  */
 async function closeUp(page: Page, turn = 0): Promise<void> {

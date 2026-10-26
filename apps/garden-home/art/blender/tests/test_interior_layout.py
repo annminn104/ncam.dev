@@ -1,4 +1,4 @@
-"""The decor pass's plan (villa v2 spec §12 "Curtains and accessories"): curtains along the tall house's glazing, as tall as the
+"""The decor pass's plan (art/README.md, Interior): curtains along the tall house's glazing, as tall as the
 rooms they hang in, and the accessories that furnish its rooms, in a module of their own standing in the house's slot.
 Pure Python."""
 import copy

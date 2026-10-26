@@ -1,4 +1,4 @@
-"""Villa v2 spec §12 "Basement": the committed basement module, its export and its generator (basement/
+"""The committed basement module, its export and its generator (basement/
 build_basement.py)."""
 import math
 import os
@@ -21,7 +21,7 @@ MODULES = os.path.join(BLENDER_DIR, "modules")
 GENERATOR = os.path.join(SCRIPTS_DIR, "basement", "build_basement.py")
 TRIS_AIM = (7000, 15000)  # a prop: 15k triangles
 # What the wallpaper draws of the basement by day: its objects but the buried ones, one draw call per primitive, the
-# light pools (GLOW_*) hidden by day. Its villa v2 budget: at most 40 more draw calls at noon (villa v2 spec §12); on the
+# light pools (GLOW_*) hidden by day. Its budget: at most 40 more draw calls at noon (art/README.md, Basement); on the
 # site route each costs about a tenth of a millisecond on SwiftShader, where the budget is 2 ms. Two of them shade the
 # light well's walls darker towards its floor (stone_shade, stone_deep), so it reads as sunk into the lawn.
 WALLPAPER_DRAWS = 28

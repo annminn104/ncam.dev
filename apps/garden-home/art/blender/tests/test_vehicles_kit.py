@@ -1,4 +1,4 @@
-"""Vehicles kit (villa v2 part 4): the two cars of the carport, a double-cab pickup and a convertible supercar, generic
+"""Vehicles kit (art/README.md, Carport and dog): the two cars of the carport, a double-cab pickup and a convertible supercar, generic
 designs with no badges, and the palette they are built from. Each car builds its body or its lights alone (part=), so
 the carport merges the lights into a night_light object of their own that a click switches."""
 import sys

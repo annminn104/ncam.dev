@@ -1,4 +1,4 @@
-"""Interior partition walls with door openings (villa v2 spec §3, §8).
+"""Interior partition walls with door openings.
 
 One partition is one object. A door opening is left clear from the floor up to the door height and trimmed with a
 frame outside it, so the clear opening is exactly width x door_height. The wall stops at the frame and a header

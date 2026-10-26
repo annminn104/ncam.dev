@@ -1,4 +1,4 @@
-"""Sanity checks on a layout module before any geometry is built (glass villa spec §10, villa v2 spec §10). Pure Python.
+"""Sanity checks on a layout module before any geometry is built. Pure Python.
 
 check(layout) returns human-readable problems; an empty list means the layout is buildable. A layout module provides
 FOOTPRINT, ROOMS and FURNITURE; POINT_LIGHTS, DOWNLIGHTS, PLANTERS, PARTITIONS, PASSAGES and FROSTED are optional. A
@@ -8,13 +8,13 @@ for a doorway.
 
 A furniture entry is (kind, name, room, (x, y), rot) with an optional sixth element: builder options such as
 {"variant": 3}, which the checks ignore except for "wind", which only the plants in catalog.WIND_SPANS take, and "on",
-the name of the piece it stands on (the decor pass, villa v2 spec §12 "Curtains and accessories"): it must lie inside one of that
+the name of the piece it stands on (the decor pass): it must lie inside one of that
 host's catalog.SURFACES tops (top_under), and so stands clear of the floor's rules. A room with
 "interior": True needs 2–4 downlights from the DOWNLIGHTS groups whose "level" matches its own. The resort groups are
 optional too: STRING_LIGHTS anchors, REFLECTING_POOLS and WALL_FOUNTAINS must stay inside the footprint, and nothing may
 stand in a pool or in a fountain's wall and basin (floor pieces on their "level", the ground for a fountain unless it
 has one); a stair (STAIR_KINDS) climbs into the level above its room's, where no floor piece may stand over it. A layout
-with ROOM_LABELS is interactive (interaction spec §3.1, houses/interact.py): every light with a level must be in a room
+with ROOM_LABELS is interactive (houses/interact.py): every light with a level must be in a room
 of that level, every lit room needs a label for its light:<room> group and every group id must match
 interact.GROUP_RE.
 """

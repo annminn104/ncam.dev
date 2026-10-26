@@ -1,4 +1,4 @@
-"""Generate blender/modules/carport.blend from carport/carport_layout.py (villa v2 part 4): the travertine slab
+"""Generate blender/modules/carport.blend from carport/carport_layout.py (art/README.md, Carport and dog): the travertine slab
 (Carport_floor, which casts no shadow); the roof's white fascia frame, its teak louvres and the white beams under them,
 the dark steel posts, the travertine pillar and back wall, the teak cabinet and the bicycle (Carport, of the click group
 lights:carport); the roof's glass sheet over the louvres (Carport_glass, of no click group, so the website's pick looks

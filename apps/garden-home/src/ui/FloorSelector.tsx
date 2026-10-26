@@ -2,7 +2,7 @@ import { useAppStore } from '../state/store';
 import { FLOOR_BUTTONS, isPressed } from './floors';
 
 /**
- * Site route: the floor buttons at the bottom left (interaction spec §2). A button holds its level of the dollhouse cut
+ * Site route: the floor buttons at the bottom left (AGENTS.md, Controls). A button holds its level of the dollhouse cut
  * whatever the camera's distance (OrbitRig reads cutMode), "Auto" gives the cut back to the distance; each says
  * whether it is on with aria-pressed. Never on the wallpaper.
  */

@@ -194,7 +194,7 @@ describe('isGlass / isPunctualLight', () => {
     expect(isGlass(new MeshStandardMaterial({ name: 'M_white' }))).toBe(false);
   });
 
-  it('recognises FROSTED_* materials as glass too (villa v2 spec §7)', () => {
+  it('recognises FROSTED_* materials as glass too', () => {
     expect(isGlass(new MeshStandardMaterial({ name: 'FROSTED_bath' }))).toBe(true);
     expect(isGlass(new MeshStandardMaterial({ name: 'M_frosted_look' }))).toBe(false); // a prefix, not a substring
   });

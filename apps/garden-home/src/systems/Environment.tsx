@@ -19,7 +19,7 @@ import { globalUniforms } from './uniforms';
 
 /**
  * Renders the gradient sky into a PMREM and uses it as scene.environment, so glass and every PBR surface reflect the
- * current time of day (glass villa spec §7). Re-renders only when the sky colours drift past the threshold — about
+ * current time of day. Re-renders only when the sky colours drift past the threshold — about
  * once a minute while the sun moves — and adds no render pass to ordinary frames.
  */
 export function SkyEnvironment() {

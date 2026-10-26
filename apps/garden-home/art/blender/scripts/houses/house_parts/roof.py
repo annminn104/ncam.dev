@@ -1,7 +1,7 @@
-"""Roof terrace of the villa v2 house (level 2 over the upper box, villa v2 spec §5.2): the jacuzzi in the front
+"""Roof terrace of the villa v2 house (level 2 over the upper box): the jacuzzi in the front
 left corner, the grape trellis with its lounge, loungers and planters; since the resort deco also a cabana daybed, an
-outdoor bar, potted palms, lanterns and string lights. The tall house's bigger roof (20 x 14.5 m over the upper box,
-villa v2 spec §12) keeps the layout, each piece the same way off its railings, and gains the way up: the spiral stair
+outdoor bar, potted palms, lanterns and string lights. The tall house's bigger roof (20 x 14.5 m over the upper box)
+keeps the layout, each piece the same way off its railings, and gains the way up: the spiral stair
 comes out in a small white pavilion by the west parapet, glazed on its deck sides, its door onto the deck; the cabana
 stands further east than it did, so the two read apart; the bedrooms' air conditioners' condensers stand along the
 parapet behind the pavilion, out of sight between two low teak screens, one on the deck's side and one on the
@@ -24,7 +24,7 @@ ROOM_LABELS = {"roof": "Roof terrace"}
 # lower case: it names the clip ambient_jacuzzi too.
 JACUZZI = {"name": "jacuzzi", "center": (-8.7, -4.2, ROOF), "deck": "teak"}  # deck: the palette key of its wood
 # archkit.vines.grape_trellis: posts at the corners and at x = 0.5 on both long sides (archkit.trellis_posts, which the
-# vines read too). leaf_density is the knob to turn when the house nears its triangle budget (spec §11 R2): the resort
+# vines read too). leaf_density is the knob to turn when the house nears its triangle budget: the resort
 # deco lowered it to 0.75, the cheaper string lights (8-triangle bulbs, a taut wire in one piece) gave the leaves back.
 TRELLIS = {"name": "Trellis", "min": (-2.0, 1.9), "max": (5.0, 6.9), "z0": ROOF, "height": 2.6,
            "leaf_density": 1.0, "bunches": 16}

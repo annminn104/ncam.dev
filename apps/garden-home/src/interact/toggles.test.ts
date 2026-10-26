@@ -12,7 +12,7 @@ import {
 } from './toggles';
 
 describe('nextToggle', () => {
-  it('turns auto into the opposite of what shows now, then alternates on and off (interaction spec §3.2)', () => {
+  it('turns auto into the opposite of what shows now, then alternates on and off (AGENTS.md, Controls)', () => {
     expect(nextToggle('auto', true)).toBe('off');
     expect(nextToggle('auto', false)).toBe('on');
     expect(nextToggle('on', true)).toBe('off');
@@ -110,7 +110,7 @@ describe("the air conditioners (ac:<room>, the tall house's bedrooms)", () => {
   });
 });
 
-describe('the basement\'s groups (villa v2 spec §12 "Basement")', () => {
+describe("the basement's groups (art/README.md, Basement)", () => {
   it("keep the karaoke's party mode and the sauna off while auto, day and night, and a click turns one on", () => {
     for (const kind of ['party', 'sauna']) {
       expect(GLOW_KINDS.has(kind)).toBe(true);

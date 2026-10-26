@@ -87,7 +87,7 @@ describe('modelSteps', () => {
     ]);
   });
 
-  it('builds the basement under the house (villa v2 spec §12) before the yard holed for it and the site', () => {
+  it('builds the basement under the house (art/README.md, Basement) before the yard holed for it and the site', () => {
     expect(
       modelSteps('/repo/blender', true, ['basement', 'house', 'yard', 'site']).map((s) => [
         s.script,
@@ -103,7 +103,7 @@ describe('modelSteps', () => {
     ]);
   });
 
-  it('builds the interior (villa v2 spec §12 "Curtains and accessories") with the house before the site that links them', () => {
+  it('builds the interior (art/README.md, Interior) with the house before the site that links them', () => {
     expect(
       modelSteps('/repo/blender', true, ['interior', 'house', 'site']).map((s) => [
         s.script,

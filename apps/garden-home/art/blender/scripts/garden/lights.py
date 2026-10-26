@@ -1,4 +1,4 @@
-"""The pools of warm light the garden's lamps cast on the ground at night (villa v2 part 2), as plain data. Pure Python.
+"""The pools of warm light the garden's lamps cast on the ground at night (art/README.md, Garden), as plain data. Pure Python.
 
 From the wallpaper camera a bollard's glowing head is a pixel or two across; what reads at 21:00 is the lawn it lights.
 A pool is a flat disc of GLOW_pool POOL_Z above the ground under a lamp (MeshBuilder.disc), in the lamp's own object: a

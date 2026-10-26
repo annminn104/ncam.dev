@@ -1,6 +1,6 @@
-"""Grape trellis (villa v2 spec §5.2): a wood frame with a slat lattice, and over it one object of twisting vine
+"""Grape trellis: a wood frame with a slat lattice, and over it one object of twisting vine
 trunks, a canopy of flat leaf blobs and hanging bunches of grapes. The vines carry the colour attribute 'wind' (R =
-sway weight, spec §6.3) like the planters do, so the runtime sways them.
+sway weight) like the planters do, so the runtime sways them.
 """
 import math
 import random

@@ -1,4 +1,4 @@
-"""Planters with wind-painted shrubs (spec §6.3: colour attribute 'wind', R channel = sway weight)."""
+"""Planters with wind-painted shrubs (colour attribute 'wind', R channel = sway weight)."""
 import random
 
 from .mesh import MeshBuilder

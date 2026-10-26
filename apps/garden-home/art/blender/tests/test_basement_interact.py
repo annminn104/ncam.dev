@@ -1,4 +1,4 @@
-"""What a click toggles in the basement (interaction spec §3.1, villa v2 spec §12 "Basement") and what the website's cut
+"""What a click toggles in the basement (art/README.md, Basement) and what the website's cut
 does to its objects: each room's lights and wall switch, the karaoke's party mode, the sauna, the spa's hot tub and the
 light well's lights, which join the garden's; what shows only under the basement's cut and what stands whole under it.
 Pure Python."""

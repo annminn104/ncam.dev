@@ -11,7 +11,7 @@ import {
   zoomTo,
 } from './helpers';
 
-// The tall house (villa v2 spec §12): its double-height living room's crystal chandelier, which the dollhouse cut clips
+// The tall house (art/README.md, Glass villa): its double-height living room's crystal chandelier, which the dollhouse cut clips
 // at the void's plane rather than at the ground floor's cut, and the bedrooms' air conditioners. Each test zooms in and
 // waits for the camera: a minute on its own, longer on SwiftShader under load.
 test.describe.configure({ timeout: 240_000 });

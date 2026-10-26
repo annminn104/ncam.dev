@@ -1,4 +1,4 @@
-"""The dog's corner (villa v2 part 4) as plain data: a module of its own filling the `kennel` zone, on the lawn behind
+"""The dog's corner (art/README.md, Carport and dog) as plain data: a module of its own filling the `kennel` zone, on the lawn behind
 the carport by the fence. Pure Python.
 
 Module space: the origin is the centre of the 3 x 3 m footprint (the zone), front to -Y, towards the lawn. A teak dog

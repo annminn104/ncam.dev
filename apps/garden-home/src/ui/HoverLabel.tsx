@@ -5,7 +5,7 @@ import { useAppStore } from '../state/store';
 /** Room the label keeps from the window's right and bottom edges before it flips to the other side of the pointer. */
 const EDGE = { x: 220, y: 64 };
 
-/** Site route: the name of the house item under the pointer, and what a click will do (interaction spec §3.2). */
+/** Site route: the name of the house item under the pointer, and what a click will do (AGENTS.md, Controls). */
 export function HoverLabel() {
   const hover = useAppStore((s) => s.hover);
   const state = useAppStore((s) => (s.hover ? s.toggles[s.hover.group] : undefined));

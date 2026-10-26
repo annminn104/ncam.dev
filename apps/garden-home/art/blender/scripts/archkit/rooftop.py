@@ -1,4 +1,4 @@
-"""Rooftop jacuzzi (villa v2 spec §5.2): a tile-lined basin sunk into a wood deck, a thin WATER_ slab, an LED ring
+"""Rooftop jacuzzi: a tile-lined basin sunk into a wood deck, a thin WATER_ slab, an LED ring
 under the water line and bubbles that bob in one seamless loop.
 
 The runtime swaps WATER_* for its water shader and plays every ambient_* clip by itself, so the builder only has to
@@ -73,7 +73,7 @@ def jacuzzi(col, name, center, mats, inner=2.4, deck=3.6, height=0.5, bubbles=20
 
 def _bubbles(col, name, center, reach, water_top, mats, count, seed, frames, groups=GROUPS):
     """Group objects holding the bubbles, animated by one action with a slot per group: <name>_bubbles_<g> for each
-    letter g of `groups` (the basement's hot tub has one, villa v2 spec §12)."""
+    letter g of `groups` (the basement's hot tub has one)."""
     rnd = random.Random(seed)
     cx, cy = center
     builders = [MeshBuilder(f"{name}_bubbles_{suffix}") for suffix in groups]

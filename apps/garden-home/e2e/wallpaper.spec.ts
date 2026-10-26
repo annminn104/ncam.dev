@@ -35,7 +35,7 @@ test('at night the glass villa glows from inside', async ({ page }) => {
   // Night lights switch on through a React effect and a shader recompile after the scene reports ready, so poll.
   // Interior lights, downlights and LED strips make 0.8 % of the island's screen region brighter than luma 150 (0.3 % above
   // 170), where the whole frame only has 0.24 % (0.08 %), diluted by the empty night sky. With every night light off the
-  // share is exactly 0, even at luma 120 (villa spec §11). A 0.3 % threshold keeps well clear of both.
+  // share is exactly 0, even at luma 120. A 0.3 % threshold keeps well clear of both.
   await expect
     .poll(async () => brightFraction(await canvas.screenshot(), 150, ISLAND), { timeout: 15_000 })
     .toBeGreaterThan(0.003);

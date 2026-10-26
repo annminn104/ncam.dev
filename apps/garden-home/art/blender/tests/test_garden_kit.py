@@ -1,4 +1,4 @@
-"""Garden kit (villa v2 part 2): the catalog pieces of the garden modules, and the MeshBuilder and furniture helpers
+"""Garden kit (art/README.md, Garden): the catalog pieces of the garden modules, and the MeshBuilder and furniture helpers
 that merge many pieces into a few objects (one draw call per material and object)."""
 import unittest
 

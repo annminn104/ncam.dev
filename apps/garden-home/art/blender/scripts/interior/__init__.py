@@ -1,4 +1,4 @@
-"""The decor pass of the tall house (villa v2 spec §12 "Curtains and accessories"): the curtains along its glazing, as tall as the
+"""The decor pass of the tall house (art/README.md, Interior): the curtains along its glazing, as tall as the
 rooms they hang in, and the accessories that furnish its rooms (cushions, throws, table decor, lamps, plants, art, a
 buffet, a console, benches, the dining table laid, the kitchen counter's things, bath accessories, rugs).
 

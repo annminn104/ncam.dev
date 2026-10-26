@@ -1,4 +1,4 @@
-"""What a click toggles in the garden (interaction spec §3.1, villa v2 part 2). Pure Python.
+"""What a click toggles in the garden (art/README.md, Garden). Pure Python.
 
 The garden's lights are one group, lights:garden "Garden lights", across four modules: the bollards along the walk and
 the driveway (garden_paths), the lanterns on the gate pillars (fence), the string lights under the barbecue pergola

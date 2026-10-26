@@ -1,12 +1,12 @@
 """Furniture sizes in metres, shared by the bpy builders (furniture/) and layout_check.py.
 
 Pure Python. Sizes are (w along X, d along Y, h); at rot 0 a piece's front faces -Y and its back faces +Y.
-Villa v2 spec §5.1 adds the pieces below the v1 ones; the resort deco adds the tropical ones, the interactive house
-(interaction spec §3.1) the wall switch, the garden (villa v2 part 2) the beds, pots, vegetable garden and barbecue
-pieces, the koi pond (part 3) the tea corner, lotus, koi and rockery pieces, the carport (part 4) the cars and the
-dog's corner, the tall house the spiral stair, the crystal chandelier, the roof's stair pavilion and the air
-conditioning, the basement (villa v2 spec §12 "Basement") its rooms' pieces and its light well's, and the decor pass
-(§12 "Curtains and accessories") the curtains as tall as their room, the roller blind and the accessories at the end.
+The villa grew in stages and the pieces below follow them: the resort deco adds the tropical ones, the interactive
+house the wall switch, the garden the beds, pots, vegetable garden and barbecue pieces, the koi pond the tea corner,
+lotus, koi and rockery pieces, the carport the cars and the dog's corner, the tall house the spiral stair, the crystal
+chandelier, the roof's stair pavilion and the air conditioning, the basement its rooms' pieces and its light well's,
+and the decor pass the curtains as tall as their room, the roller blind and the accessories at the end (art/README.md
+has one section per stage).
 """
 FURNITURE = {
     "sofa_l": (2.8, 2.2, 0.85),
@@ -35,7 +35,7 @@ FURNITURE = {
     "plant_small": (0.4, 0.4, 0.8),
     "painting_l": (1.6, 0.05, 1.0),
     "painting_m": (0.9, 0.05, 0.7),
-    # the decor pass (villa v2 spec §12 "Curtains and accessories"): a curtain run, its track as wide as the glazing (the
+    # the decor pass (art/README.md, Interior): a curtain run, its track as wide as the glazing (the
     # builder's `width`) and as high over the floor as the room is tall (`drop`), the sizes here its defaults
     "curtain": (2.4, 0.22, 3.0),
     "dining_set_8": (2.8, 2.1, 0.9),
@@ -84,7 +84,7 @@ FURNITURE = {
     # interactive house: the wall switch of a room's lights (houses/interact.py), the click target that stays in reach
     # while the dollhouse cut hides the ceiling and what hangs from it
     "light_switch": (0.09, 0.02, 0.12),
-    # garden (villa v2 part 2): flower beds, pots and clipped shrubs; the vegetable garden; the barbecue terrace; the
+    # garden (art/README.md, Garden): flower beds, pots and clipped shrubs; the vegetable garden; the barbecue terrace; the
     # lantern on a gate pillar. The garden modules merge them into a few objects (furniture.place_into).
     "flower_bed": (2.0, 0.9, 0.6),
     "flower_pot": (0.6, 0.6, 0.9),
@@ -102,7 +102,7 @@ FURNITURE = {
     "dining_set_6": (2.9, 1.9, 0.95),
     "parasol": (2.6, 2.6, 2.5),
     "pillar_lamp": (0.3, 0.3, 0.45),
-    # koi pond and tea corner (villa v2 part 3): the round stone tea table, its drum stools and the tea set on it,
+    # koi pond and tea corner (art/README.md, Koi pond): the round stone tea table, its drum stools and the tea set on it,
     # bonsai and the stone lantern of the tea corner; the lotus pads and flowers, the koi and the rock peaks of the
     # rockery in the pond. The pond modules merge them into a few objects like the garden does.
     "stone_table_round": (1.0, 1.0, 0.72),
@@ -114,7 +114,7 @@ FURNITURE = {
     "lotus_flower": (0.32, 0.32, 0.5),
     "koi": (0.18, 0.48, 0.12),  # nose to the front (-Y), the tail fin fanned out flat behind it
     "rock_peak": (1.6, 1.4, 2.2),
-    # carport (villa v2 part 4): a double-cab pickup and a convertible supercar, generic designs with no badges, nose
+    # carport (art/README.md, Carport and dog): a double-cab pickup and a convertible supercar, generic designs with no badges, nose
     # to the front (-Y); the mirrors reach the width. The carport builds each car's body and its lights apart (part=).
     "pickup_truck": (1.9, 5.3, 1.85),
     "convertible_supercar": (2.0, 4.5, 1.15),
@@ -140,7 +140,7 @@ FURNITURE = {
     "ac_remote": (0.08, 0.02, 0.12),
     "ac_condenser": (0.8, 0.3, 0.6),
     "teak_screen": (2.6, 0.06, 0.9),
-    # the basement (villa v2 spec §12 "Basement"), merged per material into a few objects like the garden's pieces:
+    # the basement (art/README.md, Basement), merged per material into a few objects like the garden's pieces:
     # the wine cellar's wall racks of bottles (their ends rows of glass on the rack's front), a barrel lying on its
     # cradle along Y and the high tasting table with a bar stool at either end; the karaoke lounge's U-shaped velvet
     # sofa round its coffee table (open to the front), the big TV on its low unit, a tower speaker, a stand with two
@@ -169,7 +169,7 @@ FURNITURE = {
     "yoga_mat": (0.65, 1.8, 0.01),
     "palm_courtyard": (2.6, 2.6, 5.5),
     "uplight": (0.14, 0.14, 0.12),
-    # the decor pass (villa v2 spec §12 "Curtains and accessories"), built into the interior module: the roller blind of a
+    # the decor pass (art/README.md, Interior), built into the interior module: the roller blind of a
     # ribbon window (its `width` and `drop` the window's, like a curtain's); the accessories (furniture/interior.py):
     # throw cushions leaning on a sofa's or a bed's back (three, or a pair), a folded throw, the coffee table's tray of
     # candles with a bowl and books, a stack of books, a vase of leafy branches, a stone bowl, a terracotta floor vase
@@ -330,7 +330,7 @@ WIND_SPANS = {
     "topiary_cone": (0.4, FURNITURE["topiary_cone"][2]),
     "raised_bed": (0.4, 0.65),  # lettuce grows lower than the carrot tops: every crop sways in full above 0.65 m
     "tomato_trellis": (0.35, FURNITURE["tomato_trellis"][2]),
-    # pond (villa v2 part 3): a bonsai from the top of its pedestal (or above its pot) up to its crown; the lotus
+    # pond (art/README.md, Koi pond): a bonsai from the top of its pedestal (or above its pot) up to its crown; the lotus
     # floats, so its span starts below the water and reaches far above it: a pad drifts by a quarter of the sway, a
     # flower's head by less than half, a few centimetres
     "bonsai": (0.45, FURNITURE["bonsai"][2]),

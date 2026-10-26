@@ -1,5 +1,5 @@
-"""Generate blender/modules/house.blend from houses/house_layout.py with the archkit builders (glass villa spec §8,
-villa v2 spec §8), tagging what the website lets a click toggle (interaction spec §3.1, houses/interact.py).
+"""Generate blender/modules/house.blend from houses/house_layout.py with the archkit builders,
+tagging what the website lets a click toggle (houses/interact.py).
 
 Usage:
   "$BLENDER_BIN" -b --factory-startup --python-exit-code 1 \
@@ -111,8 +111,8 @@ def build(col, mats):
                                sag=group["sag"], bulb_radius=group["bulb_radius"])
     for name, pos, rot in interact.shower_flows(L):
         water.shower_flow(col, name, pos, rot, mats)
-    # interaction spec §3.1: what a click on the website toggles, carried to glTF as node extras, and what the dollhouse
-    # cut clips at the void's plane, with how high that runs under the ground floor's cut (§2)
+    # What a click on the website toggles, carried to glTF as node extras, and what the dollhouse
+    # cut clips at the void's plane, with how high that runs under the ground floor's cut (AGENTS.md, Controls)
     for name, props in interact.tags(L).items():
         ob = col.objects[name]
         for key, value in props.items():

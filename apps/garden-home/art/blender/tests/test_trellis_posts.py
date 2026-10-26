@@ -8,7 +8,7 @@ from houses import house_layout  # noqa: E402
 
 
 class TrellisPostsTest(unittest.TestCase):
-    """Villa v2 spec §5.2: the grape trellis stands on posts at the corners and every ~3.5 m along the long sides. The
+    """The grape trellis stands on posts at the corners and every ~3.5 m along the long sides. The
     function is pure: the house layout (system Python) reads it to put a planter at the foot of every post, and
     archkit.vines builds the posts from the same list."""
 

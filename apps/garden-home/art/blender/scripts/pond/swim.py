@@ -1,4 +1,4 @@
-"""The paths the koi swim (villa v2 part 3). Pure Python.
+"""The paths the koi swim (art/README.md, Koi pond). Pure Python.
 
 A koi loops for ever round a closed path in the pond, nose first: an ellipse (or a figure of eight) of `radii` round
 `centre`, turned `tilt` degrees, at the height `z` of the fish's underside, bobbing `bob` metres up and down twice a

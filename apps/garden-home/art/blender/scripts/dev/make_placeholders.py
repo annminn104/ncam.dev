@@ -1,13 +1,13 @@
-"""Generate Phase 1 placeholder art that satisfies the module contract (spec §6, §7).
+"""Generate Phase 1 placeholder art that satisfies the module contract (art/README.md, Adding or replacing a module).
 
 Writes blender/modules/yard.blend, blender/site.blend and blender/fixtures/broken_module.blend. Real art replaces the
 module files later; keep the contract. site.blend links house.blend, pool.blend, the garden modules, the pond's (the
-koi pond and the tea corner, villa v2 part 3, which replaced the placeholder pond) and the carport's (the carport and
-the kennel, part 4) and the basement under the house too, so build those first (pnpm --filter @ncam/garden-home art:models does). The yard's lawn
+koi pond and the tea corner, which replaced the placeholder pond) and the carport's (the carport and
+the kennel) and the basement under the house too, so build those first (pnpm --filter @ncam/garden-home art:models does). The yard's lawn
 has a hole where the koi pond is dug into it (pond/koi_layout.py OUTLINE at its slot) and one for the basement's pit
 (basement/basement_layout.py PIT: the house's plinth and the light well in front of it).
-Existing files are kept unless --force is given (glass villa spec §8.2).
-The trees, lamp, module slots and cameras come from siteplan/zones.py (villa v2 spec §4); the yard is a floating island
+Existing files are kept unless --force is given.
+The trees, lamp, module slots and cameras come from siteplan/zones.py (art/README.md, Glass villa); the yard is a floating island
 (zones.ISLAND: a flat grass top at z 0 over a faceted rock underside) whose bounding size --yard-size can change. The
 generator refuses to run when siteplan/zones_check.py finds the plan inconsistent (on the island that is built, too).
 
@@ -125,7 +125,7 @@ def sphere(radius, z, subdivisions=2):
 
 
 def paint_wind(ob, z0, z1):
-    """Wind weight in the R channel of color attribute 'wind': 0 at z0, 1 at z1 (spec §6.3)."""
+    """Wind weight in the R channel of color attribute 'wind': 0 at z0, 1 at z1."""
     attr = ob.data.color_attributes.new(name="wind", type="FLOAT_COLOR", domain="POINT")
     for i, vert in enumerate(ob.data.vertices):
         weight = min(1.0, max(0.0, (vert.co.z - z0) / (z1 - z0)))

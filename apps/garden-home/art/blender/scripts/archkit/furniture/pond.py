@@ -1,4 +1,4 @@
-"""Koi pond and tea corner pieces (villa v2 part 3): the round stone tea table, its drum stools and the tea set on it,
+"""Koi pond and tea corner pieces (art/README.md, Koi pond): the round stone tea table, its drum stools and the tea set on it,
 bonsai on a stone pedestal or in a glazed pot and the stone lantern of the tea corner; the lotus pads and flowers, the
 koi and the rock peaks of the rockery in the pond.
 

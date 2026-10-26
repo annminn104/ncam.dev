@@ -1,4 +1,4 @@
-"""What a click toggles at the carport and what it does to the dog (interaction spec §3.1, villa v2 part 4). Pure
+"""What a click toggles at the carport and what it does to the dog (art/README.md, Carport and dog). Pure
 Python.
 
 The carport's downlights are the group lights:carport "Carport lights": their object and the carport itself (its roof,

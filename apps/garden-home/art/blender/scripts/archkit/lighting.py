@@ -1,4 +1,4 @@
-"""Night lighting (glass villa spec §4.5). Every fixture carries night_light=True: emissive meshes are dimmed by the
+"""Night lighting. Every fixture carries night_light=True: emissive meshes are dimmed by the
 runtime during the day, point lights are scaled by the night factor and hidden while it is 0."""
 import math
 
@@ -70,7 +70,7 @@ def string_lights(col, name, points, mats, bulbs_per_m=4.0, sag=0.15, bulb_radiu
 
 def point_light(col, name, pos, energy, color=(1.0, 0.58, 0.3), radius=0.3):
     """Warm point light (~3000 K in linear RGB, so rooms read amber against the blue night). export_module.py exports lights in RAW mode, so `energy` reaches three.js unchanged as the
-    PointLight intensity (spec §13 V2: the default SPEC mode turns 60 W into 3261 cd, far too bright)."""
+    PointLight intensity (the default SPEC mode turns 60 W into 3261 cd, far too bright)."""
     data = bpy.data.lights.new(name, "POINT")
     data.energy = energy
     data.color = color

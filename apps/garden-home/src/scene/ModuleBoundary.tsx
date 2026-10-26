@@ -10,7 +10,7 @@ interface State {
   failed: boolean;
 }
 
-/** A broken or missing GLB removes only its own slot (spec §12). */
+/** A broken or missing GLB removes only its own slot. */
 export class ModuleBoundary extends Component<Props, State> {
   state: State = { failed: false };
 

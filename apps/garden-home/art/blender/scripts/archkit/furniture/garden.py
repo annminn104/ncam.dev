@@ -1,4 +1,4 @@
-"""Garden pieces (villa v2 part 2): planted flower beds, flower pots and clipped shrubs; the raised beds, tomato
+"""Garden pieces (art/README.md, Garden): planted flower beds, flower pots and clipped shrubs; the raised beds, tomato
 trellis, wheelbarrow, watering can, compost bin and tool shed of the vegetable garden; the grill and its glowing coals,
 outdoor kitchen, six-seat teak dining set and parasol of the barbecue terrace; the lantern on a gate pillar; and a small
 bush growing straight from the lawn (the dog's corner, part 4).

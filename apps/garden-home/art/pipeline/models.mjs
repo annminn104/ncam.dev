@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // pnpm --filter @ncam/garden-home art:models [-- --force] [--only house pool fence ... site] : generate the villa, garden, pond and carport modules
-// and the placeholder yard/site (glass villa spec §8.4, villa v2 parts 2 to 4)
+// and the placeholder yard/site
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { runBlender } from './src/blender.mjs';

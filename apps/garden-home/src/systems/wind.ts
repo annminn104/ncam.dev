@@ -26,7 +26,7 @@ export function patchWindVertex(source: string): string {
 }
 
 /**
- * Makes vertices sway by their windWeight (spec §9 Wind). Idempotent.
+ * Makes vertices sway by their windWeight. Idempotent.
  * Only call for materials whose meshes all carry windWeight: GLTFLoader already gives
  * vertex-colored meshes their own material variant, so this holds for module GLBs.
  */

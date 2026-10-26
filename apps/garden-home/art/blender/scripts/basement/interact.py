@@ -1,4 +1,4 @@
-"""What a click toggles in the basement (interaction spec §3.1, villa v2 spec §12 "Basement") and what the website's
+"""What a click toggles in the basement (art/README.md, Basement) and what the website's
 cut does to its objects. Pure Python.
 
 The groups, like the house's (houses/interact.py), on the objects build_basement.py makes:

@@ -544,7 +544,7 @@ describe("nearFor: the camera near the house, close enough to make out the inter
   });
 });
 
-describe('the floor buttons and the basement\'s cut (villa v2 spec §12 "Basement")', () => {
+describe("the floor buttons and the basement's cut (art/README.md, Basement)", () => {
   it('cutFor takes the mode: a level picked holds whatever the distance, as long as the camera clears its cut', () => {
     const [fx, fy, fz] = HOUSE.focus;
     expect(cutFor([fx + 60, fy + 40, fz + 60], HOUSE, 'none', 'ground')).toBe('ground');
@@ -578,7 +578,7 @@ describe('the floor buttons and the basement\'s cut (villa v2 spec §12 "Basemen
   });
 });
 
-describe('floorPose: where a floor button takes the camera (interaction spec §2)', () => {
+describe('floorPose: where a floor button takes the camera (AGENTS.md, Controls)', () => {
   const DEG = Math.PI / 180;
   /** The camera of CAM_idle, the site's first view: 110 m from the house, 13.8 degrees down onto it. */
   const idleCamera = [...scene.camera.idle.position] as [number, number, number];

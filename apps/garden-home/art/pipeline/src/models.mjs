@@ -1,11 +1,11 @@
 /**
- * Generator steps behind `pnpm --filter @ncam/garden-home art:models` (glass villa spec §8.4, villa v2 parts 2 to 4). site.blend links the house,
+ * Generator steps behind `pnpm --filter @ncam/garden-home art:models`. site.blend links the house,
  * the pool, the garden modules, the pond's and the carport's, so the placeholder script (yard, site, broken fixture)
  * runs last; the yard's lawn has the koi pond's hole and the basement's pit. Without force every script keeps existing
  * files. `only` names the modules to build (house, pool, the garden's fence, garden_paths, flower_beds, veg_garden and
- * bbq_area, the pond's koi_pond and tea_garden, the carport, the kennel, the basement under the house, villa v2 spec
- * §12, and the interior, the house's curtains and accessories) and the placeholder parts (yard, site, broken): the
- * garden can be rebuilt without regenerating the house.
+ * bbq_area, the pond's koi_pond and tea_garden, the carport, the kennel, the basement under the house, and the
+ * interior, the house's curtains and accessories) and the placeholder parts (yard, site, broken): the garden can be
+ * rebuilt without regenerating the house.
  */
 export const GENERATORS = [
   ['house', 'houses/build_house.py'],

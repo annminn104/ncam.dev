@@ -1,4 +1,4 @@
-/** layout.json (Blender) + <id>.meta.json files -> scene.json v1 (spec §8.2). */
+/** layout.json (Blender) + <id>.meta.json files -> scene.json v1. */
 export function mergeScene({ layout, metas, generatedAt }) {
   const modules = {};
   for (const meta of metas) {

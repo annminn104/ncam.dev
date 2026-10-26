@@ -1,4 +1,4 @@
-"""The shape of the koi pond (villa v2 part 3) and the tests on it. Pure Python.
+"""The shape of the koi pond (art/README.md, Koi pond) and the tests on it. Pure Python.
 
 The pond is dug into the lawn. Its outline, where the grass ends, is a smooth irregular blob: round a centre, its radius
 in each direction is an ellipse bent by a few harmonics (blob), sampled into a polygon. The radius never folds back, so

@@ -1,4 +1,4 @@
-"""The villa v2 shell (villa v2 spec §5, §5.1, §5.3; the tall house, §12): structure, glazing, interior partitions,
+"""The villa v2 shell (the tall house): structure, glazing, interior partitions,
 frosted bathroom panels, the main door and where the stair climbs through the upper floor, plus the LED strips and wall
 lights fixed to it. Pure Python.
 """
@@ -19,7 +19,7 @@ BALCONY_X0 = -2.8
 # quarter, behind the column, from the west wall's inner face. Its upper flight climbs on from that landing round the
 # same column to the roof (archkit.spiral.flights), through a hole in the roof slab over the whole of its square but
 # the quarter one steps onto off its top tread (towards -Y, its front left), inside the stair pavilion (roof.py). The
-# basement's flight (basement/basement_layout.py, villa v2 spec §12 "Basement") comes up the same column the same way:
+# basement's flight (basement/basement_layout.py) comes up the same column the same way:
 # its top tread ends on the -X axis flush with the ground floor, so the ground slab (the plinth, grown down to the
 # basement's ceiling) keeps that same quarter as the landing both flights leave from and is holed over the rest of the
 # square, a balustrade on the hole's open sides (Columns): steel, but glass where the house's flight climbs over it.
@@ -261,7 +261,7 @@ RAILINGS = [
      "z0": ROOF_TOP, "height": 1.1, "panes": 6},
 ]
 
-DOOR_WIDTH = 0.9  # open doorways, no leaf (spec §5.1)
+DOOR_WIDTH = 0.9  # open doorways, no leaf
 _KITCHEN_HALL_END = 6.2  # where the hall's kitchen wall stops, 1.1 m short of the back wall's inner face
 
 
@@ -271,7 +271,7 @@ def _partition(name, level, start, end, doors=()):
             "doors": [(offset, DOOR_WIDTH) for offset in doors]}
 
 
-# Spec §5.1: partitions only round the wet rooms, the closet and the bedrooms; living, dining and kitchen stay open.
+# Partitions only round the wet rooms, the closet and the bedrooms; living, dining and kitchen stay open.
 # Each wall starts and ends at the face of the wall it meets.
 PARTITIONS = [
     # ground floor: the TV's media wall between the living and the dining room, free standing; the hall behind the

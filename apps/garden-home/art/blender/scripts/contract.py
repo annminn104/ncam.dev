@@ -1,4 +1,4 @@
-"""Module contract rules (spec §6). Pure Python: no bpy, runs on Python 3.9+ and inside Blender.
+"""Module contract rules (art/README.md, Adding or replacing a module). Pure Python: no bpy, runs on Python 3.9+ and inside Blender.
 
 validate(facts) returns ["<rule>: <detail>", ...]; an empty list means the module is valid.
 `facts` is the plain dict produced by facts.collect().
@@ -6,19 +6,19 @@ validate(facts) returns ["<rule>: <detail>", ...]; an empty list means the modul
 import re
 
 BUDGETS = {
-    "hero": {"tris": 50000, "texture": 2048},  # the tall house (villa v2 spec §12): 40k for the glass villa
+    "hero": {"tris": 50000, "texture": 2048},  # the tall house (art/README.md, Glass villa): 40k for the glass villa
     "prop": {"tris": 15000, "texture": 1024},
 }
 CLIP_RE = re.compile(r"^(ambient|act)_[a-z0-9_]+$")
 HOTSPOT_ACTIONS = ("toggle", "play", "focus")
 SCALE_EPS = 1e-4
-# Glass villa spec §6: lights, glass and texture count.
+# Lights, glass and texture count.
 LIGHT_BUDGET = {"hero": 4, "prop": 2}
 LIGHT_TYPES = ("POINT", "SPOT")
 TEXTURE_COUNT_MAX = 4
 GLASS_ALPHA = (0.1, 0.5)
 GLASS_ROUGHNESS_MAX = 0.1
-# Villa v2 spec §6: frosted panels (FROSTED_*) are translucent but diffuse.
+# Frosted panels (FROSTED_*) are translucent but diffuse.
 FROSTED_ALPHA = (0.4, 0.85)
 FROSTED_ROUGHNESS = (0.3, 0.8)
 GLASS_EPS = 1e-6  # Blender stores material inputs as float32: 0.1 reads back as 0.10000000149

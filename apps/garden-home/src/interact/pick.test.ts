@@ -85,7 +85,7 @@ describe('pickable', () => {
     expect(pickable(hit(door, [0, 1, 0], 1))).toBe(false);
   });
 
-  it('looks through the curtains\' voile like a pane (villa v2 spec §12 "Curtains and accessories"): a click reaches the room behind', () => {
+  it("looks through the curtains' voile like a pane (art/README.md, Interior): a click reaches the room behind", () => {
     const decor = new Mesh(new BoxGeometry(), [
       new MeshStandardMaterial({ name: 'M_drape' }),
       new MeshStandardMaterial({ name: 'M_sheer' }),

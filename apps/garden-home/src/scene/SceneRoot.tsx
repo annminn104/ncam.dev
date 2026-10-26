@@ -33,7 +33,7 @@ interface Props {
 }
 
 const CONTEXT_RESTORE_MS = 3000;
-/** The module the camera keeps out of and whose focus the dollhouse cut measures from (interaction spec §2). */
+/** The module the camera keeps out of and whose focus the dollhouse cut measures from (AGENTS.md, Controls). */
 const HOUSE_MODULE = 'house';
 
 export function SceneRoot({ config, sceneUrl, runtime, params, onFatal, onReady }: Props) {

@@ -438,7 +438,7 @@ describe('prepareModule on GLTFLoader output', () => {
   });
 });
 
-describe('prepareModule: the curtains\' voile (villa v2 spec §12 "Curtains and accessories")', () => {
+describe("prepareModule: the curtains' voile (art/README.md, Interior)", () => {
   function decor(): {
     root: Group;
     mesh: Mesh;
@@ -488,7 +488,7 @@ describe('prepareModule: the curtains\' voile (villa v2 spec §12 "Curtains and 
   });
 });
 
-describe('prepareModule: glass villa (spec §7)', () => {
+describe('prepareModule: glass villa', () => {
   /** three calls Object3D.onBeforeRender once per drawn material group, right before the program is set up. */
   function drawn(object: Object3D, scene: Scene, material: Material): void {
     object.onBeforeRender(
@@ -522,7 +522,7 @@ describe('prepareModule: glass villa (spec §7)', () => {
     expect([pane.castShadow, pane.renderOrder]).toEqual([false, GLASS_RENDER_ORDER]);
   });
 
-  it('sets FROSTED_* panes up as transparent glass but keeps their own roughness (villa v2 spec §7)', () => {
+  it('sets FROSTED_* panes up as transparent glass but keeps their own roughness', () => {
     const frosted = new MeshStandardMaterial({
       name: 'FROSTED_bath',
       transparent: true,

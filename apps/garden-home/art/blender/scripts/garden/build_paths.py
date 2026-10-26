@@ -1,4 +1,4 @@
-"""Generate blender/modules/garden_paths.blend from garden/paths_layout.py (villa v2 part 2): the travertine slabs of
+"""Generate blender/modules/garden_paths.blend from garden/paths_layout.py (art/README.md, Garden): the travertine slabs of
 the walk, the driveway with its kerbs and the pebbles (one object, Paving, which casts no shadow) and the bollards along
 both with the pools of light they cast (Garden_lamps, a night light of the click group lights:garden).
 

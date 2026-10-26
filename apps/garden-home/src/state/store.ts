@@ -31,7 +31,7 @@ export interface AppState {
    * press on "Basement" while it is on eases a camera that left the house back to it), which cutMode alone cannot tell.
    */
   floorPress: number;
-  /** Click toggles per interact group (interaction spec §3.2); a group missing here is on 'auto'. */
+  /** Click toggles per interact group (AGENTS.md, Controls); a group missing here is on 'auto'. */
   toggles: Record<string, ToggleState>;
   hover: Hover | null;
   /** Where (world space) and when (the shared clock) a click last fed the koi; null until then. */

@@ -73,7 +73,7 @@ describe('house heights', () => {
 });
 
 describe('cutHeight', () => {
-  it('cuts 1.6 m above the floor of the storey on show (interaction spec §2)', () => {
+  it('cuts 1.6 m above the floor of the storey on show (AGENTS.md, Controls)', () => {
     expect(CUT_ABOVE_FLOOR).toBe(1.6);
     expect(cutHeight('upper')).toBeCloseTo(6.86, 9); // the tall house's upper floor, 5.26 m
     expect(cutHeight('ground')).toBeCloseTo(2.05, 9);
@@ -368,7 +368,7 @@ describe('applyCut', () => {
   });
 });
 
-describe('the basement (villa v2 spec §12 "Basement")', () => {
+describe('the basement (art/README.md, Basement)', () => {
   it('is cut 1.6 m over its floor, which houses/house_parts/common.py puts under the ground slab', () => {
     expect(HOUSE_LEVELS.basementFloor).toBe(pyConstant('BASEMENT_FLOOR'));
     expect(cutHeight('basement')).toBeCloseTo(
@@ -408,7 +408,7 @@ describe('the basement (villa v2 spec §12 "Basement")', () => {
   });
 });
 
-describe('the interior (villa v2 spec §12 "Curtains and accessories")', () => {
+describe('the interior (art/README.md, Interior)', () => {
   /** A mesh from `bottom` to `top` metres over the slot (module space), standing at the house's middle. */
   function slab(bottom: number, top: number, name: string): Mesh {
     const mesh = new Mesh(new BoxGeometry(2, top - bottom, 2), new MeshStandardMaterial());
@@ -538,7 +538,7 @@ describe("the interior's details: drawn only while the camera is near the house"
   });
 });
 
-describe('forcedCut and cutLevelFor: the floor buttons (interaction spec §2)', () => {
+describe('forcedCut and cutLevelFor: the floor buttons (AGENTS.md, Controls)', () => {
   it('holds the level picked whatever the distance, but never cuts while the camera is under the cut and its clearance', () => {
     expect(forcedCut('upper', HIGH, 'none')).toBe('upper');
     expect(forcedCut('upper', 6.86 + 2.01, 'none')).toBe('upper');

@@ -1,4 +1,4 @@
-"""The vegetable garden (villa v2 part 2) as plain data: a module of its own in the `vegetables` zone. Pure Python.
+"""The vegetable garden (art/README.md, Garden) as plain data: a module of its own in the `vegetables` zone. Pure Python.
 
 Module space: the origin is the centre of the 8 x 8 m footprint (the zone), front to -Y like every module. A gravel
 plot edged with teak; on it six raised teak beds in two columns (lettuce, cabbage, carrots, herbs) with a gravel path

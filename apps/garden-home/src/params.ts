@@ -26,7 +26,7 @@ const BACKGROUND = /^[A-Za-z0-9._-]+\.(jpg|jpeg|png|webp)$/i;
 export const BACKGROUNDS_URL = '/backgrounds/';
 
 /**
- * URL tuning knobs (spec §9): ?t=HH:MM, ?quality=high|medium, ?fps=N, ?debug=1, ?align=left|center|right and
+ * URL tuning knobs: ?t=HH:MM, ?quality=high|medium, ?fps=N, ?debug=1, ?align=left|center|right and
  * ?bg=<file> (an image in public/backgrounds/ shown behind the island instead of the sky).
  */
 export function parseParams(search: string): Params {

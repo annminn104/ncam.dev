@@ -60,7 +60,7 @@ def run_placeholders(root, *args, pre_expr=None):
 
 @unittest.skipUnless(blender_available(), "Blender not found (set BLENDER_BIN)")
 class PlaceholderYardTest(unittest.TestCase):
-    """Villa v2 spec §4: the placeholder yard takes its trees and lamp from siteplan/zones.py; it stands on a floating
+    """The placeholder yard takes its trees and lamp from siteplan/zones.py; it stands on a floating
     island (zones.ISLAND) with a flat grass top at ground level and a faceted rock underside."""
 
     @classmethod
@@ -217,7 +217,7 @@ class PlaceholderYardTest(unittest.TestCase):
             self.assertTrue(on_top((cx + (x - cx) * 1.03, cy + (y - cy) * 1.03)), (x, y))  # outside: the lawn
 
     def test_the_lawn_has_a_hole_where_the_basement_is_dug_under_the_house_and_its_light_well(self):
-        """The basement's pit (villa v2 spec §12 "Basement"): the house's plinth covers the part under the house, so the
+        """The basement's pit (art/README.md, Basement): the house's plinth covers the part under the house, so the
         lawn does not hide the basement when the website cuts the house down to it, and the light well in front of the
         house opens to the sky. Just inside each edge of its outline is no lawn, just outside it is."""
         (primitive,) = self.primitives(self.node("Ground"))
@@ -328,7 +328,7 @@ class PlaceholderYardTest(unittest.TestCase):
 
 @unittest.skipUnless(blender_available(), "Blender not found (set BLENDER_BIN)")
 class NoPlaceholderPondTest(unittest.TestCase):
-    """The placeholder pond made way for the koi pond (villa v2 part 3, pond/build_koi.py): the placeholder script
+    """The placeholder pond made way for the koi pond (pond/build_koi.py): the placeholder script
     builds the yard, the site and the broken fixture only."""
 
     def test_the_placeholder_script_no_longer_builds_a_pond(self):

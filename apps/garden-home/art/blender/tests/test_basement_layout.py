@@ -1,4 +1,4 @@
-"""The basement's plan (villa v2 spec §12 "Basement"): under the tall house's ground slab, round a hall at the foot of
+"""The basement's plan (art/README.md, Basement): under the tall house's ground slab, round a hall at the foot of
 the spiral stair, a wine cellar behind a glass wall, a karaoke lounge, a spa with its sauna and hot tub, a gym and a
 shower room, each with its furniture, lights and a wall switch under the website's cut. Pure Python."""
 import copy
@@ -146,7 +146,7 @@ class BasementPlanTest(unittest.TestCase):
         self.assertLessEqual({"shower", "toilet", "vanity_single"}, set(kinds("shower_room")))
 
     def test_a_few_accents_where_the_rooms_looked_bare_stand_on_their_hosts_tops(self):
-        # the decor pass (villa v2 spec §12 "Curtains and accessories"): the cellar's decanter and glasses on the tasting table,
+        # the decor pass (art/README.md, Interior): the cellar's decanter and glasses on the tasting table,
         # a pair of cushions on the karaoke's sofa, rolled towels on a massage bed, a towel and bottles by the gym's
         # dumbbells (the basement keeps within its 15k triangles)
         from houses import layout_check as house_check

@@ -1,4 +1,4 @@
-"""Pond kit (villa v2 part 3): the catalog pieces of the koi pond and the tea corner (stone tea table and stools, tea
+"""Pond kit (art/README.md, Koi pond): the catalog pieces of the koi pond and the tea corner (stone tea table and stools, tea
 set, bonsai, stone lantern, lotus pads and flowers, koi, the rock peaks of the rockery), the palette they are built from
 and the MeshBuilder helper that builds a piece of mesh face by face (rocks, fish, the pond's bank)."""
 import sys

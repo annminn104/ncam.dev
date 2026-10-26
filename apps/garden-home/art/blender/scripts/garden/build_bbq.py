@@ -1,4 +1,4 @@
-"""Generate blender/modules/bbq_area.blend from garden/bbq_layout.py (villa v2 part 2): the travertine terrace with the
+"""Generate blender/modules/bbq_area.blend from garden/bbq_layout.py (art/README.md, Garden): the travertine terrace with the
 table for six, the outdoor kitchen, the parasol and its armchairs (BBQ_terrace), the teak pergola (Pergola), the
 charcoal grill (BBQ_grill, which casts its shadow) and its coals (BBQ_coals, a night light), both of the click group
 bbq, the planters (BBQ_plants, swaying) and the string lights under the pergola (String_lights_bbq, lights:garden).

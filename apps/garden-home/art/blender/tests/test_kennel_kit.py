@@ -1,4 +1,4 @@
-"""Kennel kit (villa v2 part 4): the Akita, sitting, built whole or as its body, its head and its tail (which the kennel
+"""Kennel kit (art/README.md, Carport and dog): the Akita, sitting, built whole or as its body, its head and its tail (which the kennel
 animates about the pivots of catalog.AKITA_PIVOTS), its dog house, mat, bowls and ball, a small bush, and the coat
 colours they are built from."""
 import sys

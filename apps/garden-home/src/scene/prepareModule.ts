@@ -35,7 +35,7 @@ export interface PreparedModule {
   koi: PreparedKoi[];
 }
 
-/** Glass reflects the sky environment more strongly: this multiplies the scene's environmentIntensity (glass villa spec §7). */
+/** Glass reflects the sky environment more strongly: this multiplies the scene's environmentIntensity. */
 export const GLASS_ENV_INTENSITY = 1.5;
 /** Transparent panes draw after opaque geometry; within the pass three sorts them back to front. */
 export const GLASS_RENDER_ORDER = 1;
@@ -127,7 +127,7 @@ const FRONT_NORMAL = ShaderChunk.normal_fragment_begin.replace(
 );
 
 /**
- * The curtains' voile (M_sheer, villa v2 spec §12 "Curtains and accessories"), a thin see-through fabric whose ribbons turn their
+ * The curtains' voile (M_sheer), a thin see-through fabric whose ribbons turn their
  * front to the room: drawn in one pass (a ribbon of folds in one colour looks the same, at half the draw calls of three's
  * back-then-front pair for a transparent DoubleSide material), and lit from both sides as a voile is, by the light that
  * falls on its room side: seen from outside at night it shows the warm room's lights rather than the moon (three would
@@ -155,7 +155,7 @@ function mapMaterial(mesh: Mesh, fn: (material: Material) => Material): void {
 
 /**
  * Wires a cloned module scene into the runtime systems: shadows (none from cast_shadow = False objects), water, the koi,
- * glass and frosted panes, the curtains' voile, night lights and the light pools (GLOW_*) among them, wind (spec §9).
+ * glass and frosted panes, the curtains' voile, night lights and the light pools (GLOW_*) among them, wind.
  */
 export function prepareModule(root: Object3D): PreparedModule {
   const nightMaterials: MeshStandardMaterial[] = [];

@@ -1,4 +1,4 @@
-"""The carport (villa v2 part 4) as plain data: a module of its own filling the `carport` zone, at the end of the
+"""The carport (art/README.md, Carport and dog) as plain data: a module of its own filling the `carport` zone, at the end of the
 driveway on the house's east side. Pure Python.
 
 Module space: the origin is the centre of the 8 x 7 m footprint (the zone), front to -Y, where the driveway

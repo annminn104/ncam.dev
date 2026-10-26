@@ -192,7 +192,7 @@ interface Point {
   y: number;
 }
 
-/** The objects of the carport and the dog's corner (villa v2 part 4). */
+/** The objects of the carport and the dog's corner (art/README.md, Carport and dog). */
 const CARPORT = [
   'Carport_floor',
   'Carport',

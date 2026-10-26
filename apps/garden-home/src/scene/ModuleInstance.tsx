@@ -41,18 +41,18 @@ interface Props {
   src: string;
   /**
    * The house, the interior and the basement on the site route: they clip to the dollhouse cut the camera or a floor
-   * button calls for (interaction spec §2). Elsewhere, and on the wallpaper, what the basement tags buried never shows.
+   * button calls for (AGENTS.md, Controls). Elsewhere, and on the wallpaper, what the basement tags buried never shows.
    */
   cutaway?: boolean;
   /** World height of the slot, which the cut heights are measured from. */
   baseY?: number;
-  /** Site route: pointer events find the item under the pointer and a click toggles its group (interaction spec §3.2). */
+  /** Site route: pointer events find the item under the pointer and a click toggles its group (AGENTS.md, Controls). */
   interactive?: boolean;
 }
 
 /**
  * One slot: clone the cached GLB, wire systems, loop ambient_* clips, follow the click toggles and play a one-shot
- * group's clip for each click on it (spec §6.4, §9).
+ * group's clip for each click on it.
  */
 export function ModuleInstance({
   slotId,

@@ -1,4 +1,4 @@
-"""Interaction spec §3.1, §4: the items of the house a click on the website toggles, as houses/interact.py tags them
+"""The items of the house a click on the website toggles, as houses/interact.py tags them
 for build_house.py, and the downlights split into one object per room. Pure Python."""
 import os
 import sys
@@ -98,7 +98,7 @@ class HouseTagsTest(unittest.TestCase):
 
     def test_the_dollhouse_cut_clips_the_chandelier_in_the_void_at_its_crown_not_at_the_ground_floors_cut(self):
         # it hangs in the double-height living room, over the ground floor's cut: clipped at the void's plane instead,
-        # it still shows (and takes a click) while the cut shows the living room (interaction spec §2); under that cut
+        # it still shows (and takes a click) while the cut shows the living room (AGENTS.md, Controls); under that cut
         # the plane runs at its crown (cut_top: the living room's floor, 3 m up, 2.2 m of chandelier and a 5 cm stub of
         # its cord), so no cord rises over the cut walls to the void's ceiling
         self.assertEqual(interact.UNCUT_KINDS, frozenset({"crystal_chandelier"}))

@@ -18,7 +18,7 @@ interface Point {
   y: number;
 }
 
-/** The objects of the koi pond and the tea corner by it (villa v2 part 3). */
+/** The objects of the koi pond and the tea corner by it (art/README.md, Koi pond). */
 const POND = [
   'Pond_bank',
   'Pond_stones',

@@ -1,7 +1,7 @@
 """Glazing: curtain walls, frameless glass railings, a sliding glass door, window panes and frosted bathroom panels.
 
-Every pane is its own GLASS_<name>_NN object (glass villa spec §6) so the runtime can sort transparent panes;
-a frosted panel is its own FROSTED_<name> object (villa v2 spec §6) for the same reason.
+Every pane is its own GLASS_<name>_NN object so the runtime can sort transparent panes;
+a frosted panel is its own FROSTED_<name> object for the same reason.
 """
 from .mesh import MeshBuilder
 
@@ -68,7 +68,7 @@ def glass_railing(col, name, start, end, z0, height, panes, mats, gap=0.03, rail
 
 def sliding_door(col, name, x0, x1, y, z0, z1, slide, mats, frames=30, frame=0.05):
     """Framed glass door filling the X-aligned opening x0..x1 at y. Action act_door_open slides it +X by `slide`
-    metres over `frames` frames (spec §4.6); frame 1 is the closed pose."""
+    metres over `frames` frames; frame 1 is the closed pose."""
     w, h = x1 - x0, z1 - z0
     mb = MeshBuilder(name)
     mb.box((-w / 2, -0.03, 0.0), (w / 2, 0.03, frame), mats["frame"])
@@ -97,7 +97,7 @@ def window(col, name, start, end, z0, z1, mats):
 
 def frosted_panel(col, name, start, end, z0, z1, mats, thickness=GLASS_THICKNESS):
     """One axis-aligned FROSTED_<name> panel from start to end (x, y) between heights z0..z1: the translucent strip
-    that lets a bathroom or WC glow softly (villa v2 spec §3). The panel is a night_light: its material emits a warm
+    that lets a bathroom or WC glow softly. The panel is a night_light: its material emits a warm
     glow that the runtime dims during the day (the ceiling downlights inside cannot be seen through a window)."""
     axis, a_start, a_end, line = _run(start, end)
     mb = MeshBuilder(f"FROSTED_{name}")

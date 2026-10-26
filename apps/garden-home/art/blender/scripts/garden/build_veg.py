@@ -1,4 +1,4 @@
-"""Generate blender/modules/veg_garden.blend from garden/veg_layout.py (villa v2 part 2): the raised beds and the tomato
+"""Generate blender/modules/veg_garden.blend from garden/veg_layout.py (art/README.md, Garden): the raised beds and the tomato
 trellis (Veg_beds, swaying, no shadow) on a teak-edged gravel plot with the compost bin, the tool shed, the wheelbarrow and the
 watering can (Veg_garden).
 

@@ -22,7 +22,7 @@ export interface Hotspot {
 const ACTIONS: readonly string[] = ['toggle', 'play', 'focus'];
 const DEFAULT_RADIUS = 0.5;
 
-/** Reads HS_* empties (spec §6.5). GLTFLoader puts glTF extras into Object3D.userData. */
+/** Reads HS_* empties. GLTFLoader puts glTF extras into Object3D.userData. */
 export function extractHotspots(root: Object3D): Hotspot[] {
   const hotspots: Hotspot[] = [];
   root.traverse((object) => {
@@ -77,31 +77,31 @@ export function isWater(object: Object3D): object is Mesh {
   return (object as Mesh).isMesh === true && nodeName(object).startsWith('WATER_');
 }
 
-/** GLASS_* materials (glass villa spec §6): clear panes, which the runtime keeps glossy. */
+/** GLASS_* materials: clear panes, which the runtime keeps glossy. */
 export function isClearGlass(material: Material): boolean {
   return material.name.startsWith('GLASS_');
 }
 
-/** GLASS_* and FROSTED_* materials (villa v2 spec §7): alpha-blended panes that reflect the sky environment. */
+/** GLASS_* and FROSTED_* materials: alpha-blended panes that reflect the sky environment. */
 export function isGlass(material: Material): boolean {
   return isClearGlass(material) || material.name.startsWith('FROSTED_');
 }
 
 /**
- * M_sheer (villa v2 spec §12 "Curtains and accessories"): the curtains' see-through voile, which a click goes through like a pane
+ * M_sheer (art/README.md, Interior): the curtains' see-through voile, which a click goes through like a pane
  * and which prepareModule draws in one pass, lit from both sides.
  */
 export function isSheer(material: Material): boolean {
   return material.name === 'M_sheer';
 }
 
-/** GLOW_* materials (villa v2 part 2): the pools of light under the garden lamps, drawn additively over the ground. */
+/** GLOW_* materials (art/README.md, Garden): the pools of light under the garden lamps, drawn additively over the ground. */
 export function isGlow(material: Material): boolean {
   return material.name.startsWith('GLOW_');
 }
 
 /**
- * Objects the dollhouse cut clips at the void's plane rather than at their storey's cut (interaction spec §2,
+ * Objects the dollhouse cut clips at the void's plane rather than at their storey's cut (AGENTS.md, Controls;
  * houses/interact.py uncut): the crystal chandelier hangs in the double-height living room's void, over the ground
  * floor's cut, and would vanish from the room it lights.
  */
@@ -120,7 +120,7 @@ export function isBuried(object: Object3D): boolean {
 }
 
 /**
- * Objects the interior tags detail (interior/interior_layout.py DETAILS, villa v2 spec §12 "Curtains and accessories"): its small
+ * Objects the interior tags detail (interior/interior_layout.py DETAILS): its small
  * things, a pixel or two from afar, which the website draws only while the camera is near the house (cutaway.ts
  * applyCut), never on the wallpaper.
  */
@@ -165,7 +165,7 @@ export function isPunctualLight(object: Object3D): object is PointLight | SpotLi
   return (object as PointLight).isPointLight === true || (object as SpotLight).isSpotLight === true;
 }
 
-/** COLOR_0.r -> 1-component 'windWeight' attribute (spec §6.3); null when the mesh has no wind paint. */
+/** COLOR_0.r -> 1-component 'windWeight' attribute; null when the mesh has no wind paint. */
 export function extractWindWeights(geometry: BufferGeometry): BufferAttribute | null {
   const color = geometry.getAttribute('color');
   if (!color) return null;

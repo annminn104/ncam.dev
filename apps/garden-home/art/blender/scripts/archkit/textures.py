@@ -1,4 +1,4 @@
-"""Seeded procedural textures (glass villa spec §8.2): the same seed gives the same pixels, so regeneration is
+"""Seeded procedural textures: the same seed gives the same pixels, so regeneration is
 reproducible. Images are packed into the .blend so the glTF exporter can embed them."""
 import array
 import math

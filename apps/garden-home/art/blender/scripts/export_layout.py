@@ -1,4 +1,4 @@
-"""site.blend -> layout.json in glTF space: Y-up, quaternions [x, y, z, w] (spec §7, §8.2).
+"""site.blend -> layout.json in glTF space: Y-up, quaternions [x, y, z, w].
 
 Usage:
   "$BLENDER_BIN" -b --factory-startup --python-exit-code 1 blender/site.blend \

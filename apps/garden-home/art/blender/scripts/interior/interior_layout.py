@@ -1,4 +1,4 @@
-"""The decor pass (villa v2 spec §12 "Curtains and accessories") as plain data: the curtains along the house's glazing and the
+"""The decor pass (art/README.md, Interior) as plain data: the curtains along the house's glazing and the
 accessories that furnish its rooms. Pure Python: build_interior.py turns it into geometry, layout_check.py sanity-checks
 it.
 

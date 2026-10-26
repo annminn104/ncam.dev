@@ -1,4 +1,4 @@
-"""Upper floor of the villa v2 house (level 1, villa v2 spec §5.1, §5.4; the tall house, §12): the gallery along the
+"""Upper floor of the villa v2 house (level 1; the tall house): the gallery along the
 double-height living room's void, which is the hallway, the master suite with closet and bath at the east end, bedrooms
 2 and 3, the shared bath, the gaming corner and the balcony; a split air conditioner in each bedroom. Pure Python.
 

@@ -1,4 +1,4 @@
-"""Generate blender/modules/kennel.blend from carport/kennel_layout.py (villa v2 part 4): the teak dog house (Kennel);
+"""Generate blender/modules/kennel.blend from carport/kennel_layout.py (art/README.md, Carport and dog): the teak dog house (Kennel);
 the mat, the bowls, the ball and the bush (Dog_corner, which casts no shadow; the bush sways); and the Akita on its mat:
 its body (Akita, which breathes in the clip ambient_dog_breathe) with its head (Akita_head) and its tail (Akita_tail,
 which wags in ambient_dog_tail) for children on their pivots, and the clip act_dog_happy over all three, which the

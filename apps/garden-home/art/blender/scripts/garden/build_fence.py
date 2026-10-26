@@ -1,4 +1,4 @@
-"""Generate blender/modules/fence.blend from garden/fence_layout.py (villa v2 part 2): the travertine posts and teak
+"""Generate blender/modules/fence.blend from garden/fence_layout.py (art/README.md, Garden): the travertine posts and teak
 boards round the island, the gate pillars and leaves (one object, Fence) and the lanterns on the pillars with the
 pools of light they cast inside the gates (Gate_lamps, a night light of the click group lights:garden).
 

@@ -1,4 +1,4 @@
-"""Pool layout as plain data (glass villa spec §5). Pure Python.
+"""Pool layout as plain data. Pure Python.
 
 The yard is a flat plane at z = 0 and a module cannot cut holes into it, so the pool sits in a raised stone platform
 with a wood deck on top (the reference renders show the same raised terrace). The water surface therefore sits at

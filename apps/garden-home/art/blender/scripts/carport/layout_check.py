@@ -1,4 +1,4 @@
-"""Sanity checks on the carport and kennel layouts before any geometry is built (villa v2 part 4). Pure Python.
+"""Sanity checks on the carport and kennel layouts before any geometry is built (art/README.md, Carport and dog). Pure Python.
 
 check_carport(layout) returns human-readable problems with a carport layout (carport/carport_layout.py); an empty list
 means it is buildable. In module space:

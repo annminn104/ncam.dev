@@ -1,4 +1,4 @@
-"""The tea corner by the koi pond (villa v2 part 3) as plain data: a module of its own filling the `tea` zone. Pure
+"""The tea corner by the koi pond (art/README.md, Koi pond) as plain data: a module of its own filling the `tea` zone. Pure
 Python.
 
 Module space: the origin is the centre of the 6 x 3.5 m footprint (the zone), front to -Y, towards the pond. A round

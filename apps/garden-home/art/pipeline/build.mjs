@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// pnpm --filter @ncam/garden-home art:assets [-- --check] : Blender modules + site.blend -> apps/garden-home/public/assets (spec §8.1)
+// pnpm --filter @ncam/garden-home art:assets [-- --check] : Blender modules + site.blend -> apps/garden-home/public/assets
 import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';

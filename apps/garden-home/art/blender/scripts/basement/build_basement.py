@@ -1,4 +1,4 @@
-"""Generate blender/modules/basement.blend from basement/basement_layout.py (villa v2 spec §12 "Basement") with the
+"""Generate blender/modules/basement.blend from basement/basement_layout.py (art/README.md, Basement) with the
 archkit builders, tagging what a click toggles (basement/interact.py) and what the website's cut does to each object.
 
 Like the garden's modules, the pieces are merged per object (furniture.place_into, one draw call per material): the
@@ -229,7 +229,7 @@ def build(col, mats):
         elif kind == "disco_ball":
             ob["cast_shadow"] = False
             spin(ob, interact.DISCO_CLIP, SPIN_FRAMES)
-    # interaction spec §3.1: what a click toggles, as node extras; and what the website's cut does to each object
+    # What a click toggles (AGENTS.md, Art pipeline), as node extras; and what the website's cut does to each object
     for name, props in interact.tags(L).items():
         for key, value in props.items():
             col.objects[name][key] = value

@@ -1,4 +1,4 @@
-"""The koi pond (villa v2 part 3) as plain data: a module of its own filling the `pond` zone. Pure Python.
+"""The koi pond (art/README.md, Koi pond) as plain data: a module of its own filling the `pond` zone. Pure Python.
 
 Module space: the origin is the centre of the 11 x 8 m footprint (the zone), front to -Y. The pond is dug into the lawn
 (the yard's grass top has a hole of OUTLINE, make_placeholders): a smooth irregular blob about 9 x 6 m (basin.blob)

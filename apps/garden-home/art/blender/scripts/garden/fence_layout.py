@@ -1,4 +1,4 @@
-"""The fence round the island and its two gates (villa v2 part 2) as plain data. Pure Python.
+"""The fence round the island and its two gates (art/README.md, Garden) as plain data. Pure Python.
 
 An island-wide module (siteplan/zones.py): its slot stands at the island's centre unturned, so module space is site
 space. The fence follows the rim of the island's grass top (siteplan/island.outline) INSET metres in: a travertine post

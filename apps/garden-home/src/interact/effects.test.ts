@@ -335,7 +335,7 @@ describe('an air conditioner', () => {
   });
 });
 
-describe('the karaoke\'s party mode (party, villa v2 spec §12 "Basement")', () => {
+describe("the karaoke's party mode (party)", () => {
   function karaoke() {
     const leds = node(
       new Mesh(new BoxGeometry(), [

@@ -5,7 +5,7 @@ import type { CameraPose } from '../scene/schema';
 
 const DRIFT = 0.25; // metres
 
-/** Phase 1 has only the `idle` mode: a slow drift around CAM_idle (spec §9 CameraRig). */
+/** Phase 1 has only the `idle` mode: a slow drift around CAM_idle. */
 export function CameraRig({ pose }: { pose: CameraPose }) {
   const camera = useThree((state) => state.camera) as PerspectiveCamera;
   const base = useMemo(() => new Vector3(...pose.position), [pose]);

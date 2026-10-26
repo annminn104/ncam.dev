@@ -227,7 +227,7 @@ function floorFor(
  * floorFor, and dips below the horizon only once it is outside the island even from this target (islandRadius +
  * |target| + margin), easing up to ORBIT_LIMITS.maxPolarAngle over 10 m, to see the underside. The limit changes
  * continuously with the distance and the target, so neither a zoom nor a turn that moves the target makes the camera
- * jump. While the house is cut away (`level`, interaction spec §2) the camera may come down to ORBIT_CLEARANCE.cutClear
+ * jump. While the house is cut away (`level`) the camera may come down to ORBIT_CLEARANCE.cutClear
  * over the height that keeps the cut on, which only ever relaxes the limit.
  */
 export function maxPolarFor(
@@ -245,7 +245,7 @@ export function maxPolarFor(
 }
 
 /**
- * The dollhouse cut for a camera at `position` (interaction spec §2): on auto cutLevel by its distance to the house focus,
+ * The dollhouse cut for a camera at `position` (AGENTS.md, Controls): on auto cutLevel by its distance to the house focus,
  * not to the orbit target, so zooming onto the vegetable garden leaves the house whole and zooming onto the house cuts
  * it; a level a floor button holds whatever the distance, as long as the camera clears its cut (cutLevelFor).
  */
@@ -280,7 +280,7 @@ export function nearFor(
 const DEG = Math.PI / 180;
 
 /**
- * Where a floor button takes the camera (interaction spec §2, floorPose): from farther than `far` metres from the house
+ * Where a floor button takes the camera (floorPose): from farther than `far` metres from the house
  * focus, or looking down at it less steeply than `steep` (the site's first view: 110 m out, 13.8 degrees down, which
  * shows the basement as a pit and a storey as a wall), to `distance` from the house focus, `down` (radians) down onto
  * it: steeply into the basement's pit, less so onto a storey. The camera gets there over `time` seconds.

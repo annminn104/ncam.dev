@@ -83,7 +83,7 @@ test('zooming in cuts the roof, then the upper floor, away; zooming out brings t
   page,
 }) => {
   // Eight zooms that each wait for the camera to settle: 40-45 s on its own, but up to 2.5 min in a full parallel run
-  // on SwiftShader since the garden (villa v2 part 2) made the site route ~15 % slower to draw: over the 150 s it had.
+  // on SwiftShader since the garden (art/README.md, Garden) made the site route ~15 % slower to draw: over the 150 s it had.
   // With the carport and the dog's corner (part 4) it took 3.3-4.0 min under load 20-40, at its four minutes' end.
   test.setTimeout(300_000);
   const errors = collectErrors(page);

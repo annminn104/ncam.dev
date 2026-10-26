@@ -1,4 +1,4 @@
-"""Generate blender/modules/tea_garden.blend from pond/tea_layout.py (villa v2 part 3): the travertine paving and
+"""Generate blender/modules/tea_garden.blend from pond/tea_layout.py (art/README.md, Koi pond): the travertine paving and
 stepping stones with the granite tea table, its stools and the tea set (Tea_corner), the bonsai (Bonsai, swaying, no
 shadow) and the stone lantern with the pool of light it casts (Stone_lantern, a night light of lights:garden).
 

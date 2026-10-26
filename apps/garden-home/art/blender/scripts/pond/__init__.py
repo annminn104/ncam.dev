@@ -1,4 +1,4 @@
-"""The koi pond and the tea corner by it (villa v2 part 3): a big pond dug into the lawn with a rockery and
+"""The koi pond and the tea corner by it (art/README.md, Koi pond): a big pond dug into the lawn with a rockery and
 its waterfall, many koi and lotus, and a stone tea table with its stools, bonsai and a stone lantern.
 
 Like garden/ (part 2): one plain-data *_layout.py per module, checked by layout_check.py before anything is built, and

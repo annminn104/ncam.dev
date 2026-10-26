@@ -1,4 +1,4 @@
-"""Generate blender/modules/interior.blend from interior/interior_layout.py (villa v2 spec §12 "Curtains and accessories") with
+"""Generate blender/modules/interior.blend from interior/interior_layout.py (art/README.md, Interior) with
 the archkit builders, tagging the lamps' shades with their rooms' light groups (interior/interact.py).
 
 Like the basement's pieces, everything is merged per object (furniture.place_into, one draw call per material): the
@@ -58,7 +58,7 @@ def build(col, mats):
         if L.OBJECTS[name].get("detail"):
             props["detail"] = True  # drawn only while the website's camera is near the house
         mb.build(col, **props)
-    # interaction spec §3.1: the lamps' shades join their rooms' light groups, as node extras
+    # What a click toggles (AGENTS.md, Art pipeline): the lamps' shades join their rooms' light groups, as node extras
     for name, props in interact.tags(L).items():
         for key, value in props.items():
             col.objects[name][key] = value

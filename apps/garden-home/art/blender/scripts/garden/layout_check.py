@@ -1,4 +1,4 @@
-"""Sanity checks on a garden layout before any geometry is built (villa v2 part 2). Pure Python.
+"""Sanity checks on a garden layout before any geometry is built (art/README.md, Garden). Pure Python.
 
 check(layout) returns human-readable problems; an empty list means the module is buildable. A garden layout provides
 MODULE_ID, FOOTPRINT and PIECES, entries (kind, group, pos, rot[, options]) whose pos is (x, y) on the ground or

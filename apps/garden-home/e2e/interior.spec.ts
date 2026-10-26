@@ -1,7 +1,7 @@
 import { expect, type Page, test } from '@playwright/test';
 import { camera, collectErrors, frames, gotoSite, settle, waitForScene, zoomTo } from './helpers';
 
-// The interior (villa v2 spec §12 "Curtains and accessories"): the house's curtains and accessories, a module of its own in the
+// The interior (art/README.md, Interior): the house's curtains and accessories, a module of its own in the
 // house's slot, which the dollhouse cut cuts with the house. Each test waits on floor buttons, a minute or two on
 // SwiftShader under load.
 test.describe.configure({ timeout: 240_000 });

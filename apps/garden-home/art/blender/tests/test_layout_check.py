@@ -74,7 +74,7 @@ class LayoutCheckTest(unittest.TestCase):
         self.assertEqual(layout_check.check(layout(FURNITURE=pieces)), ["Chair_a overlaps Chair_b"])
 
     def test_a_piece_on_a_host_sits_on_its_top_rather_than_beside_it(self):
-        # the decor pass (villa v2 spec §12 "Curtains and accessories"): a piece put "on" another stands on one of the host's
+        # the decor pass (art/README.md, Interior): a piece put "on" another stands on one of the host's
         # catalog.SURFACES tops, so it does not clash with it; off every top of its host, on no piece of the layout or on
         # one without a top, it is reported
         sofa = ("sofa_l", "Sofa", "living", (0.0, 0.0), 0)
@@ -355,7 +355,7 @@ def walled(doors=WALL["doors"], furniture=(), **wall):
 
 
 class PartitionCheckTest(unittest.TestCase):
-    """Villa v2 spec §5.1, §10: doors fit their walls, nothing stands in a doorway, partitions stay in the house."""
+    """Doors fit their walls, nothing stands in a doorway, partitions stay in the house."""
 
     def test_a_wall_with_a_free_door_is_clean(self):
         self.assertEqual(layout_check.check(walled()), [])
@@ -449,7 +449,7 @@ def lit(points, level=0, interior=True):
 
 
 class DownlightCheckTest(unittest.TestCase):
-    """Villa v2 spec §5.4, §10: every interior room has 2–4 downlights."""
+    """Every interior room has 2–4 downlights."""
 
     def test_two_to_four_downlights_are_fine(self):
         self.assertEqual(layout_check.check(lit([(-3.0, 0.0), (-1.0, 0.0)])), [])
@@ -492,7 +492,7 @@ def interactive(points=((-3.0, 0.0), (-1.0, 0.0)), **overrides):
 
 
 class InteractionCheckTest(unittest.TestCase):
-    """Interaction spec §3.1: in a layout with ROOM_LABELS every lit room gets a labelled light:<room> group, every
+    """In a layout with ROOM_LABELS every lit room gets a labelled light:<room> group, every
     light finds its room and group ids are well formed. Layouts without ROOM_LABELS are not interactive."""
 
     def test_a_lit_interactive_layout_is_clean(self):
@@ -538,7 +538,7 @@ class InteractionCheckTest(unittest.TestCase):
 
 
 class LightSwitchCheckTest(unittest.TestCase):
-    """Every light group needs a target that stays in reach under the dollhouse cut (interaction spec §2, §3.1): the
+    """Every light group needs a target that stays in reach under the dollhouse cut (AGENTS.md, Controls): the
     wall switch of its room, inside it, below the cut of its level and not hidden behind tall furniture."""
 
     def test_a_lit_room_without_a_switch_is_reported(self):

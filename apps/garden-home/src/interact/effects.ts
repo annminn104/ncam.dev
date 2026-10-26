@@ -15,7 +15,7 @@ import type { PreparedModule } from '../scene/prepareModule';
 import { collectGroups, groupKind, type InteractGroup, interactiveNode } from './groups';
 import { GLOW_KINDS, glowFactor, isOn, type ToggleState } from './toggles';
 
-/** What the toggles of one module drive (interaction spec §3.2). */
+/** What the toggles of one module drive (AGENTS.md, Controls). */
 export interface InteractionModel {
   groups: Map<string, InteractGroup>;
   /** Night materials and lights of the glowing groups (lights, screens), by group; the rest follow the night alone. */
@@ -33,7 +33,7 @@ export interface InteractionModel {
 
 /** Materials of the party's lights: what the karaoke's party mode cycles through the hues, the disco ball's tiles too. */
 const PARTY_LIGHTS = /^(M_party_led|GLOW_party|M_disco)$/;
-/** One turn through the hues of the party's LEDs takes this many seconds (interaction spec §3.2, villa v2 spec §12). */
+/** One turn through the hues of the party's LEDs takes this many seconds (AGENTS.md, Controls). */
 export const PARTY_PERIOD = 6;
 
 /** The hue (0..1) the party's LEDs show `time` seconds into the shared clock: one turn every PARTY_PERIOD seconds. */

@@ -48,7 +48,7 @@ def spiral_stair(mb, m, w, d, h, rise=None, upper=None, treads=None, turns=None,
     SPIRAL_STAIR["rail"] over the treads' leading edges, the column rising to the top of the handrail. `rise` (the
     floor-to-floor height it climbs) defaults to the catalog height less the handrail; the top tread ends on the +X
     axis at that height, flush with the floor it reaches. `treads` and `turns` replace the catalog's for a flight of
-    another rise (the basement's, villa v2 spec §12 "Basement"); with cap=False the column stops at the top tread, where
+    another rise (the basement's); with cap=False the column stops at the top tread, where
     the stair over it goes on round the same column. `upper` ({"rise", "treads", "turns"}) adds a flight on up round the
     same column from a quarter-turn landing after that top tread (archkit.spiral.flights): the tall house's way on from
     the gallery to the roof."""

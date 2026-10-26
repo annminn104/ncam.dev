@@ -25,7 +25,7 @@ function channelDelta(a: Color, b: Color): number {
   return Math.max(Math.abs(a.r - b.r), Math.abs(a.g - b.g), Math.abs(a.b - b.b));
 }
 
-/** True when the sky drifted far enough from the colours of the last PMREM to render a new one (villa spec §7). */
+/** True when the sky drifted far enough from the colours of the last PMREM to render a new one. */
 export function shouldRefreshEnvironment(
   last: SkyColors | null,
   now: SkyColors,

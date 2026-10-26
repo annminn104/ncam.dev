@@ -130,7 +130,7 @@ def wall_fountain(col, name, start, end, z0, height, mats, facing=-1):
 
 
 def shower_flow(col, name, pos, rot, mats, radius=0.09, segments=10):
-    """The water falling from the rain head of an archkit.furniture.bath.shower (interaction spec §3.1): one WATER_
+    """The water falling from the rain head of an archkit.furniture.bath.shower (AGENTS.md, Art pipeline): one WATER_
     column `radius` wide from just under the head down to the tray, which the water shader streaks as falling water.
     It is built in the shower's local space and stands like the shower: `pos` (x, y, z) is where the shower stands and
     `rot` its turn in degrees. The runtime keeps it hidden until the shower is turned on."""

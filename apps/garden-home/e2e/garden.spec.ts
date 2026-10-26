@@ -21,7 +21,7 @@ interface Point {
   y: number;
 }
 
-/** One object of each garden module (villa v2 part 2): the fence, the paths, the beds, the vegetables, the barbecue. */
+/** One object of each garden module (art/README.md, Garden): the fence, the paths, the beds, the vegetables, the barbecue. */
 const GARDEN = [
   'Fence',
   'Gate_lamps',

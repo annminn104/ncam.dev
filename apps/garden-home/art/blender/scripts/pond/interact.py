@@ -1,4 +1,4 @@
-"""What a click toggles at the koi pond (interaction spec §3.1, villa v2 part 3). Pure Python.
+"""What a click toggles at the koi pond (art/README.md, Koi pond). Pure Python.
 
 The waterfall is the group waterfall "Waterfall": the rockery it falls from, the falling sheet of water and the foam at
 its foot. Like the house's wall fountain it runs while on auto, and a click stops it (the website hides the sheet and

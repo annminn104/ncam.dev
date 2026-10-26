@@ -26,7 +26,7 @@ describe('createWaterMaterial', () => {
     expect(fragmentShader).toContain('n.y * n.y < 0.25 * dot(n, n)');
   });
 
-  it('clips at clipping planes like the standard materials (the dollhouse cutaway, interaction spec §2)', () => {
+  it('clips at clipping planes like the standard materials (the dollhouse cutaway)', () => {
     const water = createWaterMaterial();
     expect(water.clipping).toBe(true);
     expect(water.vertexShader).toContain('#include <clipping_planes_pars_vertex>');

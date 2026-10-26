@@ -1,4 +1,4 @@
-"""The basement under the tall house (villa v2 spec §12 "Basement"): a wine cellar, a karaoke lounge, a spa with its
+"""The basement under the tall house (art/README.md, Basement): a wine cellar, a karaoke lounge, a spa with its
 sauna and stone hot tub, a gym, a shower room and the hall at the foot of the spiral stair, which comes down from the
 living room, with a light well dug into the lawn in front of the house that lights the spa through a glass
 wall.

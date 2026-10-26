@@ -1,4 +1,4 @@
-"""The cars of the carport (villa v2 part 4): a double-cab pickup truck and a convertible supercar with its top down,
+"""The cars of the carport (art/README.md, Carport and dog): a double-cab pickup truck and a convertible supercar with its top down,
 generic designs with no badges or logos.
 
 Low-poly like the rest of the kit: a body lofted along Y through stations (per station a hexagon: its bottom corners,

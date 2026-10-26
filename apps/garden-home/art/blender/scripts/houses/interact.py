@@ -1,4 +1,4 @@
-"""What a click toggles on the website (interaction spec §3.1). Pure Python.
+"""What a click toggles on the website (AGENTS.md, Art pipeline). Pure Python.
 
 build_house.py tags objects with custom properties that the glTF export carries as node extras: `interact`, the group
 a click on the object toggles, `label`, the name the website shows on hover, and for the door and the
@@ -62,7 +62,7 @@ def room_at(rooms, level, point):
 
 
 def split_downlights(groups, rooms):
-    """The downlight groups with one group LT_down_<room> per room (interaction spec §3.1), so a click can switch a
+    """The downlight groups with one group LT_down_<room> per room (AGENTS.md, Art pipeline), so a click can switch a
     room's discs without its neighbours'.
 
     Every point of a group with a "level" goes to the first room on that level that holds it; the room groups keep

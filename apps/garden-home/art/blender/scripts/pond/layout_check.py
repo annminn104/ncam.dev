@@ -1,4 +1,4 @@
-"""Sanity checks on the pond layouts before any geometry is built (villa v2 part 3). Pure Python.
+"""Sanity checks on the pond layouts before any geometry is built (art/README.md, Koi pond). Pure Python.
 
 check_koi(layout) returns human-readable problems with a koi pond layout (pond/koi_layout.py); an empty list means it is
 buildable. In module space:

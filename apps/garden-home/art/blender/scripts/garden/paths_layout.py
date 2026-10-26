@@ -1,5 +1,5 @@
 """The stone walk from the main gate to the front door, the driveway from the car gate to the carport, and the bollards
-along both (villa v2 part 2), as plain data. Pure Python.
+along both (art/README.md, Garden), as plain data. Pure Python.
 
 An island-wide module like the fence (module space is site space). The walk follows the path zones of
 siteplan/zones.py (path_gate, path_turn, path_door): travertine slabs across it, a stride apart on the grass, from just

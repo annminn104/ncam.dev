@@ -6,7 +6,7 @@ const hhmm = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'expected HH:MM');
 
 const cameraPose = z.object({ position: vec3, rotation: quat, fov: z.number().positive() });
 
-/** scene.json v1 (spec §8.2). */
+/** scene.json v1. */
 export const sceneSchema = z
   .object({
     version: z.literal(1),

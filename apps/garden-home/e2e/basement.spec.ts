@@ -14,7 +14,7 @@ import {
   zoomTo,
 } from './helpers';
 
-// The basement (villa v2 spec §12 "Basement") and the floor buttons (interaction spec §2): each test turns the camera,
+// The basement (art/README.md, Basement) and the floor buttons (AGENTS.md, Controls): each test turns the camera,
 // zooms and waits for it, a minute or two on SwiftShader, longer under load.
 test.describe.configure({ timeout: 240_000 });
 

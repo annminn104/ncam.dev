@@ -1,4 +1,4 @@
-"""Low-poly furniture (glass villa spec §4.2–§4.5, §5; split by room in villa v2 spec §8). Each builder fills a
+"""Low-poly furniture (split by room). Each builder fills a
 MeshBuilder in local space: footprint (catalog.FURNITURE) centred on the origin, floor at z = 0, front facing -Y.
 Every room module ends with its own BUILDERS table; this package merges them and place() positions and rotates a piece,
 or place_into() builds it into a mesh shared with other pieces (the garden modules).

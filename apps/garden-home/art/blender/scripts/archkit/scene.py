@@ -36,7 +36,7 @@ def module_collection(module_id, footprint, role):
 
 
 def marker(col, name, location, **props):
-    """Empty with custom properties (hotspots: spec §6.5)."""
+    """Empty with custom properties (hotspots)."""
     ob = bpy.data.objects.new(name, None)
     ob.location = location
     for key, value in props.items():

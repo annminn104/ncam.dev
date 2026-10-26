@@ -899,7 +899,7 @@ def summary(expr, **values):
 
 @unittest.skipUnless(blender_available(), "Blender not found (set BLENDER_BIN)")
 class ArchkitTest(unittest.TestCase):
-    """Glass villa spec §8 / §11: every builder produces the named objects and materials the contract expects."""
+    """Every builder produces the named objects and materials the contract expects."""
 
     @classmethod
     def setUpClass(cls):
@@ -942,7 +942,7 @@ class ArchkitTest(unittest.TestCase):
 
 @unittest.skipUnless(blender_available(), "Blender not found (set BLENDER_BIN)")
 class ArchkitKitV2Test(unittest.TestCase):
-    """Villa v2 spec §3, §6, §8: partitions, frosted panels, the art atlas and the new palette entries."""
+    """Partitions, frosted panels, the art atlas and the new palette entries."""
 
     @classmethod
     def setUpClass(cls):
@@ -1048,7 +1048,7 @@ class ArchkitKitV2Test(unittest.TestCase):
         })
 
 
-# Villa v2 spec §5.1: (w, d, h) of the pieces added for the living, dining, kitchen, entry and decor rooms, and the
+# (w, d, h) of the pieces added for the living, dining, kitchen, entry and decor rooms, and the
 # palette materials each one is built from (a piece may use more, e.g. book colours).
 LIVING_KINDS = {
     "tv_wall": ([3.2, 0.5, 2.0], {"M_wood", "M_screen_on", "M_frame"}),
@@ -1068,7 +1068,7 @@ LIVING_KINDS = {
     "shoe_cabinet": ([1.4, 0.4, 1.0], {"M_wood", "M_frame"}),
     "bench_mirror": ([1.2, 0.45, 2.0], {"M_cushion", "M_metal"}),
 }
-# Villa v2 spec §5.2 and §5.3: the same for the bedroom, closet, office, bath, laundry and outdoor pieces.
+# The same for the bedroom, closet, office, bath, laundry and outdoor pieces.
 BEDROOM_KINDS = {
     "bed_king": ([2.0, 2.3, 1.15], {"M_cushion", "M_wood", "M_white", "M_fabric"}),
     "nightstand_lamp": ([0.5, 0.4, 0.95], {"M_wood", "M_led"}),
@@ -1117,9 +1117,9 @@ EXPECTED_NIGHT_KINDS = ["ac_split", "bar_cabinet", "bbq_coals", "candle_set", "c
 EXPECTED_WALL_MOUNTED = {"painting_l": 1.2, "painting_m": 1.4, "wall_shelf": 1.5, "laundry_shelf": 1.4,
                          "fern_hanging": 2.1, "rattan_pendant": 2.3, "light_switch": 1.15, "crystal_chandelier": 3.0,
                          "ac_split": 2.4, "ac_remote": 1.15,
-                         # the basement (villa v2 spec §12 "Basement")
+                         # the basement (art/README.md, Basement)
                          "disco_ball": 2.1, "oil_shelf": 0.95, "mirror_wall": 0.25,
-                         # the decor pass (villa v2 spec §12 "Curtains and accessories")
+                         # the decor pass (art/README.md, Interior)
                          "art_print": 1.1, "mirror_round": 1.2, "towel_bar": 0.85}
 
 
@@ -1129,7 +1129,7 @@ LARGE_PIECES = {"crystal_chandelier": 3500}
 
 @unittest.skipUnless(blender_available(), "Blender not found (set BLENDER_BIN)")
 class ArchkitFurnishingTest(unittest.TestCase):
-    """Furniture, lighting and planting builders (glass villa spec §4.2–§4.5)."""
+    """Furniture, lighting and planting builders."""
 
     @classmethod
     def setUpClass(cls):
@@ -1244,7 +1244,7 @@ def rounded(*values):
 
 @unittest.skipUnless(blender_available(), "Blender not found (set BLENDER_BIN)")
 class ArchkitRooftopTest(unittest.TestCase):
-    """Villa v2 spec §5.2: the rooftop jacuzzi with its looping bubbles and the grape trellis with its wind-painted
+    """The rooftop jacuzzi with its looping bubbles and the grape trellis with its wind-painted
     vines."""
 
     @classmethod
@@ -1611,7 +1611,7 @@ class ArchkitTropicalTest(unittest.TestCase):
 
 @unittest.skipUnless(blender_available(), "Blender not found (set BLENDER_BIN)")
 class ArchkitLightSwitchTest(unittest.TestCase):
-    """Interactive house (interaction spec §3.1): the wall switch of a room, the click target of its lights while the
+    """Interactive house (AGENTS.md, Art pipeline): the wall switch of a room, the click target of its lights while the
     dollhouse cut hides the ceiling: a small dark plate with a white rocker, hung at switch height."""
 
     @classmethod

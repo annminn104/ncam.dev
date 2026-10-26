@@ -1,4 +1,4 @@
-"""The tall house (villa v2 spec §12 "Tall house + double height"): every storey of the villa 30 % taller over the same plinth,
+"""The tall house (art/README.md, Glass villa): every storey of the villa 30 % taller over the same plinth,
 both storeys grown to 23 x 15 m, a double-height living room under a gallery with a glass balustrade, an open spiral stair
 up to it and a tiered crystal ring chandelier in the void. Pure Python."""
 import math
@@ -15,7 +15,7 @@ from houses import house_layout, layout_check  # noqa: E402
 from houses.house_parts import common, shell  # noqa: E402
 from siteplan import zones, zones_check  # noqa: E402
 
-# The glass villa's heights (villa v2 spec §5), which the tall house raises over the plinth.
+# The glass villa's heights, which the tall house raises over the plinth.
 GLASS_VILLA = {"GROUND_CEIL": 3.85, "UPPER_FLOOR": 4.15, "UPPER_CEIL": 7.25, "ROOF_TOP": 7.55, "DOOR_TOP": 2.85}
 
 

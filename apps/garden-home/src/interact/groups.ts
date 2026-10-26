@@ -6,7 +6,7 @@ import type { Object3D } from 'three';
  */
 export const GROUP_RE = /^[a-z]+(:[A-Za-z0-9_]+)?$/;
 
-/** The items one click toggles together (interaction spec §3.1), within a module or across modules (lights:garden). */
+/** The items one click toggles together (AGENTS.md, Art pipeline), within a module or across modules (lights:garden). */
 export interface InteractGroup {
   id: string;
   /** light, lights, tv, pc, bbq, shower, door, jacuzzi, fountain or waterfall: what a toggle does to the group. */

@@ -337,7 +337,7 @@ test('the camera never ends up inside the rock, under the grass or in the house'
   await gotoSite(page, '/?t=12:00');
   await waitForScene(page);
 
-  // At the closest zoom onto the house (14.5 m) it is cut down to its ground floor (interaction spec §2): the camera may
+  // At the closest zoom onto the house (14.5 m) it is cut down to its ground floor (AGENTS.md, Controls): the camera may
   // come lower than the house's top (HOUSE_TOP, the rooftop trellis, as orbit.test.ts measures), but stays more than
   // 2 m over the cut (2.05 m), so the cut stays on and the camera out of the walls.
   await zoomTo(page, 12);

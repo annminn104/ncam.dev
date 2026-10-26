@@ -1,4 +1,4 @@
-"""Generate blender/modules/pool.blend from houses/pool_layout.py (glass villa spec §5, §8).
+"""Generate blender/modules/pool.blend from houses/pool_layout.py.
 
 Usage:
   "$BLENDER_BIN" -b --factory-startup --python-exit-code 1 \
