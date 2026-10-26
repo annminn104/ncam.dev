@@ -29,6 +29,10 @@ apps/
   mini-store/       Mini Store diorama remote (:9009). React 19 shell around a
                     hand-written WebGL2 renderer (no three.js) that boots on
                     the first interaction; art/blender + legacy are reference.
+  garden-home/      Garden Home remote (:9010). React 19 + React Three Fiber
+                    glass villa and garden island from Blender modules (art/:
+                    Blender build + KTX pipeline, run locally), cut away floor
+                    by floor; boots behind a server-rendered poster.
   strapi/           Strapi 5 headless CMS for the blog (:1337): a backend
                     service, not a federation remote.
 packages/
@@ -61,7 +65,7 @@ Commands (from the root):
 
 ```bash
 pnpm install
-pnpm dev              # every dev server (host :9000, remotes :9001–:9009, strapi :1337)
+pnpm dev              # every dev server (host :9000, remotes :9001–:9010, strapi :1337)
 pnpm build            # builds every app
 pnpm typecheck
 pnpm lint             # ESLint; `pnpm format:check` for Prettier

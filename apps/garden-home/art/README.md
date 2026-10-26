@@ -1,181 +1,703 @@
-# Garden Home
+# Garden Home: the art side
 
-Khu nhà + sân vườn 3D dựng từ module Blender, dùng chung cho website và wallpaper macOS (Plash).
-Thiết kế: [docs/superpowers/specs/2026-10-15-garden-home-3d-design.md](docs/superpowers/specs/2026-10-15-garden-home-3d-design.md)
+The Blender modules, their generators and the pipeline that turns them into the glTF files the page
+loads. What the visitor can do with the result (controls, the dollhouse cut, the floor buttons,
+click toggles, the URL parameters, the wallpaper) is in [`../AGENTS.md`](../AGENTS.md), together
+with the module contract and the `interact` / `label` / `clip` / `uncut` / `cut_top` data the page
+reads. This file is the per-module reference: how each part of the island is generated, what to
+change where, and the performance it was built to.
 
-## Cài đặt một lần
+Conventions used below:
 
-- Blender 5.2.2 LTS (đường dẫn khác thì đặt biến `BLENDER_BIN`)
-- Node 22, `brew install git-lfs`, `git lfs install`
-- KTX-Software ≥ 4.4.0 (đã test với v4.4.2): https://github.com/KhronosGroup/KTX-Software/releases
-- `npm install`, rồi `npx -w web playwright install chromium` (tải Chromium cho Playwright)
+- Paths starting `art/`, `src/`, `public/` or `e2e/` are relative to `apps/garden-home`. A bare
+  path such as `houses/interact.py` or `archkit/catalog.py` is relative to
+  `art/blender/scripts/`.
+- Distances are metres, the front of the house faces −Y, and Blender's Z is glTF's Y.
+- Commands are `pnpm --filter @ncam/garden-home <script>`, run from anywhere in the monorepo;
+  commands that call Blender by hand run from `apps/garden-home`.
+- The performance numbers (draw calls, triangles, milliseconds per frame) were measured in the
+  standalone project, with its `shoot --stats` screenshot script (not carried over), on SwiftShader
+  with `?bg=example.jpg`. Read them as the budget each module was built to, and re-measure with
+  `?debug=1` or the browser's tools after a big change.
 
-## Lệnh
+## Prerequisites
 
-| Lệnh                                          | Việc                                                                                                                                                                                                                                                                                                                                                        |
-| --------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `npm run models [-- --force] [--only <tên>…]` | Sinh `house.blend`, `pool.blend`, năm module sân vườn, ao cá koi và góc trà, nhà xe và góc chó, yard/site placeholder (giữ file đã có nếu không `--force`); `--only` chỉ chạy các bước được nêu: `house`, `pool`, `fence`, `garden_paths`, `flower_beds`, `veg_garden`, `bbq_area`, `koi_pond`, `tea_garden`, `carport`, `kennel`, `yard`, `site`, `broken` |
-| `npm run assets -- --check`                   | Chỉ kiểm hợp đồng các module                                                                                                                                                                                                                                                                                                                                |
-| `npm run assets`                              | Blender → `web/public/assets` (GLB high/medium + `scene.json`)                                                                                                                                                                                                                                                                                              |
-| `npm run dev -w web`                          | Dev server: `/` và `/wallpaper`                                                                                                                                                                                                                                                                                                                             |
-| `npm test`                                    | Test Blender (Python) + pipeline + web unit                                                                                                                                                                                                                                                                                                                 |
-| `npm run e2e`                                 | Playwright: smoke, ngày/đêm, fallback, xoay camera, ảnh nền, căn lề, cắt lớp, bấm đồ trong nhà, sân vườn và bếp nướng, ao cá (thác nước, cho cá ăn), nhà xe (đèn xe), bé Akita và nhà cao (đèn chùm pha lê, máy lạnh)                                                                                                                                       |
-| `npm run poster`                              | Chụp `poster.jpg` (fallback)                                                                                                                                                                                                                                                                                                                                |
+- **Blender 5.2.2 LTS** at `/Applications/Blender.app` (any other path: set `BLENDER_BIN`).
+- **KTX-Software ≥ 4.4.0** (tested with v4.4.2): <https://github.com/KhronosGroup/KTX-Software/releases>.
+- Node 22 and pnpm (`pnpm install` at the monorepo root), and `python3` for the unit tests.
+- Playwright's Chromium for `e2e` and `capture:poster`:
+  `pnpm --filter @ncam/garden-home exec playwright install chromium`.
 
-Tham số URL: `?t=HH:MM` · `?quality=high|medium` · `?fps=N` · `?debug=1` · `?align=left|center|right` · `?bg=<tên file>`
+## Commands
 
-- Website (`/`): kéo chuột để xoay, lăn chuột (hoặc chụm hai ngón) để phóng to/thu nhỏ (14.5–140 m), cả hai theo vị trí con trỏ; phóng gần nhà thì nhà bị cắt lớp kiểu nhà búp bê và bấm được đồ trong nhà (xem mục [Tương tác trên website](#tương-tác-trên-website)). Camera không chui vào đá, vào nhà hay vào cây, dù tâm xoay ở đâu trên đảo: còn có thể ở trên nhà thì ở trên mái (hoặc trên mặt cắt khi nhà đang bị cắt), còn có thể ở trên đảo thì cao hơn ngọn cây (4 m), ra khỏi đảo mới xuống tới mặt cỏ, và chỉ khi đã ra ngoài đảo hẳn (bán kính đảo 30 m + khoảng cách từ tâm xoay tới giữa đảo + 3 m) mới hạ xuống dưới đường chân trời để thấy đáy đá. Wallpaper (`/wallpaper`) không nhận chuột.
-- `?align=`: đặt đảo sang trái, giữa hoặc phải màn hình (tâm cảnh ở 32 % / 50 % / 68 % bề ngang, phối cảnh không đổi). Mặc định wallpaper `right`, website `center`. Màn hình hẹp (tỉ lệ dưới khoảng 1.5 : 1, như 4 : 3) thì đảo được kéo dần về giữa để mép đảo không bị cắt (còn khoảng 64 % ở 4 : 3, 50 % ở màn hình dọc).
-- `?bg=`: thay bầu trời bằng một ảnh. Thả ảnh vào `web/public/backgrounds/` (tên chỉ gồm chữ, số, `.`, `_`, `-`, đuôi `jpg`, `jpeg`, `png` hoặc `webp`, viết hoa như `IMG_1234.JPG` cũng được; tên khác bị bỏ qua và console in một dòng cảnh báo), build lại (`npm run build -w web`), rồi mở `/wallpaper?bg=<tên file>`. Ảnh phủ kín màn hình (cover, căn giữa); ánh sáng ngày/đêm của đảo vẫn theo giờ, sương mù tắt, phản chiếu trên kính vẫn lấy từ bầu trời. Bầu trời vẫn hiện cho tới khi ảnh giải mã xong (không có nháy nền tối), ảnh không tải được thì giữ bầu trời. Có sẵn ảnh mẫu `example.jpg`; ảnh riêng trong `web/public/backgrounds/` không bị git theo dõi (chỉ `example.jpg`).
+| Command                                 | What it does                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `art:models [--force] [--only <step>…]` | Generates `house.blend`, `pool.blend`, the five garden modules, the koi pond and tea garden, the carport and kennel, the basement, the interior, and the yard and site placeholders. It keeps existing files unless `--force`. `--only` runs just the named steps: `house`, `pool`, `fence`, `garden_paths`, `flower_beds`, `veg_garden`, `bbq_area`, `koi_pond`, `tea_garden`, `carport`, `kennel`, `basement`, `interior`, `yard`, `site`, `broken`. |
+| `art:assets -- --check`                 | Checks the modules against the contract and writes nothing.                                                                                                                                                                                                                                                                                                                                                                                            |
+| `art:assets`                            | Blender → `public/assets` (GLB `high` and `medium` tiers per module, plus `scene.json`).                                                                                                                                                                                                                                                                                                                                                               |
+| `dev`                                   | The dev server on :9010: `/` and `/wallpaper`.                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `test:art`                              | The Blender (Python) tests and the pipeline's tests. It rewrites `public/assets`.                                                                                                                                                                                                                                                                                                                                                                      |
+| `e2e`                                   | Playwright, on the production preview: smoke, day and night, fallbacks, orbiting, the background photo, alignment, the dollhouse cut, clicking things in the house, the garden and the barbecue, the koi pond (waterfall, feeding the fish), the carport (car lights), the Akita pup and the tall house (crystal chandelier, air conditioners).                                                                                                        |
+| `capture:poster`                        | Captures the poster the page shows before the scene boots (`src/assets/poster`).                                                                                                                                                                                                                                                                                                                                                                       |
 
-## Tương tác trên website
+`site.blend` holds hand-placed instances of every module, so **leave `site` out of `--only` and
+never run `art:models --force` bare** (it regenerates every generated file, `site.blend` included,
+and with it the positions placed by hand). The `--force --only …` examples below therefore list
+the modules and `yard` only.
 
-Chỉ có ở `/`. Wallpaper không nhận chuột, không cắt nhà, mọi thứ ở chế độ tự động. Thiết kế: [docs/superpowers/specs/2026-10-16-interaction-cutaway-design.md](docs/superpowers/specs/2026-10-16-interaction-cutaway-design.md)
+## Adding or replacing a module
 
-- **Xoay, phóng to theo con trỏ:** lăn chuột (hoặc chụm hai ngón trên trackpad hay màn hình cảm ứng, hoặc kéo nút giữa) để phóng to/thu nhỏ về phía điểm dưới con trỏ (giữa hai ngón; với nút giữa là điểm dưới chỗ bắt đầu kéo): điểm đó đứng yên dưới con trỏ, tâm xoay đi theo trên mặt đất; con trỏ ở trên bầu trời thì phóng về tâm xoay như cũ. Kéo chuột (một ngón) thì xoay quanh trục đứng qua điểm dưới chỗ nhấn: nhấn lên ao rồi kéo ngang thì ao đứng yên trên màn hình, camera đi vòng quanh nó; nhấn lên bầu trời thì xoay quanh tâm xoay. Kéo dọc vẫn nghiêng camera quanh tâm xoay. Lần lăn chuột hay lần nhấn tiếp theo bỏ điểm xoay đó. Tâm xoay luôn nằm trong đảo, cách mép ít nhất 3 m: phóng về phía ngoài mép hay xoay quanh một điểm sát mép thì tâm dừng ở đó và camera đi theo, nên khung hình luôn quay quanh đảo chứ không quay quanh khoảng trời trống. Khi giới hạn góc của camera (không vào nhà, cây, đá) hoặc mép đảo can thiệp thì điểm dưới con trỏ trôi đi một chút. Gần nhà, sàn của camera nâng dần lên mái theo khoảng cách (nhiều nhất khoảng 2 m cho mỗi mét phóng ra hay mỗi mét tâm xoay dời về phía nhà), nên phóng hay xoay sát sàn không làm camera nhảy lên.
-- **Cắt lớp (nhà búp bê)**, theo khoảng cách camera → giữa nhà (tâm footprint của nhà trên mặt đất, không phải tâm xoay: phóng về vườn rau thì nhà vẫn nguyên, phóng về nhà thì nhà bị cắt):
+1. Create `art/blender/modules/<id>.blend` with one top-level collection named `<id>` and the
+   custom props `footprint: [w, d]` and `role: "hero" | "prop"`.
+2. Follow the contract (`art/blender/scripts/contract.py`, summarised in `../AGENTS.md`): apply
+   scale, `ambient_*` / `act_*` clips, `HS_*` hotspots, `WATER_*` water meshes, the `night_light`
+   prop, the `wind` colour attribute.
+3. Open `art/blender/site.blend` → File → Link → `<id>.blend` → Collection `<id>`, and place the
+   instance.
+4. Run `art:assets`. A contract failure names the module and the rule in the terminal.
 
-  | Khoảng cách | Thấy                                      |
-  | ----------- | ----------------------------------------- |
-  | > 45 m      | cả nhà                                    |
-  | 28–45 m     | tầng 2: mái và mọi thứ trên 6.86 m bị cắt |
-  | < 28 m      | tầng trệt: cắt ở 2.05 m                   |
+Who generates what. `yard` is a placeholder made by `dev/make_placeholders.py` (the old placeholder
+pond gave way to the koi pond); `house` and `pool` by `houses/build_house.py` and
+`houses/build_pool.py`; the five garden modules by `garden/build_*.py`, the koi pond and tea garden
+by `pond/build_*.py`, the carport and kennel by `carport/build_*.py`, the basement by
+`basement/build_basement.py` and the curtains and accessories in the house by
+`interior/build_interior.py`. One section for each follows.
 
-  Mỗi ngưỡng có trễ ±3 m (đi vào thì đổi ở 42 m / 25 m, đi ra ở 48 m / 31 m) nên dừng gần ngưỡng không bị nhấp nháy. Chỉ bắt đầu cắt khi camera cao hơn mặt cắt quá 2 m (nhìn từ dưới đáy đảo lên thì nhà nguyên vẹn); đã cắt thì giữ cho tới khi camera thấp hơn mặt cắt 1.25 m (trễ 0.75 m), nên camera lướt qua giới hạn không làm mái nhấp nháy. Camera ở trong dải của tầng 2 mà thấp quá mặt cắt tầng 2 (8.86 m để bắt đầu, 8.11 m để giữ) thì thấy mặt cắt tầng trệt thay vì cả nhà: phóng thẳng vào nhà cao từ khung đầu (nhìn xuống 13.8°) thì camera xuống dưới 8.11 m từ 34 m, và mái không được hiện lại trước khi tới dải tầng trệt; mặt cắt chỉ chuyển lên tầng 2 khi camera đã cao quá 8.86 m. Đèn chùm pha lê ở khoảng thông tầng phòng khách (custom prop `uncut`) không bị mặt cắt tầng trệt cắt: nó có mặt phẳng cắt riêng (`voidPlane`), ở mặt cắt tầng 2 (6.86 m) khi xem tầng 2 (dây treo dừng ở ngang tường tầng 2 đã cắt) và ở đỉnh của chính nó (custom prop `cut_top`, 5.72 m: núm đồng trên cùng cộng 5 cm dây) khi xem tầng trệt, nên xem tầng trệt vẫn thấy nó treo nguyên giữa phòng khách và bấm được mà không có sợi dây vươn lên trên nhà đã cắt. Khung vàng khi di chuột cũng dừng ở chỗ mặt cắt cắt món đồ (`pick.ts` `shownBox`), không vươn tới trần khoảng thông tầng. Tường bị cắt vẽ cả mặt trong nên không lộ lòng rỗng; bóng nắng cũng bị cắt nên nắng rọi vào phòng. Trong lúc đang cắt, sàn của camera ở chỗ nó có thể ở trên nhà hạ từ trên mái (13.7 m: mái nhà cao 9.68 m, giàn nho trên mái tới 12.76 m) xuống 3.5 m trên mặt cắt (5.55 m khi xem tầng trệt, 10.36 m khi xem tầng 2), để mặt cắt không tắt và camera không chui vào phần tường còn lại; sàn này nâng dần lên sàn của mức kế tiếp trong dải trễ khi zoom ra, nên đổi mức không làm camera giật. Sàn nới này chỉ áp dụng khi đang cắt và chỉ ở chỗ camera còn với tới nhà: xa hơn góc xa nhất của nhà (tính từ tâm xoay), sàn thường (mái rồi ngọn cây, rồi mặt cỏ khi đã ra ngoài đảo) đã thấp hơn nên được dùng. Nó nâng dần theo khoảng cách xa nhất camera có thể cách giữa nhà (khoảng cách tới tâm xoay cộng khoảng cách từ tâm xoay tới giữa nhà, vì phương vị tự do), nên camera chỉ xuống thấp trên nhà đang cắt khi tâm xoay ở nhà: phóng về nhà (con trỏ trên nhà) tới 20 m thì sàn là 5.55 m, còn với tâm xoay ở điểm ban đầu (điểm CAM_idle nhìn xuống mặt đất, (4, 0, 4)) và camera cách nó 20 m thì dù nhà đang cắt tới tầng trệt (camera xoay sang phía nhà), sàn vẫn là 10.36 m (sàn của tầng 2). Phóng gần nhất 14.5 m (trước là 12 m): sàn trên mái 13.7 m, camera gần như thẳng đứng trên một tâm xoay sát nhà vẫn phải ở trên mái.
+## Glass villa: generation and tuning
 
-- **Nút tầng** (góc dưới trái, chỉ ở `/`): "Tự động", "Mái", "Tầng 2", "Tầng 1", "Hầm" (`web/src/ui/FloorSelector.tsx`, nút đang chọn có `aria-pressed="true"`, store `cutMode`). "Tự động" là cắt theo khoảng cách như bảng trên. Các nút khác giữ một mức bất kể khoảng cách: "Mái" là cả nhà, "Tầng 2" cắt ở 6.86 m, "Tầng 1" ở 2.05 m, "Hầm" ở −2.02 m (sàn hầm −3.62 + 1.6: nhà biến mất hết, nhìn xuống hố thấy các phòng hầm như sơ đồ mặt bằng, tường có vạch cắt màu bê tông). Luật chiều cao vẫn giữ: camera không cao hơn mặt cắt quá 2 m thì nhà nguyên (`forcedCut`, trễ 0.75 m); mặt cắt hầm nằm dưới cỏ nên trên đảo lúc nào cũng cắt được. Mức hầm chỉ có qua nút, không bao giờ tự đến theo khoảng cách. Khi xem hầm, sàn của camera trên nhà là sàn của mức tầng trệt (5.55 m, trước là sàn cỏ 4 m): camera vẫn nhìn xuống hố được, và từ đó bấm "Tầng 1" thì camera không phải nhảy lên. Bấm "Tầng 2", "Tầng 1" hay "Hầm" khi camera xa tâm nhà hơn 45 m hoặc nhìn xuống nhà chưa tới 35° (như khung đầu: 124 m, 13.8°, từ đó hầm chỉ là một cái hố) thì camera trôi về nhà trong 0.8 s (`FLOOR_VIEW`, `floorPose` ở `orbit.ts`, `choose` ở `cursorOrbit.ts`): cách tâm nhà 35 m, nhìn xuống 55° vào hố hầm hoặc 40° xuống hai tầng, giữ hướng nhìn; "Mái" và "Tự động" không kéo camera về. Mỗi khung camera đi một phần quãng còn lại (smoothstep theo thời gian, mỗi khung tính tối đa 0.05 s), giới hạn camera vẫn áp mỗi khung; bấm chuột, cuộn hay kéo là dừng ngay ở chỗ đang tới. Bấm lại nút đang chọn (ví dụ "Hầm" sau khi đã phóng ra xa) cũng kéo camera về như vậy. Nếu mức vừa chọn cần camera cao hơn chỗ nó đứng (từ một góc thấp xuống hố bấm "Mái" hay "Tầng 2"), camera được nâng thẳng lên quanh điểm nhìn tới sàn của mức đó trước, mức đang hiện giữ nguyên tới khi camera qua sàn ấy, kể cả khi bấm chuột, cuộn hay kéo dừng nó giữa chừng: không khung nào hiện lại cả nhà hay mái ở giữa chừng, camera không nhảy. Bấm lại "Tự động" thì mặt cắt theo khoảng cách từ khung hình kế tiếp. Ở mức hầm, mọi mesh của nhà nằm trọn trên mặt cắt nên không vẽ (layer ẩn), bốn đèn điểm của nhà về cường độ 0 (vẫn giữ trong cảnh để không đổi số đèn, không biên dịch lại shader; đêm không còn rọi vào hố): ở khung nhìn sau khi bấm "Hầm" (35 m, 55°) route site vẽ khoảng 310 lệnh, so với khoảng 1 140 khi cả nhà đứng đó.
-- **Bấm vào đồ trong nhà để bật/tắt.** Di chuột lên món đồ thì hiện tên tiếng Việt cạnh con trỏ (kèm "Bấm để bật / tắt / mở / đóng"), con trỏ bàn tay và khung vàng mảnh quanh món đồ. Bấm được:
-  - đèn từng phòng: point light, downlight, đèn thả, đèn sàn, đèn ngủ của phòng, cả ô kính mờ phòng tắm/WC, và ở phòng khách **đèn chùm pha lê** ("Đèn chùm pha lê", treo giữa khoảng thông tầng; point light của phòng khách nằm trong nó); bấm một đèn thì cả phòng đổi. Mỗi phòng có đèn còn có **công tắc đèn trên tường** ("Công tắc đèn phòng khách"…, tấm đen nhỏ có nút trắng, cao 1.15 m, cạnh cửa phòng hoặc trên tường của phòng thông): bấm nó cũng đổi cả phòng. Khi nhà bị cắt thì trần, đèn thả và downlight đã bị cắt đi, công tắc (dưới mặt cắt) là chỗ bấm của phòng; nó nhỏ (khoảng 9 × 12 cm), phóng gần mới thấy rõ, và chỉ thấy từ phía mặt tường nó quay ra;
-  - TV phòng khách (trên vách TV quay về phía tây: nhìn từ phía tây nam mới thấy màn hình), TV phòng ngủ master, máy tính (góc máy tính tầng 2); bật lúc ban ngày thì màn hình sáng yếu hơn (một phần mười) để là tấm màn xanh chứ không trắng xoá, ban đêm sáng như cũ;
-  - vòi sen phòng tắm master và phòng tắm chung (hiện cột nước rơi), cửa chính (trượt mở / đóng), bể sục (bong bóng chạy / dừng), tường nước (tấm nước chảy / ngừng), dây đèn trên mái;
-  - **máy lạnh** ba phòng ngủ ("Máy lạnh phòng master", "Máy lạnh phòng ngủ 2", "Máy lạnh phòng ngủ 3"): bấm máy (treo cao 2.4 m, trên mặt cắt tầng 2) hay **bộ điều khiển trên tường** cạnh công tắc đèn ("Điều khiển máy lạnh …", dưới mặt cắt) thì cánh đảo gió mở ra (clip `act_ac_<phòng>`, chạy ngược khi tắt) và đèn trạng thái sáng; tự động là tắt, ngày cũng như đêm, cả trên wallpaper;
-  - ngoài sân (xem mục [Sân vườn](#sân-vườn)): **đèn sân vườn** (đèn trụ dọc lối đá và đường xe, đèn trên trụ cổng, dây đèn dưới giàn BBQ, đèn đá ở góc trà: một nhóm, bấm một cái thì cả sân đổi) và **bếp nướng** (than hồng lên, kể cả ban ngày);
-  - ở nhà xe (xem mục [Nhà xe và chó](#nhà-xe-và-chó)): **đèn nhà xe** (bấm mái hay cột nhà xe: ba đèn âm trần trên dầm và vũng sáng dưới sàn), **đèn xe bán tải** và **đèn siêu xe** (bấm vào xe, từ trên cao thì bấm qua khe lam mái: tấm kính mái không chặn; đèn pha, đèn hậu và vệt sáng đèn pha hắt xuống đất trước mũi xe; tự động thì sáng nhẹ theo đêm như đèn sân vườn), và **bé Akita** (bấm vào chó: bé nhảy cẫng hai cái, ngoẹo đầu, vẫy đuôi thật nhanh rồi về ngồi như cũ, mỗi cú bấm một lần; bấm lúc bé đang vui thì không có gì xảy ra, bé vui tiếp cho hết chứ không bị giật về đầu giữa cú nhảy; hiện "Bấm để chơi với bé"; không phải công tắc nên không đổi trạng thái nào);
-  - ở tầng hầm (xem mục [Tầng hầm](#tầng-hầm), khi đã bấm nút "Hầm"): đèn từng phòng ("Đèn sảnh hầm", "Đèn hầm rượu", "Đèn phòng karaoke", "Đèn spa", "Đèn phòng gym", "Đèn phòng tắm hầm", bấm công tắc trên tường của phòng), **chế độ tiệc** ("Chế độ tiệc": bấm TV, loa hay micro của phòng karaoke: màn hình sáng, dải LED quanh phòng và vũng sáng dưới quả cầu disco đổi màu theo vòng sắc độ mỗi 6 s, quả cầu disco quay và các ô gương của nó sáng cùng màu với dải LED; tự động là tắt), **phòng xông hơi** (đá trên bếp đỏ lên, có dải sáng ấm dưới bậc ngồi; tự động là tắt) và **bể ngâm** của spa (bong bóng chạy / dừng như bể sục; tự động là chạy);
-  - ở ao cá (xem mục [Ao cá koi](#ao-cá-koi)): **thác nước** (bấm vào hòn non bộ, tấm nước hay bọt: tấm nước và bọt ẩn / hiện) và **cho cá ăn** (bấm mặt ao: đàn koi bơi tới quây quanh chỗ bấm vài giây rồi bơi lại vòng của mình; bấm chỗ khác khi cá còn đang ăn thì cả đàn lượn theo sang chỗ mới, không con nào giật về vòng; không phải công tắc nên không đổi trạng thái nào).
+- The house's layout (the tall house, 23 × 15 m on both storeys) is plain data in
+  `houses/house_parts/`: `common.py` (heights, axes, the double-height void `VOID`), `shell.py`
+  (structure, glass, partitions, frosted panes, doors, the stair's opening through the floors),
+  `ground.py`, `upper.py` and `roof.py` (rooms, furniture, lights, hot tub, grape trellis, stair
+  pavilion, condensers). `houses/house_layout.py` gathers them. The pool is in `pool_layout.py`.
+- **The tall house with a double-height living room:**
+  - Heights: the plinth is still 0.45 m and every storey above it is 30 % taller
+    (`common.HEIGHT_SCALE`): ground ceiling 4.87, upper floor 5.26, upper ceiling 9.29, roof 9.68,
+    door head 3.57 m. Each storey is 4.81 m floor to floor, 4.4 and 4.0 m clear. The site route's
+    cuts are at 2.05 and 6.86 m.
+  - Plan 23 × 15 m: zone `house` (−13, 2) to (10, 17), slot (−1.5, 9.5). The front (y = 2), the east
+    wall (x = 10, 2 m from the carport) and the front door (x 6.1, at the end of the stone walk)
+    kept their places in the yard; the bigger house grows 3 m to the left and 2 m to the back. The
+    two trees behind the house moved to y 19.5 and the flower beds' "behind the pool" palm to
+    (−14, 2.6).
+  - The double-height living room at the front left: the void `VOID`, 7.84 × 7 m, has no upper
+    floor (the cantilever included), and its front and west flank are one glass wall from the
+    plinth to the upper ceiling (6 and 5 panes, continuous mullions). The TV stands on its own wall,
+    the L-shaped sofa has its back to the west glass, and a reading corner sits under the gallery at
+    the back. Upper floor: the `gallery` hallway runs along the back edge of the void behind a
+    glass balustrade; bedroom 2 and the master bedroom face the front; the wardrobe and master
+    bathroom are behind the master (frosted glass on the east side, seen over the stone block's
+    roof); bedroom 3 has a glass window in its west wall; the shared bathroom has frosted glass in
+    its back wall; the `gaming` computer corner opens onto the hallway; the balcony projects from
+    x −2.8 (so the chandelier is seen from the front right). The 20 × 14.5 m roof terrace keeps its
+    old layout.
+  - The spiral stair (`spiral_stair`, `archkit/spiral.py` and `archkit/furniture/stairs.py`): a
+    steel column, 25 open teak treads (19 cm, 18° each, one turn and a quarter) and a spiral
+    handrail, at the back left corner of the void with its centre on the hallway's edge. The upper
+    landing is the back-right quarter and the back-left quarter is the opening in the floor. It
+    goes on up to the roof (option `upper`, 23 treads, same column): the roof slab has an opening
+    except for the landing, and the stair comes out in the **stair pavilion** `stair_pavilion` by
+    the west balustrade. The pavilion has solid white walls to the west and back (so there are no
+    two layers behind the glass balustrade), glass to the east and on the right half of the front
+    between teak posts, a 1.2 m door in the left half of the front under a teak lintel, and a thin
+    10 cm white slab roof overhanging 20 cm to the front and east (`catalog.STAIR_PAVILION`). Its
+    2.6 × 2.6 m walls enclose the stair and its 2.8 × 2.8 × 2.4 m roof is in the catalog, so the
+    pavilion stands 0.1 m off the stair's centre, to the east and to the front. The cabana bed moved
+    east (x −6.2) so the two masses do not look alike. Head room is at least 2 m under every landing
+    (a test).
+  - The crystal chandelier (`crystal_chandelier`, `archkit/furniture/lights.py`): 2.4 × 2.4 × 2.2 m.
+    Three rings of flat brass strip, 6 × 2 cm (24 segments), Ø 2.2 / 1.6 / 1.0 m; under each ring
+    an open, 24-sided, pleated **crystal curtain** with a zig-zag edge 14 to 22 cm deep; in front
+    of the curtain 40 / 28 / 20 strings of large crystal drops (10 × 22 cm, long and short in turn,
+    180 drops); 16 / 12 / 8 candle bulbs (flame 8 × 18 cm) on the three rings and an emissive core,
+    `M_led`, round the body. `M_crystal` is champagne mirror (metallic 1.0, roughness 0.04: next to
+    `L_living` every diffuse part burns out to white, so at night the crystal only sparkles and
+    glows warm yellow at 1.2), opaque so there is no transparent pass. It hangs from the upper
+    ceiling in front of the sofa rug (−7.4, −2.8), its lowest ring 3.5 m above the floor; from
+    `CAM_idle` the stair is about 8° off the line of sight instead of right behind the chandelier.
+    `L_living` (160) sits inside it; 3 100 triangles, one object with three materials.
+  - Air conditioning (`archkit/furniture/climate.py`): an `ac_split` hangs at 2.4 m on the partition
+    in the master bedroom, bedroom 2 and bedroom 3 (the flap is a child object turning about
+    `catalog.AC_FLAP_PIVOT`, clip `act_ac_<room>`; the main flap is the status light, `M_ac_light`,
+    white like the body and pale green when the unit runs, so body and flap have a material each);
+    an `ac_remote` beside the light switch (black glass, one material); three `ac_condenser`s (all
+    grey metal, with a raised fan grille) between two `teak_screen`s along the west parapet on the
+    roof, one on the deck side and one on the parapet side so they are not seen from outside through
+    the glass balustrade either (merged into one `AC_condensers` object with two materials, the
+    `into` option of `FURNITURE`).
+  - The back: clerestory glass strips high over the kitchen run (5.2 × 1.1 m) and at the computer
+    corner (3.6 × 1 m), `shell.WINDOWS` (one `GLASS_window_<name>` pane per window,
+    `glazing.window`, the black frame in `Facade_details`). The way from the hall into the kitchen
+    is a 1.1 m gap between the end of `Wall_kitchen_hall` and the back wall: `shell.PASSAGES`, and
+    `layout_check` keeps 0.8 m free on each side as for a door.
+  - Budget: the `hero` ceiling went from 40k to 50k triangles (`contract.py`); the house is 45.8k
+    (at most 48k), 301 mesh objects, 4 point lights, textures still `T_stone`, `T_wood`, `T_art`.
+    The light switches, air conditioners (body, flap, remote) and condensers carry
+    `cast_shadow = False`.
+  - Performance (`shoot --stats`, `?bg=example.jpg`, SwiftShader): 762 → 788 draw calls at 12:00 and
+    768 → 794 at 21:00 (+12 for the tall house, void, stair and chandelier; +14 for the way to the
+    roof, the air conditioners and the back windows); wallpaper triangles 82.9k → 89.5k; the site
+    route (7 interleaved rounds, load 7) 46.6 ms (main) → 51.2 ms per frame, draw calls
+    1 283 → 1 278 (the last fix changed nothing: 51.2 → 50.8 ms).
+- The 48 × 40 m yard is in `siteplan/zones.py`: the zones (house, pool, pond, carport, driveway,
+  barbecue, vegetable garden, kennel, stone walk…), the module slots, the trees, lamp posts and
+  cameras. The yard stands on a floating island (`zones.ISLAND`, rim in `siteplan/island.py`): a
+  flat grass top at z = 0, a seeded super-elliptical rim 54 × 46 m, a grass lip, a layer of earth
+  and a low-poly rock underside tapering to a point 15.5 m below (darker towards the point, with a
+  few light faces), a few hanging rocks, roots and small tufts and stones along the rim. The `yard`
+  module's footprint is the island's bounding size. `make_placeholders.py` runs `zones_check` first
+  and stops with `ZONES: …` if zones overlap, a slot lies outside its zone, or a zone, tree or lamp
+  post lies outside the island's rim (also for a differently sized island, `--yard-size W D`). The
+  house and pool slots take their footprints from the modules themselves (`common.py`,
+  `pool_layout.py`).
+- The builders are in `archkit/`. Furniture: sizes in `archkit/catalog.py`, builders split by area
+  in `archkit/furniture/` (living, dining_kitchen, bedroom, office, bath, outdoor, decor, tropical,
+  stairs, lights, climate). Paintings take a `variant` option 0 to 7 (one cell of the `T_art`
+  atlas).
+- Tropical resort decoration (`archkit/furniture/tropical.py`): the plants `palm_tall`,
+  `palm_small`, `monstera`, `bird_of_paradise`, `fern_hanging` (hanging) and `plant_wall`; rattan,
+  teak and linen furniture `rattan_armchair`, `egg_chair`, `daybed_cabana`, `teak_lounger` and
+  `outdoor_bar`; the lights `rattan_pendant` (hanging) and `lantern` (both glow, `night_light`).
+  Materials: travertine `M_stone`, `M_teak`, `M_rattan`, `M_linen`, `M_terracotta`, `M_leaf_dark`.
+  - Outdoor plants take the option `{"wind": True}` (only `palm_tall`, `palm_small`, `monstera`,
+    `bird_of_paradise` and `fern_hanging`): the object is painted with the `wind` colour attribute
+    from the pot to the tip, so the runtime sways the leaves. Indoor plants keep the default (no
+    wind). Any other piece given `wind` raises `TypeError`.
+  - Ceiling-hung pieces (`rattan_pendant`, `fern_hanging`, `crystal_chandelier`) hang at
+    `WALL_MOUNTED`; where the ceiling is higher, add the option `cord` (extra cord length, m): the
+    house layout uses `common.hang(kind, level, point)` so the cord reaches the ceiling exactly
+    there (in the void that is the upper ceiling, `common.ceiling_over`).
+  - `lighting.string_lights(col, name, points, mats, bulbs_per_m, sag, bulb_radius)`: one
+    `night_light` string-light object through the anchor points (x, y, z), sagging by `sag` × the
+    length of each span (0 = taut). The house uses 12 cm round bulbs (`bulb_radius=0.06`) because
+    smaller ones are not visible from the wallpaper camera. In the layout: `roof.STRING_LIGHTS` (a
+    zig-zag under the grape trellis and along the front roof railing).
+  - Water: `water.reflecting_pool(...)` (a shallow pool with a travertine rim, `WATER_<name>`,
+    stepping stones `<name>_steps`) and `water.wall_fountain(...)` (the water wall: a vertical
+    `WATER_<name>_sheet`, `WATER_<name>` in the trough, an LED `LT_<name>`). In the layout:
+    `ground.REFLECTING_POOLS` (along the porch, a column standing in the water) and
+    `ground.WALL_FOUNTAINS` (beside the front door). `layout_check` checks the string-light
+    anchors, pools and fountains lie inside the footprint and that no piece stands in a pool. The
+    runtime's water shader gives a vertical face (steeper than 60°) streaks of running water
+    instead of surface ripples.
+- Edit the layout, regenerate that module, then run `art:assets`. The house:
+  `"${BLENDER_BIN:-/Applications/Blender.app/Contents/MacOS/Blender}" -b --factory-startup --python-exit-code 1 -P art/blender/scripts/houses/build_house.py -- --force`
+  (from `apps/garden-home`); the pool: the same with `build_pool.py`. `layout_check` reports
+  furniture outside its room or overlapping before the script builds anything in Blender.
+- `art:models --force` overwrites **every** generated file: `house.blend`, `pool.blend`, the five
+  garden modules, `koi_pond.blend`, `tea_garden.blend`, `yard.blend`, `site.blend` (and with it
+  every hand-placed instance) and the fixture. Use it only when no file has been edited by hand;
+  to regenerate a few files add `--only` (for example
+  `art:models --force --only bbq_area yard`).
+- To tune by hand, open `art/blender/modules/house.blend` and edit materials and details. From then
+  on do not run `--force` again: the `.blend` is the source. `art:assets` still checks the contract.
+- Conventions for hand edits:
+  - Glass uses `GLASS_*` materials: alpha 0.1 to 0.5, roughness ≤ 0.1, one object per pane (except
+    the sliding door `Door_main`).
+  - Frosted glass (bathroom, WC) uses `FROSTED_*`: alpha 0.4 to 0.85, roughness 0.3 to 0.8. Every
+    frosted pane must carry `night_light = True`: its weak emission is multiplied by the night
+    factor, and without the prop the pane glows in daylight.
+  - Lights are Point or Spot with the custom prop `night_light = True`, at most 4 for the house
+    (`hero`) and 2 for the pool (`prop`). The intensity (W) goes straight into three.js.
+    Triangle ceilings: `hero` 50k (the tall house), `prop` 15k.
+  - Every object with an emissive material (the `M_led` LEDs, the `M_rgb` strip, the
+    `M_screen_on` screens, the `FROSTED_*` panes…) must carry `night_light = True`, or it glows by
+    day. `test_villa_modules.py` checks this on the house and pool exports.
 
-  Lúc đầu mọi thứ ở chế độ tự động (đèn, màn hình và than bếp nướng sáng theo đêm; vòi sen tắt, cửa đóng, máy lạnh tắt, bể sục, tường nước và thác nước chạy). Lần bấm đầu đảo ngược thứ đang thấy (ban ngày thì bật đèn, ban đêm thì tắt), sau đó bật ↔ tắt. Nhấn rồi kéo quá 5 px (xoay camera) không tính là bấm, kể cả khi thả chuột ngay chỗ đã nhấn. Kính trong suốt không chặn cú bấm (bấm xuyên qua kính vào phòng), trừ kính của chính món đồ (cabin tắm, cửa kính); phần nhà bị mặt cắt bỏ đi cũng không chặn (bấm xuyên qua chỗ đã cắt, còn tường vẫn thấy thì vẫn chặn). Khung vàng và nhãn đi theo món đồ khi nó di chuyển (cửa trượt), và được chọn lại khi camera hoặc mặt cắt đổi dưới con trỏ đứng yên; món đồ đang trỏ mà bị ẩn đi (bấm tắt thác: tấm nước biến mất) thì khung và nhãn bỏ ngay, con trỏ chọn lại thứ phía sau (hòn non bộ). Trạng thái không lưu khi tải lại trang. Đèn treo cao hơn mặt cắt (đèn thả phòng ăn, bếp, mọi downlight) bị cắt đi nên lúc đó không bấm được: bấm công tắc trên tường của phòng.
+## Garden
 
-- **Dữ liệu:** object trong `house.blend` mang custom prop `interact` (nhóm: `light:<phòng>`, `tv:<object>`, `pc:<object>`, `shower:<object>`, `ac:<phòng>`, `door:main`, `jacuzzi`, `fountain`, `lights:string`; ngoài sân thêm `lights:garden` và `bbq`, gắn bởi `blender/scripts/garden/interact.py`, ở ao `waterfall` và `koi`, gắn bởi `blender/scripts/pond/interact.py`, ở nhà xe `lights:carport`, `lights:car_pickup`, `lights:car_super` và `dog`, gắn bởi `blender/scripts/carport/interact.py`, ở tầng hầm `light:<phòng hầm>`, `party`, `sauna` và `jacuzzi:spa`, gắn bởi `blender/scripts/basement/interact.py`; chao đèn bàn của module `interior` vào `light:<phòng>` của nhà, gắn bởi `blender/scripts/interior/interact.py`), `label` (tên hiện khi di chuột) và với cửa, bể sục, chó, cánh đảo gió của máy lạnh thêm `clip`; đèn chùm mang thêm `uncut` (mặt cắt cắt nó ở mặt phẳng riêng của khoảng thông tầng chứ không ở mặt cắt tầng của nó) và `cut_top` (cao độ đỉnh của nó trong module, nơi mặt phẳng đó dừng khi xem tầng trệt). `build_house.py` gắn chúng theo loại đồ và phòng (`blender/scripts/houses/interact.py`); tên phòng nằm ở `ROOM_LABELS` trong `house_parts/ground.py`, `upper.py`, `roof.py`. Downlight dựng một object mỗi phòng `LT_down_<phòng>`; point light cần `"level"` để biết thuộc phòng nào. Công tắc là loại đồ `light_switch` (catalog, treo ở 1.15 m, `Switch_<phòng>` trong `FURNITURE` của tầng), mang `interact = light:<phòng>` và nhãn "Công tắc đèn <phòng>". `layout_check` báo đèn nằm ngoài mọi phòng, phòng có đèn mà thiếu tên, phòng có đèn mà thiếu công tắc, công tắc ở phòng không có đèn, công tắc cao quá mặt cắt của tầng nó (`CUT_HEIGHTS`, từ `CUT_ABOVE_FLOOR` trong `house_parts/common.py`, `cutaway.test.ts` đối chiếu với `cutaway.ts`) hoặc bị đồ cao che trước mặt (0.3 m), và mã nhóm sai dạng.
+The garden: a fence and gates, a stone walk and garden lamps, flower beds, a vegetable garden, an
+outdoor dining and barbecue area, in the house's resort style (travertine, teak, rattan,
+terracotta, palms), low-poly. The code is in `garden/`, built like `houses/`: each module has a
+plain-data layout (`*_layout.py`) and a generator (`build_*.py`); `garden/layout_check.py` checks
+before building and, on an error, prints `LAYOUT <module>: …` and exits 1.
 
-## Thêm hoặc thay module
+- **`fence`** (slot `fence_01`, the whole island): a travertine post at every vertex of the island's
+  rim (set back 0.45 m) and three teak rails between posts; a pedestrian gate at the main walk
+  (x 0) and a car gate at the driveway (x 17), each with two travertine gate posts topped by a
+  lantern (glowing core 32 cm high) and two closed teak-slat leaves; under each lantern half a pool
+  of light (radius 1.1 m) facing inwards.
+- **`garden_paths`** (`garden_paths_01`, the whole island): 34 travertine slabs a step apart (square
+  landings at the two turns) from inside the main gate along `path_gate` → `path_turn` →
+  `path_door` to the foot of the door step; a travertine driveway between two grey kerbs (sharing
+  no face, so no z-fighting) from inside the car gate to the carport zone, its last 2.4 m
+  flaring out into a parking apron (`APRON`, from x 15–19 to 12.4–19.8) for both carport bays,
+  with the kerb running diagonally and meeting the straight kerb in a mitre; 15 low lamp posts
+  (`garden_lamp`, light head 29 cm high) along both routes, each with a round 1.6 m pool of light on
+  the lawn; a few pebbles.
+- **`flower_beds`** (`flower_beds_01`, the whole island): travertine-edged beds (pink, yellow, red
+  and white flowers) joined end to end into two strips: one of four beds on each side of the stone
+  walk from the main gate, and one of four along the south edge of the pond zone (the koi pond's,
+  below), branching off the right-hand strip; cone-trimmed topiary at the gate end of a
+  strip, round at the other; terracotta flower pots at the door step, palms at both gates, behind
+  the pool and by the driveway; every plant sways (12 beds, 25 pieces, 9.4k triangles).
+- **`veg_garden`** (`veg_garden_01`, zone `vegetables`): a gravel yard edged with teak; six raised
+  wooden beds (lettuce, cabbage, carrots, herbs) on both sides of a gravel path, a bamboo-stake
+  tomato trellis, a compost bin, a terracotta-roofed tool shed, a wheelbarrow and a watering can.
+  The front-left corner (0.6 m from the island's rim, the fence running just outside) is gravel
+  only.
+- **`bbq_area`** (`bbq_area_01`, zone `bbq`): a travertine terrace; a teak pergola over a
+  six-seat dining table with a zig-zag of string lights under it (9 cm round bulbs); an outdoor
+  kitchen counter along the east edge, the charcoal grill just in front of it and set well back into
+  the terrace so the pool's deck hides it less (nothing tall hides it from the wallpaper camera),
+  a parasol over two rattan chairs, and planters at the corners.
 
-1. Tạo `blender/modules/<id>.blend`, có một collection gốc tên `<id>` với custom props `footprint: [w, d]` và `role: "hero" | "prop"`.
-2. Theo đúng hợp đồng ở spec §6: apply scale, đặt clip `ambient_*` / `act_*`, hotspot `HS_*`, mesh nước `WATER_*`, prop `night_light`, color attribute `wind`.
-3. Mở `blender/site.blend` → File → Link → `<id>.blend` → Collection `<id>`, rồi đặt vị trí instance.
-4. Chạy `npm run assets`. Nếu có lỗi hợp đồng, terminal báo đúng module và đúng rule.
+Notes:
 
-`yard` là placeholder, sinh bởi `blender/scripts/dev/make_placeholders.py` (ao placeholder cũ đã thay bằng ao cá koi); `house` và `pool` sinh bởi `blender/scripts/houses/build_house.py` và `build_pool.py`; năm module sân vườn bởi `blender/scripts/garden/build_*.py`, ao cá và góc trà bởi `blender/scripts/pond/build_*.py`, nhà xe và góc chó bởi `blender/scripts/carport/build_*.py`, tầng hầm bởi `blender/scripts/basement/build_basement.py`, rèm và phụ kiện trong nhà bởi `blender/scripts/interior/build_interior.py` (xem các mục dưới).
+- **The three whole-island modules** (slots with `zone = "island"`, `siteplan.island.ISLAND_WIDE`)
+  stand at the island's centre, unrotated, with a footprint equal to the island's bounding size;
+  their coordinates are yard coordinates. `zones_check` enforces exactly that (position (0, 0),
+  yaw 0, footprint `zones.ISLAND["size"]`, also when `--yard-size` builds a different island).
+  `garden/layout_check.py` checks the content: inside the island's rim, not over any zone other
+  than the ones the module uses (`ZONES_USED`: the stone walk uses `path_*` and `driveway`; the
+  house, pool, vegetable garden, barbecue and the zones of the modules below, `pond`, `tea`,
+  `carport` and `kennel`, are all off limits), at least 0.35 m from the yard's tree trunks and lamp
+  posts. `check_island` checks the three modules against each other: no piece of one over a piece
+  of another, and every gate leads to a stone walk or driveway of the right kind. The stone walk
+  must be continuous (grass gaps ≤ 0.45 m, the first slab right at the gate, the last touching the
+  door step) and the driveway starts at the car gate and runs to the carport zone. The vegetable
+  garden and barbecue are ordinary modules inside their zones (module coordinates, front −Y). A
+  parasol is allowed over the pieces below it; a piece standing on the floor (gravel, paving,
+  z < 0.3 m) still counts as on the ground, a piece placed on another (a lamp on a post) does not.
+- **Performance:** each module merges the pieces of one group into **one object** (`PIECES`:
+  `(kind, group, position, rotation[, option])`): `furniture.place_into` builds the piece into a
+  shared mesh and `MeshBuilder.placed` paints `wind` per piece, so each material is one draw call
+  however many hundred pieces there are. `shoot --stats` at 12:00 (SwiftShader,
+  `?bg=example.jpg`): 642 → 696 draw calls (+54, budget +120; 21:00 adds 2 for the pools of light:
+  698), 44.6k → 70.3k triangles (fence 5.0k, stone walk 3.2k, flower beds 9.4k, vegetable garden
+  4.6k, barbecue 3.6k). No point lights: the garden lights are emissive `night_light`s that glow
+  with the night. Flat or small objects carry `cast_shadow = False` (`Paving`, `Flower_beds` and
+  `Veg_beds` through the layout's `SHADOWLESS`, and the yard's `Rim_tufts`): `prepareModule` keeps
+  them out of the shadow pass (they still receive shadows), which saves the site route about 16k
+  triangles and 20 draw calls in that pass.
+- **Pools of light.** From the wallpaper camera a lamp head is 1 to 2 px; what reads at 21:00 is the
+  lawn it lights. Each lamp has a flat `GLOW_pool` disc 2.5 cm high (`MeshBuilder.disc`, UV running
+  from 0 at the centre to 1 at the rim; `garden/lights.py`, the layout lists them in `POOLS`,
+  `assemble.pieces` merges them into the lamp's object). The page draws `GLOW_*` additively (no depth
+  write, one pass, no shadows cast or received), fading towards the rim by `(1 − u²)²` through a
+  32 × 1 alpha map made at run time (the module carries no texture) with the opacity following the
+  night factor like any other emissive (the `lights:garden` toggle overrides it), and hides it
+  altogether by day so it costs no draw call (+2 at night). Contract: `GLOW_*` must emit, have a
+  black base colour, and every object using it must be `night_light`.
+- **Clicking on the page:** the group `lights:garden` ("Garden lights": the objects
+  `Garden_lamps`, `Gate_lamps` and `String_lights_bbq`, three modules in one group, the pools of
+  light following the same group) and `bbq` ("Barbecue": `BBQ_grill`, whose body casts shadows like
+  any piece, and `BBQ_coals`, the `M_ember` coals, their own `night_light`: they glow when switched
+  on, by day too, and follow the night while automatic). The labels are in `garden/interact.py`.
+- **Regenerate** just the garden (not the house or pool):
+  `art:models --force --only fence garden_paths flower_beds veg_garden bbq_area yard`, then
+  `art:assets`. `yard` is in the list because the grass and rocks of the island's rim
+  (`siteplan/rim.py`) avoid the fence, posts and whole-island pieces: change the garden's layout
+  without regenerating `yard` and old rocks may lie on top of it. `--only` without names is an
+  error, not a silent no-op. One module:
+  `"${BLENDER_BIN:-/Applications/Blender.app/Contents/MacOS/Blender}" -b --factory-startup --python-exit-code 1 -P art/blender/scripts/garden/build_fence.py -- --force`
+  (likewise `build_paths.py`, `build_beds.py`, `build_veg.py`, `build_bbq.py`). Regenerating twice
+  gives byte-identical GLBs.
+- **New catalog pieces** (`archkit/furniture/garden.py`): `flower_bed` and `flower_pot` (option
+  `variant` 0 to 3: the flower colour set), `topiary_ball`, `topiary_cone`, `raised_bed` (option
+  `crop`: `lettuce`, `cabbage`, `carrot`, `herbs`), `tomato_trellis`, `wheelbarrow`,
+  `watering_can`, `compost_bin`, `tool_shed`, `bbq_grill`, `bbq_coals` (emissive, on the firebox
+  mouth, `GRILL_COALS_Z` = 0.86 m), `outdoor_kitchen`, `dining_set_6`, `parasol` and `pillar_lamp`
+  (emissive). Plants and beds take `{"wind": True}`. New materials: `M_flower_pink`,
+  `M_flower_yellow`, `M_flower_red` (the ripe tomatoes too), `M_flower_white`, `M_cabbage`,
+  `M_gravel` (warm grey 0.42, 0.39, 0.34: lighter and it reads as white concrete at noon),
+  `M_pebble`, `M_ember` and `GLOW_pool`.
+- **The island's rim:** the yard's grass tufts and small stones (`Rim_tufts`) are placed by
+  `siteplan/rim.py` along the fence line of the island as built: grass in a strip 0.05 to 0.25 m
+  outside the fence (the grass roots too, 0.05 m clear of the post caps, leaning outwards, none at
+  the gates), stones inside the fence at least 0.8 m from it and clear of the zones, garden pieces
+  and tree roots by their own size; they used to poke through the fence.
 
-## Biệt thự kính: sinh và tinh chỉnh
+## Koi pond
 
-- Bố cục nhà (nhà cao, 23 × 15 m cả hai tầng) là dữ liệu thuần trong `blender/scripts/houses/house_parts/`: `common.py` (cao độ, trục, khoảng thông tầng `VOID`), `shell.py` (kết cấu, kính, tường ngăn, kính mờ, cửa, chỗ cầu thang xuyên sàn), `ground.py`, `upper.py`, `roof.py` (phòng, đồ đạc, đèn, bể sục, giàn nho, chòi cầu thang, dàn nóng). `houses/house_layout.py` gom các phần đó lại. Đơn vị mét, mặt tiền −Y. Hồ bơi nằm ở `pool_layout.py`.
-- **Nhà cao + thông tầng** (thay bản 20 × 13 m của villa v2):
-  - Cao độ: bục vẫn 0.45 m, mọi tầng phía trên cao thêm 30 % (`common.HEIGHT_SCALE`): trần trệt 4.87, sàn tầng 2 5.26, trần tầng 2 9.29, mái 9.68, đầu cửa 3.57 m; mỗi tầng 4.81 m sàn tới sàn, thông thủy 4.4 / 4.0 m. Mặt cắt website ở 2.05 / 6.86 m.
-  - Mặt bằng 23 × 15 m: ô `house` (−13, 2)–(10, 17), slot (−1.5, 9.5); mặt tiền (y = 2), tường đông (x = 10, cách nhà xe 2 m) và cửa chính (x 6.1, cuối lối đá) giữ nguyên chỗ trên sân, nhà lớn ra 3 m về bên trái và 2 m về phía sau. Hai cây sau nhà dời ra y 19.5, cây cọ "sau hồ bơi" của bồn hoa dời tới (−14, 2.6).
-  - Phòng khách thông tầng ở góc trái phía trước: khoảng thông tầng `VOID` 7.84 × 7 m không có sàn tầng 2 (cả phần đua ra ngoài), mặt trước và hông tây là một vách kính cao một mạch từ bục tới trần tầng 2 (6 và 5 ô, đố liền); TV trên vách TV đứng riêng, sofa chữ L quay lưng ra vách kính tây, góc đọc sách dưới hành lang phía sau. Tầng 2: hành lang `gallery` chạy dọc mép sau khoảng thông tầng, lan can kính; phòng ngủ 2 và master ở mặt tiền, tủ đồ và tắm master phía sau master (kính mờ ở mặt đông, thấy trên mái khối đá), phòng ngủ 3 (cửa sổ kính ở tường tây), tắm chung (kính mờ ở tường sau), góc máy tính `gaming` mở ra hành lang; ban công đua ra từ x −2.8 (để thấy đèn chùm từ phía trước bên phải). Sân thượng 20 × 14.5 m giữ bố cục cũ.
-  - Cầu thang xoắn (`spiral_stair`, `archkit/spiral.py` + `furniture/stairs.py`): cột thép, 25 bậc gỗ teak hở (19 cm, 18°, một vòng và một phần tư), tay vịn xoắn; đứng ở góc sau trái khoảng thông tầng, tâm trên mép hành lang: chiếu nghỉ tầng 2 là một phần tư phía sau phải, phía sau trái là lỗ sàn. Đi tiếp lên mái (option `upper`, 23 bậc, cùng cột): lỗ sàn mái trừ chiếu nghỉ, ra trong **chòi cầu thang** `stair_pavilion` cạnh lan can tây: tường trắng đặc ở mặt tây và mặt sau (không có hai lớp kính sau lan can kính), kính ở mặt đông và nửa phải mặt trước giữa cột gỗ teak, cửa 1.2 m ở nửa trái mặt trước dưới lanh tô teak, mái bản trắng mỏng 10 cm đua 20 cm ra trước và sang đông (`catalog.STAIR_PAVILION`); tường 2.6 × 2.6 m bao quanh ô cầu thang, cả mái 2.8 × 2.8 × 2.4 m (catalog), nên chòi đứng lệch tâm cầu thang 0.1 m về đông và về trước. Giường cabana dời sang đông (x −6.2) cho hai khối khỏi giống nhau. Khoảng trống đầu ≥ 2 m dưới mọi chiếu nghỉ (test).
-  - Đèn chùm pha lê (`crystal_chandelier`, `furniture/lights.py`): 2.4 × 2.4 × 2.2 m, ba vòng là dải đồng thau dẹt 6 × 2 cm (24 đoạn) Ø 2.2 / 1.6 / 1.0 m, dưới mỗi vòng một **rèm pha lê** hở 24 mặt gấp nếp, mép zig-zag sâu 14–22 cm, trước rèm 40 / 28 / 20 chuỗi giọt pha lê lớn (10 × 22 cm, dài ngắn xen kẽ, 180 giọt), 16 / 12 / 8 bóng nến (ngọn 8 × 18 cm) trên cả ba vòng và một lõi phát sáng `M_led` quanh thân; `M_crystal` là gương champagne (metallic 1.0, roughness 0.04: ở sát `L_living` mọi phần khuếch tán đều cháy trắng, nên ban đêm pha lê chỉ lấp lánh và phát sáng vàng ấm 1.2), đục để không có pass trong suốt. Treo từ trần tầng 2 trên phía trước thảm sofa (−7.4, −2.8) (vòng thấp nhất 3.5 m trên sàn): từ `CAM_idle` cầu thang lệch tia nhìn khoảng 8° thay vì nằm ngay sau đèn chùm. `L_living` (160) nằm trong nó; 3 100 tris, một object ba material.
-  - Máy lạnh (`furniture/climate.py`): `ac_split` treo 2.4 m trên tường ngăn ở master, phòng ngủ 2, phòng ngủ 3 (cánh đảo gió là object con xoay quanh `catalog.AC_FLAP_PIVOT`, clip `act_ac_<phòng>`; cánh chính là đèn trạng thái, `M_ac_light` trắng như thân, sáng xanh nhạt khi máy chạy, nên thân và cánh mỗi cái một material), `ac_remote` cạnh công tắc đèn (kính đen, một material), ba `ac_condenser` (toàn kim loại xám, lưới quạt nổi) giữa hai tấm chắn `teak_screen` dọc lan can tây trên mái, một tấm phía sàn mái và một tấm phía lan can, nên nhìn từ ngoài qua lan can kính cũng không thấy (gộp một object `AC_condensers` hai material, option `into` của `FURNITURE`).
-  - Mặt sau: cửa sổ băng kính trong cao trên dãy bếp (5.2 × 1.1 m) và ở góc máy tính tầng 2 (3.6 × 1 m), `shell.WINDOWS` (một ô kính `GLASS_window_<tên>` mỗi cửa, `glazing.window`), khung đen nằm trong `Facade_details`. Lối từ sảnh vào bếp là khe 1.1 m giữa đầu tường `Wall_kitchen_hall` và tường sau: `shell.PASSAGES`, `layout_check` giữ trống 0.8 m mỗi bên như một cửa.
-  - Ngân sách: trần `hero` nâng 40k → 50k tris (`contract.py`); nhà 45.8k tris (≤ 48k), 301 mesh object, 4 point light, texture vẫn `T_stone`, `T_wood`, `T_art`. Công tắc đèn, máy lạnh (thân, cánh, bộ điều khiển), dàn nóng mang `cast_shadow = False`.
-  - Hiệu năng (`shoot --stats`, `?bg=example.jpg`, SwiftShader): 762 → 788 lệnh vẽ lúc 12:00, 768 → 794 lúc 21:00 (+12 cho nhà cao, thông tầng, cầu thang, đèn chùm; +14 cho lối lên mái, máy lạnh và cửa sổ mặt sau), tris wallpaper 82.9k → 89.5k; route site (7 vòng xen kẽ, tải 7) 46.6 ms (main) → 51.2 ms mỗi khung, lệnh vẽ 1 283 → 1 278 (đợt sửa cuối không đổi: 51.2 → 50.8 ms).
-- **Rèm và phụ kiện** (yêu cầu "fix rèm cửa, trang trí nhà, thêm các phụ kiện nội thất", ghi chú ở [villa v2 §12 «Rèm và phụ kiện»](docs/superpowers/specs/2026-10-15-villa-v2-design.md)): module riêng `interior` (role `prop`, ≤ 15k tris, không point light; nhà ở 46k trên trần 50k) trong slot `interior_01` đứng đúng chỗ nhà (`zones.ZONE_SHARED` như tầng hầm), không gian module là của nhà, phòng là `house_layout.ROOMS`. Code ở `blender/scripts/interior/` (`interior_layout.py`, `layout_check.py`, `interact.py` thuần Python; `build_interior.py` cần bpy), đồ ở `archkit/furniture/interior.py` (31 loại) và `decor.py` (`curtain`, `roller_blind`).
-  - Rèm (`curtain`, thay rèm cũ cao cố định 3 m và `Curtain_master` của nhà): ray trần mảnh màu đồng (`M_bronze`) rộng đúng mảng kính (`width`), cao theo phòng (`drop` = trần − sàn − 1 cm, `interior_layout.drop`, trong khoảng thông tầng là trần tầng 2: rèm voan phòng khách cao 8.8 m), vải cách sàn 2 cm. Hai đầu mỗi dải một bó vải sóng mềm (dải quad một mặt lượn sin, 8 sóng một mét, smooth shading): lớp voan ngà `M_sheer` phía kính (trong, alpha 0.75: primitive trong suốt duy nhất của module, website vẽ một lượt (`forceSinglePass`, không phải hai lượt sau-trước của vật liệu trong suốt hai mặt) và chiếu sáng hai mặt: mặt sau giữ pháp tuyến hướng phòng nên ban đêm từ ngoài nhìn vào voan sáng ánh đèn vàng của phòng chứ không phải sọc xanh trăng; click và zoom xuyên qua voan như qua kính) và lớp rèm lanh màu cát `M_drape` phía phòng (một mặt, backface culling: nhìn từ ngoài ban đêm lưng các dải sóng là những cột sọc xanh thẫm sau voan; khi cắt nhà mọi material đục vẽ hai mặt), buộc túm bằng đai đồng ở 1.05 m; kính ở giữa để trống (`catalog.CURTAIN`). Sáu dải: mặt trước và hông tây của phòng khách thông tầng, kính phòng ăn, phòng ngủ 2, master (kính ra ban công), cửa sổ tây phòng ngủ 3; rèm cuốn (`roller_blind`) ở hai cửa sổ băng trên bếp và góc máy tính.
-  - Phụ kiện (79 món): gối và chăn trên sofa, giường; khay nến, sách, bát trên bàn trà; bình hoa khô, bàn trống travertine, cây bàng Singapore (`fiddle_leaf`), ghế mây, tủ thấp teak-mây dưới gương tròn; bàn ăn bày sẵn 8 chỗ trên thảm cói lớn, đèn bàn trên tủ buffet; bát trái cây, thớt-ấm-hũ, chậu rau thơm, nệm ghế bar ở bếp; đèn đầu giường, ghế băng cuối giường, góc bàn học phòng ngủ 2, tủ thấp làm bàn trang điểm; console, ghế băng, tranh, thảm dài ở hành lang; khay đồ dùng, thảm chân, thanh treo khăn, chậu cây ở phòng tắm; gương, bình, ống ô ở tiền sảnh. Gối là gối vuông (hai tấm lưới 4 × 4 khâu ở mép, dày giữa mỏng mép, 64 tris; trước là cầu bẹp đọc như quả bóng từ camera site); ly trên bàn ăn và bộ rượu ở hầm là `M_glassware` đục bóng (không thêm lần vẽ trong suốt); món travertine nhỏ (bàn trống, bát, khay) lấy UV trong hệ của chính nó lệch nửa tấm đá (`MeshBuilder` `uv_offset`, `STONE_MID`) nên không lộ chữ thập đường ron. Món đặt lên đồ khác mang option `"on": <tên object>` và đứng trên mặt của nó (`catalog.SURFACES`, `houses/layout_check.top_under`; ±1 cm); món treo tường phải dựa tường đặc (không kính, không trên ô cửa). `interior/layout_check.py` kiểm thêm: rèm dọc kính của phòng, trong phòng, dưới trần, tránh cửa, cầu thang, đèn chùm, đồ của nhà và công tắc; món sàn tránh đồ của nhà, lối đi (cửa, khe, cầu thang, dải đi dọc lan can hành lang).
-  - Object: `Interior_decor` (rèm, ghế, cây, tủ, gương, chân đèn bàn: 9 material, 5 100 tris), `Interior_details` (đồ nhỏ, extras `detail`, 10 material, 6 872 tris: route site chỉ vẽ khi camera ở gần nhà, cách tâm nhà dưới 45 m như mức cắt tầng 2 với cùng độ trễ ±3 m (`nearHouse`, `nearFor`, store `near` do `OrbitRig` đặt), dù nhà nguyên ("Mái" ở 20 m, hay "Tự động" sát nhà với camera thấp) hay đang cắt; wallpaper không vẽ: từ xa chúng chỉ một hai pixel mà chiếm phần lớn số tam giác) và `LT_lamp_dining` / `LT_lamp_bedroom2` / `LT_lamp_bedroom3` (chao đèn bàn, `night_light`, thuộc nhóm `light:<phòng>` của nhà: bấm công tắc phòng tắt / bật cả đèn bàn; chân đèn ở `Interior_decor`, vẽ mỗi khi chao được vẽ, nên chao không bao giờ lơ lửng). Không object nào đổ bóng. Website: `CUTAWAY_MODULES.interior` (cắt cùng nhà ở mọi mức, ẩn cùng nhà khi "Hầm"), `cutOnlyByButton` (chỉ hầm bỏ mặt phẳng khi nguyên), `applyCut(…, near)`, `leaveOutDetails`. Lệnh vẽ trong suốt thật của module: 1 (voan, một lượt); trước đợt sửa là 2 khi nhà nguyên và 4 khi chi tiết hiện (`M_sheer` ở cả decor và ly trong details, mỗi primitive hai lượt), thêm 2 ở hầm (bộ rượu).
-  - Nhà sinh lại không còn `Curtain_master` (45 884 tris); monstera, cọ phòng khách, cây phòng ăn, cây hành lang và bàn học phòng ngủ 3 dời chút cho bó rèm và ghế băng. Tầng hầm thêm vài món ở chỗ trống (bình rượu và ly trên bàn thử rượu, gối trên sofa karaoke, khăn cuộn trên giường massage, khăn và chai nước ở gym; 14 784 tris).
-  - Hiệu năng (SwiftShader, `?bg=example.jpg`): wallpaper 806 → 816 lệnh vẽ lúc 12:00, 813 → 823 lúc 21:00; tris module `interior` 12 192 (`Interior_decor` 5 100 + chao đèn + `Interior_details` 6 872; khi ở xa nhà chỉ vẽ phần decor và chao đèn, 12 lệnh vẽ). tris wallpaper ≈ 98.2k. Route site `/?t=12:00` ở mặt cắt none, góc nhìn đầu (7 vòng xen kẽ với bản main, máy tải 7–15): 64.2 → 66.3 ms/khung (hiệu trung vị +2.0 ms), 1 301 → 1 309 lệnh vẽ; ở gần nhà (20 m, cắt tầng 1 hoặc "Mái") rèm và phụ kiện tốn thêm khoảng 19–21 ms/khung trên SwiftShader (voan ~5, mây/lanh ~7, đồ nhỏ ~5 ms; chủ yếu là chi phí tô điểm ảnh).
-  - Sinh lại: `npm run models -- --force --only interior house site` (thêm `basement` nếu sửa đồ hầm), rồi `npm run assets`.
-- Sân 48 × 40 m nằm ở `blender/scripts/siteplan/zones.py`: các ô khu vực (nhà, hồ bơi, ao, nhà xe, đường xe, BBQ, vườn rau, chuồng chó, lối đá…), vị trí slot, cây, đèn cột và camera. Sân đứng trên một hòn đảo bay (`zones.ISLAND`, viền ở `siteplan/island.py`): mặt cỏ phẳng ở z = 0, viền siêu elip 54 × 46 m có nhiễu theo seed, gờ cỏ, lớp đất và đáy đá low-poly nhọn dần tới đỉnh 15.5 m bên dưới (đá tối dần về phía đỉnh, xen vài mặt sáng), vài khối đá treo, rễ, cụm cỏ và đá nhỏ dọc mép. Footprint của module `yard` là kích thước bao của đảo. `make_placeholders.py` chạy `zones_check` trước và dừng với `ZONES: …` nếu có ô chồng nhau, slot nằm ngoài ô, hoặc ô, cây, đèn cột nằm ngoài viền đảo (cả đảo `--yard-size W D` khác cỡ). Footprint của slot nhà và hồ bơi lấy từ chính module (`common.py`, `pool_layout.py`).
-- Các builder nằm trong `blender/scripts/archkit/`. Đồ nội thất: kích thước ở `archkit/catalog.py`, builder chia theo khu trong `archkit/furniture/` (living, dining_kitchen, bedroom, office, bath, outdoor, decor, tropical, stairs, lights, climate). Tranh nhận option `variant` 0–7 (một ô của atlas `T_art`).
-- Trang trí resort nhiệt đới (`archkit/furniture/tropical.py`): cây `palm_tall`, `palm_small`, `monstera`, `bird_of_paradise`, `fern_hanging` (treo), `plant_wall`; đồ mây/gỗ teak/vải lanh `rattan_armchair`, `egg_chair`, `daybed_cabana`, `teak_lounger`, `outdoor_bar`; đèn `rattan_pendant` (treo) và `lantern` (hai món này phát sáng, `night_light`). Vật liệu: đá travertine `M_stone`, `M_teak`, `M_rattan`, `M_linen`, `M_terracotta`, `M_leaf_dark`.
-  - Cây ngoài trời thêm option `{"wind": True}` (chỉ `palm_tall`, `palm_small`, `monstera`, `bird_of_paradise`, `fern_hanging`): object được sơn color attribute `wind` từ chậu tới ngọn nên runtime cho lá đung đưa. Cây trong nhà để mặc định (không gió). Món khác nhận `wind` thì báo `TypeError`.
-  - Món treo trần (`rattan_pendant`, `fern_hanging`, `crystal_chandelier`) treo ở độ cao `WALL_MOUNTED`; trần nhà cao hơn thì thêm option `cord` (dây dài thêm, m) — layout nhà dùng `common.hang(kind, level, point)` để dây chạm đúng trần ở đó (trong khoảng thông tầng là trần tầng 2, `common.ceiling_over`).
-  - `lighting.string_lights(col, name, points, mats, bulbs_per_m, sag, bulb_radius)`: một object dây đèn `night_light` qua các điểm neo (x, y, z), võng `sag` × chiều dài mỗi nhịp (0 = căng thẳng). Nhà dùng bóng cầu 12 cm (`bulb_radius=0.06`) vì bóng nhỏ không nhìn thấy từ camera wallpaper. Trong layout: `roof.STRING_LIGHTS` (zig-zag dưới giàn nho và dọc tay vịn lan can mái trước).
-  - Nước: `water.reflecting_pool(...)` (bể cạn có viền travertine, `WATER_<tên>`, đá bước `<tên>_steps`) và `water.wall_fountain(...)` (tường nước: `WATER_<tên>_sheet` dựng đứng, `WATER_<tên>` trong máng, LED `LT_<tên>`). Trong layout: `ground.REFLECTING_POOLS` (dọc hiên, cột đứng giữa nước) và `ground.WALL_FOUNTAINS` (cạnh cửa chính). `layout_check` kiểm điểm neo đèn dây, bể và đài phun nằm trong footprint, và không món nào đứng trong bể. Shader nước runtime cho mặt dựng đứng (dốc hơn 60°) vệt nước chảy xuống thay cho gợn sóng mặt hồ.
-- Sửa layout rồi sinh lại đúng module đó, sau đó chạy `npm run assets`. Nhà: `"${BLENDER_BIN:-/Applications/Blender.app/Contents/MacOS/Blender}" -b --factory-startup --python-exit-code 1 -P blender/scripts/houses/build_house.py -- --force` (chạy từ thư mục gốc repo); hồ bơi: thay bằng `build_pool.py`. `layout_check` báo đồ đạc nằm ngoài phòng hoặc chồng lên nhau trước khi script dựng bất cứ thứ gì trong Blender.
-- `npm run models -- --force` ghi đè **tất cả** file sinh ra: `house.blend`, `pool.blend`, năm module sân vườn, `koi_pond.blend`, `tea_garden.blend`, `yard.blend`, `site.blend` (mất cả vị trí instance đã đặt tay) và fixture. Chỉ dùng khi chưa sửa tay file nào; chỉ sinh lại vài file thì thêm `--only` (ví dụ `npm run models -- --force --only bbq_area site`).
-- Muốn tinh chỉnh tay: mở `blender/modules/house.blend` và sửa vật liệu, chi tiết. Từ lúc đó đừng chạy `--force` nữa, vì file `.blend` đã là nguồn chính. `npm run assets` vẫn kiểm hợp đồng.
-- Quy ước khi sửa tay:
-  - Kính dùng material `GLASS_*`: Alpha 0.1–0.5, Roughness ≤ 0.1, mỗi ô kính một object (trừ cửa trượt `Door_main`, xem spec §6).
-  - Kính mờ (phòng tắm, WC) dùng material `FROSTED_*`: Alpha 0.4–0.85, Roughness 0.3–0.8. Mỗi mảng kính mờ phải gắn `night_light = True`: emission yếu của nó được nhân với hệ số ban đêm, thiếu prop này thì mảng kính sáng cả ban ngày.
-  - Đèn là Point/Spot có custom prop `night_light = True`, tối đa 4 cái cho nhà (`hero`), 2 cho hồ bơi (`prop`). Cường độ (W) đi thẳng vào three.js. Trần tris: `hero` 50k (nhà cao), `prop` 15k.
-  - Mọi object có material phát sáng (emission: đèn LED `M_led`, dải `M_rgb`, màn hình `M_screen_on`, kính mờ `FROSTED_*`…) phải gắn `night_light = True`, nếu không nó sáng cả ban ngày. Test `test_villa_modules.py` kiểm điều này trên bản xuất của nhà và hồ bơi.
+A big pond dug into the lawn, a rockery with a waterfall, many koi, lily pads and lotus flowers;
+beside it a tea corner with a table and stools of stone, a tea set, bonsai and a stone lantern;
+low-poly, in the same resort style. The code is in `pond/`, built like `garden/` (sharing
+`garden/assemble.py`): `koi_layout.py` and `tea_layout.py` (plain data), `basin.py` (the pond's
+shape: rim, bank, depth), `swim.py` (the fish's swimming paths), `layout_check.py` (on an error it
+prints `LAYOUT <module>: …` and exits 1), `interact.py`, `build_koi.py` and `build_tea.py`.
 
-## Sân vườn
+- **`koi_pond`** (slot `koi_pond_01`, zone `pond`, 11 × 8 m, yaw 0): a pond about 9.3 × 6.1 m whose
+  rim is a soft, irregular round shape (an ellipse bent by four harmonics, 56 points). The `yard`'s
+  lawn has a hole of exactly that outline, and the bank is tucked 1.2 cm under the grass so there is
+  no gap. The bank slopes: a strip of green grass down to the water's edge, then mud, then a dark
+  floor 0.65 m deep in the middle; the water surface is 7 cm below the grass. 31 grey stones along
+  the edge, leaving four grass stretches that touch the water, and a few pebbles. The rockery at
+  the north-west corner: four grey limestone peaks (`rock_peak`, the tallest 2.2 m, two of them
+  standing in the water) built with truncated tips rather than needle points, three moss tufts on
+  each peak, seven shrubs on the rock ledges (four on the tallest peak, one on a tip), and a waterfall
+  falling from the tallest peak into the pond (facing the wallpaper camera) with white foam at its
+  foot; at night the waterfall and foam soften like water under the moon. 14 koi (orange,
+  white-and-orange kohaku, black-and-orange, gold) swim five loops at three depths; 13 lily pads
+  (two greens), 5 flowers (pink, white) and 2 buds in three clusters drift a little in the wind.
+- **`tea_garden`** (slot `tea_garden_01`, zone `tea`, 6 × 3.5 m): a round travertine paved area, a
+  round granite stone table with an earthenware pot and four cups on a teak tray, four stone
+  stools; three bonsai (two on stone pedestals, one in a jade-glazed pot); a stone lantern (in the
+  garden lights group) with a 1 m pool of light after dark; two stepping stones from the paving up
+  to the stone walk's landing at the turn towards the door.
+- **The `tea` zone** now stretches to y −3.0 (touching the `path_turn` zone), so the stepping
+  stones reach the stone walk with grass gaps ≤ 0.45 m as the walk itself does; the two pebbles of
+  `garden_paths` there moved aside.
+- **Checks** (`pond/layout_check.py`):
+  - the pond's rim is star-shaped about its centre, at least 0.5 m inside the footprint; the
+    rockery stands on the bank, at least one peak is in the water, and the waterfall falls from
+    the tallest peak into the water;
+  - every fish (nose and tail) is at least 0.3 m from the bank and the rockery, its floor at least
+    5 cm under its belly, its dorsal fin at least 2.5 cm under the water; two fish at the same depth
+    do not swim through each other (fish on the same loop are compared over a whole loop, their
+    distance repeats each loop; fish on two different loops are compared path to path, so two loops
+    at one depth must not cross even out of step);
+  - feeding: wherever the food falls in the feeding disc (`FEEDING`, centre (0.21, −0.31) in the
+    middle of the school, radius 1.2 m), every fish, on the straight line from its swimming loop to
+    the loop round the food (the shader's formula copied in `swim.fed_position`), stays at least
+    half a body (0.24 m) from the standing rock peaks and 5 cm above the floor under its belly (the
+    floor is measured further than half a body towards the bank; just under the nose and tail, when
+    leaving the food in the shallows, it is really about 4 cm);
+  - the reach of a rock peak (`peak_reach`) is its widest foot ring, the larger radius ×
+    (1 + `catalog.ROCK_PEAK_JITTER` 0.22), and the kit's test measures that it covers every mesh
+    vertex of the peak;
+  - lily pads float in the water 0.1 m from the edge, do not overlap, and keep off the rockery
+    and the waterfall foam; flowers grow in the middle of a cluster of pads; the garden's beds, stone
+    walk and lamp posts are at least 0.3 m from the pond. The tea corner uses the rules of
+    `garden/layout_check.py` (no overlaps, inside the footprint) plus the stepping stones joining
+    the paving to the stone walk without lying on any slab of it.
+- **The fish swim in a shader:** the 14 are **one object** `Koi` (four materials, four draw calls),
+  built where each fish's swimming loop starts. The object carries the custom props `koi` (12
+  numbers per fish: centre, radius, tilt, depth, angular speed, phase, figure-eight, bobbing:
+  `swim.pack`), `koi_water` and `koi_feed` (the feeding disc: x, y, radius); a second UV map `koi`
+  numbers each fish. The vertex shader on the page (`src/systems/koi.ts`) recomputes `swim.py`'s
+  formula, brings each fish into its own frame, wags its tail (on its own clock `mod(uTime, 2π/6)`,
+  wrapping after a whole beat so nothing jerks at the end of a loop) and puts it back where its
+  loop has it for the current time. The fish are drawn after the water surface (transparent,
+  `renderOrder` 1, one pass) and fade towards the water colour with depth, so from the wallpaper
+  camera you still see orange dots in the dark green pond (behind the old shader's 0.7 water layer
+  the fish were only a brown smear). One object per fish with `ambient_*` clips would cost about 29
+  draw calls instead of 4.
+- **The pond water** carries `water = "pond"`: the page draws it in the pond style
+  (`WATER_STYLES.pond` in `src/systems/water.ts`: deep green, gently rippled, whiter waterfall; at
+  night the waterfall's white is a quarter of its day value and the dark `*_foam` foam is 0.45 by
+  `uNight` (`FALL_NIGHT`), so the waterfall reads as water under the moon and not a bright sheet on
+  dark rock); the pool, hot tubs, water wall and showers keep the old style.
+- **Clicking on the page:** `waterfall` ("Waterfall": `Rockery`, `WATER_waterfall_sheet`,
+  `Waterfall_foam`; running while automatic like the water wall, a click turns it off and on),
+  `koi` ("Feed the koi": `WATER_surface`; click a point on the pond and the food falls exactly
+  there, or on the edge of the feeding disc if you click outside it; the fish arrive within 3 s,
+  form two loops round it and disperse to their loops after 9 to 13 s; click again while they are
+  feeding and the centre of the two loops glides to the new place over 1 s, the fish keeping the
+  same "hunger" they had (none snaps back to its loop) and staying as long as the first time; the
+  fish do not block the click) and the stone lantern in `lights:garden`.
+- **Performance** (`shoot --stats` at 12:00, `?bg=example.jpg`, SwiftShader): 696 → 727 draw calls
+  (21:00: 698 → 730; the last fix added none), 70.3k → 77.3k triangles; `koi_pond` 5.7k triangles
+  (23 primitives; the truncated peaks, moss and two shrubs added 320), `tea_garden` 1.6k (14; the
+  pool of light is drawn only at night). Site route: each frame 43–44 → 44.5–46 ms (interleaved
+  against the version before the pond, the pond version before the last fix, and after it; noise
+  ±1.5 ms; the last fix 0 to +1.2 ms). No point lights. The bank, rim stones, foam, fish, lotus
+  and bonsai cast no shadows (`cast_shadow = False`); the rockery and the stone table and stools do.
+- **New catalog pieces** (`archkit/furniture/pond.py`): `stone_table_round`, `stone_stool`,
+  `tea_set`, `bonsai` (`variant` 0 stone pedestal, 1 glazed pot, 2 leaning shape), `stone_lantern`
+  (emissive), `lotus_pad` (`variant` 0 to 3: four sizes, two greens, notched), `lotus_flower`
+  (`variant` 0 pink, 1 white, 2 bud), `koi` (`variant` 0 orange, 1 kohaku, 2 black-and-orange,
+  3 gold; nose towards −Y, tail fanned flat so it shows from above) and `rock_peak` (`variant` 0
+  to 3, tall to low). `bonsai`, `lotus_pad` and `lotus_flower` take `{"wind": True}` (the lotus only
+  drifts a few centimetres). `boulder()` and `shrub()` build the rim stones and the shrubs on the
+  rockery. `MeshBuilder.faces(points, faces, mat)` builds an arbitrary piece of mesh. New materials
+  (flat colour, no texture): `M_granite`, `M_rock`, `M_rock_light`, `M_moss`, `M_bark`, `M_glaze`,
+  `M_lotus`, `M_lotus_pad`, `M_koi_orange`, `M_koi_white`, `M_koi_black`, `M_koi_gold`,
+  `M_pond_bank`, `M_pond_floor` and `M_foam`.
+- **Regenerate** the pond and tea corner (not the house or pool):
+  `art:models --force --only koi_pond tea_garden yard`, then `art:assets` (`yard` because the hole
+  in the lawn follows the pond's rim). One module:
+  `"${BLENDER_BIN:-/Applications/Blender.app/Contents/MacOS/Blender}" -b --factory-startup --python-exit-code 1 -P art/blender/scripts/pond/build_koi.py -- --force`
+  (likewise `build_tea.py`). Regenerating gives byte-identical GLBs.
 
-Phần 2 của đợt nâng cấp (ghi chú triển khai ở [villa v2 §12 «Sân vườn»](docs/superpowers/specs/2026-10-15-villa-v2-design.md)): hàng rào và cổng, lối đá và đèn sân, bồn hoa, vườn rau, khu ăn ngoài trời và BBQ, cùng phong cách resort của nhà (travertine, teak, mây, đất nung, cọ), low-poly. Code ở `blender/scripts/garden/`, cùng cách làm với `houses/`: mỗi module một layout dữ liệu thuần (`*_layout.py`) và một generator (`build_*.py`); `garden/layout_check.py` kiểm trước khi dựng, có lỗi thì in `LAYOUT <module>: …` và thoát 1.
+## Carport and dog
 
-| Module         | Slot                            | Nội dung                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| -------------- | ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `fence`        | `fence_01`, cả đảo              | Cột travertine ở mọi đỉnh viền đảo (lùi vào 0.45 m) và ba thanh gỗ teak giữa hai cột; cổng đi bộ ở lối chính (x 0) và cổng xe ở đường xe (x 17), mỗi cổng hai trụ travertine có đèn lồng trên đỉnh (lõi sáng cao 32 cm) và hai cánh nan teak đóng; dưới mỗi đèn lồng một nửa vũng sáng (bán kính 1.1 m) quay vào trong hàng rào                                                                                                                                                                                                           |
-| `garden_paths` | `garden_paths_01`, cả đảo       | 34 tấm đá travertine cách nhau một bước (chiếu nghỉ vuông ở hai chỗ rẽ) từ trong cổng chính theo `path_gate` → `path_turn` → `path_door` tới chân bậc cửa; đường xe lát travertine nằm giữa hai bó vỉa xám (không chung mặt nào, hết z-fight) từ trong cổng xe tới ô nhà xe, 2.4 m cuối loe ra thành sân đỗ (`APRON`, từ x 15–19 ra 12.4–19.8) cho cả hai làn nhà xe, bó vỉa xiên theo, nối vát với bó vỉa thẳng; 15 đèn trụ thấp (`garden_lamp`, đầu sáng cao 29 cm) dọc hai lối, mỗi đèn một vũng sáng tròn 1.6 m trên cỏ; vài viên sỏi |
-| `flower_beds`  | `flower_beds_01`, cả đảo        | Bồn hoa viền travertine (hoa hồng, vàng, đỏ, trắng) nối đầu nhau thành hai dải: một dải bốn bồn mỗi bên lối đá từ cổng chính, và một dải bốn bồn dọc mép nam ô ao (ô ao để dành cho phần 3) rẽ ra từ dải bên phải lối đá; cây cắt tỉa nón ở đầu dải phía cổng, tròn ở đầu kia; chậu hoa đất nung ở chân bậc cửa, cọ ở hai cổng, sau hồ bơi và cạnh đường xe; mọi cây đung đưa (12 bồn, 25 món, 9.4k tris)                                                                                                                                 |
-| `veg_garden`   | `veg_garden_01`, ô `vegetables` | Bãi sỏi viền teak; sáu luống gỗ nâng (xà lách, bắp cải, cà rốt, rau thơm) hai bên lối sỏi; giàn cà chua cọc tre, thùng ủ phân, kho dụng cụ mái đất nung, xe cút kít, bình tưới. Góc trước bên trái (cách mép đảo 0.6 m, hàng rào đi sát ngoài) chỉ có sỏi                                                                                                                                                                                                                                                                                 |
-| `bbq_area`     | `bbq_area_01`, ô `bbq`          | Sân travertine; giàn pergola teak trên bàn ăn sáu ghế, dây đèn zig-zag dưới giàn (bóng tròn 9 cm); quầy bếp ngoài trời dọc mép đông, bếp nướng than ngay trước quầy, lùi sâu vào sân để sàn hồ bơi che ít hơn (không có gì cao che nó khỏi camera wallpaper), dù che hai ghế mây; chậu cây ở các góc                                                                                                                                                                                                                                      |
+A roofed two-car carport at the side of the house, at the end of the driveway, with a pickup truck
+and a convertible supercar; behind it, by the fence, a dog house and an Akita pup. Everything is
+built by script (no downloaded model), with generic designs: no brand names, logos or badges. The
+code is in `carport/`, built like `garden/` and `pond/`: `carport_layout.py`, `kennel_layout.py`,
+`layout_check.py` and `interact.py` are pure Python; `build_carport.py` and `build_kennel.py` need
+bpy.
 
-- **Ba module cả đảo** (slot có `zone = "island"`, `siteplan.island.ISLAND_WIDE`) đứng ở tâm đảo, không xoay, footprint bằng kích thước bao của đảo; toạ độ trong layout là toạ độ sân. `zones_check` bắt buộc đúng như vậy (vị trí (0, 0), yaw 0, footprint bằng `zones.ISLAND["size"]`, kể cả khi `--yard-size` dựng đảo khác), còn `garden/layout_check.py` kiểm nội dung: nằm trong viền đảo, không lấn ô nào ngoài các ô module dùng (`ZONES_USED`: lối đá dùng `path_*` và `driveway`; nhà, hồ bơi, vườn rau, BBQ và các ô chừa cho phần 3–4 `pond`, `tea`, `carport`, `kennel` đều bị chặn), cách gốc cây và đèn cột của yard ít nhất 0.35 m. `check_island` kiểm ba module với nhau: không món nào của module này đè lên món của module kia, và mỗi cổng dẫn tới lối đá hoặc đường xe đúng loại. Lối đá phải liền (khe cỏ ≤ 0.45 m, tấm đầu sát cổng, tấm cuối chạm bậc cửa); đường xe bắt đầu ở cổng xe và chạy tới ô nhà xe. Vườn rau và BBQ là module thường trong ô của mình (toạ độ module, mặt trước −Y); dù (`parasol`) được che lên đồ bên dưới, món đứng trên sàn (sỏi, sân lát, z < 0.3 m) vẫn tính là trên mặt đất, món đặt lên món khác (đèn trên trụ) thì không.
-- **Hiệu năng:** mỗi module gộp các món cùng nhóm (`PIECES`: `(loại, nhóm, vị trí, xoay[, option])`) thành **một object** — `furniture.place_into` dựng món vào một mesh chung, `MeshBuilder.placed` sơn `wind` riêng cho từng món — nên mỗi material chỉ là một lệnh vẽ dù có hàng trăm món. Đo `shoot --stats` lúc 12:00 (SwiftShader, `?bg=example.jpg`): 642 → 696 lệnh vẽ (+54, ngân sách +120; 21:00 thêm 2 cho vũng sáng: 698), 44.6k → 70.3k tris (hàng rào 5.0k, lối đá 3.2k, bồn hoa 9.4k, vườn rau 4.6k, BBQ 3.6k). Không có point light: đèn sân là emissive `night_light`, sáng theo đêm. Object phẳng hoặc nhỏ mang `cast_shadow = False` (`Paving`, `Flower_beds`, `Veg_beds` qua `SHADOWLESS` của layout, `Rim_tufts` của yard): `prepareModule` không cho chúng đổ bóng (vẫn nhận bóng), route site bớt ~16k tris và 20 lệnh vẽ ở pass bóng.
-- **Vũng sáng:** từ camera wallpaper đầu đèn trụ chỉ 1–2 px, cái đọc được lúc 21:00 là bãi cỏ nó soi. Mỗi đèn có một đĩa phẳng `GLOW_pool` cao 2.5 cm (`MeshBuilder.disc`, UV chạy từ 0 ở tâm ra 1 ở mép; `garden/lights.py`, layout liệt kê trong `POOLS`, `assemble.pieces` gộp vào object của đèn). Website vẽ `GLOW_*` cộng sáng (additive, không ghi depth, một pass, không đổ/nhận bóng), mờ dần ra mép theo `(1 − u²)²` bằng một alphaMap 32 × 1 tạo lúc chạy (module không mang texture nào), độ đục theo hệ số đêm như emissive khác (`lights:garden` bật/tắt ghi đè), ban ngày ẩn hẳn nên không tốn lệnh vẽ (đêm +2). Contract: `GLOW_*` phải phát sáng, màu nền đen, và mọi object dùng nó phải `night_light`.
-- **Bấm trên website:** nhóm `lights:garden` "Đèn sân vườn" (object `Garden_lamps`, `Gate_lamps`, `String_lights_bbq`, ba module một nhóm; vũng sáng theo cùng nhóm) và `bbq` "Bếp nướng" (`BBQ_grill`, thân bếp đổ bóng như đồ thường, và `BBQ_coals`, than `M_ember` là `night_light` riêng: hồng lên khi bật, kể cả ban ngày; tự động thì theo đêm). Nhãn ở `garden/interact.py`.
-- **Sinh lại** chỉ sân vườn (không đụng nhà, hồ bơi): `npm run models -- --force --only fence garden_paths flower_beds veg_garden bbq_area yard site`, rồi `npm run assets` (`yard` vì cỏ và đá viền đảo, `siteplan/rim.py`, tránh hàng rào, cột và các món phủ cả đảo: sửa layout sân vườn mà không sinh lại `yard` thì đá cũ có thể nằm đè) (`--only` không kèm tên thì báo lỗi, không lặng lẽ bỏ qua). Từng module: `"${BLENDER_BIN:-/Applications/Blender.app/Contents/MacOS/Blender}" -b --factory-startup --python-exit-code 1 -P blender/scripts/garden/build_fence.py -- --force` (tương tự `build_paths.py`, `build_beds.py`, `build_veg.py`, `build_bbq.py`). Sinh lại hai lần ra GLB giống hệt từng byte.
-- **Món mới trong catalog** (`archkit/furniture/garden.py`): `flower_bed` và `flower_pot` (option `variant` 0–3: bộ màu hoa), `topiary_ball`, `topiary_cone`, `raised_bed` (option `crop`: `lettuce`, `cabbage`, `carrot`, `herbs`), `tomato_trellis`, `wheelbarrow`, `watering_can`, `compost_bin`, `tool_shed`, `bbq_grill`, `bbq_coals` (phát sáng, nằm trên miệng lò `GRILL_COALS_Z` = 0.86 m), `outdoor_kitchen`, `dining_set_6`, `parasol`, `pillar_lamp` (phát sáng). Cây và luống nhận `{"wind": True}`. Vật liệu mới: `M_flower_pink`, `M_flower_yellow`, `M_flower_red` (cả cà chua chín), `M_flower_white`, `M_cabbage`, `M_gravel` (xám ấm 0.42, 0.39, 0.34: sáng hơn thì trưa trông như bê tông trắng), `M_pebble`, `M_ember`, `GLOW_pool`.
-- **Mép đảo:** cụm cỏ và đá nhỏ của yard (`Rim_tufts`) do `siteplan/rim.py` đặt theo đúng đường hàng rào của đảo được dựng: cỏ trong dải 0.05–0.25 m ngoài hàng rào (cả gốc cỏ, cách cả nắp cột 0.05 m, nghiêng ra ngoài mép, không mọc ở cổng), đá nằm trong hàng rào cách ít nhất 0.8 m và cách các ô, món sân vườn, gốc cây theo kích thước của nó; trước đây chúng đâm xuyên hàng rào.
+- **`carport`** (slot `carport_01`, zone `carport`, 8 × 7 m, centre (16, 6.5), yaw 0): a 4 cm
+  travertine floor level with the driveway, its front edge exactly where the driveway ends (y = 3),
+  where the driveway has already flared into an apron the width of both bays (`garden_paths`). A
+  flat roof: a white fascia frame 0.2 m wide and 0.3 m thick round the edge, inside it a glass
+  panel (`GLASS_clear`, its own object `Carport_glass`, in no click group) and teak slats hung under
+  the glass (30 slats of 14 cm, running front to back) on three white cross beams. From the
+  wallpaper camera the roof reads as a timber roof; from above you still see the cars through the
+  slats, and the sun makes stripes on the floor and the cars. Two slim black steel posts on the side
+  away from the house (east); on the house side a travertine-clad pier at the front corner and a
+  travertine wall closing the back, 2 m from the house's east wall. Two bays: the pickup next to
+  the house, the low red supercar on the outside, both parked nose to the driveway; a teak cabinet
+  behind the pickup, a black bicycle leaning on the back wall behind the supercar. Three recessed
+  lights under the beams in the aisle between the cars, each throwing a 1.1 m pool of light on the
+  floor after dark.
+- **`kennel`** (slot `kennel_01`, zone `kennel`, 3 × 3 m, centre (22, 12.5), yaw 0): a teak dog
+  house on a dark base, a charcoal gable roof, an arched door and a plain sign over it; in front of
+  the door a dark mat with the Akita sitting on it facing the lawn and the wallpaper camera (25°);
+  beside the mat a water bowl and a red food bowl, a red ball on the grass, a small shrub by the
+  house (it sways).
+- **The cars** (`archkit/furniture/vehicles.py`; `pickup_truck` 1.9 × 5.3 × 1.85 m and
+  `convertible_supercar` 2.0 × 4.5 × 1.15 m, nose towards −Y): the body is lofted along Y through
+  hexagonal cross sections (straight sides, shoulder, top), the lower edge curving up into the wheel
+  arches; the 12-sided wheels stand on one point, with chrome rims and black centre caps. The pickup
+  is moss green (`paint_green` (0.08, 0.27, 0.15), metallic 0.15, a light metallic sheen; it used to
+  be (0.06, 0.2, 0.11), metallic 0.45: a heavily metallic paint mostly reflects the dark night sky,
+  so at night under the roof the truck was nearly black, and now it reads dark green): a double-cab
+  with black glass under the painted roof, black B pillars, a black roof rack, an open bed with a
+  black liner, a black front bumper, a chrome grille, black arch flares, running boards, a chrome
+  rear bumper and tail lights standing at the bed's two corners. The red supercar: a low wedge nose,
+  front wings higher than the bonnet, flanks tucked in under a character line, black air intakes on
+  both sides, a folded-down roof: a raked windscreen in a black frame, a dark cockpit with two tan
+  leather seats and the steering wheel on the left, two headrest fairings behind, a black front
+  splitter and rear diffuser, two chrome exhaust pipes and a horizontal strip of tail lights.
+  `part="body"` or `part="lights"` builds the body or the lights alone (the default builds both):
+  the carport splits each car's lights into an object of their own, a `night_light` (`Pickup_lights`,
+  `Supercar_lights`), with a half disc `GLOW_beam` 1.5 m in front of the nose (the headlight beam on
+  the floor, driveway and lawn), `HEADLIGHT_POOL_TOP` 0.076 m high, above the driveway's kerb top
+  (0.07 m): below the kerb top the kerb would cut the beam into dark stripes. The pickup is 1 238
+  triangles, the supercar 1 382.
+- **The Akita** (`archkit/furniture/animals.py`, `akita` 0.48 × 0.8 × 0.95 m): sitting, russet
+  coat (`M_akita_red`), cream "urajiro" (`M_akita_cream`) on the muzzle, cheeks, chest, front legs
+  and paws, glossy black eyes and nose (`M_dog_dark`): materials of their own rather than vertex
+  colours (the export keeps only `wind`). Upright triangular ears and a big tail curled up over the
+  back: an eight-sided tube swept along a Catmull-Rom curve through the `TAIL` points (two rings per
+  segment, a flat root inside the rump, a closed pointed tip), with the inside of the curl a thinner
+  cream tube (it used to be five tube sections joined by spheres, which read as a string of beads
+  from the side). The haunches are rounder (an icosphere subdivided twice) and the hind paws sit
+  under the haunch (before, they sat well forward and nearly came off the leg).
+  `part="body" / "head" / "tail"` builds one part in the dog's own space; `catalog.AKITA_PIVOTS` is
+  where the head turns (the neck) and the tail wags (the tail's root). In `kennel.blend` the dog is
+  three objects: `Akita` (the body) with the children `Akita_head` and `Akita_tail` whose origins
+  are at the pivots. 1 168 triangles (before: 1 076).
+- **Clips:** `ambient_dog_breathe` (the body swells a little: 2.5 % across, 1.5 % deep, 1 % tall,
+  a 3 s cycle) and `ambient_dog_tail` (a slow wag of ±9° about the body's long axis, 2 s) loop for
+  ever like every `ambient_*` clip; `act_dog_happy` (2.5 s: a 10 cm hop then a 7 cm one, a ±15°
+  shake, the head tilting 24° and turning 30°, the tail wagging fast ±32° for eight beats in 2 s,
+  then back to rest) plays once per click. Each clip is an action with a slot for each object; the
+  object's first clip is the assigned action and the others sit in NLA tracks, so glTF exports all
+  three animations, keyed from frame 0.
+- **On the page:** the group `dog` is a "play once" kind (`playsOnce` in `src/interact/toggles.ts`):
+  a click makes `store.play(group)` count one more, and `ModuleInstance` calls `playOnce` for the
+  action of the clip, converted to additive (`effects.oneShot`, `AnimationUtils.makeClipAdditive`
+  on a copy of the clip), so it runs on top of the breathing and the slow wag (a fast wag over the
+  slow one, the body hopping while it breathes) and returns exactly to where it was; a click while
+  the clip is still running is ignored by `playOnce` (`action.isRunning()`), so the dog never
+  snaps back to the start in mid-hop. The car and carport lights use the existing light group
+  (`lights`): automatic follows the night, a click turns them off and on. The roof glass is an
+  object of its own in no click group (`Carport_glass`), so `pick.ts` skips it like any pane that
+  is not an item's own: from above, a pointer ray that passes between the slats hits a car ("Pickup
+  truck lights" / "Supercar lights") and one that hits a slat is still "Carport lights" (from a
+  52° high angle in the south-east about a fifth of the points on a horizontal line across a car
+  fall through a gap; before, the glass was inside the `Carport` object and every ray from above
+  stopped at it). The dollhouse cut never touches the carport or the dog: they are always whole
+  (the e2e checks).
+- **Checks** (`carport/layout_check.py`): the roof, floor, posts, pier, wall, cabinet, bicycle and
+  pools of light lie inside the footprint and do not overlap; each car is of the right catalog
+  kind, inside its bay, at least 0.5 m from both bay edges, touching no post, pier, wall, cabinet,
+  bicycle or the other car, under the roof and at least 0.3 m under the bottom of a beam or the
+  fascia; the recessed lights are under a beam inside the fascia frame, their pools on the floor;
+  in yard coordinates: the carport (roof, floor, structure) is at least 1 m from the house's
+  footprint, the floor's front edge coincides with the end of the driveway (the apron's top edge,
+  `APRON`), covers its whole width, at the same surface height (0.04 m), the roof is at least 1.5 m
+  from a tree trunk (canopy 1.2 m), the headlight beam lies inside the island, does not fall on the
+  house and is higher than the kerb top. The dog's corner: the garden's rules
+  (`garden/layout_check.check`: known kinds, no overlaps, inside the footprint, `wind` only on
+  plants), the dog sitting on the mat (its centre over it), touching no house, bowl, ball or shrub,
+  facing the lawn (−Y) and no more than 30° off the wallpaper camera (now 2°), and correct
+  `ambient_*` / `act_*` clip names.
+- **Performance** (`shoot --stats`, `?bg=example.jpg`, SwiftShader): 727 → 762 draw calls at 12:00
+  (+35), 730 → 768 at 21:00 (+38: three pools of light drawn only at night), wallpaper triangles
+  77.3k → 82.8k; `carport` 3 688 triangles (23 primitives), `kennel` 1 876 (15). Site route: the
+  median of 5 interleaved rounds against the previous version (`/?t=12:00`, 40 frames after load)
+  44.1 → 46.6 ms (+2.5 ms; the site route's draw calls 1 227 → 1 283). Turning off the cars' or
+  the dog's shadows made no measurable difference (within ±1 ms noise), so they still cast; the
+  carport floor, the mat, bowls and shrub corner cast none (`cast_shadow = False`). The last fix
+  (the glass as its own object, the apron, the paint, the dog's tail and legs): draw calls stay at
+  762 / 768, wallpaper triangles 82.9k / 83.2k; `carport` still 3 688 triangles in 23 primitives;
+  `kennel` 1 968 (15); `garden_paths` 3 164 → 3 200 (5); site route 5 interleaved rounds against
+  the previous version 48.3 → 47.5 ms (within the noise), draw calls 1 283 as before.
+- **e2e** (`e2e/carport.spec.ts`): the wallpaper at 12:00 and 21:00 requires every object of the
+  carport and the dog's corner (through three's devtools hook), and the middle of the `Carport` box
+  on screen changes colour when the carport is hidden (measured 35.5 at 12:00, 12.7 at 21:00;
+  thresholds 15 / 6), so a missing carport fails the test; clicking the pickup at night: the share
+  of bright pixels around it drops and rises again, and the emissive of `Pickup_lights` goes to 0
+  and comes back (the supercar's lights do not change); from a high angle over the carport, a line
+  of points across each car must hit one that shows the car's name; clicking the dog: the head
+  turns, then returns to rest.
+- **New catalog pieces:** `pickup_truck`, `convertible_supercar` (`part`), `akita` (`part`),
+  `dog_house`, `dog_mat`, `dog_bowl` (`variant` 0 water, 1 food), `dog_ball`, `bush` (`garden.py`,
+  sways). Palette: `paint_green`, `paint_red`, `glass_tinted` (`GLASS_tinted`, dark car glass),
+  `chrome`, `rubber`, `leather`, `headlight`, `taillight`, `glow_beam` (`GLOW_beam`), `akita_red`,
+  `akita_cream`, `dog_dark`.
+- **Regenerate** the carport and dog's corner (not the house or pool):
+  `art:models --force --only carport kennel`, then `art:assets`. One module:
+  `"${BLENDER_BIN:-/Applications/Blender.app/Contents/MacOS/Blender}" -b --factory-startup --python-exit-code 1 -P art/blender/scripts/carport/build_carport.py -- --force`
+  (likewise `build_kennel.py`). The `carport` and `kennel` zones are unchanged, so `yard` (whose
+  rocks and grass avoid the zones) need not be regenerated. The apron at the head of the driveway
+  belongs to `garden_paths` (`APRON`, `APRON_X`, `APRON_RUN` in `garden/paths_layout.py`): change
+  it and run `art:models --force --only garden_paths`, then `art:assets`.
 
-## Ao cá koi
+## Basement
 
-Phần 3 (ghi chú triển khai ở [villa v2 §12 «Ao cá koi»](docs/superpowers/specs/2026-10-15-villa-v2-design.md)): ao lớn đào xuống bãi cỏ, hòn non bộ có thác nước, nhiều cá koi, lá và hoa sen; cạnh ao một góc trà với bàn và đôn đá, bộ ấm chén, bonsai, đèn đá; low-poly, cùng phong cách resort của nhà. Code ở `blender/scripts/pond/`, cùng cách làm với `garden/` (dùng chung `garden/assemble.py`): `koi_layout.py`, `tea_layout.py` (dữ liệu thuần), `basin.py` (hình ao: viền, bờ, độ sâu), `swim.py` (đường bơi của cá), `layout_check.py` (có lỗi thì in `LAYOUT <module>: …` và thoát 1), `interact.py`, `build_koi.py`, `build_tea.py`.
+A basement under the house: a wine cellar, a karaoke room, a sauna, a gym and a spa. It is a module
+of its own (`basement`, role `prop`, so the house keeps its triangle budget) in slot `basement_01`,
+standing exactly where the house slot does (`zones.ZONE_SHARED`: the `house` zone lets this one slot
+share it). The module's space is the house's, so it shares the axes in `house_parts/common.py`. The
+code is in `basement/` (`basement_layout.py`, `layout_check.py` and `interact.py` are pure Python;
+`build_basement.py` needs bpy), the pieces in `archkit/furniture/basement.py`.
 
-| Module       | Slot                                      | Nội dung                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| ------------ | ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `koi_pond`   | `koi_pond_01`, ô `pond` (11 × 8 m, yaw 0) | Ao khoảng 9.3 × 6.1 m, viền là một khối tròn méo mềm (elip uốn bởi bốn hoạ âm, 56 điểm); mặt cỏ của `yard` có lỗ đúng viền đó, bờ ao nhét dưới cỏ 1.2 cm nên không hở khe. Bờ dốc: dải cỏ xanh xuống tới mép nước, bùn, rồi đáy tối sâu 0.65 m ở giữa; mặt nước thấp hơn cỏ 7 cm. 31 hòn đá xám dọc mép, chừa bốn khoảng cỏ chạm nước, vài viên sỏi. Hòn non bộ ở góc tây bắc: bốn đỉnh đá vôi xám (`rock_peak`, đỉnh cao nhất 2.2 m, hai đỉnh đứng trong nước) kết bằng chóp cụt chứ không nhọn như mũi kim, ba búi rêu trên mặt mỗi đỉnh, bảy bụi cây trên gờ đá (bốn trên đỉnh cao nhất, một trên chóp), thác nước rơi từ đỉnh cao nhất xuống ao (quay về phía camera wallpaper), bọt trắng dưới chân thác; ban đêm thác và bọt dịu xuống như nước dưới trăng. 14 cá koi (cam, kohaku trắng-cam, đen-cam, vàng) bơi năm vòng ở ba độ sâu; 13 lá sen (hai màu xanh), 5 hoa (hồng, trắng) và 2 nụ thành ba cụm, khẽ trôi theo gió |
-| `tea_garden` | `tea_garden_01`, ô `tea` (6 × 3.5 m)      | Sân lát travertine tròn, bàn đá granite tròn với ấm đất và bốn chén trên khay teak, bốn đôn đá; ba bonsai (hai trên bệ đá, một trong chậu men ngọc); đèn đá (thuộc nhóm đèn sân vườn) có vũng sáng 1 m lúc tối; hai viên đá bước từ sân lát lên chiếu nghỉ của lối đá ở chỗ rẽ về cửa                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+- **Heights** (`common.py`): the house's plinth is pulled down into a ground slab `GROUND_SLAB`
+  0.85 m thick, whose underside is the basement ceiling `BASEMENT_CEIL` −0.40; the basement floor
+  `BASEMENT_FLOOR` is −3.62 (finished −3.60), 3.2 m clear; the basement's cut is at −2.02.
+- **Plan** (inside a 0.2 m retaining wall round the plinth, x ±11.3, y −6.6 to 7.3): the lobby (x
+  −11.3 to 2, y 0 to 3: the stair at the west end, two rattan chairs round a coffee table on a rug,
+  a plant wall, planters); the wine cellar behind a glass partition along the back of the lobby (8
+  racks of green and red bottle heads along three walls, a granite tasting table with two bar
+  stools, two wooden barrels); the karaoke room at the east end, the full depth (a U-shaped velvet
+  sofa round a coffee table, a big TV on a low cabinet against the east wall between two tower
+  speakers, a stand with two microphones, a disco ball hanging in the middle, a dark rug, purple
+  velvet walls); along the front the basement bathroom (two shower cubicles, a WC, a basin, a towel
+  rack), the spa (a wooden sauna cabin with a glass door in the front left corner with two benches
+  and a stone stove, a stone-edged soaking tub `WATER_hot_tub`, two massage beds, an oil shelf,
+  candles) and the gym (two treadmills and a squat rack with a bench facing the mirror on the east
+  wall, a dumbbell rack, three yoga mats). Doors: lobby → bathroom, spa, karaoke room, wine cellar
+  (a doorway between two glass panels); spa → gym.
+- **Stair:** the house's spiral stair continues down the same column (`Stair_basement`: 21 treads of
+  19.4 cm, 18° each like the house's, turned 180° so the top tread ends on the −X axis at the
+  ground floor's level, a quarter turn before the house's first tread; the column stops at the
+  ground floor, the house's column goes on). The ground floor (plinth and stone layer) keeps the
+  landing quarter (as on the roof) and is open over the other three quarters; the balustrade round
+  the opening's edge on the living room side is in the object `Columns`: black steel on the back
+  edge and the back half of the east edge, and on the front right quarter, where the first five
+  treads of the stair up (0.64 to 1.41 m) pass just over the opening's edge, a frameless glass
+  panel 1 m high and 2 cm from the edge of tread 2 (the steel is at least 10 cm from every tread at
+  the same height, a test). Clearance over every tread is at least 2 m (a test).
+- **The light well** (zone `lightwell` (−7.5, −2) to (−1.5, 2), in front of the living room glass,
+  between the pool and the stone walk; the placeholder lamp post moved to (−4.5, −3)): a 5.2 × 4.3 m
+  pit down to the basement floor, with travertine walls and a 5 cm lip at grass level, darkening
+  towards the bottom (`WELL_BANDS`: a bright band 40 cm under the lip, `M_stone_shade` down to
+  −1.1 m, `M_stone_deep` to the floor, the same travertine texture tinted darker; the wallpaper
+  camera sees only about a metre of the far wall), and it still casts a shadow into the pit (the
+  lip stands 2 cm over `UNDERGROUND`), so from the wallpaper it reads as a sunken courtyard and no
+  longer as a pale square; a gravel floor, a 5.5 m palm (its crown nearly 2 m above the grass),
+  two small potted palms, a bird of paradise, frameless glass balustrade on the three open sides
+  (`GLASS_rail`, alpha 0.1, half the house glass's, reflecting the sky less); the back side is a
+  glass wall looking into the spa. At night: wall-washing lights, an LED strip under the lip round
+  the opening that throws light down the west wall and over the plinth behind (the wallpaper camera
+  sees only about a metre down the pit), in the `lights:garden` group.
+- **The lawn:** the yard's `Ground` has a hole following `PIT` (the plinth's outline plus the light
+  well): the plinth covers the hole while the house is whole; when you look at the basement the
+  retaining wall (always whole to the ceiling, `uncut`) and the ground slab's concrete lip
+  (−0.4 to 0, shown only when cut) surround the pit.
+- **What is drawn, and when:** objects tagged `buried` (the basement's rooms, furniture, lights,
+  switches) are drawn only when the cut is at the basement level, so never on the wallpaper; always
+  drawn: the stair, the light well and its planting. The rest below the lawn (walls, partitions, the
+  stone floor, the spa behind the light well's glass, the soaking tub) is drawn only when it can be
+  seen through an "opening" (`OPENINGS` in `basement_layout.py`, extras `opening` on `Light_well`
+  and `Stair_basement`: the light well's mouth inside its lip and the stair's hole in the ground
+  floor): every frame `showThroughOpenings` (`src/scene/cutaway.ts`) tests each mesh's bounding box
+  against four planes through the camera and the opening's edges, on the site route and the
+  wallpaper alike; from the first frame you see the spa through the glass but not the low soaking
+  tub behind. The basement's opaque meshes are drawn after everything else when the basement is not
+  being viewed (`renderOrder` `UNDER_LAWN_ORDER` 1): the grass and plinth are already in the depth
+  buffer, so those fragments are rejected before shading. Pieces under the lawn cast shadows only
+  when the basement is viewed (only then does sunlight reach into the pit); the stair (rising to the
+  ground floor's balustrade) casts shadows only when the house is cut to the ground floor or
+  lower. The basement module drops the cut plane from its materials while the house is whole (no
+  `discard` in the shader); `uncut` materials that the void's plane never reaches (the retaining
+  wall, the light well) never carry a plane; the shader variants for the basement view are
+  compiled ahead, when the site route is idle after loading (`warmCut` + `renderer.compileAsync`).
+  Each room has a `GLOW_room` pool of light under its recessed lights (the recessed light discs
+  themselves are not built, since the cut removes the ceiling). The disco ball is a mirror-tile
+  `M_disco` (pale grey, half metallic, so it is no longer black at night) that lights up and changes
+  colour with the LED strips when party mode is on.
+- **Performance** (SwiftShader, `?bg=example.jpg`): wallpaper 788 → 806 draw calls at 12:00, 794 →
+  813 at 21:00 (main → branch); the `basement` module 14 180 triangles (87 primitives), the house
+  45 800 → 46 040, the yard 2 548 → 2 558. Site route `/?t=12:00` (three passes of 5 to 7
+  interleaved rounds against main): about 51.5 → 53.5–54.7 ms per frame at cut `none` (1 278 →
+  1 301 draw calls; the median per-round difference +2.0 to +3.1 ms depending on machine load, +2.5
+  over all 19 rounds); pressing **Basement** takes the camera to 35 m, 55° and the frame costs
+  69–71 ms (308 draw calls), the cheapest at that spot (the same spot: **Ground floor** 114 ms,
+  the whole house 175 ms).
+- **Regenerate:** `art:models --force --only basement house yard`, then `art:assets`. One module:
+  `"${BLENDER_BIN:-/Applications/Blender.app/Contents/MacOS/Blender}" -b --factory-startup --python-exit-code 1 -P art/blender/scripts/basement/build_basement.py -- --force`.
 
-- **Ô `tea`** nay kéo tới y −3.0 (chạm mép ô `path_turn`) để đá bước tới được lối đá với khe cỏ ≤ 0.45 m như lối đá; hai viên sỏi của `garden_paths` ở đó dời sang bên.
-- **Kiểm tra** (`pond/layout_check.py`): viền ao hình sao quanh tâm, cách mép footprint ≥ 0.5 m; hòn non bộ đứng trên bờ, ít nhất một đỉnh trong nước, thác rơi từ đỉnh cao nhất xuống nước; mỗi con cá (mũi và đuôi) cách bờ và hòn non bộ ≥ 0.3 m, đáy dưới bụng ≥ 5 cm, vây lưng dưới mặt nước ≥ 2.5 cm, hai con cùng độ sâu không bơi xuyên nhau (cá cùng một vòng so suốt một vòng, khoảng cách của chúng lặp lại mỗi vòng; cá hai vòng khác nhau so đường với đường, nên hai vòng cùng độ sâu không được cắt nhau dù lệch giờ); cho ăn: thức ăn rơi đâu trong đĩa cho ăn (`FEEDING`, tâm (0.21, −0.31) là giữa đàn, bán kính 1.2 m) thì mọi con, trên đường thẳng từ vòng bơi tới vòng quanh thức ăn (công thức của shader chép ở `swim.fed_position`), vẫn cách các đỉnh đá đứng trong nước ≥ nửa thân (0.24 m) và đáy ≥ 5 cm dưới bụng (đáy đo xa hơn nửa thân về phía bờ; ngay dưới mũi và đuôi, lúc rời mồi ở chỗ nông, thực tế còn khoảng 4 cm); tầm của một đỉnh đá (`peak_reach`) là vành chân rộng nhất, bán kính lớn × (1 + `catalog.ROCK_PEAK_JITTER` 0.22), test bộ kit đo nó phủ mọi đỉnh lưới; lá sen nổi trong nước cách mép 0.1 m, không chồng nhau, không đè hòn non bộ hay bọt thác, hoa mọc giữa cụm lá; bồn hoa, lối đá, đèn trụ của sân vườn cách ao ≥ 0.3 m. Góc trà dùng luật của `garden/layout_check.py` (không chồng, nằm trong footprint) cộng thêm đá bước nối liền sân lát với lối đá mà không đè lên tấm nào của lối.
-- **Cá bơi bằng shader:** 14 con là **một object** `Koi` (bốn material, bốn lệnh vẽ), dựng ở chỗ vòng bơi của mỗi con bắt đầu. Object mang custom prop `koi` (12 số mỗi con: tâm, bán kính, góc nghiêng, độ sâu, tốc độ góc, pha, hình số 8, nhấp nhô — `swim.pack`), `koi_water` và `koi_feed` (đĩa cho ăn: x, y, bán kính); UV map thứ hai `koi` đánh số từng con. Vertex shader trên website (`web/src/systems/koi.ts`) tính lại đúng công thức của `swim.py`, đưa từng con về hệ của nó, lắc đuôi (theo đồng hồ riêng `mod(uTime, 2π/6)`, quấn sau trọn nhịp nên không giật khi hết vòng), rồi đặt lại ở chỗ vòng bơi cho thời điểm hiện tại. Cá vẽ sau mặt nước (trong suốt, `renderOrder` 1, một pass) và ngả dần sang màu nước theo độ sâu, nên từ camera wallpaper vẫn thấy những chấm cam trong ao xanh tối (để sau lớp nước 0.7 của shader cũ thì cá chỉ còn vệt nâu). Nếu mỗi con một object với clip `ambient_*` thì mất khoảng 29 lệnh vẽ thay vì 4.
-- **Nước ao** mang `water = "pond"`: website vẽ kiểu nước ao (`WATER_STYLES.pond` trong `web/src/systems/water.ts`: xanh lục đậm, gợn nhẹ, thác trắng hơn; ban đêm phần trắng của thác chỉ còn 1/4 và bọt `*_foam` tối còn 0.45 theo `uNight` (`FALL_NIGHT`), nên thác đọc như nước dưới trăng chứ không phải một tấm sáng trên đá tối); hồ bơi, bể sục, tường nước, vòi sen giữ kiểu cũ.
-- **Bấm trên website:** `waterfall` "Thác nước" (`Rockery`, `WATER_waterfall_sheet`, `Waterfall_foam`; tự động thì chạy như tường nước, bấm thì tắt / bật), `koi` "Cho cá ăn" (`WATER_surface`; bấm một điểm trên mặt ao thì thức ăn rơi đúng chỗ đó, hoặc lên mép đĩa cho ăn nếu bấm ngoài đĩa; cá kéo tới trong 3 s, xếp hai vòng quanh đó rồi tản về vòng bơi sau 9–13 s; bấm tiếp khi cá còn ăn thì tâm hai vòng lượn sang chỗ mới trong 1 s, cá giữ nguyên mức «đói» lúc đó (không con nào giật về vòng) và ở lại đủ lâu như lần đầu; cá không chặn cú bấm), đèn đá trong `lights:garden`.
-- **Hiệu năng** (đo `shoot --stats` 12:00, `?bg=example.jpg`, SwiftShader): 696 → 727 lệnh vẽ (21:00: 698 → 730; đợt sửa cuối không thêm lệnh vẽ nào), 70.3k → 77.3k tris; `koi_pond` 5.7k tris (23 primitive; đỉnh đá cụt, rêu và hai bụi cây thêm 320), `tea_garden` 1.6k (14, vũng sáng chỉ vẽ lúc tối). Route site: mỗi khung hình 43–44 → 44.5–46 ms (so xen kẽ bản trước ao, bản ao trước đợt sửa và bản sau, nhiễu ±1.5 ms; đợt sửa 0 … +1.2 ms). Không có point light. Bờ, đá viền, bọt, cá, sen và bonsai không đổ bóng (`cast_shadow = False`); hòn non bộ và bàn ghế đá đổ bóng.
-- **Món mới trong catalog** (`archkit/furniture/pond.py`): `stone_table_round`, `stone_stool`, `tea_set`, `bonsai` (`variant` 0 bệ đá, 1 chậu men, 2 dáng nghiêng), `stone_lantern` (phát sáng), `lotus_pad` (`variant` 0–3: bốn cỡ, hai màu xanh, có khía), `lotus_flower` (`variant` 0 hồng, 1 trắng, 2 nụ), `koi` (`variant` 0 cam, 1 kohaku, 2 đen-cam, 3 vàng; mũi về −Y, đuôi xoè phẳng để nhìn từ trên thấy được), `rock_peak` (`variant` 0–3 từ cao tới thấp). `bonsai`, `lotus_pad`, `lotus_flower` nhận `{"wind": True}` (sen chỉ trôi vài cm). `boulder()` và `shrub()` dựng đá viền và bụi cây trên hòn non bộ. `MeshBuilder.faces(points, faces, mat)` dựng một mảnh lưới bất kỳ. Vật liệu mới (màu phẳng, không texture): `M_granite`, `M_rock`, `M_rock_light`, `M_moss`, `M_bark`, `M_glaze`, `M_lotus`, `M_lotus_pad`, `M_koi_orange`, `M_koi_white`, `M_koi_black`, `M_koi_gold`, `M_pond_bank`, `M_pond_floor`, `M_foam`.
-- **Sinh lại** ao và góc trà (không đụng nhà, hồ bơi): `npm run models -- --force --only koi_pond tea_garden yard site`, rồi `npm run assets` (`yard` vì lỗ trên mặt cỏ đi theo viền ao). Từng module: `"${BLENDER_BIN:-/Applications/Blender.app/Contents/MacOS/Blender}" -b --factory-startup --python-exit-code 1 -P blender/scripts/pond/build_koi.py -- --force` (tương tự `build_tea.py`). Sinh lại ra GLB giống hệt từng byte.
+## Interior
 
-## Nhà xe và chó
+The house's curtains and accessories: the curtains, the roller blinds and 79 small pieces of
+furniture and decoration. A module of its own, `interior` (role `prop`, at most 15k triangles, no
+point light; the house stands at 46k under its 50k ceiling), in slot `interior_01`, standing exactly
+where the house does (`zones.ZONE_SHARED`, like the basement). The module's space is the house's
+and the rooms are `house_layout.ROOMS`. The code is in `interior/` (`interior_layout.py`,
+`layout_check.py` and `interact.py` are pure Python; `build_interior.py` needs bpy), the pieces in
+`archkit/furniture/interior.py` (31 kinds) and `decor.py` (`curtain`, `roller_blind`).
 
-Phần 4 (ghi chú triển khai ở [villa v2 §12 «Nhà xe và chó»](docs/superpowers/specs/2026-10-15-villa-v2-design.md)): nhà xe có mái ở bên hông nhà, cuối đường xe, với một xe bán tải và một siêu xe mui trần; sau nhà xe, cạnh hàng rào, một chuồng chó và bé Akita. Tất cả dựng bằng script (không tải mẫu nào), thiết kế chung chung: không tên hãng, logo hay huy hiệu. Code ở `blender/scripts/carport/` (cùng khuôn với `garden/` và `pond/`: `carport_layout.py`, `kennel_layout.py`, `layout_check.py`, `interact.py` thuần Python; `build_carport.py`, `build_kennel.py` cần bpy).
-
-| Module    | Slot                                                      | Nội dung                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| --------- | --------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `carport` | `carport_01`, ô `carport` (8 × 7 m, tâm (16, 6.5), yaw 0) | Sàn travertine 4 cm bằng mặt đường xe, mép trước đúng chỗ đường xe kết thúc (y = 3), ở đó đường xe đã loe thành sân đỗ rộng hết hai làn (`garden_paths`). Mái phẳng: khung viền trắng (fascia) rộng 0.2 m, dày 0.3 m quanh mép, trong khung là tấm kính (`GLASS_clear`, object riêng `Carport_glass` không thuộc nhóm bấm nào) và lam gỗ teak treo dưới kính (30 thanh 14 cm, chạy dọc trước–sau), trên ba dầm trắng ngang; từ camera wallpaper mái đọc như một mái gỗ, nhìn từ trên xuống vẫn thấy xe qua khe lam, nắng xuyên lam thành sọc trên sàn và trên xe. Hai cột thép đen mảnh ở phía xa nhà (đông); phía nhà là một trụ ốp travertine ở góc trước và bức tường travertine khép phía sau, cách tường đông của nhà 2 m. Hai làn: xe bán tải phía nhà, siêu xe đỏ (thấp) phía ngoài, cả hai đỗ đầu ra đường xe; tủ gỗ teak sau xe bán tải, xe đạp đen dựa tường sau siêu xe. Ba đèn âm dưới dầm trên lối giữa hai xe, mỗi đèn hắt vũng sáng 1.1 m xuống sàn lúc tối. |
-| `kennel`  | `kennel_01`, ô `kennel` (3 × 3 m, tâm (22, 12.5), yaw 0)  | Chuồng chó gỗ teak trên bệ tối, mái dốc hai mái màu than, cửa vòm, tấm biển trơn trên cửa; trước cửa tấm thảm tối, bé Akita ngồi trên thảm quay về bãi cỏ và camera wallpaper (25°); cạnh thảm bát nước và bát hạt màu đỏ, quả bóng đỏ ngoài cỏ, một bụi cây nhỏ cạnh chuồng (đung đưa).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-
-- **Xe** (`archkit/furniture/vehicles.py`, `pickup_truck` 1.9 × 5.3 × 1.85 m và `convertible_supercar` 2.0 × 4.5 × 1.15 m, mũi về −Y): thân xe "loft" dọc trục Y qua các mặt cắt sáu cạnh (sườn thẳng, vai, mặt trên), mép dưới cong lên thành vòm bánh; bánh 12 cạnh đứng trên một đỉnh, la-zăng mạ crôm, chụp giữa đen. Bán tải xanh rêu (`paint_green` (0.08, 0.27, 0.15), metallic 0.15, ánh kim nhẹ; trước là (0.06, 0.2, 0.11), metallic 0.45: sơn nhiều kim loại chủ yếu phản chiếu bầu trời đêm tối nên lúc đêm dưới mái xe gần như đen, nay đọc ra xanh đậm): mui kép kính đen dưới mái sơn, cột B đen, giá nóc đen, thùng sau hở có lót đen, cản trước đen, ca-lăng crôm, vè đen quanh vòm bánh, bậc lên xuống, cản sau crôm, đèn hậu đứng ở hai góc thùng. Siêu xe đỏ: mũi nêm thấp, vè trước cao hơn nắp capô, hông thóp vào dưới đường gân, hốc gió đen hai bên, mui gập: kính chắn gió nghiêng trong khung đen, khoang lái tối với hai ghế da bò và vô-lăng bên trái, hai gờ sau tựa đầu, cánh gió trước và khuếch tán sau đen, hai ống xả crôm, dải đèn hậu ngang. `part="body"` hay `part="lights"` dựng riêng thân hay đèn (mặc định cả hai): nhà xe tách đèn mỗi xe thành object `night_light` riêng (`Pickup_lights`, `Supercar_lights`), kèm nửa đĩa `GLOW_beam` 1.5 m trước mũi xe (vệt đèn pha trên sàn, đường xe và bãi cỏ), cao `HEADLIGHT_POOL_TOP` 0.076 m, trên mặt bó vỉa đường xe (0.07 m): nằm dưới mặt bó vỉa thì bó vỉa cắt vệt sáng thành sọc tối. Bán tải 1 238 tris, siêu xe 1 382.
-- **Akita** (`archkit/furniture/animals.py`, `akita` 0.48 × 0.8 × 0.95 m): ngồi, lông đỏ hung (`M_akita_red`), phần "urajiro" kem (`M_akita_cream`) ở mõm, má, ngực, chân trước và bàn chân, mắt mũi đen bóng (`M_dog_dark`): material riêng chứ không màu đỉnh (export chỉ giữ `wind`). Tai dựng tam giác, đuôi to cuộn lên lưng: một ống tám cạnh quét dọc đường cong Catmull-Rom qua các điểm `TAIL` (hai vòng mỗi đoạn, gốc phẳng trong mông, ngọn khép nhọn), mặt trong vòng cuộn là một ống kem mảnh hơn (trước là năm đoạn ống nối bằng khối cầu, nhìn nghiêng thành chuỗi hạt). Đùi gập tròn hơn (icosphere hai lần chia), bàn chân sau nằm dưới đùi (trước nằm hẳn phía trước, gần như rời khỏi chân). `part="body" / "head" / "tail"` dựng riêng từng phần trong không gian của chó; `catalog.AKITA_PIVOTS` là chỗ đầu xoay (cổ) và đuôi vẫy (gốc đuôi). Trong `kennel.blend` chó là ba object: `Akita` (thân), con là `Akita_head` và `Akita_tail` đặt gốc ở pivot. 1 168 tris (trước 1 076).
-- **Clip:** `ambient_dog_breathe` (thân phồng nhẹ: ngang 2.5 %, dọc 1.5 %, cao 1 %, chu kỳ 3 s), `ambient_dog_tail` (đuôi vẫy chậm ±9° quanh trục dọc thân, 2 s) lặp mãi như mọi clip `ambient_*`; `act_dog_happy` (2.5 s: nhảy 10 cm rồi 7 cm, lắc mình ±15°, đầu nghiêng 24° và quay 30°, đuôi vẫy nhanh ±32° tám nhịp trong 2 s, rồi về tư thế nghỉ) mỗi cú bấm chạy một lần. Mỗi clip là một action có slot cho từng object; clip đầu của object là action đang gán, clip khác nằm trong track NLA, nên glTF xuất đủ ba animation, key từ frame 0.
-- **Website:** nhóm `dog` thuộc loại "chạy một lần" (`playsOnce` trong `web/src/interact/toggles.ts`): bấm thì `store.play(nhóm)` đếm thêm một lần, `ModuleInstance` gọi `playOnce` cho action của clip đã chuyển sang additive (`effects.oneShot`, `AnimationUtils.makeClipAdditive` trên bản sao clip) nên chạy chồng lên nhịp thở và cái vẫy chậm (đuôi vẫy nhanh trên cái vẫy chậm, thân nhảy trong khi thở) và hết clip thì về đúng chỗ cũ; bấm lại khi clip còn đang chạy thì `playOnce` bỏ qua (`action.isRunning()`), nên chó không bị giật về đầu giữa cú nhảy. Đèn xe và đèn nhà xe dùng nhóm đèn sẵn có (`lights`): tự động sáng theo đêm, bấm thì tắt / bật. Kính mái là object riêng không thuộc nhóm bấm nào (`Carport_glass`), nên `pick.ts` bỏ qua nó như mọi tấm kính không phải của món đồ: nhìn từ trên cao, tia trỏ lọt qua khe lam thì trúng xe ("Đèn xe bán tải" / "Đèn siêu xe"), trúng lam thì vẫn là "Đèn nhà xe" (từ góc cao 52° phía đông nam, khoảng 1/5 số điểm trên một đường ngang qua xe lọt khe; trước kia tấm kính nằm trong object `Carport` nên mọi tia từ trên đều dừng ở nó). Mặt cắt nhà búp bê chỉ cắt `house`, nhà xe và chó luôn nguyên (e2e kiểm).
-- **Kiểm tra** (`carport/layout_check.py`): mái, sàn, cột, trụ, tường, tủ, xe đạp và vũng sáng nằm trong footprint, các phần không chồng nhau; mỗi xe đúng loại catalog, nằm trong làn của nó, cách hai mép làn ≥ 0.5 m, không chạm cột, trụ, tường, tủ, xe đạp hay xe kia, nằm dưới mái và cách đáy dầm / fascia ≥ 0.3 m; đèn âm nằm dưới một dầm trong khung fascia, vũng sáng trên sàn; trong toạ độ sân: nhà xe (mái, sàn, kết cấu) cách footprint nhà ≥ 1 m, mép trước sàn trùng đúng đầu đường xe (mép trên của sân đỗ `APRON`), phủ hết bề ngang của nó, cùng cao độ mặt (0.04 m), mái cách thân cây ≥ 1.5 m (tán 1.2 m), vệt đèn pha nằm trong đảo, không rơi lên nhà và cao hơn mặt bó vỉa. Góc chó: luật vườn (`garden/layout_check.check`: loại đã biết, không chồng nhau, trong footprint, `wind` chỉ cho cây), chó ngồi trên thảm (tâm trên thảm), không chạm chuồng, bát, bóng, bụi cây, quay mặt về phía bãi cỏ (−Y) và lệch camera wallpaper không quá 30° (nay 2°), tên clip đúng `ambient_*` / `act_*`.
-- **Hiệu năng** (đo `shoot --stats`, `?bg=example.jpg`, SwiftShader): 727 → 762 lệnh vẽ lúc 12:00 (+35), 730 → 768 lúc 21:00 (+38: ba vũng sáng chỉ vẽ lúc tối), tris wallpaper 77.3k → 82.8k; `carport` 3 688 tris (23 primitive), `kennel` 1 876 tris (15 primitive). Route site: trung vị 5 vòng xen kẽ với bản trước (`/?t=12:00`, 40 khung hình sau khi tải) 44.1 → 46.6 ms (+2.5 ms; lệnh vẽ route site 1 227 → 1 283). Tắt bóng của xe hay của chó không đo được khác biệt (trong nhiễu ±1 ms) nên vẫn để chúng đổ bóng; sàn nhà xe, góc thảm/bát/bụi cây không đổ bóng (`cast_shadow = False`). Đợt sửa cuối (kính tách object, sân đỗ, sơn, đuôi và chân chó): lệnh vẽ giữ 762 / 768, tris wallpaper 82.9k / 83.2k; `carport` vẫn 3 688 tris, 23 primitive; `kennel` 1 968 tris (15); `garden_paths` 3 164 → 3 200 (5); route site xen kẽ 5 vòng với bản trước 48.3 → 47.5 ms (trong nhiễu), lệnh vẽ 1 283 như cũ.
-- **E2e** (`web/e2e/carport.spec.ts`): wallpaper 12:00 và 21:00 đòi đủ mọi object của nhà xe và góc chó (qua hook devtools của three) và giữa hộp của `Carport` trên màn hình đổi màu khi ẩn nhà xe đi (đo 35.5 lúc 12:00, 12.7 lúc 21:00; ngưỡng 15 / 6), nên thiếu nhà xe là test hỏng; bấm xe bán tải lúc đêm: tỉ lệ điểm sáng quanh xe giảm / tăng và emissive của `Pickup_lights` về 0 rồi sáng lại (đèn siêu xe không đổi); từ góc cao trên nhà xe, một đường điểm ngang qua mỗi xe phải có điểm hiện tên xe; bấm chó: đầu quay rồi về nghỉ.
-- **Món mới trong catalog:** `pickup_truck`, `convertible_supercar` (`part`), `akita` (`part`), `dog_house`, `dog_mat`, `dog_bowl` (`variant` 0 nước, 1 hạt), `dog_ball`, `bush` (`garden.py`, đung đưa). Palette: `paint_green`, `paint_red`, `glass_tinted` (`GLASS_tinted`, kính xe tối), `chrome`, `rubber`, `leather`, `headlight`, `taillight`, `glow_beam` (`GLOW_beam`), `akita_red`, `akita_cream`, `dog_dark`.
-- **Sinh lại** nhà xe và góc chó (không đụng nhà, hồ bơi): `npm run models -- --force --only carport kennel site`, rồi `npm run assets`. Từng module: `"${BLENDER_BIN:-/Applications/Blender.app/Contents/MacOS/Blender}" -b --factory-startup --python-exit-code 1 -P blender/scripts/carport/build_carport.py -- --force` (tương tự `build_kennel.py`). Ô `carport`, `kennel` không đổi nên `yard` (đá và cỏ viền đảo né các ô) không cần sinh lại. Sân đỗ ở đầu đường xe thuộc `garden_paths` (`APRON`, `APRON_X`, `APRON_RUN` trong `garden/paths_layout.py`): đổi nó thì `npm run models -- --force --only garden_paths site` rồi `npm run assets`.
-
-## Tầng hầm
-
-Yêu cầu "thêm tầng hầm chứa: hầm rượu, phòng karaoke, phòng xông hơi, gym và spa" (ghi chú triển khai ở [villa v2 §12 «Tầng hầm»](docs/superpowers/specs/2026-10-15-villa-v2-design.md)). Module riêng `basement` (role `prop`, để nhà giữ ngân sách tris của nó), slot `basement_01` đứng đúng chỗ slot nhà (`zones.ZONE_SHARED`: ô `house` chỉ cho slot này ở chung), không gian module là của nhà nên dùng chung trục ở `house_parts/common.py`. Code ở `blender/scripts/basement/` (`basement_layout.py`, `layout_check.py`, `interact.py` thuần Python; `build_basement.py` cần bpy), đồ ở `archkit/furniture/basement.py`.
-
-- **Cao độ** (`common.py`): bục nhà kéo xuống thành sàn trệt dày `GROUND_SLAB` 0.85 m, mặt dưới là trần hầm `BASEMENT_CEIL` −0.40; sàn hầm `BASEMENT_FLOOR` −3.62 (mặt hoàn thiện −3.60), cao thông thuỷ 3.2 m; mặt cắt hầm −2.02.
-- **Mặt bằng** (trong tường chắn 0.2 m quanh viền bục, x ±11.3, y −6.6..7.3): sảnh hầm (x −11.3..2, y 0..3: cầu thang ở đầu tây, đôi ghế mây quanh bàn trà trên thảm, tường cây, chậu cây), hầm rượu sau vách kính dọc lưng sảnh (8 giá rượu đầu chai xanh / đỏ dọc ba tường, bàn nếm rượu đá granite với hai ghế bar, hai thùng gỗ), phòng karaoke ở đầu đông suốt chiều sâu (sofa nhung chữ U quanh bàn trà, TV lớn trên tủ thấp ở tường đông giữa hai loa cột, giá hai micro, quả cầu disco treo giữa phòng, thảm tối, tường nhung tím), dọc mặt tiền phòng tắm hầm (hai buồng tắm, WC, lavabo, giá khăn), spa (cabin xông hơi gỗ cửa kính ở góc trước trái với hai bậc ngồi và bếp đá, bể ngâm viền đá nước `WATER_hot_tub`, hai giường massage, kệ dầu, nến) và gym (hai máy chạy bộ và giá squat có ghế quay về gương ở tường đông, giá tạ tay, ba thảm yoga). Cửa: sảnh → phòng tắm, spa, karaoke, hầm rượu (khe cửa giữa hai đoạn kính); spa → gym.
-- **Cầu thang:** cầu thang xoắn của nhà đi tiếp xuống theo cùng cột (`Stair_basement`: 21 bậc 19.4 cm, 18° mỗi bậc như của nhà, xoay 180° để bậc trên cùng kết thúc ở trục −X ngang sàn trệt, một phần tư vòng trước bậc đầu của nhà; cột dừng ở sàn trệt, cột của nhà đi tiếp). Sàn trệt (bục và lớp đá) giữ phần tư chiếu nghỉ (như mái) và thủng ở ba phần tư còn lại; lan can quanh mép lỗ phía phòng khách nằm trong object `Columns`: thép đen ở cạnh sau và nửa sau cạnh đông, còn phần tư trước phải, nơi năm bậc đầu của cầu thang lên (0.64–1.41 m) đi qua ngay trên mép lỗ, là kính không khung cao 1 m cách mép bậc 2 cm (thép cách mọi bậc cùng độ cao ít nhất 10 cm, test). Khoảng trống trên mọi bậc ≥ 2 m (test).
-- **Giếng trời** (ô `lightwell` (−7.5, −2)..(−1.5, 2), trước kính phòng khách, giữa hồ bơi và lối đá; đèn trụ placeholder dời ra (−4.5, −3)): hố 5.2 × 4.3 m sâu tới sàn hầm, tường travertine có gờ 5 cm ở mặt cỏ, tối dần xuống đáy (`WELL_BANDS`: dải sáng 40 cm dưới gờ, `M_stone_shade` tới −1.1 m, `M_stone_deep` tới sàn, cùng texture travertine nhuộm tối; camera wallpaper chỉ thấy khoảng một mét tường xa) và vẫn đổ bóng xuống lòng hố (gờ cao hơn `UNDERGROUND` 2 cm), nên từ wallpaper đọc ra một sân trũng chứ không còn là ô nhạt; sàn sỏi, cây cọ 5.5 m (tán nhô trên cỏ gần 2 m), hai chậu cọ nhỏ, cây thiên điểu, lan can kính không khung ở ba cạnh hở (`GLASS_rail`, alpha 0.1 bằng nửa kính nhà, ít phản chiếu trời); cạnh sau là vách kính nhìn vào spa. Đêm: đèn hắt chân tường, dải LED dưới gờ quanh miệng hố hắt sáng xuống tường tây và mặt bục phía sau (camera wallpaper chỉ nhìn được khoảng một mét xuống hố), nhóm `lights:garden`.
-- **Cỏ:** `Ground` của yard thủng theo `PIT` (viền bục nhà cộng giếng trời): bục nhà che lỗ lúc nhà còn nguyên; xem hầm thì tường chắn (luôn nguyên tới trần, `uncut`) và gờ bê tông của sàn trệt (−0.4..0, chỉ hiện khi cắt) bao quanh hố.
-- **Vẽ gì, khi nào:** object `buried` (phòng hầm, đồ, đèn, công tắc) chỉ vẽ khi mặt cắt ở mức hầm, kể cả không bao giờ trên wallpaper; luôn vẽ: cầu thang, giếng trời và cây của nó. Phần còn lại dưới mặt cỏ (tường, vách ngăn, sàn đá, spa sau kính giếng trời, bể ngâm) chỉ vẽ khi nhìn thấy được qua một "lỗ mở" (`OPENINGS` ở `basement_layout.py`, extras `opening` trên `Light_well` và `Stair_basement`: miệng giếng trời trong gờ và lỗ cầu thang ở sàn trệt): mỗi khung, `showThroughOpenings` (`cutaway.ts`) thử hộp bao của từng mesh với bốn mặt phẳng qua camera và các cạnh của lỗ, cả ở route site lẫn wallpaper; từ khung đầu thấy spa qua kính nhưng không thấy bể ngâm thấp phía sau. Mesh đục của hầm vẽ sau mọi thứ khác khi chưa xem hầm (`renderOrder` `UNDER_LAWN_ORDER` 1): cỏ và bục đã có trong depth buffer nên fragment bị loại trước khi tô. Đồ dưới mặt cỏ chỉ đổ bóng khi xem hầm (nắng mới rọi vào hố); cầu thang (nhô lên tới lan can sàn trệt) chỉ đổ bóng khi nhà cắt tới tầng trệt hoặc thấp hơn. Module hầm bỏ mặt phẳng cắt khỏi material khi nhà nguyên (không có `discard` trong shader); những material `uncut` mà mặt phẳng của khoảng trống không bao giờ chạm tới (tường chắn, giếng trời) không bao giờ mang mặt phẳng; các biến thể shader lúc xem hầm được biên dịch trước khi route site rảnh sau khi tải (`warmCut` + `renderer.compileAsync`). Mỗi phòng có vũng sáng `GLOW_room` dưới đèn âm trần (đĩa đèn âm không dựng: mặt cắt bỏ trần đi). Quả cầu disco là ô gương `M_disco` (xám nhạt, nửa kim loại, nên đêm không còn đen), sáng lên và đổi màu cùng dải LED khi bật chế độ tiệc.
-- **Hiệu năng** (SwiftShader, `?bg=example.jpg`): wallpaper 788 → 806 lệnh vẽ lúc 12:00, 794 → 813 lúc 21:00 (main → nhánh); tris module `basement` 14 180 (87 primitive), nhà 45 800 → 46 040, yard 2 548 → 2 558. Route site `/?t=12:00` (ba lượt 5–7 vòng xen kẽ với bản main): khoảng 51.5 → 53.5–54.7 ms/khung ở mặt cắt none (1 278 → 1 301 lệnh vẽ; trung vị hiệu từng vòng +2.0 đến +3.1 ms tuỳ tải máy, +2.5 trên cả 19 vòng); bấm "Hầm" thì camera về 35 m, 55° và khung tốn 69–71 ms (308 lệnh vẽ), rẻ nhất ở chỗ đó (cùng chỗ: "Tầng 1" 114 ms, cả nhà 175 ms); chi tiết ở ghi chú §12 của spec villa v2.
-- **Sinh lại:** `npm run models -- --force --only basement house yard site`, rồi `npm run assets`. Từng module: `"${BLENDER_BIN:-/Applications/Blender.app/Contents/MacOS/Blender}" -b --factory-startup --python-exit-code 1 -P blender/scripts/basement/build_basement.py -- --force`.
-
-## Wallpaper bằng Plash
-
-1. `npm run build -w web && npm run preview -w web` (giữ chạy nền)
-2. Plash → Add Website → `http://localhost:4173/wallpaper` (đảo nằm bên phải màn hình, nền trời theo giờ)
-3. Muốn dùng ảnh nền riêng: chép ảnh vào `web/public/backgrounds/`, build lại, rồi dùng `http://localhost:4173/wallpaper?bg=example.jpg` (thay `example.jpg` bằng tên ảnh). Đảo sang trái: thêm `&align=left`.
-4. Muốn tiết kiệm pin hơn thì thêm `?fps=20` (hoặc `&fps=20` sau tham số khác).
+- **Curtains** (`curtain`, replacing the old fixed 3 m curtain and the house's `Curtain_master`): a
+  slim bronze ceiling track (`M_bronze`) as wide as the glazing (`width`), as tall as the room
+  (`drop` = ceiling − floor − 1 cm, `interior_layout.drop`; in the void it is the upper ceiling, so
+  the living room's voile curtain is 8.8 m tall), the fabric 2 cm off the floor. At each end of a
+  run a bundle of soft wavy fabric (a one-sided strip of quads in a sine wave, 8 waves a metre,
+  smooth shading): the ivory `M_sheer` voile on the glass side (the inner one, alpha 0.75: the
+  module's only transparent primitive; the page draws it in one pass (`forceSinglePass`, not the
+  back-then-front two passes of a two-sided transparent material) and lights both faces: the back
+  face keeps its normal pointing into the room, so at night, from outside, the voile glows with the
+  room's warm light instead of showing moon-blue stripes; clicks and zooming go through the voile
+  as through glass) and the sand-coloured linen drape `M_drape` on the room side (one-sided, with
+  backface culling: seen from outside at night, the backs of the wave strips are dark blue
+  columns behind the voile; when the house is cut every opaque material draws both faces), tied
+  back with a bronze band at 1.05 m; the glass between is left clear (`catalog.CURTAIN`). Six runs:
+  the front and west flank of the double-height living room, the dining room glass, bedroom 2, the
+  master bedroom (the glass onto the balcony) and bedroom 3's west window; roller blinds
+  (`roller_blind`) on the two clerestory windows over the kitchen and the computer corner.
+- **Accessories** (79 pieces): cushions and throws on the sofa and beds; a candle tray, books and a
+  bowl on the coffee table; a dried-flower vase, a travertine side table, a fiddle-leaf fig, a
+  rattan chair, a low teak-and-rattan cabinet under the round mirror; a laid dining table for 8 on
+  a large sisal rug, a table lamp on the buffet; a fruit bowl, a chopping board, teapot and jar, a
+  herb pot and bar-stool cushions in the kitchen; bedside lamps, a bench at the foot of the bed, a
+  study corner in bedroom 2, a low cabinet doing duty as a dressing table; a console, a bench, a
+  painting and a long rug in the hallway; a tray, a bath mat, a towel rail and a plant in the
+  bathrooms; a mirror, a vase and an umbrella stand in the entrance hall. A cushion is a square
+  cushion (two 4 × 4 grids stitched at the edge, thick in the middle and thin at the edge, 64
+  triangles; before, a flattened sphere that read as a ball from the site camera); the glasses on
+  the dining table and the wine set in the basement are `M_glassware`, opaque and glossy (no extra
+  transparent draw); a small travertine piece (the side table, a bowl, a tray) takes its UVs in its
+  own system offset by half a stone slab (`MeshBuilder` `uv_offset`, `STONE_MID`), so the grout
+  cross does not show. A piece set on another carries the option `"on": <object name>` and stands on
+  its top (`catalog.SURFACES`, `houses/layout_check.top_under`; ±1 cm); a wall-hung piece must lean
+  on a solid wall (not glass, not over a doorway). `interior/layout_check.py` also checks: a
+  curtain runs along the room's glass, inside the room, under the ceiling, clear of doors, the stair,
+  the chandelier, the house's furniture and the switches; floor pieces avoid the house's furniture
+  and the walkways (doors, gaps, the stair, the strip along the hallway balustrade).
+- **Objects:** `Interior_decor` (curtains, chairs, plants, cabinets, mirrors, lamp bases: 9
+  materials, 5 100 triangles), `Interior_details` (the small pieces, extras `detail`, 10 materials,
+  6 872 triangles: the site route draws it only when the camera is near the house, under 45 m from
+  its middle like the upper-floor cut level and with the same ±3 m hysteresis (`nearHouse`,
+  `nearFor`, the store's `near`, set by `OrbitRig`), whether the house is whole ("Roof" at 20 m, or
+  "Auto" close in with a low camera) or cut; the wallpaper does not draw it: from far away the
+  pieces are a pixel or two across yet hold most of the triangles) and
+  `LT_lamp_dining` / `LT_lamp_bedroom2` / `LT_lamp_bedroom3` (the table lamp shades, `night_light`,
+  in the house's `light:<room>` groups: the room's switch turns the room's table lamps off and on
+  too; the lamp bases are in `Interior_decor`, drawn whenever a shade is, so a shade never floats).
+  No object casts a shadow. On the page: `CUTAWAY_MODULES.interior` (cut with the house at every
+  level, hidden with the house on "Basement"), `cutOnlyByButton` (only the basement takes the plane
+  away when whole), `applyCut(…, near)`, `leaveOutDetails`. The module's real transparent draw
+  calls: 1 (the voile, one pass); before the fix it was 2 with the house whole and 4 with the
+  details shown (`M_sheer` in both decor and the glasses in details, two passes per primitive), and
+  2 more in the basement (the wine set).
+- The regenerated house no longer has `Curtain_master` (45 884 triangles); the monstera, the living
+  room palm, the dining room plant, the hallway plant and bedroom 3's desk moved a little to make
+  room for the curtain bundles and the bench. The basement gained a few pieces in empty spots (a
+  decanter and glasses on the tasting table, cushions on the karaoke sofa, rolled towels on the
+  massage bed, towels and water bottles in the gym; 14 784 triangles).
+- **Performance** (SwiftShader, `?bg=example.jpg`): wallpaper 806 → 816 draw calls at 12:00,
+  813 → 823 at 21:00; the `interior` module 12 192 triangles (`Interior_decor` 5 100 + the lamp
+  shades + `Interior_details` 6 872; far from the house only the decor and the shades are drawn, 12
+  draw calls). Wallpaper triangles about 98.2k. Site route `/?t=12:00` at cut none, first view (7
+  rounds interleaved with the main build, machine load 7 to 15): 64.2 → 66.3 ms per frame (median
+  difference +2.0 ms), 1 301 → 1 309 draw calls; near the house (20 m, cut to the ground floor or
+  "Roof") the curtains and accessories cost about 19 to 21 ms per frame more on SwiftShader (the
+  voile about 5, the fabric and linen about 7, the small pieces about 5 ms; mostly fill cost).
+- **Regenerate:** `art:models --force --only interior house` (add `basement` if you changed the
+  basement's pieces), then `art:assets`.
