@@ -1,4 +1,5 @@
 import type { WebGLRenderer } from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const clear = vi.fn();
@@ -8,7 +9,13 @@ vi.mock('@react-three/fiber', () => ({
   useLoader: Object.assign(() => ({}), { clear: (...args: unknown[]) => clear(...args) }),
 }));
 
-import { getKTX2Loader, releaseLoaders, setTranscoderPath, useModuleGLTF } from './loader';
+import {
+  forgetModules,
+  getKTX2Loader,
+  releaseLoaders,
+  setTranscoderPath,
+  useModuleGLTF,
+} from './loader';
 
 /** Just enough renderer for KTX2Loader.detectSupport. */
 const gl = { extensions: { has: () => false } } as unknown as WebGLRenderer;
@@ -36,5 +43,33 @@ describe('releaseLoaders', () => {
   it("points the transcoder at the remote's origin", () => {
     setTranscoderPath('https://garden.example/basis/');
     expect(getKTX2Loader(gl).transcoderPath).toBe('https://garden.example/basis/');
+  });
+});
+
+describe('forgetModules', () => {
+  beforeEach(() => {
+    releaseLoaders();
+    clear.mockClear();
+  });
+
+  it("drops just the given modules from R3F's cache, so a retry fetches them again", () => {
+    useModuleGLTF(HOUSE);
+    useModuleGLTF(POOL);
+    forgetModules([HOUSE]);
+    expect(clear.mock.calls).toEqual([[GLTFLoader, HOUSE]]);
+  });
+
+  it('forgets them for good: the next release has only the others left to drop', () => {
+    useModuleGLTF(HOUSE);
+    useModuleGLTF(POOL);
+    forgetModules([HOUSE]);
+    clear.mockClear();
+    releaseLoaders();
+    expect(clear.mock.calls.map(([, url]) => url)).toEqual([POOL]);
+  });
+
+  it('is harmless for a module that was never requested', () => {
+    expect(() => forgetModules([HOUSE])).not.toThrow();
+    expect(clear.mock.calls).toEqual([[GLTFLoader, HOUSE]]);
   });
 });

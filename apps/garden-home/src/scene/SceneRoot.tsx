@@ -16,12 +16,13 @@ import { Sky } from '../systems/Sky';
 import { backdropStyle, showsSky, useBackdrop } from '../ui/backdrop';
 import { FrameCounter } from '../ui/DebugOverlay';
 import { CUTAWAY_MODULES } from './cutaway';
+import { forgetModules } from './loader';
 import { moduleUrl } from './loadScene';
 import { ModuleBoundary } from './ModuleBoundary';
 import { ModuleInstance } from './ModuleInstance';
 import { ReadyProbe } from './ReadyProbe';
 import { ReleaseGate } from './release-scene';
-import type { SceneConfig } from './schema';
+import type { SceneConfig, Slot } from './schema';
 
 interface Props {
   config: SceneConfig;
@@ -50,6 +51,20 @@ export function SceneRoot({ config, sceneUrl, runtime, params, onFatal, onReady 
     () => (house ? houseBounds(house, config.modules[house.module].footprint) : null),
     [house, config],
   );
+
+  const srcOf = (slot: Slot) =>
+    moduleUrl(config.modules[slot.module].src[runtime.quality], sceneUrl);
+
+  // A module that will not load removes only its own slot (ModuleBoundary), but a scene with none left is empty:
+  // that is a failure, and "Try again" must refetch what failed, not replay R3F's cached rejections.
+  const failedSlots = useRef(new Set<string>());
+  const handleSlotFailed = (slotId: string) => {
+    markSlotSettled(slotId);
+    failedSlots.current.add(slotId);
+    if (failedSlots.current.size < config.slots.length) return;
+    forgetModules(config.slots.map(srcOf));
+    onFatal(new Error('no module of the scene loaded'));
+  };
 
   const restoreTimer = useRef(0);
   const disposed = useRef(false);
@@ -113,13 +128,13 @@ export function SceneRoot({ config, sceneUrl, runtime, params, onFatal, onReady 
       {/* The site camera picks the point under the cursor from the modules alone (OrbitRig). */}
       <group name={MODULES_GROUP}>
         {config.slots.map((slot) => (
-          <ModuleBoundary key={slot.id} slotId={slot.id} onFailed={markSlotSettled}>
+          <ModuleBoundary key={slot.id} slotId={slot.id} onFailed={handleSlotFailed}>
             <Suspense fallback={null}>
               <group position={slot.position} quaternion={slot.rotation} scale={slot.scale}>
                 <ModuleInstance
                   slotId={slot.id}
                   module={slot.module}
-                  src={moduleUrl(config.modules[slot.module].src[runtime.quality], sceneUrl)}
+                  src={srcOf(slot)}
                   cutaway={site && Object.hasOwn(CUTAWAY_MODULES, slot.module)}
                   baseY={slot.position[1]}
                   interactive={site}

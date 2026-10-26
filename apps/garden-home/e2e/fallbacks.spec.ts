@@ -23,6 +23,27 @@ test('on the site route a missing scene.json says so over the poster and offers 
   await expect(page.locator('.gh-poster img')).toBeVisible();
 });
 
+test('on the site route a scene with no module loaded shows the gate, and Try again fetches them again', async ({
+  page,
+}) => {
+  test.setTimeout(120_000); // two boots on software WebGL
+  await page.route('**/assets/modules/*.glb', (route) =>
+    route.fulfill({ status: 404, body: 'missing' }),
+  );
+  await gotoSite(page, '/');
+  const gate = page.getByRole('alert');
+  await expect(gate).toContainText("The 3D garden couldn't start. Please try again.");
+  const retry = gate.getByRole('button', { name: 'Try again' });
+  await expect(retry).toBeVisible();
+  await expect(page.locator('.gh-poster img')).toBeVisible();
+
+  // The modules are served again: a retry that replayed R3F's cached rejections would fail the same way.
+  await page.unroute('**/assets/modules/*.glb');
+  await retry.click();
+  await waitForScene(page);
+  await expect(page.locator('.gh-scene.is-live')).toBeVisible();
+});
+
 test('a broken module only removes its own slot', async ({ page }) => {
   await page.route('**/assets/scene.json', async (route) => {
     const response = await route.fetch();

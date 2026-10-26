@@ -30,6 +30,17 @@ export function useModuleGLTF(url: string): GLTF {
   });
 }
 
+/**
+ * Forgets modules that would not load: R3F caches the rejection per URL, so without this "Try again" would replay it
+ * instead of fetching them again.
+ */
+export function forgetModules(urls: readonly string[]): void {
+  for (const url of urls) {
+    useLoader.clear(GLTFLoader, url);
+    loaded.delete(url);
+  }
+}
+
 /** Drops the parsed modules from R3F's cache and stops the KTX2 transcoder's workers. */
 export function releaseLoaders(): void {
   for (const url of loaded) useLoader.clear(GLTFLoader, url);
