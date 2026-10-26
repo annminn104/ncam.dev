@@ -90,7 +90,7 @@ Home, whose projects are yet to be created ([the order](#adding-a-remote-to-the-
    them too, or their canonicals keep naming the old origin.
 
 Hobby plan notes: one build runs at a time, so a push that touches everything
-builds the nine projects one after another (`turbo-ignore` skips the untouched
+builds the eleven projects one after another (`turbo-ignore` skips the untouched
 ones); the plan is for non-commercial use only. Share the Turbo cache with
 `npx turbo login && npx turbo link`.
 

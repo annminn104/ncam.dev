@@ -39,7 +39,7 @@ hand:
   `git checkout -- apps/garden-home/public/assets` unless the change is meant.
 - `e2e` builds the app and serves it with `vite preview` on `127.0.0.1:4173` (an already running
   server is reused outside CI), in Playwright's Chromium on SwiftShader (software WebGL, so a run
-  does not depend on the GPU), at 1280 × 800. 13 spec files plus `e2e/helpers.ts`, 60 tests, about
+  does not depend on the GPU), at 1280 × 800. 13 spec files plus `e2e/helpers.ts`, 61 tests, about
   15 minutes. Every site navigation goes through `gotoSite()` (opens the page, then presses
   **Enter the garden**, because the scene waits behind the poster on SwiftShader); the wallpaper
   boots by itself and is opened with `page.goto`. Install the browser once with
@@ -187,16 +187,28 @@ if a file moves into the SSR graph by accident. Keep `src/failure.ts`, `release.
 `scene-props.ts` and `lib/asset-url.ts` free of scene imports for the same reason.
 
 **Failures** (`src/failure.ts`) keep the poster and show a plain English message in a
-`role="alert"`: no WebGL2 (`GardenStartError`, "This browser can't draw the 3D garden: WebGL 2 is
-off or unsupported."), `scene.json` or a GLB that will not load, or a context lost for good (not
-restored within 3 s) ("The 3D garden couldn't start. Please try again.", with **Try again**), and
-a chunk that would not load (`SceneChunkError`: "…couldn't load. Reload the page to try again.",
-no retry, because `lazy()` and Chromium both remember a rejected dynamic import). The messages are
-for visitors; the technical detail goes to the logger (`garden-home.boot-failed`).
+`role="alert"`:
+
+- no WebGL2 (`GardenStartError`): "This browser can't draw the 3D garden: WebGL 2 is off or
+  unsupported.", with **Try again**;
+- `scene.json` that will not load, a context lost for good (not restored within 3 s), or **no module
+  of the scene loading**: "The 3D garden couldn't start. Please try again.", with **Try again**. One
+  module that fails is only skipped (`ModuleBoundary` drops its slot and the rest of the scene
+  runs, on the wallpaper too); when every slot has failed the scene is empty, so `SceneRoot`
+  forgets the modules in R3F's cache (`forgetModules`, or **Try again** would replay the cached
+  rejections) and calls `onFatal`;
+- a chunk that would not load (`SceneChunkError`): "…couldn't load. Reload the page to try again.",
+  no retry, because `lazy()` and Chromium both remember a rejected dynamic import.
+
+On the wallpaper every one of these shows the poster. The messages are for visitors; the technical
+detail goes to the logger (`garden-home.boot-failed`).
 
 **The fade.** When `ready` arrives the canvas fades in over the poster in **600 ms** (`FADE_MS` in
 `src/App.tsx` equals the `.gh-scene` transition in `src/styles.css`; keep them equal), then the
-poster unmounts. It comes back with a failure.
+poster unmounts. It comes back with a failure. Until `ready` the layer is `inert`
+(`SceneHost`): the invisible scene takes no drag, wheel or focus, and its floor buttons cannot be
+tabbed to. `waitForScene` in `e2e/helpers.ts` therefore also waits for `.is-live`, because
+`window.__sceneReady` is set a moment before React commits it.
 
 **The LCP rule.** In Lighthouse the poster is not the LCP element (Chrome treats an image that
 fills the viewport as a background); the LCP is the HUD's help text, `.gh-hud p`. Per the monorepo
@@ -384,7 +396,9 @@ Unit tests (`src/**/*.test.ts`, node environment, run by the root `pnpm test`; 3
 `test:art` is the Python `unittest` suite (`art/blender/tests`, 748 tests) plus the pipeline's
 vitest (`art/pipeline/test`, 21 tests). `e2e` is by hand, as above: `orbit`, `cutaway`,
 `basement`, `interact`, `garden`, `pond`, `carport`, `interior`, `tallhouse`, `framing`,
-`background`, `wallpaper` and `fallbacks` (no WebGL2, failing loads, **Try again**). The specs
+`background`, `wallpaper` and `fallbacks` (a missing `scene.json` on both routes, every module
+failing then **Try again** fetching them again, one broken module skipped, a context lost for good,
+the debug overlay; no WebGL2 is not covered). The specs
 read `window.__camera`, `window.__interact` and `window.__sceneReady`, hooks the scene sets for
 them.
 

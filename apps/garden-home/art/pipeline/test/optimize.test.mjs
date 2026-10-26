@@ -26,7 +26,7 @@ describe('optimizeModule (Blender + KTX-Software)', () => {
   beforeAll(async () => {
     if (!isKtxSupported(ktxVersion())) {
       throw new Error(
-        'KTX-Software >= 4.4.0 not found: install it before running this test (see plan "Preparation")',
+        'KTX-Software >= 4.4.0 not found: install it before running this test (see apps/garden-home/AGENTS.md, Commands)',
       );
     }
     tmp = mkdtempSync(join(tmpdir(), 'garden-opt-'));
