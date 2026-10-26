@@ -173,6 +173,9 @@ test('a drag that starts on the TV turns the camera and leaves the TV alone', as
 test('a press that strays off the TV and comes back to it is a drag too, not a click', async ({
   page,
 }) => {
+  // The same furnished close-up as the TV test above, plus a settle after the camera is dragged away and back: past the
+  // describe's 3 min in a full run at load 30.
+  test.setTimeout(300_000);
   const errors = collectErrors(page);
   await closeUp(page, TV_SIDE);
   const tv = await at(page, 'TV_wall');
