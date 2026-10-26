@@ -21,6 +21,7 @@ const AUDITED_PATHS = [
   '/projects/holodex',
   '/projects/chess',
   '/projects/mini-store',
+  '/projects/garden-home',
 ];
 
 /**
@@ -39,7 +40,7 @@ function auditedPaths() {
   return AUDITED_PATHS.filter((_, index) => index % of === n - 1);
 }
 
-/** The .env defaults (host 9000, remotes 9001-9009, CMS 1337), shifted by LH_PORT_OFFSET. */
+/** The .env defaults (host 9000, remotes 9001-9010, CMS 1337), shifted by LH_PORT_OFFSET. */
 function ports() {
   const offset = Number(process.env.LH_PORT_OFFSET ?? '0');
   if (!Number.isInteger(offset) || offset < 0)
@@ -60,6 +61,7 @@ function remotes() {
     { name: 'holodex', pkg: '@ncam/holodex', key: 'HOLODEX', port: 9007 },
     { name: 'chess', pkg: '@ncam/chess', key: 'CHESS', port: 9008 },
     { name: 'mini-store', pkg: '@ncam/mini-store', key: 'MINI_STORE', port: 9009 },
+    { name: 'garden-home', pkg: '@ncam/garden-home', key: 'GARDEN_HOME', port: 9010 },
   ].map((remote) => ({ ...remote, port: remote.port + offset }));
 }
 
