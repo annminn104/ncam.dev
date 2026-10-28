@@ -5,7 +5,7 @@ import {
   TrackEntity,
   TrackListItem,
   type VisualIdentityInput,
-} from './schema';
+} from './schema.js';
 import type { ArtistDetail, Collection, Palette, Picture, TrackDetail } from './types';
 
 /**

@@ -1,5 +1,5 @@
-import { SPOTIFY_ID } from '../routes';
-import { EmbedError, loadArtist, loadCollection, loadTrack } from '../spotify/embed';
+import { SPOTIFY_ID } from '../routes.js';
+import { EmbedError, loadArtist, loadCollection, loadTrack } from '../spotify/embed.js';
 
 /**
  * `GET /api/spotify?type=<playlist|album|track|artist>&id=<id>`: Spotify's embed data as this
