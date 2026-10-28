@@ -106,8 +106,8 @@ Text inside the scene (the atlas) stays Vietnamese on purpose; the UI around it 
   `scene.json`), `circle_k_dem_mua.blend` (Eevee, ACES 2.0 view) and `preview.png`.
 - `legacy/` — the original single-file JS build.
 
-ESLint, Prettier, TypeScript, Vitest and the Docker build context all skip both. Don't import from
-them.
+ESLint, Prettier, TypeScript, Vitest, CodeQL (`.github/codeql/codeql-config.yml`) and the Docker
+build context all skip both. Don't import from them.
 
 ## Tests
 

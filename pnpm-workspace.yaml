@@ -58,7 +58,7 @@ overrides:
   # No 6.x release fixes GHSA-g84c-rxfj-3j2c (path traversal). Only @strapi/strapi's opt-in
   # webpack bundler (`strapi develop --bundler=webpack`) loads it; the default is vite.
   'webpack-dev-middleware@6': '7.4.6' # GHSA-g84c-rxfj-3j2c (@strapi/strapi)
-  'qs@6': '6.16.0' # GHSA-4mjr-xmp4-gh2g, GHSA-x5fp-wj9c-mxmx (@strapi/* pin 6.15.3; koa via co-body / formidable)
+  'qs@6': '6.16.1' # GHSA-4mjr-xmp4-gh2g, GHSA-x5fp-wj9c-mxmx, GHSA-6pq8-jhm2-2vcw (@strapi/* pin 6.15.3; koa via co-body / formidable)
   # Strapi pins vite 5.4.21 for its admin build, and the 5.x line no longer receives these
   # fixes (all land in 6.4.x). @vitejs/plugin-react-swc 3.11 accepts vite ^6, and
   # `strapi build` + `strapi start` were smoke-tested on 6.4.5. Scoped with `parent>child`
@@ -91,3 +91,6 @@ auditConfig:
 #   verifier, GHSA-mjw6-4jj6-33hc in Assembler; data-transfer only uses jsonl/Parser (a
 #   JSON.parse per line) and jsonl/Stringer. The patched 3.x line is ESM-only (node >= 22)
 #   — not a drop-in override.
+# - deepmerge 4.3.1 (low, fork-ts-checker-webpack-plugin under @strapi/strapi):
+#   GHSA-gcqx-w48m-w2h4 has no patched release. Only the opt-in webpack bundler loads it, at
+#   build time, on the project's own config (see webpack-dev-middleware above).
