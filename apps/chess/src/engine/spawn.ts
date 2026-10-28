@@ -8,14 +8,14 @@ const STALL_MS = 20_000;
 /**
  * Start Stockfish from this remote's origin even when the page is the host's.
  *
- * The ~7 MB wasm is downloaded here, not by the worker. A worker's own fetch can't be watched from
+ * The ~2 MB wasm is downloaded here, not by the worker. A worker's own fetch can't be watched from
  * outside, so the engine's handshake clock couldn't tell a slow network from a dead engine. This
  * way the worker exists only once the files are in hand, the handshake gets its full budget, and a
  * stalled download fails instead of hanging. The worker instantiates the wasm from a blob URL.
  *
  * Workers must be same-origin, so a cross-origin script runs from a blob URL too. The wasm
  * location rides in the URL hash. Checked against the shipped build
- * (stockfish-17.1-lite-single): its loader reads `self.location.hash.substr(1)`, splits on ",",
+ * (stockfish-19-lite-single): its loader reads `self.location.hash.substr(1)`, splits on ",",
  * and takes decodeURIComponent(part 0) as the wasm location. For split builds it builds a wasm
  * blob URL the same way itself. Only an empty hash makes it default to a sibling `.wasm` of the
  * script URL.

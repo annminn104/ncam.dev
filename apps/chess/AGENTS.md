@@ -110,7 +110,7 @@ host's `MountConfig`; only `assetBase` is read. Not route-aware.
 ## vs AI (`battle/useAiOpponent.ts`, `engine/`)
 
 - One engine per battle, only vs the AI with a playable board (not hot-seat, capture mode or a
-  WebGL fallback). It is warmed up a tick after the battle mounts, so the ~7 MB download overlaps
+  WebGL fallback). It is warmed up a tick after the battle mounts, so the ~2 MB download overlaps
   the player's first move. The tick is there because StrictMode's dev-only remount disposes the
   first engine at once, and then nothing has been fetched.
 - `spawnStockfish` downloads the wasm on the page (`download.ts`) and only then creates the worker,

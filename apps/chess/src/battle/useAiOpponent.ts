@@ -26,7 +26,7 @@ export interface AiState {
 /**
  * The Stockfish opponent. It plays `aiSide`'s moves through `game.play`, the player's own path,
  * and locks the board meanwhile. There is one engine per battle while `enabled`, warmed up as the
- * battle opens so the ~7 MB download overlaps the player's first move.
+ * battle opens so the ~2 MB download overlaps the player's first move.
  */
 export function useAiOpponent(opts: {
   enabled: boolean;
