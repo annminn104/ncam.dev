@@ -499,8 +499,8 @@ importers:
         version: 19.3.1(react@19.3.1)
     devDependencies:
       '@module-federation/vite':
-        specifier: 1.23.2
-        version: 1.23.2(typescript@5.9.3)(vite@8.3.5(@types/node@26.6.5)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.1)(yaml@2.9.1))
+        specifier: 1.23.5
+        version: 1.23.5(typescript@5.9.3)(vite@8.3.5(@types/node@26.6.5)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.1)(yaml@2.9.1))
       '@ncam/mf-remote':
         specifier: workspace:*
         version: link:../../packages/mf-remote
@@ -745,8 +745,8 @@ importers:
   packages/mf-remote:
     dependencies:
       '@module-federation/vite':
-        specifier: 1.23.2
-        version: 1.23.2(typescript@5.9.3)(vite@8.3.5(@types/node@26.6.5)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.1)(yaml@2.9.1))
+        specifier: 1.23.5
+        version: 1.23.5(typescript@5.9.3)(vite@8.3.5(@types/node@26.6.5)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.1)(yaml@2.9.1))
       dotenv:
         specifier: ^18.0.7
         version: 18.0.9
@@ -2100,8 +2100,8 @@ packages:
   '@module-federation/third-party-dts-extractor@2.9.2':
     resolution: {integrity: sha512-FKJVGx+/jIe16RfmwoyIDVMPAttIFJv6AJCLkKf05IRNvI3RJFqQ1tLP1YjcfGuumCbYuWGa4QKnMla7YjVpqg==}
 
-  '@module-federation/vite@1.23.2':
-    resolution: {integrity: sha512-LlfbC+IDFicoPMR/kELhl/1BzSI79SP7dWON6gX/Gm/8SkFXxpHpdQGaJSLSmJvtLbQMTPx0bqZDj4huB2Du3g==}
+  '@module-federation/vite@1.23.5':
+    resolution: {integrity: sha512-pZ4gwP3SyuNG9JnYAWFIOJyFz1Kl37hnJyKjajMpPqQwTQkCjY7gn58qEmVwTyBv8VqOA5XxEXe1ZMF3AsOmnw==}
     engines: {node: ^20.19.0 || >=22.12.0}
     peerDependencies:
       vite: ^5.0.0 || ^6.0.0 || ^7.0.0 || ^8.0.0
@@ -10326,7 +10326,7 @@ snapshots:
 
   '@module-federation/third-party-dts-extractor@2.9.2': {}
 
-  '@module-federation/vite@1.23.2(typescript@5.9.3)(vite@8.3.5(@types/node@26.6.5)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.1)(yaml@2.9.1))':
+  '@module-federation/vite@1.23.5(typescript@5.9.3)(vite@8.3.5(@types/node@26.6.5)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.1)(yaml@2.9.1))':
     dependencies:
       '@module-federation/dts-plugin': 2.9.2(typescript@5.9.3)
       '@module-federation/runtime': 2.9.2
