@@ -24,21 +24,26 @@ export const VisualIdentity = z
 
 export type VisualIdentityInput = z.infer<typeof VisualIdentity>;
 
+/**
+ * One entry of a collection's `trackList`. `CollectionEntity` keeps the entries as they come and
+ * `toCollection` parses them one by one, so a single entry that does not match is skipped instead
+ * of failing the whole collection.
+ */
+export const TrackListItem = z.object({
+  uri: z.string(),
+  title: z.string(),
+  subtitle: z.string().nullish(),
+  duration: z.number().nullish(),
+  isPlayable: z.boolean().nullish(),
+  isExplicit: z.boolean().nullish(),
+});
+
 export const CollectionEntity = z.object({
   type: z.enum(['playlist', 'album']),
   id: z.string(),
   name: z.string(),
   subtitle: z.string().nullish(),
-  trackList: z.array(
-    z.object({
-      uri: z.string(),
-      title: z.string(),
-      subtitle: z.string().nullish(),
-      duration: z.number().nullish(),
-      isPlayable: z.boolean().nullish(),
-      isExplicit: z.boolean().nullish(),
-    }),
-  ),
+  trackList: z.array(z.unknown()),
 });
 
 export const TrackEntity = z.object({

@@ -56,6 +56,19 @@ describe('toCollection', () => {
     ]);
   });
 
+  it('skips list items that do not fit instead of failing the whole collection', () => {
+    const [first, second, episode] = PLAYLIST.trackList;
+    const noTitle = {
+      uri: 'spotify:track:0000000000000000000001',
+      subtitle: 'Nobody',
+      duration: 1,
+    };
+    const messy = { ...PLAYLIST, trackList: [null, first, noTitle, second, episode] };
+    const { tracks } = toCollection(messy, REF);
+    expect(tracks.map((track) => track.title)).toEqual(['Housewife', 'BbY WOW']);
+    expect(tracks).toEqual(toCollection(PLAYLIST, REF).tracks);
+  });
+
   it('is not_found for a missing entity or another type', () => {
     expect(() => toCollection(null, REF)).toThrow(expect.objectContaining({ kind: 'not_found' }));
     expect(() => toCollection({ ...PLAYLIST, type: 'album' }, REF)).toThrow(
@@ -134,5 +147,18 @@ describe('fetchEntity', () => {
         throw new TypeError('offline');
       }),
     ).rejects.toMatchObject({ kind: 'upstream' });
+  });
+
+  it('maps a body that fails while it is read to upstream', async () => {
+    const failing = (reason: Error) => async () =>
+      new Response(new ReadableStream({ start: (controller) => controller.error(reason) }));
+    const cut = new TypeError('terminated');
+    const timeout = new DOMException('The operation was aborted due to timeout', 'TimeoutError');
+    for (const reason of [cut, timeout]) {
+      await expect(fetchEntity('track', 'x', failing(reason))).rejects.toMatchObject({
+        kind: 'upstream',
+        message: expect.stringContaining(reason.message),
+      });
+    }
   });
 });

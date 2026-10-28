@@ -1,5 +1,11 @@
 import type { CollectionRef, CollectionType } from '../routes';
-import { ArtistEntity, CollectionEntity, TrackEntity, type VisualIdentityInput } from './schema';
+import {
+  ArtistEntity,
+  CollectionEntity,
+  TrackEntity,
+  TrackListItem,
+  type VisualIdentityInput,
+} from './schema';
 import type { ArtistDetail, Collection, Palette, Picture, TrackDetail } from './types';
 
 /**
@@ -69,12 +75,17 @@ export function toCollection(entity: unknown, ref: CollectionRef): Collection {
   if (!parsed.success) throw new EmbedError('upstream', `${ref.type} ${ref.id}: unexpected shape`);
   const data = parsed.data;
   if (data.type !== ref.type) throw new EmbedError('not_found', `${ref.id} is not a ${ref.type}`);
+  // The entry shape is checked per item: one that does not fit is skipped, the list still loads.
+  const items = data.trackList.flatMap((entry) => {
+    const item = TrackListItem.safeParse(entry);
+    return item.success ? [item.data] : [];
+  });
   return {
     type: data.type,
     id: data.id,
     name: data.name,
     subtitle: data.subtitle ?? '',
-    tracks: data.trackList
+    tracks: items
       .filter((item) => item.uri.startsWith('spotify:track:'))
       .map((item) => ({
         id: idOf(item.uri),
@@ -132,7 +143,14 @@ export async function fetchEntity(
   }
   if (response.status === 404) throw new EmbedError('not_found', `${type} ${id}: 404`);
   if (!response.ok) throw new EmbedError('upstream', `${type} ${id}: status ${response.status}`);
-  return readEntity(await response.text());
+  // The timeout signal governs the body too: a stall or a cut after the headers fails here.
+  let body: string;
+  try {
+    body = await response.text();
+  } catch (error) {
+    throw new EmbedError('upstream', `reading ${type} ${id} failed: ${String(error)}`);
+  }
+  return readEntity(body);
 }
 
 export async function loadCollection(
