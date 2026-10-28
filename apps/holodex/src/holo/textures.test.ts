@@ -132,6 +132,14 @@ function firstDifference(a: ArrayLike<number>, b: ArrayLike<number>): number {
   return -1;
 }
 
+/**
+ * The budget of a test that draws a texture a second time to prove it is the same on every load:
+ * that costs what drawing it does, 1.7 s for vmaxbg and 1 s for illusion on a laptop, and three
+ * times that on a CI runner sharing its four cores with the rest of the suite (5.4 s on
+ * 2026-10-28, past Vitest's default five seconds).
+ */
+const REDRAW_TIMEOUT_MS = 20_000;
+
 const sparkleNumbers = (sparkles: ReturnType<typeof birthdaySparkles>) =>
   sparkles.flatMap((s) => [s.x, s.y, s.arm, s.hue, s.saturation, s.lightness]);
 
@@ -478,11 +486,15 @@ describe('trainerbg, blue wavy lines on white', () => {
 describe('illusion, warped black and white bands', () => {
   const px = illusionPixels(ILLUSION_SIZE);
 
-  it('is the reference’s size, opaque, and the same on every load', () => {
-    expect(TEXTURE_SIZE.illusion).toEqual([600, 600]);
-    expect(firstDifference(illusionPixels(ILLUSION_SIZE), px)).toBe(-1);
-    expect(mean(px, 3)).toBe(255);
-  });
+  it(
+    'is the reference’s size, opaque, and the same on every load',
+    { timeout: REDRAW_TIMEOUT_MS },
+    () => {
+      expect(TEXTURE_SIZE.illusion).toEqual([600, 600]);
+      expect(firstDifference(illusionPixels(ILLUSION_SIZE), px)).toBe(-1);
+      expect(mean(px, 3)).toBe(255);
+    },
+  );
 
   it('is about as much black as the reference, a little less than half', () => {
     // measured off illusion.png: 41% black, 48% white, the rest their edges
@@ -599,11 +611,15 @@ describe('ancient, stepped zig-zag stripes', () => {
 describe('vmaxbg, overlapping ringed discs', () => {
   const px = vmaxbgPixels(VMAXBG_WIDTH, VMAXBG_HEIGHT, VMAXBG_SEED);
 
-  it('is the reference’s size, opaque, and the same on every load', () => {
-    expect(TEXTURE_SIZE.vmaxbg).toEqual([600, 400]);
-    expect(firstDifference(vmaxbgPixels(VMAXBG_WIDTH, VMAXBG_HEIGHT, VMAXBG_SEED), px)).toBe(-1);
-    expect(mean(px, 3)).toBe(255);
-  });
+  it(
+    'is the reference’s size, opaque, and the same on every load',
+    { timeout: REDRAW_TIMEOUT_MS },
+    () => {
+      expect(TEXTURE_SIZE.vmaxbg).toEqual([600, 400]);
+      expect(firstDifference(vmaxbgPixels(VMAXBG_WIDTH, VMAXBG_HEIGHT, VMAXBG_SEED), px)).toBe(-1);
+      expect(mean(px, 3)).toBe(255);
+    },
+  );
 
   it('keeps close to the reference’s colour', () => {
     // measured off vmaxbg.jpg: mean rgb(57, 73, 87)

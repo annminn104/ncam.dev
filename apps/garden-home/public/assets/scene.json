@@ -1,0 +1,479 @@
+{
+  "version": 1,
+  "generatedAt": "2026-10-25T17:12:32.492Z",
+  "modules": {
+    "basement": {
+      "src": {
+        "high": "modules/basement.high.glb",
+        "medium": "modules/basement.medium.glb"
+      },
+      "footprint": [
+        23,
+        15
+      ],
+      "role": "prop"
+    },
+    "bbq_area": {
+      "src": {
+        "high": "modules/bbq_area.high.glb",
+        "medium": "modules/bbq_area.medium.glb"
+      },
+      "footprint": [
+        8,
+        6
+      ],
+      "role": "prop"
+    },
+    "carport": {
+      "src": {
+        "high": "modules/carport.high.glb",
+        "medium": "modules/carport.medium.glb"
+      },
+      "footprint": [
+        8,
+        7
+      ],
+      "role": "prop"
+    },
+    "fence": {
+      "src": {
+        "high": "modules/fence.high.glb",
+        "medium": "modules/fence.medium.glb"
+      },
+      "footprint": [
+        54,
+        46
+      ],
+      "role": "prop"
+    },
+    "flower_beds": {
+      "src": {
+        "high": "modules/flower_beds.high.glb",
+        "medium": "modules/flower_beds.medium.glb"
+      },
+      "footprint": [
+        54,
+        46
+      ],
+      "role": "prop"
+    },
+    "garden_paths": {
+      "src": {
+        "high": "modules/garden_paths.high.glb",
+        "medium": "modules/garden_paths.medium.glb"
+      },
+      "footprint": [
+        54,
+        46
+      ],
+      "role": "prop"
+    },
+    "house": {
+      "src": {
+        "high": "modules/house.high.glb",
+        "medium": "modules/house.medium.glb"
+      },
+      "footprint": [
+        23,
+        15
+      ],
+      "role": "hero"
+    },
+    "interior": {
+      "src": {
+        "high": "modules/interior.high.glb",
+        "medium": "modules/interior.medium.glb"
+      },
+      "footprint": [
+        23,
+        15
+      ],
+      "role": "prop"
+    },
+    "kennel": {
+      "src": {
+        "high": "modules/kennel.high.glb",
+        "medium": "modules/kennel.medium.glb"
+      },
+      "footprint": [
+        3,
+        3
+      ],
+      "role": "prop"
+    },
+    "koi_pond": {
+      "src": {
+        "high": "modules/koi_pond.high.glb",
+        "medium": "modules/koi_pond.medium.glb"
+      },
+      "footprint": [
+        11,
+        8
+      ],
+      "role": "prop"
+    },
+    "pool": {
+      "src": {
+        "high": "modules/pool.high.glb",
+        "medium": "modules/pool.medium.glb"
+      },
+      "footprint": [
+        12,
+        7
+      ],
+      "role": "prop"
+    },
+    "tea_garden": {
+      "src": {
+        "high": "modules/tea_garden.high.glb",
+        "medium": "modules/tea_garden.medium.glb"
+      },
+      "footprint": [
+        6,
+        3.5
+      ],
+      "role": "prop"
+    },
+    "veg_garden": {
+      "src": {
+        "high": "modules/veg_garden.high.glb",
+        "medium": "modules/veg_garden.medium.glb"
+      },
+      "footprint": [
+        8,
+        8
+      ],
+      "role": "prop"
+    },
+    "yard": {
+      "src": {
+        "high": "modules/yard.high.glb",
+        "medium": "modules/yard.medium.glb"
+      },
+      "footprint": [
+        54,
+        46
+      ],
+      "role": "prop"
+    }
+  },
+  "slots": [
+    {
+      "id": "basement_01",
+      "module": "basement",
+      "position": [
+        -1.5,
+        0,
+        -9.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "bbq_area_01",
+      "module": "bbq_area",
+      "position": [
+        -19,
+        0,
+        -6
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "carport_01",
+      "module": "carport",
+      "position": [
+        16,
+        0,
+        -6.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "fence_01",
+      "module": "fence",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "flower_beds_01",
+      "module": "flower_beds",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "garden_paths_01",
+      "module": "garden_paths",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "house_01",
+      "module": "house",
+      "position": [
+        -1.5,
+        0,
+        -9.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "interior_01",
+      "module": "interior",
+      "position": [
+        -1.5,
+        0,
+        -9.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "kennel_01",
+      "module": "kennel",
+      "position": [
+        22,
+        -0.000001,
+        -12.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "koi_pond_01",
+      "module": "koi_pond",
+      "position": [
+        9,
+        0,
+        11
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "pool_01",
+      "module": "pool",
+      "position": [
+        -14,
+        0,
+        2
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "tea_garden_01",
+      "module": "tea_garden",
+      "position": [
+        7,
+        0,
+        4.75
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "veg_garden_01",
+      "module": "veg_garden",
+      "position": [
+        -19,
+        0.000001,
+        14
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "yard_01",
+      "module": "yard",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    }
+  ],
+  "camera": {
+    "idle": {
+      "position": [
+        72.5,
+        29.600004,
+        85.599998
+      ],
+      "rotation": [
+        -0.126932,
+        0.338984,
+        0.046215,
+        0.931044
+      ],
+      "fov": 31.891
+    },
+    "stops": [
+      {
+        "id": "CAM_stop_01",
+        "position": [
+          0,
+          3.200001,
+          17
+        ],
+        "rotation": [
+          0.007999,
+          0,
+          0,
+          0.999968
+        ],
+        "fov": 43.603
+      }
+    ]
+  },
+  "sky": {
+    "sunrise": "06:00",
+    "sunset": "18:00"
+  }
+}

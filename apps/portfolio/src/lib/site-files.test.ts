@@ -96,6 +96,7 @@ describe('sitemapXml', () => {
       'https://ncam.dev/projects/holodex/sets',
       'https://ncam.dev/projects/chess',
       'https://ncam.dev/projects/mini-store',
+      'https://ncam.dev/projects/garden-home',
     ]);
     expect(xml).not.toContain('<lastmod>');
     expect(xml).not.toMatch(/changefreq|priority/);
@@ -207,7 +208,10 @@ describe('llmsTxt', () => {
     expect(text).toContain(
       '- [Mini Store](https://ncam.dev/projects/mini-store): Rainy-night corner store diorama',
     );
-    expect(text.match(/^- \[.+\]\(https:\/\/ncam\.dev\/projects\//gm)).toHaveLength(8);
+    expect(text).toContain(
+      '- [Garden Home](https://ncam.dev/projects/garden-home): A glass villa and its garden island, cut away floor by floor',
+    );
+    expect(text.match(/^- \[.+\]\(https:\/\/ncam\.dev\/projects\//gm)).toHaveLength(9);
   });
 
   it('lists the newest indexable posts on one line each, and omits the section with none', () => {

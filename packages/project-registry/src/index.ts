@@ -154,6 +154,19 @@ export const projects: ProjectEntry[] = [
     module: './mount',
     status: 'live',
   },
+  {
+    id: 'garden-home',
+    name: 'Garden Home',
+    tagline: 'A glass villa and its garden island, cut away floor by floor',
+    description:
+      'A glass villa and its garden island, built from Blender modules and drawn with React Three Fiber: orbit it, zoom in to cut the house away floor by floor like a dollhouse, and switch its lights, screens, shower and fountains on and off.',
+    accent: '#6BA368',
+    thumbnail: '/thumbnails/garden-home.jpg',
+    // MF remote name must be a valid identifier → underscore (route id stays kebab).
+    remote: 'garden_home',
+    module: './mount',
+    status: 'live',
+  },
 ];
 
 export function getProject(id: string): ProjectEntry | undefined {

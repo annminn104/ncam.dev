@@ -20,21 +20,22 @@ slashes, `dependabot/npm_and_yarn/…`); GitHub Actions still checks their pull
 requests. Vercel reads the rule from the commit it would deploy, so it holds for
 a Dependabot branch cut from, or rebased on, a `main` that has it, and a new
 app's `vercel.json` needs it too. Create **one Vercel project per app** from this
-repo, each with the matching **Root Directory**. The live ones, and Chess and Mini Store, whose
-projects are yet to be created ([the order](#adding-a-remote-to-the-live-site) matters):
+repo, each with the matching **Root Directory**. The live ones, and Chess, Mini Store and Garden
+Home, whose projects are yet to be created ([the order](#adding-a-remote-to-the-live-site) matters):
 
-| App                     | Root Directory         | Production URL                               |
-| ----------------------- | ---------------------- | -------------------------------------------- |
-| Host                    | `apps/portfolio`       | https://ncam-profile.vercel.app              |
-| TOONHUB                 | `apps/toonhub`         | https://ncam-toonhub.vercel.app              |
-| Mindloop                | `apps/mindloop`        | https://ncam-mindloop.vercel.app             |
-| Immersive Ocean         | `apps/immersive-ocean` | https://ncam-immersive-ocean.vercel.app      |
-| Viktor.                 | `apps/viktor`          | https://ncam-viktor.vercel.app               |
-| Bali Adventure          | `apps/bali`            | https://ncam-bali.vercel.app                 |
-| Profile (home sections) | `apps/profile`         | https://ncam-sections.vercel.app             |
-| Holodex                 | `apps/holodex`         | https://ncam-holodex.vercel.app              |
-| Cultivation Chess       | `apps/chess`           | https://ncam-chess.vercel.app (planned)      |
-| Mini Store              | `apps/mini-store`      | https://ncam-mini-store.vercel.app (planned) |
+| App                     | Root Directory         | Production URL                                |
+| ----------------------- | ---------------------- | --------------------------------------------- |
+| Host                    | `apps/portfolio`       | https://ncam-profile.vercel.app               |
+| TOONHUB                 | `apps/toonhub`         | https://ncam-toonhub.vercel.app               |
+| Mindloop                | `apps/mindloop`        | https://ncam-mindloop.vercel.app              |
+| Immersive Ocean         | `apps/immersive-ocean` | https://ncam-immersive-ocean.vercel.app       |
+| Viktor.                 | `apps/viktor`          | https://ncam-viktor.vercel.app                |
+| Bali Adventure          | `apps/bali`            | https://ncam-bali.vercel.app                  |
+| Profile (home sections) | `apps/profile`         | https://ncam-sections.vercel.app              |
+| Holodex                 | `apps/holodex`         | https://ncam-holodex.vercel.app               |
+| Cultivation Chess       | `apps/chess`           | https://ncam-chess.vercel.app (planned)       |
+| Mini Store              | `apps/mini-store`      | https://ncam-mini-store.vercel.app (planned)  |
+| Garden Home             | `apps/garden-home`     | https://ncam-garden-home.vercel.app (planned) |
 
 1. **Remotes first.** Pick the Vite framework preset; everything else comes
    from `vercel.json`. Deploy each remote and note its production URL.
@@ -60,6 +61,7 @@ projects are yet to be created ([the order](#adding-a-remote-to-the-live-site) m
    HOLODEX_REMOTE_URL=https://ncam-holodex.vercel.app/remoteEntry.js
    CHESS_REMOTE_URL=https://ncam-chess.vercel.app/remoteEntry.js
    MINI_STORE_REMOTE_URL=https://ncam-mini-store.vercel.app/remoteEntry.js
+   GARDEN_HOME_REMOTE_URL=https://ncam-garden-home.vercel.app/remoteEntry.js
    NODE_OPTIONS=--experimental-vm-modules
    ```
 
@@ -88,7 +90,7 @@ projects are yet to be created ([the order](#adding-a-remote-to-the-live-site) m
    them too, or their canonicals keep naming the old origin.
 
 Hobby plan notes: one build runs at a time, so a push that touches everything
-builds the nine projects one after another (`turbo-ignore` skips the untouched
+builds the eleven projects one after another (`turbo-ignore` skips the untouched
 ones); the plan is for non-commercial use only. Share the Turbo cache with
 `npx turbo login && npx turbo link`.
 
@@ -99,7 +101,7 @@ falls back to the `.env` default, `http://localhost:<port>/remoteEntry.js`. The
 project registry lists the project as soon as it is merged, so the home page's
 gallery (the profile remote bundles the registry), the host's sitemap and its
 `llms.txt` would all send visitors to a page whose remote cannot load. A new
-remote (Chess and Mini Store, today) therefore goes live in this order:
+remote (Chess, Mini Store and Garden Home, today) therefore goes live in this order:
 
 1. Create its Vercel project (Root Directory `apps/<id>`, the Vite preset; for
    Chess `apps/chess`, named `ncam-chess`) and deploy it.
@@ -119,7 +121,7 @@ One multi-stage image builds the whole monorepo, and `docker-compose.yml` runs
 the SSR host and each remote (as a static preview) from that same image:
 
 ```bash
-docker compose up --build                     # host http://localhost:9000, remotes :9001–:9009
+docker compose up --build                     # host http://localhost:9000, remotes :9001–:9010
 docker compose --profile gateway up --build   # + nginx on :80 → http://ncam.localhost
 ```
 
@@ -205,31 +207,25 @@ shows placeholders. That is by design: the site degrades rather than failing.
 A free Render service sleeps after 15 minutes without a request.
 `.github/workflows/keep-cms-awake.yml` keeps it awake by requesting
 `https://ncam-cms.onrender.com/api/health` (the `CMS_URL` repository variable)
-every 5 minutes. The route answers 200 when the CMS's database answers too, and
-503 when it does not (see [cms.md](cms.md#health-check)).
+on a `*/10` schedule. The route answers 200 when the CMS's database answers too,
+and 503 when it does not (see [cms.md](cms.md#health-check)).
 
-The workflow is a **relay**, not a schedule. GitHub runs scheduled workflows on a
-best-effort basis, and the `*/10` schedule it used to rely on was delivered only
-4–7 times a day (runs 110–500 minutes apart, median 4 hours, 2026-09-20..29), so
-the CMS slept between almost every pair of runs. Now each run checks the route
-every 5 minutes for about 5 h 40 min, just under a job's 6-hour limit, then
-dispatches the next run, which waits for it to finish. A schedule every 3 hours
-only restarts the relay if a run is lost. After changing the workflow, or if the
-Actions tab shows no run in progress, start it with **Run workflow**.
+Each run makes one check and ends, so no runner is held between checks. GitHub
+runs scheduled workflows on a best-effort basis, though: this schedule was
+delivered only 4–7 times a day in 2026-09 (runs 110–500 minutes apart, median
+4 hours). Whenever a delivery comes more than 15 minutes after the last one, the
+CMS sleeps in between and the next visitor gets the empty state. Until 2026-10
+each run was a ~5 h 40 min relay leg that checked every 5 minutes and dispatched
+the next leg instead, which kept one runner busy around the clock.
 
-- **Alerts:** a run fails, and GitHub emails the failure, when the route fails
-  3 checks in a row (15 minutes). It still hands over to the next run.
-- **Cost:** one GitHub-hosted runner is busy around the clock. That is free for
-  this public repository; on a private one it would use up the free Actions
-  minutes within a day.
+- **Alerts:** a run fails, and GitHub emails the failure, when the route does
+  not answer 2xx/3xx within the check's retries (about 5 minutes, enough for a
+  cold start).
 - **Inactivity:** GitHub disables scheduled workflows after 60 days without
-  repository activity, and a disabled workflow cannot be dispatched either.
-  Re-enable it in the Actions tab.
+  repository activity. Re-enable it in the Actions tab.
 
-The relay uses Actions as a pinger for the project's own deployment, which GitHub
-may not tolerate forever. An **uptime monitor** does the same job without a
-runner. If you set one up, disable the workflow in the Actions tab, or keep it
-for its alerts:
+An **uptime monitor** checks on time, which the schedule cannot promise. If you
+set one up, disable the workflow in the Actions tab, or keep it for its alerts:
 
 - **UptimeRobot:** add a monitor of type HTTP(s) for that URL, with a 5-minute
   interval and an email alert contact.

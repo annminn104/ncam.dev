@@ -12,6 +12,7 @@ describe('project-registry', () => {
       'holodex',
       'chess',
       'mini-store',
+      'garden-home',
     ]);
   });
 

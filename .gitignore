@@ -81,3 +81,13 @@ Desktop.ini
 apps/chess/public/stockfish/
 # Mini Store: Blender's editor backups next to the .blend
 apps/mini-store/art/**/*.blend1
+# Garden Home: the Basis transcoder copied from three, Blender's raw exports and backups,
+# personal ?bg= photos (only the example is tracked), Python caches, Playwright output
+apps/garden-home/public/basis/
+apps/garden-home/public/backgrounds/*
+!apps/garden-home/public/backgrounds/example.jpg
+apps/garden-home/art/blender/out/
+apps/garden-home/art/**/*.blend1
+apps/garden-home/art/**/__pycache__/
+apps/garden-home/test-results/
+apps/garden-home/playwright-report/

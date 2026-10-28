@@ -119,7 +119,7 @@ no canvas or settings in the server markup, the CSS shipping with the render), `
 `src/assets/poster/poster.test.ts`. Node environment, run by the root `pnpm test`.
 
 The page is one of the Lighthouse-audited paths (`/projects/mini-store`,
-`scripts/lighthouse/config.cjs`); `LH_SHARD=11/11` audits just it (11 paths today, so the index
+`scripts/lighthouse/config.cjs`); `LH_SHARD=11/12` audits just it (12 paths today, so the index
 moves when one is added).
 
 ## Deploying

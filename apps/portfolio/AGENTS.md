@@ -334,7 +334,7 @@ pnpm --filter @ncam/portfolio build   # client + SSR + Nitro server; generates r
 ```
 
 End-to-end needs the dev servers: `pnpm dev` at the repo root (portfolio :9000,
-remotes :9001–:9009), then open http://localhost:9000 — the home sections mount
+remotes :9001–:9010), then open http://localhost:9000 — the home sections mount
 from the `profile` remote; open a project to mount its remote.
 
 > Note: the Nitro server-bundle step can be slow; the config force-exits the

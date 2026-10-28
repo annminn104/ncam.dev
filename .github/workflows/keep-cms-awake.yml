@@ -6,26 +6,21 @@
 # and 5 s in @ncam/cms, so the first request after a sleep always loses: /blog
 # falls back to its empty state and the home section shows placeholders.
 #
-# A RELAY, NOT A SCHEDULE. GitHub's scheduled workflows are best-effort: the
-# */10 schedule this file used to rely on was delivered only 4-7 times a day
-# (2026-09-20..29: runs 110-500 min apart, median 4 h), so the CMS slept between
-# almost every pair of runs. Each run is now one leg of a relay instead: it
-# checks /api/health every 5 minutes for ~5 h 40 min (a job may run at most
-# 6 h), then dispatches the next leg, which the concurrency group below holds
-# back until this one ends. The schedule only restarts the relay if a leg is
-# lost (a timeout, a GitHub outage, the workflow disabled and re-enabled);
-# after changing this file, start it with "Run workflow" rather than wait.
+# A SCHEDULE OF SHORT RUNS. Every 10 minutes the schedule starts a run that
+# checks /api/health once and ends, so no runner is held between checks. Until
+# 2026-10 each run was instead a ~5 h 40 min leg of a relay that checked every
+# 5 minutes and dispatched the next leg, which kept one runner busy around the
+# clock.
 #
-# COST. The relay keeps one GitHub-hosted runner busy around the clock. Actions
-# minutes are free for this public repository; on a private one this would use
-# up the free minutes within a day. It uses Actions as a pinger for the
-# project's own deployment, which GitHub may not tolerate forever: an external
-# uptime monitor (docs/deployment.md, "Keeping the free service awake") does
-# the same job without a runner.
+# RELIABILITY. GitHub's scheduled workflows are best-effort: this */10 schedule
+# was delivered only 4-7 times a day in 2026-09 (runs 110-500 min apart, median
+# 4 h). Whenever a delivery comes more than 15 minutes after the last one, the
+# CMS sleeps in between and the next visitor gets the empty state. An external
+# uptime monitor (docs/deployment.md, "Keeping the free service awake") checks
+# on time.
 #
-# ALARM. A leg fails, so GitHub emails the failure, when /api/health fails 3
-# checks in a row (15 minutes). It still hands over, so a sick CMS stays
-# watched.
+# ALARM. A run fails, so GitHub emails the failure, when /api/health does not
+# answer 2xx/3xx within the retries below.
 #
 # QUOTA. Render grants 750 Free instance hours per WORKSPACE per calendar month,
 # and a service consumes them only while awake. Keeping one service up around
@@ -40,100 +35,55 @@
 # (render.yaml) still uses that one.
 #
 # GitHub also disables scheduled workflows after 60 days without repository
-# activity, and a disabled workflow cannot be dispatched either; re-enable it in
-# the Actions tab if the repo goes quiet.
+# activity; re-enable it in the Actions tab if the repo goes quiet.
 
 name: Keep CMS awake
 
 on:
   schedule:
-    # The relay's restart only (see above). While a leg runs, a delivery just
-    # waits behind it and takes over as the next leg.
-    - cron: '17 */3 * * *'
+    # Every 10 minutes: inside Render's 15-minute idle window, with room for drift.
+    - cron: '*/10 * * * *'
   workflow_dispatch:
 
+# Least privilege: this job only makes an outbound request.
 permissions:
   contents: read
-  # To dispatch the next leg.
-  actions: write
 
-# One leg at a time: a new run waits for the running leg instead of cancelling
-# it, and GitHub keeps only the newest waiting run, so legs never stack.
+# A delayed run must not stack on top of the next one. A leg of the old relay
+# still running holds deliveries back until it ends; whatever its handover
+# dispatches runs this file, one check with no handover, so the relay ends by
+# itself.
 concurrency:
   group: keep-cms-awake
   cancel-in-progress: false
 
 jobs:
-  keep-awake:
-    name: Keep the CMS awake
+  ping:
+    name: Check the CMS health endpoint
     runs-on: ubuntu-latest
-    # A job may run 6 h. The leg stops checking at LEG_MINUTES, leaving room for
-    # a last slow check and the handover.
-    timeout-minutes: 355
-    env:
-      # Override with a repository variable if the CMS moves.
-      CMS_URL: ${{ vars.CMS_URL || 'https://ncam-cms.onrender.com' }}
+    timeout-minutes: 10
     steps:
-      # No actions are used on purpose: nothing needs checking out, and plain
-      # `run` steps keep this free of third-party SHAs to pin and review.
-      - name: Check /api/health every 5 minutes
+      # No actions are used on purpose: nothing needs checking out, and a plain
+      # `run` step keeps this free of third-party SHAs to pin and review.
+      - name: Check /api/health
         env:
-          LEG_MINUTES: '340'
-          INTERVAL_SECONDS: '300'
-          # 3 failed checks in a row: unhealthy for 15 minutes.
-          FAILS_TO_ALARM: '3'
+          # Override with a repository variable if the CMS moves.
+          CMS_URL: ${{ vars.CMS_URL || 'https://ncam-cms.onrender.com' }}
         run: |
           set -uo pipefail
-          deadline=$(( $(date +%s) + LEG_MINUTES * 60 ))
-          checks=0
-          streak=0
-          worst=0
-          while :; do
-            # --max-time and the retries cover a ~60 s cold start, which Render
-            # answers by holding the request until the service is up. curl
-            # writes 000 itself when it gets no answer, so no fallback is needed.
-            code=$(curl -s -o /dev/null -w '%{http_code}' \
-                     --max-time 90 --retry 2 --retry-delay 5 --retry-all-errors \
-                     "${CMS_URL}/api/health")
-            checks=$((checks + 1))
-            echo "$(date -u +%H:%M:%SZ) GET ${CMS_URL}/api/health: HTTP ${code}"
-            # 200 means the CMS is awake and its database answers; a 503 woke the
-            # service, but its database did not answer.
-            case "$code" in
-              2*|3*) streak=0 ;;
-              *)
-                streak=$((streak + 1))
-                if [ "$streak" -gt "$worst" ]; then worst=$streak; fi
-                echo "::warning::CMS health check failed (HTTP ${code}), ${streak} in a row"
-                ;;
-            esac
-            if [ $(( $(date +%s) + INTERVAL_SECONDS )) -ge "$deadline" ]; then break; fi
-            sleep "$INTERVAL_SECONDS"
-          done
-          echo "${checks} checks, longest failing streak ${worst}."
-          if [ "$worst" -ge "$FAILS_TO_ALARM" ]; then
-            echo "::error::CMS failed ${worst} health checks in a row — it may be suspended, redeploying, out of Render free instance hours, or unable to reach its database."
-            exit 1
-          fi
-
-      # Also after a failed check above, so a sick CMS stays watched; not after a
-      # cancellation, which the schedule recovers from.
-      - name: Hand over to the next leg
-        if: ${{ !cancelled() }}
-        env:
-          GH_TOKEN: ${{ github.token }}
-          REPO: ${{ github.repository }}
-          REF: ${{ github.ref_name }}
-        run: |
-          set -euo pipefail
-          # A delivery of the schedule may already be waiting behind this leg.
-          # It takes over; a second waiting run would only replace it.
-          waiting=$(gh run list --repo "$REPO" --workflow keep-cms-awake.yml --limit 20 \
-                      --json status \
-                      --jq '[.[] | select(.status == "pending" or .status == "queued" or .status == "waiting" or .status == "requested")] | length')
-          if [ "$waiting" -gt 0 ]; then
-            echo "A run is already waiting to take over."
-          else
-            gh workflow run keep-cms-awake.yml --repo "$REPO" --ref "$REF"
-            echo "Dispatched the next leg."
-          fi
+          # One request. --max-time and the retries cover a ~60 s cold start,
+          # which Render answers by holding the request until the service is up.
+          # curl writes 000 itself when it gets no answer, so no fallback is needed.
+          code=$(curl -s -o /dev/null -w '%{http_code}' \
+                   --max-time 90 --retry 2 --retry-delay 5 --retry-all-errors \
+                   "${CMS_URL}/api/health")
+          echo "GET ${CMS_URL}/api/health: HTTP ${code}"
+          # 200 means the CMS is awake and its database answers; a 503 woke the
+          # service, but its database did not answer.
+          case "$code" in
+            2*|3*) ;;
+            *)
+              echo "::error::CMS failed its health check (HTTP ${code}) — it may be suspended, redeploying, out of Render free instance hours, or unable to reach its database."
+              exit 1
+              ;;
+          esac

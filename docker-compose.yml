@@ -57,6 +57,7 @@ services:
       - '9007:9007'
       - '9008:9008'
       - '9009:9009'
+      - '9010:9010'
 
   toonhub:
     image: ncam-monorepo:latest
@@ -113,6 +114,12 @@ services:
     image: ncam-monorepo:latest
     command:
       ['pnpm', '--filter', '@ncam/mini-store', 'preview', '--host', '0.0.0.0', '--port', '9009']
+    network_mode: service:portfolio
+
+  garden-home:
+    image: ncam-monorepo:latest
+    command:
+      ['pnpm', '--filter', '@ncam/garden-home', 'preview', '--host', '0.0.0.0', '--port', '9010']
     network_mode: service:portfolio
 
   # ── CMS (Strapi): own image + Postgres, in the `cms` profile so the default
@@ -187,6 +194,7 @@ services:
       - holodex
       - chess
       - mini-store
+      - garden-home
     networks:
       default:
         aliases:
