@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { readLast, STORAGE_KEY, writeLast } from './persist';
+import { readLast, restoreTarget, STORAGE_KEY, writeLast } from './persist';
+import { DEFAULT_COLLECTION, type CollectionRef } from './routes';
 
 function memory(initial: Record<string, string> = {}) {
   const data = new Map(Object.entries(initial));
@@ -38,5 +39,29 @@ describe('persist', () => {
     };
     expect(readLast(broken)).toBeNull();
     expect(() => writeLast(broken, { type: 'album', id: ID })).not.toThrow();
+  });
+});
+
+describe('restoreTarget', () => {
+  const saved: CollectionRef = { type: 'album', id: '64LU4c1nfjz1t4VnGhagcg' };
+
+  it('sends `/` to the saved collection the first time this page load looks', () => {
+    expect(restoreTarget('home', saved, false)).toEqual(saved);
+  });
+
+  it('stays put once this page load has looked, so Back to `/` is not bounced forward', () => {
+    expect(restoreTarget('home', saved, true)).toBeNull();
+  });
+
+  it('leaves a collection URL alone', () => {
+    expect(restoreTarget('collection', saved, false)).toBeNull();
+  });
+
+  it('has nowhere to go when the saved collection is the default one', () => {
+    expect(restoreTarget('home', { ...DEFAULT_COLLECTION }, false)).toBeNull();
+  });
+
+  it('has nowhere to go when nothing is saved', () => {
+    expect(restoreTarget('home', null, false)).toBeNull();
   });
 });

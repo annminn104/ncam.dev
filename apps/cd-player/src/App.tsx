@@ -1,19 +1,13 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { createBridge } from './bridge';
 import { remoteBase } from './lib/asset-url';
-import { readLast, safeStorage, writeLast } from './persist';
+import { readLast, restoreTarget, safeStorage, writeLast } from './persist';
 import { createEmbedPlayer, type EmbedCallbacks } from './playback/embed-controller';
 import type { EngineDeps, InitialData } from './playback/engine';
 import { currentIndex } from './playback/sequencer';
 import { usePlayerEngine } from './playback/usePlayerEngine';
 import type { RouteController } from './route-controller';
-import {
-  collectionPath,
-  DEFAULT_COLLECTION,
-  parseRoute,
-  routeCollection,
-  sameCollection,
-} from './routes';
+import { collectionPath, parseRoute, routeCollection } from './routes';
 import { Backdrop } from './shell/Backdrop';
 import { Hud } from './shell/Hud';
 import { LinkBar } from './shell/LinkBar';
@@ -31,6 +25,13 @@ export interface AppProps {
   /** This remote's origin (lib/asset-url remoteBase); never read on the server. */
   assetBase?: string;
 }
+
+/**
+ * Whether this page load has already looked for a collection to come back to. Module-level on
+ * purpose: Back to `/` re-renders the same App, and a remount must not send the visitor forward
+ * again either. Only an effect touches it, so a server render never does.
+ */
+let restoredThisLoad = false;
 
 export default function App({ controller, initial = null, assetBase = '' }: AppProps) {
   const route = useSyncExternalStore(
@@ -58,12 +59,12 @@ export default function App({ controller, initial = null, assetBase = '' }: AppP
   const [linkBusy, setLinkBusy] = useState(false);
   const [tracksOpen, setTracksOpen] = useState(false);
 
-  // On `/`, come back to the visitor's own collection (spec §7).
+  // The first time this page load is shown, `/` comes back to the visitor's own collection. Only the
+  // first check counts, navigating or not, so Back to `/` stays on `/` instead of bouncing forward.
   useEffect(() => {
-    if (parsed.view !== 'home') return;
-    const last = readLast(safeStorage());
-    if (last && !sameCollection(last, DEFAULT_COLLECTION))
-      controller.navigate(collectionPath(last));
+    const target = restoreTarget(parsed.view, readLast(safeStorage()), restoredThisLoad);
+    restoredThisLoad = true;
+    if (target) controller.navigate(collectionPath(target));
   }, [controller, parsed.view]);
 
   const loadLink = useCallback(
@@ -121,7 +122,10 @@ export default function App({ controller, initial = null, assetBase = '' }: AppP
         status={snapshot.seq.status}
         open={tracksOpen}
         onToggle={() => setTracksOpen((open) => !open)}
-        onSelect={(index) => engine.user({ type: 'SELECT', index })}
+        onSelect={(index) => {
+          setTracksOpen(false);
+          engine.user({ type: 'SELECT', index });
+        }}
       />
       <NowPlaying
         now={nowPlayingFor(snapshot)}

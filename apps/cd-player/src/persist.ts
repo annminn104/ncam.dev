@@ -1,4 +1,4 @@
-import { SPOTIFY_ID, type CollectionRef } from './routes';
+import { DEFAULT_COLLECTION, SPOTIFY_ID, sameCollection, type CollectionRef } from './routes';
 
 /** The visitor's last playlist or album, so `/projects/cd-player` comes back as theirs. */
 export const STORAGE_KEY = 'ncam.cd-player.last';
@@ -30,6 +30,20 @@ export function writeLast(storage: WriteStore | null, ref: CollectionRef): void 
   } catch {
     // A full or blocked storage just forgets.
   }
+}
+
+/**
+ * Where `/` should send the visitor: the collection they last loaded. Only the first time this page
+ * load looks (`alreadyRestored` false), because Back to `/` must not bounce them forward again; only
+ * on `/` itself; and never to the default playlist, which `/` already shows.
+ */
+export function restoreTarget(
+  routeView: 'home' | 'collection',
+  last: CollectionRef | null,
+  alreadyRestored: boolean,
+): CollectionRef | null {
+  if (routeView !== 'home' || alreadyRestored || !last) return null;
+  return sameCollection(last, DEFAULT_COLLECTION) ? null : last;
 }
 
 /** `localStorage`, or null where there is none or it throws (private modes, sandboxed frames). */

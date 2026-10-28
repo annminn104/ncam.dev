@@ -1,7 +1,10 @@
 /* The @font-face rules: imported by src/fonts.ts on the client (standalone and ./mount) and inlined
    by ./ssr with the host's copy of the page, so a server render asks for its fonts on first paint.
+   Fraunces comes upright and italic: the display titles are italic, and without the second file the
+   browser would slant the upright one itself.
    The fallbacks are metric-matched so the swap does not move text (Lighthouse CLS). */
 @import '@fontsource-variable/fraunces';
+@import '@fontsource-variable/fraunces/wght-italic.css';
 @import '@fontsource-variable/manrope';
 
 @font-face {

@@ -25,6 +25,14 @@
     <meta property="og:image:height" content="630" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:image" content="%SITE_URL%/thumbnails/cd-player.jpg" />
+    <!-- Standalone page only: no 8px white frame around the app. Not in app.css, which the host also loads. -->
+    <style>
+      html,
+      body {
+        margin: 0;
+        background: #2a1f24;
+      }
+    </style>
   </head>
   <body>
     <div id="app"></div>
