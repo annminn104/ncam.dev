@@ -33,7 +33,18 @@ const artist: ArtistDetail = {
   palette: null,
 };
 
-function setup(options: { failPlayer?: boolean; hangPlayer?: boolean; realTimers?: boolean } = {}) {
+interface SetupOptions {
+  /** Building the Spotify player is refused at once. */
+  failPlayer?: boolean;
+  /** Building it stays pending until the test calls `arrive()` (or `refuse()`). */
+  hangPlayer?: boolean;
+  /** Only the first attempt misbehaves; the next one (after a retry) works. */
+  firstAttemptOnly?: boolean;
+  /** No injected timers: the engine uses the real ones. */
+  realTimers?: boolean;
+}
+
+function setup(options: SetupOptions = {}) {
   const client: SpotifyClient = {
     collection: vi.fn(async () => collection),
     track: vi.fn(async (id: string) => detail(id)),
@@ -51,12 +62,21 @@ function setup(options: { failPlayer?: boolean; hangPlayer?: boolean; realTimers
     destroy: vi.fn(),
   };
   let callbacks: EmbedCallbacks | null = null;
-  // Spotify's script can stay silent for good: a hanging player answers only on `arrive()`.
+  // Spotify's script can stay silent for good: a hanging player answers only on `arrive()`, or is
+  // refused on `refuse()`.
   let arrive: () => void = () => {};
+  let refuse: () => void = () => {};
+  let attempts = 0;
   const createPlayer = vi.fn(async (_uri: string, cb: EmbedCallbacks) => {
     callbacks = cb;
-    if (options.failPlayer) throw new Error('blocked');
-    if (options.hangPlayer) await new Promise<void>((resolve) => (arrive = resolve));
+    const misbehaves = !options.firstAttemptOnly || ++attempts === 1;
+    if (misbehaves && options.failPlayer) throw new Error('blocked');
+    if (misbehaves && options.hangPlayer) {
+      await new Promise<void>((resolve, reject) => {
+        arrive = resolve;
+        refuse = () => reject(new Error('blocked'));
+      });
+    }
     return player;
   });
   // Every timer the engine asks for: its callback, its delay (the hint's and the player's differ),
@@ -91,12 +111,28 @@ function setup(options: { failPlayer?: boolean; hangPlayer?: boolean; realTimers
     cleared,
     createPlayer,
     arrive: () => arrive(),
+    refuse: () => refuse(),
     swap: () => finishSwap(),
     cb: () => callbacks!,
   };
 }
 
 const ref = { type: 'playlist', id: collection.id } as const;
+
+type Ctx = ReturnType<typeof setup>;
+
+/** The two ways building the Spotify player fails: it is refused, or it never answers. */
+const failures: { how: string; fail: (ctx: Ctx) => Promise<void> | void }[] = [
+  {
+    how: 'is refused',
+    fail: async (ctx) => {
+      ctx.refuse();
+      await ctx.flush();
+    },
+  },
+  // The 20 s wait runs out.
+  { how: 'never answers', fail: (ctx) => ctx.timers[ctx.delays.indexOf(20_000)]() },
+];
 
 describe('PlayerEngine', () => {
   it('opens a collection, prefetches the first tracks and their artist, and names it to the scene', async () => {
@@ -255,5 +291,86 @@ describe('PlayerEngine', () => {
     engine.open(ref);
     await flush();
     expect(engine.getSnapshot().error).toMatch(/try again/i);
+  });
+
+  // With no player there is no music, so the sequencer must not stay `playing` (the next press of
+  // play would pause) or `swapping` (the disc seating would then "play"): it goes idle, keeping the
+  // track, and the next press of play builds a new player and loads that track into it.
+  describe.each(failures)('when the Spotify player $how', ({ fail }) => {
+    // Only the first attempt fails: the visitor's next press of play builds one that works.
+    const start = () => setup({ hangPlayer: true, firstAttemptOnly: true });
+
+    it('goes idle during the disc change, and ignores the disc seating late', async () => {
+      const ctx = start();
+      const { engine, flush, swap, player } = ctx;
+      engine.open(ref);
+      await flush();
+      engine.send({ type: 'TOGGLE_REPEAT' });
+      engine.user({ type: 'PLAY' });
+      const before = engine.getSnapshot().seq;
+      expect(before).toMatchObject({ status: 'swapping', cursor: 0, repeat: true });
+      await fail(ctx);
+      expect(engine.getSnapshot().embed).toBe('blocked');
+      expect(engine.getSnapshot().seq).toEqual({ ...before, status: 'idle', positionMs: 0 });
+      swap();
+      await flush();
+      expect(engine.getSnapshot().seq.status).toBe('idle');
+      expect(player.load).not.toHaveBeenCalled();
+    });
+
+    it('goes idle when it fails after the disc is seated', async () => {
+      const ctx = start();
+      const { engine, flush, swap } = ctx;
+      engine.open(ref);
+      await flush();
+      engine.user({ type: 'PLAY' });
+      swap();
+      await flush();
+      expect(engine.getSnapshot().seq.status).toBe('playing');
+      await fail(ctx);
+      expect(engine.getSnapshot()).toMatchObject({
+        embed: 'blocked',
+        seq: { status: 'idle', cursor: 0 },
+      });
+    });
+
+    it('plays again on the next press: a fresh player is given the current track', async () => {
+      const ctx = start();
+      const { engine, flush, swap, createPlayer, player } = ctx;
+      engine.open(ref);
+      await flush();
+      engine.user({ type: 'PLAY' });
+      await fail(ctx);
+      swap();
+      await flush();
+      engine.user({ type: 'PLAY' });
+      expect(createPlayer).toHaveBeenCalledTimes(2);
+      expect(createPlayer).toHaveBeenLastCalledWith('spotify:track:a', expect.anything());
+      expect(engine.getSnapshot()).toMatchObject({ embed: 'loading', seq: { status: 'playing' } });
+      await flush();
+      expect(engine.getSnapshot().embed).toBe('ready');
+      expect(player.load).toHaveBeenCalledTimes(1);
+      expect(player.load).toHaveBeenCalledWith('spotify:track:a');
+    });
+  });
+
+  it('drops what was queued for a Spotify player that turns up after the wait', async () => {
+    const { engine, flush, swap, timers, delays, player, arrive } = setup({
+      hangPlayer: true,
+      firstAttemptOnly: true,
+    });
+    engine.open(ref);
+    await flush();
+    engine.user({ type: 'PLAY' });
+    swap();
+    await flush();
+    // The disc is seated and the load waits for the player; then the wait runs out.
+    timers[delays.indexOf(20_000)]();
+    arrive();
+    await flush();
+    expect(player.destroy).toHaveBeenCalledTimes(1);
+    // The destroyed player gets no load, and no "press play in the widget" hint is armed for it.
+    expect(player.load).not.toHaveBeenCalled();
+    expect(delays).toEqual([20_000]);
   });
 });

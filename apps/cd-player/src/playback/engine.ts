@@ -211,8 +211,16 @@ export class PlayerEngine {
     // Whichever of the answer, the failure and the timeout comes first is the only one acted on.
     let settled = false;
     const fail = () => {
-      if (this.player === pending) this.player = null;
-      if (!this.disposed) this.set({ embed: 'blocked' });
+      const current = this.player === pending;
+      if (current) this.player = null;
+      if (this.disposed) return;
+      // No player, no music: a sequencer left `playing` would turn the visitor's next press of play
+      // into a pause, and one left `swapping` would reach `playing` as the disc seats. Idle keeps
+      // the track (and order, repeat, shuffle), so that press loads it into the next player.
+      const patch: Partial<EngineSnapshot> = { embed: 'blocked' };
+      const { seq } = this.snapshot;
+      if (current && seq.status !== 'idle') patch.seq = { ...seq, status: 'idle', positionMs: 0 };
+      this.set(patch);
     };
     const wait = this.startTimer(() => {
       if (settled || this.disposed) return;
@@ -249,34 +257,37 @@ export class PlayerEngine {
         return;
       }
       case 'load':
-        void this.player?.then(
-          (player) => {
-            this.awaitingStart = true;
-            player.load(command.uri);
-            this.armHint();
-          },
-          () => {},
-        );
+        this.withPlayer((player) => {
+          this.awaitingStart = true;
+          player.load(command.uri);
+          this.armHint();
+        });
         return;
       case 'pause':
-        void this.player?.then(
-          (player) => player.pause(),
-          () => {},
-        );
+        this.withPlayer((player) => player.pause());
         return;
       case 'resume':
-        void this.player?.then(
-          (player) => player.resume(),
-          () => {},
-        );
+        this.withPlayer((player) => player.resume());
         return;
       case 'seek':
-        void this.player?.then(
-          (player) => player.seek(command.ms),
-          () => {},
-        );
+        this.withPlayer((player) => player.seek(command.ms));
         return;
     }
+  }
+
+  /**
+   * Hands the Spotify player to `fn` once it is there (commands wait for one still being built).
+   * An attempt given up on or let go of meanwhile (timed out, failed, disposed) is no longer
+   * `this.player`, so a player that turns up late, already destroyed, is given nothing.
+   */
+  private withPlayer(fn: (player: EmbedPlayer) => void): void {
+    const pending = this.player;
+    void pending?.then(
+      (player) => {
+        if (this.player === pending) fn(player);
+      },
+      () => {},
+    );
   }
 
   private prefetch(): void {
