@@ -207,31 +207,25 @@ shows placeholders. That is by design: the site degrades rather than failing.
 A free Render service sleeps after 15 minutes without a request.
 `.github/workflows/keep-cms-awake.yml` keeps it awake by requesting
 `https://ncam-cms.onrender.com/api/health` (the `CMS_URL` repository variable)
-every 5 minutes. The route answers 200 when the CMS's database answers too, and
-503 when it does not (see [cms.md](cms.md#health-check)).
+on a `*/10` schedule. The route answers 200 when the CMS's database answers too,
+and 503 when it does not (see [cms.md](cms.md#health-check)).
 
-The workflow is a **relay**, not a schedule. GitHub runs scheduled workflows on a
-best-effort basis, and the `*/10` schedule it used to rely on was delivered only
-4–7 times a day (runs 110–500 minutes apart, median 4 hours, 2026-09-20..29), so
-the CMS slept between almost every pair of runs. Now each run checks the route
-every 5 minutes for about 5 h 40 min, just under a job's 6-hour limit, then
-dispatches the next run, which waits for it to finish. A schedule every 3 hours
-only restarts the relay if a run is lost. After changing the workflow, or if the
-Actions tab shows no run in progress, start it with **Run workflow**.
+Each run makes one check and ends, so no runner is held between checks. GitHub
+runs scheduled workflows on a best-effort basis, though: this schedule was
+delivered only 4–7 times a day in 2026-09 (runs 110–500 minutes apart, median
+4 hours). Whenever a delivery comes more than 15 minutes after the last one, the
+CMS sleeps in between and the next visitor gets the empty state. Until 2026-10
+each run was a ~5 h 40 min relay leg that checked every 5 minutes and dispatched
+the next leg instead, which kept one runner busy around the clock.
 
-- **Alerts:** a run fails, and GitHub emails the failure, when the route fails
-  3 checks in a row (15 minutes). It still hands over to the next run.
-- **Cost:** one GitHub-hosted runner is busy around the clock. That is free for
-  this public repository; on a private one it would use up the free Actions
-  minutes within a day.
+- **Alerts:** a run fails, and GitHub emails the failure, when the route does
+  not answer 2xx/3xx within the check's retries (about 5 minutes, enough for a
+  cold start).
 - **Inactivity:** GitHub disables scheduled workflows after 60 days without
-  repository activity, and a disabled workflow cannot be dispatched either.
-  Re-enable it in the Actions tab.
+  repository activity. Re-enable it in the Actions tab.
 
-The relay uses Actions as a pinger for the project's own deployment, which GitHub
-may not tolerate forever. An **uptime monitor** does the same job without a
-runner. If you set one up, disable the workflow in the Actions tab, or keep it
-for its alerts:
+An **uptime monitor** checks on time, which the schedule cannot promise. If you
+set one up, disable the workflow in the Actions tab, or keep it for its alerts:
 
 - **UptimeRobot:** add a monitor of type HTTP(s) for that URL, with a 5-minute
   interval and an email alert contact.
