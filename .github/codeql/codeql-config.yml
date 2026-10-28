@@ -1,0 +1,11 @@
+# CodeQL configuration, read by .github/workflows/codeql.yml. The query suite
+# (security-and-quality) is set in the workflow.
+name: ncam CodeQL config
+
+# Mini Store reference material outside every build (apps/mini-store/AGENTS.md):
+# the Blender scene and the original single-file JS build, which ESLint,
+# Prettier and TypeScript skip too. Nothing in them ships, so their findings
+# are noise.
+paths-ignore:
+  - apps/mini-store/art
+  - apps/mini-store/legacy

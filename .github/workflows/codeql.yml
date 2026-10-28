@@ -33,6 +33,8 @@ jobs:
         with:
           languages: javascript-typescript
           queries: security-and-quality
+          # Paths left out of the analysis (reference material that never ships).
+          config-file: ./.github/codeql/codeql-config.yml
 
       - name: Analyze
         uses: github/codeql-action/analyze@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
