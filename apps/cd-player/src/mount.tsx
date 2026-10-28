@@ -2,6 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import type { MountConfig, MountHandle } from '@ncam/mf-remote';
 import App from './App';
+import './fonts';
 import { createRouteController, type RouteController } from './route-controller';
 import css from './styles/app.css?inline';
 

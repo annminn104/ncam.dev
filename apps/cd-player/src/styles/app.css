@@ -1,7 +1,523 @@
 .cdp-root {
+  --cdp-ink: #fff;
+  --cdp-ink-soft: rgb(255 255 255 / 0.72);
+  --cdp-ink-faint: rgb(255 255 255 / 0.5);
+  --cdp-glass: rgb(24 14 19 / 0.4);
+  --cdp-glass-hi: rgb(255 255 255 / 0.1);
+  --cdp-line: rgb(255 255 255 / 0.16);
+  --cdp-blush: #e296a4;
+  --cdp-gold: #ecc476;
+  --cdp-radius: 22px;
+  --cdp-display: 'Fraunces Variable', 'Fraunces Fallback', Georgia, serif;
+  --cdp-ui: 'Manrope Variable', 'Manrope Fallback', system-ui, sans-serif;
   position: relative;
+  isolation: isolate;
   min-height: 100dvh;
-  background: #2a1f24;
-  color: #fff;
-  font-family: system-ui, sans-serif;
+  overflow: hidden;
+  color: var(--cdp-ink);
+  font-family: var(--cdp-ui);
+  background: rgb(42 31 36);
+  -webkit-font-smoothing: antialiased;
+}
+
+.cdp-root *,
+.cdp-root *::before,
+.cdp-root *::after {
+  box-sizing: border-box;
+}
+
+.cdp-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ── backdrop: blurred album art under the track's colours ───────────────── */
+.cdp-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+}
+.cdp-backdrop__layer {
+  position: absolute;
+  inset: 0;
+  background: var(--cdp-tint);
+}
+.cdp-backdrop__layer::before {
+  content: '';
+  position: absolute;
+  inset: -10%;
+  background: var(--cdp-art) center / cover no-repeat;
+  filter: blur(48px) saturate(1.3);
+  transform: scale(1.2);
+  opacity: 0.85;
+}
+.cdp-backdrop__layer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(
+      120% 90% at 30% 25%,
+      color-mix(in srgb, var(--cdp-bg) 55%, transparent) 0%,
+      transparent 60%
+    ),
+    linear-gradient(
+      180deg,
+      rgb(0 0 0 / 0.05) 0%,
+      color-mix(in srgb, var(--cdp-tint) 80%, transparent) 100%
+    );
+}
+.cdp-backdrop__layer.is-entering {
+  animation: cdp-fade 800ms ease both;
+}
+.cdp-backdrop__grain {
+  position: absolute;
+  inset: 0;
+  opacity: 0.12;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+@keyframes cdp-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ── poster and scene (Tasks 12, 16) ─────────────────────────────────────── */
+.cdp-poster,
+.cdp-scene {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+.cdp-scene {
+  z-index: 2;
+  opacity: 0;
+  transition: opacity 600ms ease;
+}
+.cdp-scene.is-live {
+  opacity: 1;
+}
+.cdp-canvas {
+  position: absolute !important;
+  inset: 0;
+  touch-action: none;
+}
+
+/* ── glass surfaces ──────────────────────────────────────────────────────── */
+.cdp-bar,
+.cdp-tracks,
+.cdp-now {
+  position: absolute;
+  z-index: 3;
+  background: var(--cdp-glass);
+  border: 1px solid var(--cdp-line);
+  border-radius: var(--cdp-radius);
+  box-shadow:
+    0 24px 70px rgb(0 0 0 / 0.28),
+    inset 0 1px 0 rgb(255 255 255 / 0.14);
+  backdrop-filter: blur(22px) saturate(1.4);
+  -webkit-backdrop-filter: blur(22px) saturate(1.4);
+}
+.cdp-eyebrow {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--cdp-ink-faint);
+}
+
+/* ── link bar ────────────────────────────────────────────────────────────── */
+.cdp-bar {
+  top: 20px;
+  left: 24px;
+  right: 404px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 520px);
+  gap: 8px 24px;
+  align-items: center;
+  padding: 14px 16px 14px 22px;
+}
+.cdp-bar__title h1 {
+  margin: 2px 0 0;
+  font-family: var(--cdp-display);
+  font-size: clamp(22px, 2.4vw, 32px);
+  font-weight: 500;
+  font-style: italic;
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cdp-bar__subtitle {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: var(--cdp-ink-soft);
+}
+.cdp-link {
+  display: flex;
+  gap: 8px;
+}
+.cdp-link input {
+  flex: 1;
+  min-width: 0;
+  height: 42px;
+  padding: 0 16px;
+  font: inherit;
+  font-size: 14px;
+  color: var(--cdp-ink);
+  background: rgb(255 255 255 / 0.08);
+  border: 1px solid var(--cdp-line);
+  border-radius: 999px;
+}
+.cdp-link input::placeholder {
+  color: var(--cdp-ink-faint);
+}
+.cdp-link input[aria-invalid='true'] {
+  border-color: #ffb4bf;
+}
+.cdp-link__error {
+  grid-column: 2;
+  margin: 0;
+  font-size: 13px;
+  color: #ffd2d9;
+}
+.cdp-button {
+  height: 42px;
+  padding: 0 18px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--cdp-ink);
+  background: rgb(255 255 255 / 0.1);
+  border: 1px solid var(--cdp-line);
+  border-radius: 999px;
+  cursor: pointer;
+}
+.cdp-button--primary {
+  color: #2a1f24;
+  background: linear-gradient(180deg, #fff 0%, #f6dfe4 100%);
+  border-color: transparent;
+}
+.cdp-button:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+/* ── tracklist ───────────────────────────────────────────────────────────── */
+.cdp-tracks {
+  top: 20px;
+  right: 24px;
+  bottom: 24px;
+  width: 360px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.cdp-tracks__toggle {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 18px 22px 12px;
+  font: inherit;
+  font-family: var(--cdp-display);
+  font-size: 20px;
+  font-style: italic;
+  color: var(--cdp-ink);
+  background: none;
+  border: 0;
+  cursor: default;
+}
+.cdp-tracks__count {
+  font-family: var(--cdp-ui);
+  font-size: 12px;
+  font-style: normal;
+  color: var(--cdp-ink-faint);
+}
+.cdp-tracks__list {
+  flex: 1;
+  margin: 0;
+  padding: 0 10px 12px;
+  overflow-y: auto;
+  list-style: none;
+  scrollbar-width: thin;
+}
+.cdp-track {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+  padding: 9px 12px;
+  font: inherit;
+  text-align: left;
+  color: var(--cdp-ink);
+  background: none;
+  border: 0;
+  border-radius: 14px;
+  cursor: pointer;
+}
+.cdp-track:hover:not(:disabled) {
+  background: var(--cdp-glass-hi);
+}
+.cdp-track.is-current {
+  background: rgb(255 255 255 / 0.14);
+}
+.cdp-track:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.cdp-track__no,
+.cdp-track__time {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--cdp-ink-faint);
+}
+.cdp-track__text {
+  display: grid;
+  min-width: 0;
+}
+.cdp-track__title,
+.cdp-track__artists {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cdp-track__title {
+  font-size: 14px;
+  font-weight: 600;
+}
+.cdp-track__artists {
+  font-size: 12px;
+  color: var(--cdp-ink-soft);
+}
+.cdp-track__explicit {
+  margin-left: 6px;
+  padding: 0 4px;
+  font-size: 10px;
+  text-decoration: none;
+  color: #2a1f24;
+  background: var(--cdp-ink-soft);
+  border-radius: 3px;
+}
+.cdp-eq {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  background: var(--cdp-blush);
+  border-radius: 50%;
+  box-shadow: 0 0 10px var(--cdp-blush);
+  animation: cdp-pulse 900ms ease-in-out infinite alternate;
+}
+@keyframes cdp-pulse {
+  to {
+    opacity: 0.4;
+    transform: scale(0.7);
+  }
+}
+
+/* ── now playing ─────────────────────────────────────────────────────────── */
+.cdp-now {
+  left: 24px;
+  bottom: 24px;
+  width: min(400px, calc(100% - 48px));
+  padding: 18px;
+}
+.cdp-now__head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+.cdp-now__meta {
+  min-width: 0;
+}
+.cdp-now__title {
+  margin: 4px 0 0;
+  font-family: var(--cdp-display);
+  font-size: 22px;
+  font-weight: 500;
+  line-height: 1.1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cdp-now__artists {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: var(--cdp-ink-soft);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cdp-now__controls {
+  display: flex;
+  gap: 6px;
+  flex: none;
+}
+.cdp-round {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  color: var(--cdp-ink);
+  background: rgb(255 255 255 / 0.1);
+  border: 1px solid var(--cdp-line);
+  border-radius: 50%;
+  cursor: pointer;
+}
+.cdp-round--main {
+  width: 48px;
+  height: 48px;
+  color: #2a1f24;
+  background: linear-gradient(180deg, #fff 0%, #f6dfe4 100%);
+  border-color: transparent;
+}
+.cdp-now__progress {
+  height: 4px;
+  margin: 14px 0 12px;
+  overflow: hidden;
+  background: rgb(255 255 255 / 0.14);
+  border-radius: 999px;
+}
+.cdp-now__progress span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--cdp-blush), var(--cdp-gold));
+  transform-origin: left center;
+}
+.cdp-now__embed:empty {
+  display: none;
+}
+.cdp-now__embed iframe {
+  display: block;
+  width: 100%;
+  border: 0;
+  border-radius: 12px;
+}
+.cdp-now__note {
+  margin: 10px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--cdp-ink-soft);
+}
+
+/* ── help line and the way in ────────────────────────────────────────────── */
+.cdp-hud {
+  position: absolute;
+  z-index: 3;
+  left: 50%;
+  bottom: 18px;
+  margin: 0;
+  transform: translateX(-50%);
+  font-size: 12px;
+  color: var(--cdp-ink-faint);
+  white-space: nowrap;
+}
+.cdp-hud kbd {
+  padding: 1px 6px;
+  font: inherit;
+  font-size: 11px;
+  border: 1px solid var(--cdp-line);
+  border-radius: 6px;
+}
+.cdp-gate {
+  position: absolute;
+  z-index: 4;
+  left: 50%;
+  top: 58%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+}
+.cdp-enter {
+  height: 52px;
+  padding: 0 28px;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  color: #2a1f24;
+  background: linear-gradient(180deg, #fff 0%, #f6dfe4 100%);
+  border: 0;
+  border-radius: 999px;
+  box-shadow: 0 18px 50px rgb(0 0 0 / 0.3);
+  cursor: pointer;
+}
+
+.cdp-root :focus-visible {
+  outline: 2px solid var(--cdp-gold);
+  outline-offset: 2px;
+}
+
+/* ── tablets and small laptops: the drawer stays; the bar stacks, since its title would be left with
+   no room beside the link form, and the help line goes, since it would run across the cards ─── */
+@media (max-width: 1260px) {
+  .cdp-bar {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .cdp-link__error {
+    grid-column: 1;
+  }
+  .cdp-hud {
+    display: none;
+  }
+}
+
+/* ── phones: the tracklist becomes a bottom sheet ────────────────────────── */
+@media (max-width: 820px) {
+  .cdp-bar {
+    top: 12px;
+    left: 12px;
+    right: 12px;
+    padding: 12px 14px;
+  }
+  .cdp-tracks {
+    top: auto;
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    width: auto;
+    max-height: 56px;
+    transition: max-height 300ms ease;
+  }
+  .cdp-tracks.is-open {
+    z-index: 4;
+    max-height: 60dvh;
+  }
+  /* A closed sheet takes its list out of the tab order and the accessibility tree, once it has
+     finished folding away. */
+  .cdp-tracks:not(.is-open) .cdp-tracks__list {
+    visibility: hidden;
+    transition: visibility 0s linear 300ms;
+  }
+  .cdp-tracks__toggle {
+    cursor: pointer;
+    padding: 16px 20px;
+  }
+  .cdp-now {
+    left: 12px;
+    right: 12px;
+    bottom: 80px;
+    width: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cdp-backdrop__layer.is-entering,
+  .cdp-eq {
+    animation: none;
+  }
+  .cdp-scene,
+  .cdp-tracks {
+    transition: none;
+  }
 }

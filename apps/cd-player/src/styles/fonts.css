@@ -1,0 +1,23 @@
+/* The @font-face rules: imported by src/fonts.ts on the client (standalone and ./mount) and inlined
+   by ./ssr with the host's copy of the page, so a server render asks for its fonts on first paint.
+   The fallbacks are metric-matched so the swap does not move text (Lighthouse CLS). */
+@import '@fontsource-variable/fraunces';
+@import '@fontsource-variable/manrope';
+
+@font-face {
+  font-family: 'Fraunces Fallback';
+  src: local('Georgia');
+  size-adjust: 104%;
+  ascent-override: 92%;
+  descent-override: 24%;
+  line-gap-override: 0%;
+}
+
+@font-face {
+  font-family: 'Manrope Fallback';
+  src: local('Arial');
+  size-adjust: 104%;
+  ascent-override: 103%;
+  descent-override: 29%;
+  line-gap-override: 0%;
+}
