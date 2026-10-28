@@ -43,7 +43,12 @@ export const EMPTY_VIEW: SceneView = {
   durationMs: 0,
 };
 
-/** Runs the CD change for `to` and resolves once the disc is seated. */
+/**
+ * Runs the CD change for `to` and resolves once the disc is seated. It must always settle, by
+ * resolving or rejecting, including when the scene is torn down mid-change: the engine waits for
+ * it, and a rejection counts as seated (the music starts even if the animation failed), so a
+ * promise that never settles leaves the player stuck changing discs.
+ */
 export type Swapper = (to: TrackView) => Promise<void>;
 
 export interface SceneBridge {

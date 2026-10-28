@@ -4,6 +4,7 @@ import type { SpotifyClient } from '../spotify/client';
 import type { ArtistDetail, Collection, TrackDetail } from '../spotify/types';
 import type { EmbedCallbacks, EmbedPlayer } from './embed-controller';
 import { PlayerEngine } from './engine';
+import type { SeqEvent } from './sequencer';
 
 const collection: Collection = {
   type: 'playlist',
@@ -52,8 +53,19 @@ function setup(options: SetupOptions = {}) {
     seed: vi.fn(),
   };
   const bridge = createBridge();
+  // The disc change stays pending until the test settles it: `swap()` seats the latest one,
+  // `failSwap()` jams it, `swaps` holds every one's resolver (to settle an older one late).
   let finishSwap: () => void = () => {};
-  bridge.setSwapper(() => new Promise<void>((resolve) => (finishSwap = resolve)));
+  let failSwap: () => void = () => {};
+  const swaps: (() => void)[] = [];
+  bridge.setSwapper(
+    () =>
+      new Promise<void>((resolve, reject) => {
+        finishSwap = resolve;
+        failSwap = () => reject(new Error('jammed'));
+        swaps.push(resolve);
+      }),
+  );
   const player: EmbedPlayer = {
     load: vi.fn(),
     pause: vi.fn(),
@@ -113,6 +125,8 @@ function setup(options: SetupOptions = {}) {
     arrive: () => arrive(),
     refuse: () => refuse(),
     swap: () => finishSwap(),
+    failSwap: () => failSwap(),
+    swaps,
     cb: () => callbacks!,
   };
 }
@@ -372,5 +386,90 @@ describe('PlayerEngine', () => {
     // The destroyed player gets no load, and no "press play in the widget" hint is armed for it.
     expect(player.load).not.toHaveBeenCalled();
     expect(delays).toEqual([20_000]);
+  });
+
+  // Spotify's script loads on the visitor's first play action, not on any key.
+  describe('building the Spotify player', () => {
+    const quiet: { name: string; event: SeqEvent; effect: object }[] = [
+      { name: 'shuffle', event: { type: 'TOGGLE_SHUFFLE', seed: 7 }, effect: { shuffle: true } },
+      { name: 'repeat', event: { type: 'TOGGLE_REPEAT' }, effect: { repeat: true } },
+      { name: 'stop', event: { type: 'STOP' }, effect: {} },
+      { name: 'seek', event: { type: 'SEEK', ms: 5000 }, effect: {} },
+    ];
+    it.each(quiet)('is not done by $name at idle', async ({ event, effect }) => {
+      const { engine, flush, createPlayer } = setup();
+      engine.open(ref);
+      await flush();
+      engine.user(event);
+      await flush();
+      expect(createPlayer).not.toHaveBeenCalled();
+      expect(engine.getSnapshot().embed).toBe('off');
+      // The key itself still did its work.
+      expect(engine.getSnapshot().seq).toMatchObject({ status: 'idle', ...effect });
+    });
+
+    const starting: { name: string; event: SeqEvent; uri: string }[] = [
+      { name: 'play', event: { type: 'PLAY' }, uri: 'spotify:track:a' },
+      { name: 'select', event: { type: 'SELECT', index: 1 }, uri: 'spotify:track:b' },
+      { name: 'next', event: { type: 'NEXT' }, uri: 'spotify:track:a' },
+    ];
+    it.each(starting)('is done by $name at idle, showing $uri', async ({ event, uri }) => {
+      const { engine, flush, createPlayer } = setup();
+      engine.open(ref);
+      await flush();
+      engine.user(event);
+      expect(createPlayer).toHaveBeenCalledTimes(1);
+      expect(createPlayer).toHaveBeenCalledWith(uri, expect.anything());
+    });
+
+    it('is not tried again after a failure by a key that does not play', async () => {
+      const { engine, flush, createPlayer } = setup({ failPlayer: true });
+      engine.open(ref);
+      await flush();
+      engine.user({ type: 'PLAY' });
+      await flush();
+      expect(engine.getSnapshot().embed).toBe('blocked');
+      engine.user({ type: 'TOGGLE_SHUFFLE', seed: 7 });
+      engine.user({ type: 'TOGGLE_REPEAT' });
+      engine.user({ type: 'STOP' });
+      expect(createPlayer).toHaveBeenCalledTimes(1);
+      expect(engine.getSnapshot().embed).toBe('blocked');
+    });
+  });
+
+  it('still plays when the disc change fails', async () => {
+    const { engine, flush, failSwap, player } = setup();
+    engine.open(ref);
+    await flush();
+    engine.user({ type: 'PLAY' });
+    await flush();
+    failSwap();
+    await flush();
+    expect(engine.getSnapshot().seq.status).toBe('playing');
+    expect(player.load).toHaveBeenCalledWith('spotify:track:a');
+  });
+
+  it('takes an old disc change finishing late for neither a newer one nor a reason to load', async () => {
+    const { engine, flush, refuse, swaps, player } = setup({
+      hangPlayer: true,
+      firstAttemptOnly: true,
+    });
+    engine.open(ref);
+    await flush();
+    engine.user({ type: 'PLAY' }); // disc change 1, towards track a
+    refuse();
+    await flush(); // the player fails: idle, with disc change 1 still turning
+    engine.user({ type: 'NEXT' }); // disc change 2, towards track b, with a new player
+    await flush();
+    expect(swaps).toHaveLength(2);
+    swaps[0]();
+    await flush();
+    expect(engine.getSnapshot().seq).toMatchObject({ status: 'swapping', cursor: 1 });
+    expect(player.load).not.toHaveBeenCalled();
+    swaps[1]();
+    await flush();
+    expect(engine.getSnapshot().seq.status).toBe('playing');
+    expect(player.load).toHaveBeenCalledTimes(1);
+    expect(player.load).toHaveBeenCalledWith('spotify:track:b');
   });
 });

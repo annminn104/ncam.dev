@@ -69,6 +69,12 @@ export class PlayerEngine {
   private player: Promise<EmbedPlayer> | null = null;
   private hintTimer: unknown = null;
   private awaitingStart = false;
+  /**
+   * Which disc change may answer with SWAP_DONE: each takes the next number, and the sequencer
+   * leaving `swapping` any other way (the player failed, a new collection) bumps it, so a change
+   * finishing late is never taken for a newer one.
+   */
+  private swapToken = 0;
   private detachBridge: (() => void) | null = null;
   private disposed = false;
 
@@ -145,13 +151,21 @@ export class PlayerEngine {
     );
   }
 
-  /** A visitor's own action: also the moment the Spotify player may be built. */
+  /**
+   * A visitor's own action. Spotify's script loads on the first play action, not on any key, so
+   * the player is built only when the reducer would start playback (a disc change or a load).
+   */
   user(event: SeqEvent): void {
-    this.prepare(event);
+    const { commands } = step(this.snapshot.seq, event);
+    if (commands.some((command) => command.type === 'swap' || command.type === 'load')) {
+      this.prepare(event);
+    }
     this.send(event);
   }
 
   send(event: SeqEvent): void {
+    // A new collection ends any disc change still turning.
+    if (event.type === 'LOAD') this.swapToken++;
     const { state, commands } = step(this.snapshot.seq, event);
     if (state !== this.snapshot.seq) this.set({ seq: state });
     for (const command of commands) this.run(command);
@@ -219,7 +233,10 @@ export class PlayerEngine {
       // the track (and order, repeat, shuffle), so that press loads it into the next player.
       const patch: Partial<EngineSnapshot> = { embed: 'blocked' };
       const { seq } = this.snapshot;
-      if (current && seq.status !== 'idle') patch.seq = { ...seq, status: 'idle', positionMs: 0 };
+      if (current && seq.status !== 'idle') {
+        patch.seq = { ...seq, status: 'idle', positionMs: 0 };
+        this.swapToken++;
+      }
       this.set(patch);
     };
     const wait = this.startTimer(() => {
@@ -251,9 +268,14 @@ export class PlayerEngine {
       case 'swap': {
         const { seq, details, artists } = this.snapshot;
         const view = trackView(seq.tracks[command.to], details, artists);
-        void this.deps.bridge.swap(view).then(() => {
-          if (!this.disposed) this.send({ type: 'SWAP_DONE' });
-        });
+        // Only the latest disc change may answer (see `swapToken`).
+        const token = ++this.swapToken;
+        const seated = () => {
+          if (!this.disposed && token === this.swapToken) this.send({ type: 'SWAP_DONE' });
+        };
+        // A disc change that fails still ends the change: the music starts even if the animation
+        // did not, rather than the sequencer waiting in `swapping` for good.
+        void this.deps.bridge.swap(view).then(seated, seated);
         return;
       }
       case 'load':
