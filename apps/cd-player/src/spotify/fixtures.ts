@@ -1,7 +1,14 @@
+const wrap = (data: unknown) =>
+  `<html><body><script id="__NEXT_DATA__" type="application/json">${JSON.stringify(data)}</script></body></html>`;
+
 /** An embed page as Spotify serves it: the entity inside __NEXT_DATA__ (fields measured 2026-10-28). */
 export function page(entity: unknown): string {
-  const data = { props: { pageProps: { state: { data: { entity } } } } };
-  return `<html><body><script id="__NEXT_DATA__" type="application/json">${JSON.stringify(data)}</script></body></html>`;
+  return wrap({ props: { pageProps: { state: { data: { entity } } } } });
+}
+
+/** The page for an unknown id: HTTP 200, no `state`, only a 404 status (measured 2026-10-29). */
+export function notFoundPage(): string {
+  return wrap({ props: { pageProps: { status: 404, title: 'Page not found' } } });
 }
 
 export const PLAYLIST = {

@@ -8,14 +8,33 @@ import {
   toCollection,
   toTrackDetail,
 } from './embed';
-import { ARTIST, page, PLAYLIST, TRACK } from './fixtures';
+import { ARTIST, notFoundPage, page, PLAYLIST, TRACK } from './fixtures';
 
 const REF = { type: 'playlist', id: PLAYLIST.id } as const;
 
 describe('readEntity', () => {
-  it('extracts the entity, or null when the page has none', () => {
+  it('extracts the entity, or null for the page of an unknown id', () => {
     expect(readEntity(page(PLAYLIST))).toEqual(PLAYLIST);
-    expect(readEntity(page(undefined))).toBeNull();
+    expect(readEntity(notFoundPage())).toBeNull();
+  });
+
+  it('fails as upstream for a page that is neither an entity nor the 404 page', () => {
+    const withJson = (json: string) =>
+      `<script id="__NEXT_DATA__" type="application/json">${json}</script>`;
+    const changed = [
+      withJson('null'),
+      withJson('[]'),
+      withJson('{"props":{}}'), // no pageProps
+      withJson('{"props":{"pageProps":{}}}'), // no state
+      withJson('{"props":{"pageProps":{"state":{}}}}'), // no data
+      withJson('{"props":{"pageProps":{"status":500}}}'), // another status is not "not found"
+      page(undefined), // data without an entity
+      page(null),
+      page([]),
+    ];
+    for (const html of changed) {
+      expect(() => readEntity(html), html).toThrow(expect.objectContaining({ kind: 'upstream' }));
+    }
   });
 
   it('fails as upstream without __NEXT_DATA__ or with broken JSON', () => {

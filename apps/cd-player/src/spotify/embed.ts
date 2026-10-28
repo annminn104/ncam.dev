@@ -34,7 +34,11 @@ export function embedUrl(type: EmbedType, id: string): string {
   return `https://open.spotify.com/embed/${type}/${id}`;
 }
 
-/** The page's entity, or null: Spotify answers 200 with no entity for an unknown id. */
+/**
+ * The page's entity, or null for an unknown id: Spotify answers that with HTTP 200 and a
+ * `pageProps` of `{ status: 404, … }` and no `state`. A page that is neither that nor an entity is
+ * a layout change on Spotify's side and fails as upstream, never as not found.
+ */
 export function readEntity(html: string): unknown {
   const match = NEXT_DATA.exec(html);
   if (!match) throw new EmbedError('upstream', 'the page has no __NEXT_DATA__');
@@ -44,8 +48,16 @@ export function readEntity(html: string): unknown {
   } catch {
     throw new EmbedError('upstream', '__NEXT_DATA__ is not JSON');
   }
-  type Shape = { props?: { pageProps?: { state?: { data?: { entity?: unknown } } } } };
-  return (data as Shape)?.props?.pageProps?.state?.data?.entity ?? null;
+  type Shape = {
+    props?: { pageProps?: { status?: unknown; state?: { data?: { entity?: unknown } } } };
+  };
+  const pageProps = (data as Shape | null)?.props?.pageProps;
+  if (pageProps?.status === 404) return null;
+  const entity = pageProps?.state?.data?.entity;
+  if (typeof entity !== 'object' || entity === null || Array.isArray(entity)) {
+    throw new EmbedError('upstream', 'the page has no entity and is not a 404 page');
+  }
+  return entity;
 }
 
 const idOf = (uri: string) => uri.split(':').pop() ?? '';
