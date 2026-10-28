@@ -80,6 +80,11 @@ export function toCollection(entity: unknown, ref: CollectionRef): Collection {
     const item = TrackListItem.safeParse(entry);
     return item.success ? [item.data] : [];
   });
+  // A change on Spotify's side breaks every entry at once: a non-empty list where none is
+  // readable is an upstream change, not an empty playlist.
+  if (data.trackList.length > 0 && items.length === 0) {
+    throw new EmbedError('upstream', `${ref.type} ${ref.id}: unexpected track list shape`);
+  }
   return {
     type: data.type,
     id: data.id,

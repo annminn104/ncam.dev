@@ -69,6 +69,12 @@ describe('toCollection', () => {
     expect(tracks).toEqual(toCollection(PLAYLIST, REF).tracks);
   });
 
+  it('is an empty collection, not an error, for an empty list or one with only episodes', () => {
+    const episode = PLAYLIST.trackList[2];
+    expect(toCollection({ ...PLAYLIST, trackList: [] }, REF).tracks).toEqual([]);
+    expect(toCollection({ ...PLAYLIST, trackList: [episode] }, REF).tracks).toEqual([]);
+  });
+
   it('is not_found for a missing entity or another type', () => {
     expect(() => toCollection(null, REF)).toThrow(expect.objectContaining({ kind: 'not_found' }));
     expect(() => toCollection({ ...PLAYLIST, type: 'album' }, REF)).toThrow(
@@ -78,6 +84,14 @@ describe('toCollection', () => {
 
   it('is upstream when the shape changed', () => {
     expect(() => toCollection({ ...PLAYLIST, trackList: undefined }, REF)).toThrow(
+      expect.objectContaining({ kind: 'upstream' }),
+    );
+  });
+
+  it('is upstream when no entry of a non-empty list is readable', () => {
+    const noTitle = { uri: 'spotify:track:0000000000000000000001', subtitle: 'Nobody' };
+    const unreadable = { ...PLAYLIST, trackList: [null, 'x', {}, noTitle] };
+    expect(() => toCollection(unreadable, REF)).toThrow(
       expect.objectContaining({ kind: 'upstream' }),
     );
   });
