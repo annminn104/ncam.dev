@@ -1,0 +1,349 @@
+import type { PlayerAction } from '../actions';
+import type { SceneBridge } from '../bridge';
+import { sameCollection, type CollectionRef } from '../routes';
+import { requestErrorMessage, type SpotifyClient } from '../spotify/client';
+import type { ArtistDetail, Collection, TrackDetail } from '../spotify/types';
+import { sceneView, trackView } from '../view';
+import type { EmbedCallbacks, EmbedPlayer } from './embed-controller';
+import {
+  currentIndex,
+  initialSeq,
+  step,
+  upcomingIndices,
+  type Command,
+  type SeqEvent,
+  type SeqState,
+} from './sequencer';
+
+export type EmbedState = 'off' | 'loading' | 'ready' | 'blocked';
+
+/** What the server render fetched, handed to the client through the page (src/ssr-state.ts). */
+export interface InitialData {
+  ref: CollectionRef;
+  collection: Collection | null;
+  firstTrack: TrackDetail | null;
+  firstArtist: ArtistDetail | null;
+}
+
+export interface EngineSnapshot {
+  ref: CollectionRef | null;
+  collection: Collection | null;
+  loading: boolean;
+  error: string | null;
+  seq: SeqState;
+  details: ReadonlyMap<string, TrackDetail>;
+  artists: ReadonlyMap<string, ArtistDetail>;
+  embed: EmbedState;
+  /** The embed was told to play and has not started: ask the visitor to press play inside it. */
+  hint: boolean;
+}
+
+export interface EngineDeps {
+  client: SpotifyClient;
+  bridge: SceneBridge;
+  /**
+   * Builds the Spotify player in the now-playing card, on the visitor's first play action. It may
+   * never settle (Spotify's callback can stay silent), so the engine stops waiting after
+   * `PLAYER_TIMEOUT_MS` and calls it again on the visitor's next action.
+   */
+  createPlayer(firstUri: string, callbacks: EmbedCallbacks): Promise<EmbedPlayer>;
+  hintMs?: number;
+  setTimer?(fn: () => void, ms: number): unknown;
+  clearTimer?(handle: unknown): void;
+}
+
+/** How many tracks ahead get their art and artist fetched. */
+const PREFETCH = 3;
+const HINT_MS = 3500;
+/** How long building the Spotify player may take before the embed counts as blocked. */
+const PLAYER_TIMEOUT_MS = 20_000;
+
+/**
+ * Playback outside React: the sequencer's state, the commands it emits (disc changes through the
+ * bridge, the Spotify embed), the collection and the per-track art. React reads it through
+ * `usePlayerEngine`; the constructor has no side effects (StrictMode builds it twice).
+ */
+export class PlayerEngine {
+  private snapshot: EngineSnapshot;
+  private readonly listeners = new Set<() => void>();
+  private player: Promise<EmbedPlayer> | null = null;
+  private hintTimer: unknown = null;
+  private awaitingStart = false;
+  private detachBridge: (() => void) | null = null;
+  private disposed = false;
+
+  constructor(
+    private readonly deps: EngineDeps,
+    initial: InitialData | null = null,
+  ) {
+    const details = new Map<string, TrackDetail>();
+    const artists = new Map<string, ArtistDetail>();
+    if (initial?.firstTrack) details.set(initial.firstTrack.id, initial.firstTrack);
+    if (initial?.firstArtist) artists.set(initial.firstArtist.id, initial.firstArtist);
+    this.snapshot = {
+      ref: initial?.ref ?? null,
+      collection: initial?.collection ?? null,
+      loading: false,
+      error: null,
+      seq: initialSeq(initial?.collection?.tracks ?? []),
+      details,
+      artists,
+      embed: 'off',
+      hint: false,
+    };
+    if (initial?.collection) deps.client.seed(initial.ref.type, initial.ref.id, initial.collection);
+    if (initial?.firstTrack) deps.client.seed('track', initial.firstTrack.id, initial.firstTrack);
+    if (initial?.firstArtist)
+      deps.client.seed('artist', initial.firstArtist.id, initial.firstArtist);
+  }
+
+  getSnapshot = (): EngineSnapshot => this.snapshot;
+
+  subscribe = (listener: () => void): (() => void) => {
+    this.listeners.add(listener);
+    return () => {
+      this.listeners.delete(listener);
+    };
+  };
+
+  /** Listens to the scene's keys and publishes the view; returns `dispose`. */
+  attach(): () => void {
+    this.disposed = false;
+    this.detachBridge = this.deps.bridge.onAction((action) => this.onAction(action));
+    this.publish();
+    this.prefetch();
+    return () => this.dispose();
+  }
+
+  dispose(): void {
+    this.disposed = true;
+    this.detachBridge?.();
+    this.detachBridge = null;
+    this.clearHint();
+    void this.player?.then(
+      (player) => player.destroy(),
+      () => {},
+    );
+    this.player = null;
+  }
+
+  /** Shows `ref`: the collection already here, or fetched. */
+  open(ref: CollectionRef): void {
+    const { snapshot } = this;
+    if (sameCollection(snapshot.ref, ref) && (snapshot.collection || snapshot.loading)) return;
+    this.set({ ref, loading: true, error: null });
+    this.deps.client.collection(ref).then(
+      (collection) => {
+        if (this.disposed || !sameCollection(this.snapshot.ref, ref)) return;
+        this.set({ collection, loading: false });
+        this.send({ type: 'LOAD', tracks: collection.tracks });
+      },
+      (error: unknown) => {
+        if (this.disposed || !sameCollection(this.snapshot.ref, ref)) return;
+        this.set({ loading: false, error: requestErrorMessage(error) });
+      },
+    );
+  }
+
+  /** A visitor's own action: also the moment the Spotify player may be built. */
+  user(event: SeqEvent): void {
+    this.prepare(event);
+    this.send(event);
+  }
+
+  send(event: SeqEvent): void {
+    const { state, commands } = step(this.snapshot.seq, event);
+    if (state !== this.snapshot.seq) this.set({ seq: state });
+    for (const command of commands) this.run(command);
+    if (event.type === 'LOAD' || commands.some((command) => command.type === 'swap'))
+      this.prefetch();
+  }
+
+  private onAction(action: PlayerAction): void {
+    switch (action.type) {
+      case 'prev':
+        return this.user({ type: 'PREV' });
+      case 'next':
+        return this.user({ type: 'NEXT' });
+      case 'toggle':
+        return this.user({ type: 'TOGGLE' });
+      case 'stop':
+        return this.user({ type: 'STOP' });
+      case 'repeat':
+        return this.user({ type: 'TOGGLE_REPEAT' });
+      case 'shuffle':
+        return this.user({ type: 'TOGGLE_SHUFFLE', seed: Date.now() });
+      case 'seek':
+        return this.user({ type: 'SEEK', ms: this.snapshot.seq.positionMs + action.deltaMs });
+    }
+  }
+
+  private prepare(event: SeqEvent): void {
+    if (this.player) return;
+    const { seq } = this.snapshot;
+    const index =
+      event.type === 'SELECT' ? event.index : (currentIndex(seq) ?? upcomingIndices(seq, 1)[0]);
+    const track = index === undefined || index === null ? undefined : seq.tracks[index];
+    if (!track) return;
+    this.set({ embed: 'loading' });
+    const pending = this.deps.createPlayer(track.uri, {
+      onStarted: () => {
+        this.awaitingStart = false;
+        this.clearHint();
+      },
+      onUpdate: (update) => {
+        // Right after a load the embed reports itself paused until the audio starts.
+        if (this.awaitingStart && update.paused) return;
+        if (update.buffering) return;
+        this.send({
+          type: 'PROGRESS',
+          positionMs: update.positionMs,
+          durationMs: update.durationMs,
+          paused: update.paused,
+        });
+      },
+      onEnded: () => this.send({ type: 'ENDED' }),
+    });
+    this.player = pending;
+    // The wait is bounded: Spotify's `createController` can stay silent for good (a half-loaded or
+    // blocked script). Past PLAYER_TIMEOUT_MS the embed counts as blocked and `player` is freed, so
+    // the visitor's next action tries again; a player that turns up after that is destroyed unused.
+    // Whichever of the answer, the failure and the timeout comes first is the only one acted on.
+    let settled = false;
+    const fail = () => {
+      if (this.player === pending) this.player = null;
+      if (!this.disposed) this.set({ embed: 'blocked' });
+    };
+    const wait = this.startTimer(() => {
+      if (settled || this.disposed) return;
+      settled = true;
+      fail();
+    }, PLAYER_TIMEOUT_MS);
+    pending.then(
+      (player) => {
+        if (settled) {
+          player.destroy();
+          return;
+        }
+        settled = true;
+        this.stopTimer(wait);
+        if (!this.disposed) this.set({ embed: 'ready' });
+      },
+      () => {
+        if (settled) return;
+        settled = true;
+        this.stopTimer(wait);
+        fail();
+      },
+    );
+  }
+
+  private run(command: Command): void {
+    switch (command.type) {
+      case 'swap': {
+        const { seq, details, artists } = this.snapshot;
+        const view = trackView(seq.tracks[command.to], details, artists);
+        void this.deps.bridge.swap(view).then(() => {
+          if (!this.disposed) this.send({ type: 'SWAP_DONE' });
+        });
+        return;
+      }
+      case 'load':
+        void this.player?.then(
+          (player) => {
+            this.awaitingStart = true;
+            player.load(command.uri);
+            this.armHint();
+          },
+          () => {},
+        );
+        return;
+      case 'pause':
+        void this.player?.then(
+          (player) => player.pause(),
+          () => {},
+        );
+        return;
+      case 'resume':
+        void this.player?.then(
+          (player) => player.resume(),
+          () => {},
+        );
+        return;
+      case 'seek':
+        void this.player?.then(
+          (player) => player.seek(command.ms),
+          () => {},
+        );
+        return;
+    }
+  }
+
+  private prefetch(): void {
+    const { seq } = this.snapshot;
+    const indices = new Set(
+      [currentIndex(seq), ...upcomingIndices(seq, PREFETCH)].filter(
+        (index): index is number => index !== null,
+      ),
+    );
+    for (const index of indices) {
+      const track = seq.tracks[index];
+      if (!track) continue;
+      this.deps.client
+        .track(track.id)
+        .then((detail) => {
+          if (this.disposed) return;
+          if (!this.snapshot.details.has(detail.id)) {
+            this.set({ details: new Map(this.snapshot.details).set(detail.id, detail) });
+          }
+          const artistId = detail.artists[0]?.id;
+          if (!artistId || this.snapshot.artists.has(artistId)) return;
+          return this.deps.client.artist(artistId).then((artist) => {
+            if (!this.disposed && !this.snapshot.artists.has(artist.id)) {
+              this.set({ artists: new Map(this.snapshot.artists).set(artist.id, artist) });
+            }
+          });
+        })
+        .catch(() => {
+          // A missing picture falls back to the album art, then to the printed default (view.ts).
+        });
+    }
+  }
+
+  private armHint(): void {
+    this.clearHint();
+    this.hintTimer = this.startTimer(() => {
+      if (!this.disposed && this.awaitingStart) this.set({ hint: true });
+    }, this.deps.hintMs ?? HINT_MS);
+  }
+
+  private clearHint(): void {
+    if (this.hintTimer !== null) {
+      this.stopTimer(this.hintTimer);
+      this.hintTimer = null;
+    }
+    if (this.snapshot.hint) this.set({ hint: false });
+  }
+
+  /** The injected timer, else the real one (the hint's and the player's wait share it). */
+  private startTimer(fn: () => void, ms: number): unknown {
+    const setTimer = this.deps.setTimer ?? ((run, delay) => setTimeout(run, delay));
+    return setTimer(fn, ms);
+  }
+
+  private stopTimer(handle: unknown): void {
+    const clearTimer =
+      this.deps.clearTimer ?? ((h) => clearTimeout(h as ReturnType<typeof setTimeout>));
+    clearTimer(handle);
+  }
+
+  private set(patch: Partial<EngineSnapshot>): void {
+    this.snapshot = { ...this.snapshot, ...patch };
+    this.publish();
+  }
+
+  private publish(): void {
+    for (const listener of this.listeners) listener();
+    this.deps.bridge.setView(sceneView(this.snapshot));
+  }
+}
