@@ -33,9 +33,9 @@ export function writeLast(storage: WriteStore | null, ref: CollectionRef): void 
 }
 
 /**
- * Where `/` should send the visitor: the collection they last loaded. Only the first time this page
- * load looks (`alreadyRestored` false), because Back to `/` must not bounce them forward again; only
- * on `/` itself; and never to the default playlist, which `/` already shows.
+ * Where `/` should send the visitor: the collection they last loaded. Only the first time the caller
+ * looks (`alreadyRestored` false; App keeps that per mount), because Back to `/` must not bounce them
+ * forward again; only on `/` itself; and never to the default playlist, which `/` already shows.
  */
 export function restoreTarget(
   routeView: 'home' | 'collection',

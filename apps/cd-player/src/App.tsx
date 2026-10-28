@@ -26,13 +26,6 @@ export interface AppProps {
   assetBase?: string;
 }
 
-/**
- * Whether this page load has already looked for a collection to come back to. Module-level on
- * purpose: Back to `/` re-renders the same App, and a remount must not send the visitor forward
- * again either. Only an effect touches it, so a server render never does.
- */
-let restoredThisLoad = false;
-
 export default function App({ controller, initial = null, assetBase = '' }: AppProps) {
   const route = useSyncExternalStore(
     controller.subscribe,
@@ -58,12 +51,15 @@ export default function App({ controller, initial = null, assetBase = '' }: AppP
   const [linkError, setLinkError] = useState<string | null>(null);
   const [linkBusy, setLinkBusy] = useState(false);
   const [tracksOpen, setTracksOpen] = useState(false);
+  const restored = useRef(false);
 
-  // The first time this page load is shown, `/` comes back to the visitor's own collection. Only the
-  // first check counts, navigating or not, so Back to `/` stays on `/` instead of bouncing forward.
+  // The first time this App is shown, `/` comes back to the visitor's own collection. Only that first
+  // check counts, navigating or not: Back to `/` reaches the same App as a route update, not a
+  // remount, and must stay on `/` instead of bouncing forward. A fresh mount (the host opening the
+  // project again) looks again.
   useEffect(() => {
-    const target = restoreTarget(parsed.view, readLast(safeStorage()), restoredThisLoad);
-    restoredThisLoad = true;
+    const target = restoreTarget(parsed.view, readLast(safeStorage()), restored.current);
+    restored.current = true;
     if (target) controller.navigate(collectionPath(target));
   }, [controller, parsed.view]);
 
