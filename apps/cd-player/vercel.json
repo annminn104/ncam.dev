@@ -1,0 +1,19 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "vite",
+  "buildCommand": "pnpm build",
+  "ignoreCommand": "npx turbo-ignore",
+  "git": { "deploymentEnabled": { "dependabot/**": false } },
+  "outputDirectory": "dist",
+  "rewrites": [{ "source": "/:kind(playlist|album)/:id", "destination": "/index.html" }],
+  "headers": [
+    {
+      "source": "/((?!api/).*)",
+      "headers": [{ "key": "Access-Control-Allow-Origin", "value": "*" }]
+    },
+    {
+      "source": "/assets/cd-player.glb",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }]
+    }
+  ]
+}

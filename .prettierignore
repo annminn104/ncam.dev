@@ -55,3 +55,7 @@ apps/mini-store/legacy
 # Garden Home: the Blender build (Python, fixtures) and the pipeline's generated scene.json + GLBs
 apps/garden-home/art/blender
 apps/garden-home/public/assets
+
+# CD Player: the Blender build (Python) and the pipeline's committed GLB
+apps/cd-player/art/blender
+apps/cd-player/public/assets

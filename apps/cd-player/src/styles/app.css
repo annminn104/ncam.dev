@@ -1,0 +1,7 @@
+.cdp-root {
+  position: relative;
+  min-height: 100dvh;
+  background: #2a1f24;
+  color: #fff;
+  font-family: system-ui, sans-serif;
+}

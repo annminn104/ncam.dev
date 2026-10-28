@@ -45,3 +45,6 @@ apps/mini-store/legacy
 # Garden Home: the Blender build and the e2e specs, not part of any image build (apps/garden-home/AGENTS.md)
 apps/garden-home/art
 apps/garden-home/e2e
+
+# CD Player: the Blender build, not part of any image build (apps/cd-player/AGENTS.md)
+apps/cd-player/art
