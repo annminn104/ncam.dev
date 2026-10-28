@@ -138,13 +138,13 @@ describe('createEmbedPlayer', () => {
     expect(callbacks.onEnded).toHaveBeenCalledTimes(1);
   });
 
-  describe('after load(), a late event for the track it replaced', () => {
-    /** An embed created on track a and told to load track b. */
-    async function loadedB() {
+  describe('after load()', () => {
+    /** An embed created on `first` and told to load each of `uris` in turn. */
+    async function embedAfter(first: string, ...uris: string[]) {
       const { api, emit } = fakeApi();
       const callbacks = { onStarted: vi.fn(), onUpdate: vi.fn(), onEnded: vi.fn() };
-      const player = await createEmbedPlayer({} as HTMLElement, 'spotify:track:a', callbacks, api);
-      player.load('spotify:track:b');
+      const player = await createEmbedPlayer({} as HTMLElement, first, callbacks, api);
+      for (const uri of uris) player.load(uri);
       return { callbacks, emit };
     }
     const data = (patch: Record<string, unknown> = {}) => ({
@@ -156,21 +156,59 @@ describe('createEmbedPlayer', () => {
       ...patch,
     });
 
-    it('is ignored, and the same update for the new track still ends it once', async () => {
-      const { callbacks, emit } = await loadedB();
+    it('ignores a late event for the track it replaced', async () => {
+      const { callbacks, emit } = await embedAfter('spotify:track:a', 'spotify:track:b');
       const atEnd = data({ playingURI: 'spotify:track:a', isPaused: true, position: 30_000 });
       emit('playback_started', { playingURI: 'spotify:track:a' });
       emit('playback_update', atEnd);
       expect(callbacks.onStarted).not.toHaveBeenCalled();
       expect(callbacks.onUpdate).not.toHaveBeenCalled();
       expect(callbacks.onEnded).not.toHaveBeenCalled();
+      // The same update for the new track still ends it, once.
       emit('playback_update', { ...atEnd, playingURI: 'spotify:track:b' });
       expect(callbacks.onUpdate).toHaveBeenCalledTimes(1);
       expect(callbacks.onEnded).toHaveBeenCalledTimes(1);
     });
 
-    it('changes neither the last update nor the ended flag', async () => {
-      const { callbacks, emit } = await loadedB();
+    it('lets a relinked id of the loaded track through, and it can end the track', async () => {
+      const { callbacks, emit } = await embedAfter('spotify:track:a', 'spotify:track:b');
+      emit('playback_started', { playingURI: 'spotify:track:b2' });
+      emit(
+        'playback_update',
+        data({ playingURI: 'spotify:track:b2', isPaused: true, position: 30_000 }),
+      );
+      expect(callbacks.onStarted).toHaveBeenCalledWith('spotify:track:b2');
+      expect(callbacks.onUpdate).toHaveBeenCalledTimes(1);
+      expect(callbacks.onEnded).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not ignore the events of a track that is loaded again', async () => {
+      // The first play of a track the embed was created on, or a one-track list on repeat.
+      const { callbacks, emit } = await embedAfter('spotify:track:a', 'spotify:track:a');
+      emit(
+        'playback_update',
+        data({ playingURI: 'spotify:track:a', isPaused: true, position: 30_000 }),
+      );
+      expect(callbacks.onUpdate).toHaveBeenCalledTimes(1);
+      expect(callbacks.onEnded).toHaveBeenCalledTimes(1);
+    });
+
+    it('ignores a late event for whichever track it replaced last', async () => {
+      const { callbacks, emit } = await embedAfter(
+        'spotify:track:a',
+        'spotify:track:b',
+        'spotify:track:c',
+      );
+      const atEnd = data({ isPaused: true, position: 30_000 });
+      emit('playback_update', atEnd);
+      expect(callbacks.onUpdate).not.toHaveBeenCalled();
+      expect(callbacks.onEnded).not.toHaveBeenCalled();
+      emit('playback_update', { ...atEnd, playingURI: 'spotify:track:c' });
+      expect(callbacks.onEnded).toHaveBeenCalledTimes(1);
+    });
+
+    it('changes neither the last update nor the ended flag when it ignores an event', async () => {
+      const { callbacks, emit } = await embedAfter('spotify:track:a', 'spotify:track:b');
       const late = data({ playingURI: 'spotify:track:a', isPaused: true, position: 30_000 });
       // `last` stays the new track's, so its snap back to 0 still counts as its end.
       emit('playback_update', data({ position: 29_200 }));
@@ -184,8 +222,8 @@ describe('createEmbedPlayer', () => {
       expect(callbacks.onEnded).toHaveBeenCalledTimes(1);
     });
 
-    it('lets an event that names no track through, as before', async () => {
-      const { callbacks, emit } = await loadedB();
+    it('lets an event that names no track through', async () => {
+      const { callbacks, emit } = await embedAfter('spotify:track:a', 'spotify:track:b');
       emit('playback_update', data({ playingURI: undefined, isPaused: true, position: 30_000 }));
       expect(callbacks.onUpdate).toHaveBeenCalledWith(expect.objectContaining({ uri: null }));
       expect(callbacks.onEnded).toHaveBeenCalledTimes(1);

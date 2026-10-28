@@ -106,11 +106,14 @@ export async function createEmbedPlayer(
   );
   let last: PlaybackUpdate | null = null;
   let ended = false;
-  // The uri the embed should be playing: `firstUri`, then whatever `load()` was last given. A late
-  // event for the track `load()` replaced (say, paused at its end) would, taken for the new
-  // track's, end that one, so it is ignored whole. An event that names no track is let through.
+  // After `load()`, an event can still arrive late for the track it replaced (say, paused at its
+  // end); taken for the new track's, it would end that one. Those are ignored whole, and only
+  // those: Spotify may report another id for a track it relinked, so dropping everything but the
+  // loaded uri would lose all of that track's events. Loading the same track again drops nothing.
   let expected = firstUri;
-  const isLate = (uri: string | null | undefined) => !!uri && uri !== expected;
+  let previous: string | null = null;
+  const isLate = (uri: string | null | undefined) =>
+    !!uri && uri === previous && previous !== expected;
   controller.addListener('playback_started', (event) => {
     if (isLate(event.data.playingURI)) return;
     ended = false;
@@ -128,6 +131,7 @@ export async function createEmbedPlayer(
   });
   return {
     load(uri) {
+      previous = expected;
       expected = uri;
       ended = false;
       last = null;
