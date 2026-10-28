@@ -74,8 +74,10 @@ export function currentIndex(state: SeqState): number | null {
 /** The next position in `order` after `from` (stepping by `dir`) whose track plays; -1 if none. */
 export function findPlayable(state: SeqState, from: number, dir: 1 | -1, wrap: boolean): number {
   const n = state.order.length;
+  // From before the first track, stepping back with wrap starts at the end (offset 1 is n - 1).
+  const start = from < 0 && dir < 0 && wrap ? n : from;
   for (let offset = 1; offset <= n; offset++) {
-    let pos = from + dir * offset;
+    let pos = start + dir * offset;
     if (pos < 0 || pos >= n) {
       if (!wrap) return -1;
       pos = ((pos % n) + n) % n;

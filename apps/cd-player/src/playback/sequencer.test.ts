@@ -63,6 +63,17 @@ describe('sequencer', () => {
     expect(early.commands).toEqual([{ type: 'pause' }, { type: 'swap', to: 0 }]);
   });
 
+  it('PREV before the first track wraps to the last playable one, only with repeat', () => {
+    const idle = loaded();
+    const wrapped = step(run(idle, { type: 'TOGGLE_REPEAT' }), { type: 'PREV' });
+    expect(wrapped.state.status).toBe('swapping');
+    expect(currentIndex(wrapped.state)).toBe(3);
+    expect(wrapped.commands).toEqual([{ type: 'swap', to: 3 }]);
+    const ignored = step(idle, { type: 'PREV' });
+    expect(ignored.state).toBe(idle);
+    expect(ignored.commands).toEqual([]);
+  });
+
   it('ignores track changes while a disc is being changed', () => {
     const swapping = step(loaded(), { type: 'PLAY' }).state;
     for (const event of [
