@@ -2,7 +2,9 @@ import { StrictMode } from 'react';
 import { hydrateRoot, type Root } from 'react-dom/client';
 import type { MountConfig, MountHandle } from '@ncam/mf-remote';
 import App from './App';
+import { remoteBase } from './lib/asset-url';
 import { createRouteController, type RouteController } from './route-controller';
+import { readState, serialiseState, SSR_STATE_ID } from './ssr-state';
 
 const roots = new WeakMap<HTMLElement, { root: Root; controller: RouteController }>();
 
@@ -14,10 +16,18 @@ export function hydrate(target: HTMLElement, config: MountConfig = {}): MountHan
     existing.root.unmount();
   }
   const controller = createRouteController(config);
+  // Written by ./ssr inside the markup the host injected. Read before hydrateRoot, and rendered
+  // back with the same text so the element has its counterpart in the tree.
+  const initial = readState(target.ownerDocument ?? document);
   const root = hydrateRoot(
     target,
     <StrictMode>
-      <App controller={controller} />
+      <App controller={controller} initial={initial} assetBase={remoteBase(config.assetBase)} />
+      <script
+        type="application/json"
+        id={SSR_STATE_ID}
+        dangerouslySetInnerHTML={{ __html: serialiseState(initial) }}
+      />
     </StrictMode>,
   );
   roots.set(target, { root, controller });
