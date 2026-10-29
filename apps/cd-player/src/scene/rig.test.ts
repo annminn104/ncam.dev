@@ -17,9 +17,11 @@ function fakeModel() {
   const booklet = new MeshPhysicalMaterial({ name: 'art_booklet' });
   const disc = named(new Group(), 'disc');
   disc.position.set(-0.048, 0.0745, -0.002);
+  disc.rotation.y = (-25 * Math.PI) / 180;
   disc.add(new Mesh(new BoxGeometry(), label));
   const seat = named(new Object3D(), 'disc_seat');
   seat.position.copy(disc.position);
+  seat.quaternion.copy(disc.quaternion);
   const caseLid = named(new Group(), 'case_lid_hinge');
   caseLid.position.set(-0.071, 0.0066, 0);
   caseLid.add(new Mesh(new BoxGeometry(), booklet));
@@ -87,6 +89,18 @@ describe('rigFor', () => {
     const slot = rig.cases[0].object.localToWorld(new Vector3(0.003, 0.006, 0));
     expect(rig.discs[0].object.visible).toBe(true);
     expect(rig.discs[0].object.position.distanceTo(slot)).toBeLessThan(1e-6);
+  });
+
+  it('lands a seated disc on the spindle’s seat, as the model has it', () => {
+    const { model } = fakeModel();
+    const rig = rigFor(model);
+    applyPose(rig, restingPose(true, true, false), null, 0);
+    const disc = rig.discs[rig.lidCase].object;
+    expect(disc.visible).toBe(true);
+    expect(disc.position.distanceTo(rig.seat.position)).toBeLessThan(1e-9);
+    expect(disc.quaternion.angleTo(rig.seat.quaternion)).toBeLessThan(1e-6);
+    expect(rig.seat.quaternion.angleTo(model.nodes.disc_seat.quaternion)).toBeLessThan(1e-6);
+    expect(disc.scale.x).toBe(1);
   });
 
   it('lifts a sliding case past the lid’s rim before it moves across, and shrinks it away with its disc', () => {

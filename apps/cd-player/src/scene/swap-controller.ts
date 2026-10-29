@@ -1,12 +1,24 @@
 import type { SceneView, Swapper, TrackView } from '../bridge';
 import { DURATION, type SwapKind } from './director';
 import { finishSwap, type ChangeState } from './rig';
-import type { Painter } from './useDirector';
 
 /** Under reduced motion a change is instant; the music still waits this long for the disc. */
 export const REDUCED_MOTION_MS = 300;
 /** How long a change waits for its prints; past that it runs on the prints its disc has. */
 export const PRINT_WAIT_MS = 1500;
+/**
+ * A timeline also ends on the clock this long after its time is up, for when no frame comes to
+ * end it: a page hidden mid-change (a background tab, a locked phone) draws none.
+ */
+export const SETTLE_SLACK_MS = 250;
+
+/**
+ * Prints `view` on disc `index` and its case's booklet. A change waits for it at most
+ * PRINT_WAIT_MS, then runs on the prints the disc has; a print that lands later still shows. The
+ * director aborts `signal` once a newer print of the same disc starts: check it before drawing, so
+ * a stale print never covers a newer one.
+ */
+export type Painter = (index: 0 | 1, view: TrackView, signal?: AbortSignal) => Promise<void>;
 
 export interface SwapClock {
   now(): number;
@@ -18,6 +30,8 @@ export interface SwapControllerOptions {
   rig: ChangeState;
   paint: Painter;
   reduced: boolean;
+  /** Whether the page is hidden now (a background tab, a locked phone): no frame runs then. */
+  hidden(): boolean;
   clock: SwapClock;
   /** A print failed (art that would not load): the change goes on with the print the disc has. */
   onPrintFailed(error: unknown, view: TrackView): void;
@@ -36,7 +50,8 @@ export interface SwapController {
   seat(view: SceneView): void;
   /**
    * Hands the change in progress to `pose` (its kind and the ms into it, 0 while its prints are
-   * painted) and ends it once its time is up, after its last pose; false between changes.
+   * painted) and ends it once its time is up, after its last pose. False between changes, and
+   * during the reduced-motion beat (the rig is already done then: the resting pose shows it).
    */
   frame(pose: (kind: SwapKind, t: number) => void): boolean;
   /** The scene is going: every change settles at once. */
@@ -64,12 +79,12 @@ const printing = new WeakMap<ChangeState, [AbortController | null, AbortControll
 /**
  * The disc changes the bridge asks for, as the rules that make each one settle (the engine waits
  * in `swapping` until it does): a new change first ends the one in progress (a collection pasted
- * mid-change, then Play), a print that fails or keeps it waiting never stops one, and the teardown
- * settles them all. No React and no renderer, on an injected clock, so node tests can drive it;
- * useDirector draws its poses.
+ * mid-change, then Play), a print that fails or keeps it waiting never stops one, a hidden page
+ * (which draws no frame) never holds one up, and the teardown settles them all. No React and no
+ * renderer, on an injected clock, so node tests can drive it; useDirector draws its poses.
  */
 export function createSwapController(options: SwapControllerOptions): SwapController {
-  const { rig, paint, reduced, clock, onPrintFailed } = options;
+  const { rig, paint, reduced, hidden, clock, onPrintFailed } = options;
   let current: Change | null = null;
   let disposed = false;
 
@@ -95,7 +110,7 @@ export function createSwapController(options: SwapControllerOptions): SwapContro
     const target: 0 | 1 = kind === 'insert' ? rig.lidCase : rig.lidCase === 0 ? 1 : 0;
     rig.swapping = true;
     return new Promise<void>((resolve) => {
-      // The pending wait: for the print, then (reduced motion) the beat.
+      // The pending wait: for the print, then the timeline's fallback or the reduced-motion beat.
       let cancel = () => {};
       const change: Change = {
         kind,
@@ -114,7 +129,8 @@ export function createSwapController(options: SwapControllerOptions): SwapContro
       const printed = () => {
         if (change.phase !== 'printing') return;
         cancel();
-        if (disposed) {
+        // A hidden page draws no frame to play the timeline in: the change is done at once.
+        if (disposed || hidden()) {
           change.end();
         } else if (reduced) {
           finishSwap(rig, kind);
@@ -123,11 +139,16 @@ export function createSwapController(options: SwapControllerOptions): SwapContro
         } else {
           change.phase = 'turning';
           change.start = clock.now();
+          // Frames end it; the clock does too, should the page be hidden before they can.
+          cancel = clock.after(DURATION[kind] + SETTLE_SLACK_MS, change.end);
         }
       };
       current = change;
-      cancel = clock.after(PRINT_WAIT_MS, printed);
       void print(target, to).then(printed);
+      // Asked for in a hidden page (the next track of a background tab): done at once, without
+      // waiting for its print, which still lands on its disc whenever it can.
+      if (hidden()) change.end();
+      else cancel = clock.after(PRINT_WAIT_MS, printed);
     });
   };
 

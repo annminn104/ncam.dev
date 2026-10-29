@@ -6,6 +6,7 @@ import {
   createSwapController,
   PRINT_WAIT_MS,
   REDUCED_MOTION_MS,
+  SETTLE_SLACK_MS,
   type SwapClock,
 } from './swap-controller';
 
@@ -24,8 +25,10 @@ const view = (patch: Partial<SceneView>): SceneView => ({ ...EMPTY_VIEW, ...patc
 const flush = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
 
 /** A controller on a fake clock whose prints land (or fail) when the test says. */
-function harness(options: { reduced?: boolean; rig?: ChangeState } = {}) {
+function harness(options: { reduced?: boolean; hidden?: boolean; rig?: ChangeState } = {}) {
   const rig: ChangeState = options.rig ?? { lidCase: 0, seated: null, swapping: false };
+  /** The page as the controller sees it; a test hides it by flipping `hidden`. */
+  const page = { hidden: options.hidden ?? false };
   let now = 0;
   let timers: { at: number; done(): void }[] = [];
   const clock: SwapClock = {
@@ -49,6 +52,7 @@ function harness(options: { reduced?: boolean; rig?: ChangeState } = {}) {
   const controller = createSwapController({
     rig,
     reduced: options.reduced ?? false,
+    hidden: () => page.hidden,
     clock,
     onPrintFailed: failed,
     paint: (index, view, signal) =>
@@ -60,6 +64,7 @@ function harness(options: { reduced?: boolean; rig?: ChangeState } = {}) {
   const poses: [SwapKind, number, 0 | 1][] = [];
   return {
     rig,
+    page,
     controller,
     prints,
     failed,
@@ -162,6 +167,7 @@ describe('createSwapController', () => {
     const controller = createSwapController({
       rig,
       reduced: false,
+      hidden: () => false,
       clock: { now: () => 0, after: () => () => {} },
       onPrintFailed: failed,
       paint: () => {
@@ -169,14 +175,19 @@ describe('createSwapController', () => {
       },
     });
     await expect(controller.print(0, track('a'))).resolves.toBeUndefined();
-    const pending = controller.swap(track('b'));
+    controller.seat(view({ current: track('b'), status: 'playing' }));
+    expect(rig.seated).toBe(0);
+    const pending = controller.swap(track('c'));
     await flush();
-    expect(failed).toHaveBeenCalledTimes(2);
-    expect(failed).toHaveBeenLastCalledWith(error, expect.objectContaining({ id: 'b' }));
+    expect(failed.mock.calls.map(([thrown, { id }]) => [thrown, id])).toEqual([
+      [error, 'a'],
+      [error, 'b'],
+      [error, 'c'],
+    ]);
     expect(controller.frame(() => {})).toBe(true);
     controller.dispose();
     await expect(pending).resolves.toBeUndefined();
-    expect(rig).toEqual({ lidCase: 0, seated: 0, swapping: false });
+    expect(rig).toEqual({ lidCase: 1, seated: 1, swapping: false });
   });
 
   it('settles a change at once when the scene goes mid-print, and its late print starts nothing', async () => {
@@ -189,6 +200,44 @@ describe('createSwapController', () => {
     h.prints[0].land();
     await flush();
     expect(h.frame(500)).toBe(false);
+  });
+
+  it('ends a timeline on the clock when no frame comes (the page hidden mid-change)', async () => {
+    const h = harness({ rig: { lidCase: 0, seated: 0, swapping: false } });
+    const change = h.swap('b');
+    h.prints[0].land();
+    await flush();
+    h.page.hidden = true;
+    h.advance(DURATION.change);
+    await flush();
+    expect(change.settled).toBe(false);
+    h.advance(DURATION.change + SETTLE_SLACK_MS);
+    await flush();
+    expect(change.settled).toBe(true);
+    expect(h.rig).toEqual({ lidCase: 1, seated: 1, swapping: false });
+  });
+
+  it('finishes a change at once in a hidden page, with no frame and no wait for its print', async () => {
+    const h = harness({ hidden: true });
+    const change = h.swap('a');
+    await flush();
+    expect(change.settled).toBe(true);
+    expect(h.rig).toEqual({ lidCase: 0, seated: 0, swapping: false });
+    expect(h.frame(100)).toBe(false);
+    // Its print still goes on, to land on the disc whenever it can.
+    expect(h.prints.map(({ index, id }) => [index, id])).toEqual([[0, 'a']]);
+    expect(h.prints[0].signal?.aborted).toBe(false);
+  });
+
+  it('finishes a change at once when its print returns while the page is hidden', async () => {
+    const h = harness({ rig: { lidCase: 1, seated: 1, swapping: false } });
+    const change = h.swap('b');
+    h.page.hidden = true;
+    h.prints[0].land();
+    await flush();
+    expect(change.settled).toBe(true);
+    expect(h.rig).toEqual({ lidCase: 0, seated: 0, swapping: false });
+    expect(h.frame(100)).toBe(false);
   });
 
   it('settles a change at once when the scene goes mid-timeline', async () => {

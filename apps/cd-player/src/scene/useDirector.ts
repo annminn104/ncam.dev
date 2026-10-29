@@ -1,20 +1,19 @@
 import { createLogger } from '@ncam/logger';
 import { useFrame } from '@react-three/fiber';
 import { useEffect, useRef } from 'react';
-import type { SceneBridge, TrackView } from '../bridge';
+import type { SceneBridge } from '../bridge';
 import { restingPose, swapPose } from './director';
 import { applyPose, type Rig } from './rig';
-import { createSwapController, type SwapClock, type SwapController } from './swap-controller';
+import {
+  createSwapController,
+  type Painter,
+  type SwapClock,
+  type SwapController,
+} from './swap-controller';
+
+export type { Painter } from './swap-controller';
 
 const log = createLogger({ scope: 'cd-player' });
-
-/**
- * Prints `view` on disc `index` and its case's booklet. A change waits for it at most
- * PRINT_WAIT_MS, then runs on the prints the disc has; a print that lands later still shows. The
- * director aborts `signal` once a newer print of the same disc starts: check it before drawing, so
- * a stale print never covers a newer one.
- */
-export type Painter = (index: 0 | 1, view: TrackView, signal?: AbortSignal) => Promise<void>;
 
 const clock: SwapClock = {
   now: () => performance.now(),
@@ -37,6 +36,7 @@ export function useDirector(rig: Rig, bridge: SceneBridge, paint: Painter): void
       rig,
       paint,
       reduced: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+      hidden: () => document.hidden,
       clock,
       onPrintFailed: (error, view) =>
         log.warn('cd-player.print-failed', { track: view.id, error: String(error) }),

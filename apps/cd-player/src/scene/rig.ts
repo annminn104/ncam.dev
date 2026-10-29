@@ -31,6 +31,8 @@ const CASE_SHRINK_SHARE = 0.3;
  * the tray, toward the visitor (checked against cd-player.glb).
  */
 const CASE_OPEN_RAD = (105 * Math.PI) / 180;
+/** From this share of the way out (a case's slide, a disc's way into a hidden case) it is hidden. */
+const HIDDEN_FROM = 0.999;
 const ARM_LIFT_M = 0.006;
 const RISE_M = 0.035;
 const ARC_M = 0.09;
@@ -146,7 +148,7 @@ export function rigFor(model: PlayerModel): Rig {
 
 function placeCase(item: CaseInstance, pose: CasePose | null): void {
   const away = pose ? Math.abs(pose.slide) : 1;
-  if (!pose || away >= 0.999) {
+  if (!pose || away >= HIDDEN_FROM) {
     item.object.visible = false;
     return;
   }
@@ -171,7 +173,7 @@ const control = new Vector3();
 const spinQuaternion = new Quaternion();
 
 function placeDisc(rig: Rig, disc: DiscInstance, owner: CaseInstance, pose: DiscPose | null): void {
-  if (!pose || (pose.along >= 0.999 && !owner.object.visible)) {
+  if (!pose || (pose.along >= HIDDEN_FROM && !owner.object.visible)) {
     disc.object.visible = false;
     return;
   }
