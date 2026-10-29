@@ -24,6 +24,7 @@ const HOLODEX_REMOTE = env('HOLODEX_REMOTE_URL', 'http://localhost:9007/remoteEn
 const CHESS_REMOTE = env('CHESS_REMOTE_URL', 'http://localhost:9008/remoteEntry.js');
 const MINI_STORE_REMOTE = env('MINI_STORE_REMOTE_URL', 'http://localhost:9009/remoteEntry.js');
 const GARDEN_HOME_REMOTE = env('GARDEN_HOME_REMOTE_URL', 'http://localhost:9010/remoteEntry.js');
+const CD_PLAYER_REMOTE = env('CD_PLAYER_REMOTE_URL', 'http://localhost:9011/remoteEntry.js');
 const PORTFOLIO_PORT = Number(env('PORTFOLIO_PORT', '9000'));
 
 /**
@@ -197,6 +198,11 @@ export default defineConfig({
           type: 'module',
           name: 'garden_home',
           entry: GARDEN_HOME_REMOTE,
+        },
+        cd_player: {
+          type: 'module',
+          name: 'cd_player',
+          entry: CD_PLAYER_REMOTE,
         },
       },
       shared: {

@@ -97,6 +97,7 @@ describe('sitemapXml', () => {
       'https://ncam.dev/projects/chess',
       'https://ncam.dev/projects/mini-store',
       'https://ncam.dev/projects/garden-home',
+      'https://ncam.dev/projects/cd-player',
     ]);
     expect(xml).not.toContain('<lastmod>');
     expect(xml).not.toMatch(/changefreq|priority/);
@@ -211,7 +212,10 @@ describe('llmsTxt', () => {
     expect(text).toContain(
       '- [Garden Home](https://ncam.dev/projects/garden-home): A glass villa and its garden island, cut away floor by floor',
     );
-    expect(text.match(/^- \[.+\]\(https:\/\/ncam\.dev\/projects\//gm)).toHaveLength(9);
+    expect(text).toContain(
+      '- [CD Player](https://ncam.dev/projects/cd-player): Any Spotify playlist on a suitcase CD player',
+    );
+    expect(text.match(/^- \[.+\]\(https:\/\/ncam\.dev\/projects\//gm)).toHaveLength(10);
   });
 
   it('lists the newest indexable posts on one line each, and omits the section with none', () => {

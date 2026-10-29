@@ -167,6 +167,22 @@ export const projects: ProjectEntry[] = [
     module: './mount',
     status: 'live',
   },
+  {
+    id: 'cd-player',
+    name: 'CD Player',
+    tagline: 'Any Spotify playlist on a suitcase CD player',
+    description:
+      "Paste a Spotify playlist or album and it plays on a 3D suitcase CD player: each track's disc flies out of the crystal case in the lid onto the spindle, printed with the artist, over the album art. Spotify's embed and iFrame API, React Three Fiber, a model generated in Blender.",
+    accent: '#E296A4',
+    thumbnail: '/thumbnails/cd-player.jpg',
+    // MF remote name must be a valid identifier → underscore (route id stays kebab).
+    remote: 'cd_player',
+    module: './mount',
+    status: 'live',
+    // /playlist/<id> and /album/<id> are the visitor's own pages (apps/cd-player/src/routes.ts).
+    // None is listed in the sitemap: they are whatever visitors bring.
+    routeAware: true,
+  },
 ];
 
 export function getProject(id: string): ProjectEntry | undefined {

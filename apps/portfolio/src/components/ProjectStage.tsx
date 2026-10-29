@@ -39,6 +39,7 @@ export const ssrLoaders: Record<string, () => Promise<unknown>> = {
   chess: () => import('chess/ssr'),
   mini_store: () => import('mini_store/ssr'),
   garden_home: () => import('garden_home/ssr'),
+  cd_player: () => import('cd_player/ssr'),
 };
 const hydrateLoaders: Record<string, () => Promise<HydrateModule>> = {
   toonhub: () => import('toonhub/hydrate'),
@@ -50,6 +51,7 @@ const hydrateLoaders: Record<string, () => Promise<HydrateModule>> = {
   chess: () => import('chess/hydrate'),
   mini_store: () => import('mini_store/hydrate'),
   garden_home: () => import('garden_home/hydrate'),
+  cd_player: () => import('cd_player/hydrate'),
 };
 const mountLoaders: Record<string, () => Promise<MountModule>> = {
   toonhub: () => import('toonhub/mount'),
@@ -61,6 +63,7 @@ const mountLoaders: Record<string, () => Promise<MountModule>> = {
   chess: () => import('chess/mount'),
   mini_store: () => import('mini_store/mount'),
   garden_home: () => import('garden_home/mount'),
+  cd_player: () => import('cd_player/mount'),
 };
 
 /**
