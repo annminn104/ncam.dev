@@ -155,7 +155,7 @@ export class PlayerEngine {
       },
       (error: unknown) => {
         if (this.disposed || !sameCollection(this.snapshot.ref, ref)) return;
-        this.set({ loading: false, error: requestErrorMessage(error) });
+        this.set({ loading: false, error: requestErrorMessage(error, ref.type) });
       },
     );
   }

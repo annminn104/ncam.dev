@@ -55,11 +55,17 @@ describe('createSpotifyClient', () => {
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 
-  it('words errors for people', () => {
-    expect(requestErrorMessage(new SpotifyRequestError('not_found', 404))).toMatch(
-      /private or deleted/,
+  it('words errors for people, naming what could not be opened', () => {
+    const missing = new SpotifyRequestError('not_found', 404);
+    expect(requestErrorMessage(missing, 'playlist')).toBe(
+      "We couldn't open that playlist. It may be private or deleted.",
     );
-    expect(requestErrorMessage(new SpotifyRequestError('upstream', 502))).toMatch(/try again/i);
-    expect(requestErrorMessage(new Error('x'))).toMatch(/try again/i);
+    expect(requestErrorMessage(missing, 'album')).toBe(
+      "We couldn't open that album. It may be private or deleted.",
+    );
+    expect(requestErrorMessage(new SpotifyRequestError('upstream', 502), 'album')).toMatch(
+      /try again/i,
+    );
+    expect(requestErrorMessage(new Error('x'), 'playlist')).toMatch(/try again/i);
   });
 });

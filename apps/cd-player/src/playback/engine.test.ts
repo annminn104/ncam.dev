@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createBridge } from '../bridge';
-import type { SpotifyClient } from '../spotify/client';
+import { SpotifyRequestError, type SpotifyClient } from '../spotify/client';
 import type { ArtistDetail, Collection, TrackDetail } from '../spotify/types';
 import type { EmbedCallbacks, EmbedPlayer } from './embed-controller';
 import { PlayerEngine } from './engine';
@@ -305,6 +305,16 @@ describe('PlayerEngine', () => {
     engine.open(ref);
     await flush();
     expect(engine.getSnapshot().error).toMatch(/try again/i);
+  });
+
+  it('names an album it cannot open as an album', async () => {
+    const { engine, client, flush } = setup();
+    vi.mocked(client.collection).mockRejectedValueOnce(new SpotifyRequestError('not_found', 404));
+    engine.open({ type: 'album', id: collection.id });
+    await flush();
+    expect(engine.getSnapshot().error).toBe(
+      "We couldn't open that album. It may be private or deleted.",
+    );
   });
 
   // With no player there is no music, so the sequencer must not stay `playing` (the next press of

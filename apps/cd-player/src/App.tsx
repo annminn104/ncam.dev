@@ -139,7 +139,7 @@ export default function App({ controller, initial = null, assetBase = '' }: AppP
         writeLast(safeStorage(), link.ref);
         controller.navigate(collectionPath(link.ref));
       } catch (error) {
-        setLinkError(requestErrorMessage(error));
+        setLinkError(requestErrorMessage(error, link.ref.type));
       } finally {
         setLinkBusy(false);
       }

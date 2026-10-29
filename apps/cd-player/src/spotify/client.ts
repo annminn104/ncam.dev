@@ -1,4 +1,4 @@
-import type { CollectionRef } from '../routes';
+import type { CollectionRef, CollectionType } from '../routes';
 import { SPOTIFY_ROUTE } from './api-route';
 import type { ArtistDetail, Collection, TrackDetail } from './types';
 
@@ -79,9 +79,10 @@ export function createSpotifyClient(
   };
 }
 
-export function requestErrorMessage(error: unknown): string {
+/** What the visitor reads when the collection `type` was asked for and `error` came back. */
+export function requestErrorMessage(error: unknown, type: CollectionType): string {
   if (error instanceof SpotifyRequestError && error.code === 'not_found') {
-    return "We couldn't open that playlist. It may be private or deleted.";
+    return `We couldn't open that ${type}. It may be private or deleted.`;
   }
   return "Spotify didn't answer. Try again in a moment.";
 }
