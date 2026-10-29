@@ -155,30 +155,54 @@ describe('createEmbedPlayer', () => {
     }
   });
 
-  it('goes back to the start by restarting a playing track, and to 1 s of a paused one', async () => {
-    // The embed ignores a seek to under a second; its restart plays from the start.
-    const { api, controller } = fakeApi();
-    const callbacks = { onStarted: vi.fn(), onUpdate: vi.fn(), onEnded: vi.fn() };
-    const player = await createEmbedPlayer({} as HTMLElement, 'spotify:track:a', callbacks, api);
-    player.load('spotify:track:a');
-    player.seek(0);
-    player.seek(800);
-    expect(controller.restart).toHaveBeenCalledTimes(2);
-    expect(controller.seek).not.toHaveBeenCalled();
-    // Stop: paused, back to the start, and still paused.
-    player.pause();
-    player.seek(0);
-    expect(controller.seek).toHaveBeenCalledWith(1);
-    expect(controller.restart).toHaveBeenCalledTimes(2);
-    player.resume();
-    player.seek(0);
-    expect(controller.restart).toHaveBeenCalledTimes(3);
-    player.pause();
-    player.load('spotify:track:b');
-    player.seek(0);
-    expect(controller.restart).toHaveBeenCalledTimes(4);
-    player.seek(1000);
-    expect(controller.seek).toHaveBeenLastCalledWith(1);
+  // The embed ignores a seek to under a second; its restart plays from the start.
+  describe('seek()', () => {
+    /** A player whose first track is loaded and playing. */
+    async function loaded() {
+      const { api, controller } = fakeApi();
+      const callbacks = { onStarted: vi.fn(), onUpdate: vi.fn(), onEnded: vi.fn() };
+      const player = await createEmbedPlayer({} as HTMLElement, 'spotify:track:a', callbacks, api);
+      player.load('spotify:track:a');
+      return { player, controller };
+    }
+
+    it('takes a playing track back to its start by restarting it', async () => {
+      const { player, controller } = await loaded();
+      player.seek(0);
+      player.seek(800);
+      expect(controller.restart).toHaveBeenCalledTimes(2);
+      expect(controller.seek).not.toHaveBeenCalled();
+    });
+
+    it('takes a paused track to its first second and leaves it paused (Stop)', async () => {
+      const { player, controller } = await loaded();
+      player.pause();
+      player.seek(0);
+      expect(controller.seek).toHaveBeenCalledWith(1);
+      expect(controller.restart).not.toHaveBeenCalled();
+      // Resumed, or loaded again (a load plays), it restarts.
+      player.resume();
+      player.seek(0);
+      expect(controller.restart).toHaveBeenCalledTimes(1);
+      player.pause();
+      player.load('spotify:track:b');
+      player.seek(0);
+      expect(controller.restart).toHaveBeenCalledTimes(2);
+    });
+
+    it('seeks a second or more in seconds, paused or playing, and never restarts for it', async () => {
+      const { player, controller } = await loaded();
+      player.pause();
+      player.seek(5000);
+      expect(controller.seek).toHaveBeenLastCalledWith(5);
+      player.resume();
+      player.seek(1500);
+      expect(controller.seek).toHaveBeenLastCalledWith(1.5);
+      player.seek(1000);
+      expect(controller.seek).toHaveBeenLastCalledWith(1);
+      expect(controller.seek).toHaveBeenCalledTimes(3);
+      expect(controller.restart).not.toHaveBeenCalled();
+    });
   });
 
   // `createController` loads the track it is given; loading it again would load the embed's page a
