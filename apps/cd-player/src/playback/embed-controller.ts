@@ -142,6 +142,12 @@ export async function createEmbedPlayer(
   );
   // Whether the page last told the embed to pause: a paused track must not play when it rewinds.
   let paused = false;
+  // `createController` has loaded `firstUri` already, and Spotify's script never takes a uri for the
+  // one it holds: a `loadUri` of it would load the embed's page again, and the music would wait for
+  // that. So the first load of `firstUri` only plays (the script holds the command until its iframe
+  // is ready). Every other load goes through `loadUri`, later ones of `firstUri` too: once a track
+  // has ended, the embed has dropped its list.
+  let fresh = true;
   return {
     load(uri) {
       previous = expected;
@@ -149,7 +155,8 @@ export async function createEmbedPlayer(
       ended = false;
       last = null;
       paused = false;
-      controller.loadUri(uri);
+      if (!fresh || uri !== firstUri) controller.loadUri(uri);
+      fresh = false;
       controller.play();
     },
     pause: () => {

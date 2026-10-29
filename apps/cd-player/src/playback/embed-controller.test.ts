@@ -181,6 +181,40 @@ describe('createEmbedPlayer', () => {
     expect(controller.seek).toHaveBeenLastCalledWith(1);
   });
 
+  // `createController` loads the track it is given; loading it again would load the embed's page a
+  // second time (Spotify's script never takes a uri for the one it holds).
+  describe('the first load()', () => {
+    async function embedOn(first: string) {
+      const { api, controller } = fakeApi();
+      const callbacks = { onStarted: vi.fn(), onUpdate: vi.fn(), onEnded: vi.fn() };
+      const player = await createEmbedPlayer({} as HTMLElement, first, callbacks, api);
+      return { player, controller };
+    }
+
+    it('only plays the track the embed was created on', async () => {
+      const { player, controller } = await embedOn('spotify:track:a');
+      player.load('spotify:track:a');
+      expect(controller.loadUri).not.toHaveBeenCalled();
+      expect(controller.play).toHaveBeenCalledTimes(1);
+    });
+
+    it('loads any other track', async () => {
+      const { player, controller } = await embedOn('spotify:track:a');
+      player.load('spotify:track:b');
+      expect(controller.loadUri).toHaveBeenCalledWith('spotify:track:b');
+      expect(controller.play).toHaveBeenCalledTimes(1);
+    });
+
+    it('is the only one: a later load of the first track loads it (after an end, the list is gone)', async () => {
+      const { player, controller } = await embedOn('spotify:track:a');
+      player.load('spotify:track:a');
+      player.load('spotify:track:a');
+      expect(controller.loadUri).toHaveBeenCalledTimes(1);
+      expect(controller.loadUri).toHaveBeenCalledWith('spotify:track:a');
+      expect(controller.play).toHaveBeenCalledTimes(2);
+    });
+  });
+
   describe('after load()', () => {
     /** An embed created on `first` and told to load each of `uris` in turn. */
     async function embedAfter(first: string, ...uris: string[]) {
