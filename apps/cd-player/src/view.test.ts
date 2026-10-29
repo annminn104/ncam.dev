@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { initialSeq, step } from './playback/sequencer';
 import type { ArtistDetail, Collection, TrackDetail } from './spotify/types';
-import { backdropFor, formatDuration, nowPlayingFor, sceneView, trackView } from './view';
+import {
+  backdropFor,
+  formatDuration,
+  nowPlayingFor,
+  sceneView,
+  seekRange,
+  trackView,
+} from './view';
 
 const collection: Collection = {
   type: 'playlist',
@@ -93,5 +100,18 @@ describe('view model', () => {
     expect(formatDuration(0)).toBe('0:00');
     expect(formatDuration(208_810)).toBe('3:28');
     expect(formatDuration(3_600_000)).toBe('60:00');
+  });
+
+  it('counts the seek slider in the whole seconds the time shows', () => {
+    // 1:23 of 3:28, the way formatDuration reads them (it floors).
+    expect(seekRange(83_700, 208_810)).toEqual({ max: 208, value: 83 });
+    expect(seekRange(0, 208_810)).toEqual({ max: 208, value: 0 });
+  });
+
+  it('keeps the slider inside its range', () => {
+    // An update a moment past the end, a negative start, and a position before a duration is known.
+    expect(seekRange(209_900, 208_810).value).toBe(208);
+    expect(seekRange(-500, 208_810).value).toBe(0);
+    expect(seekRange(5_000, 0)).toEqual({ max: 0, value: 0 });
   });
 });

@@ -200,12 +200,19 @@ export default function App({ controller, initial = null, assetBase = '' }: AppP
         status={snapshot.seq.status}
         positionMs={snapshot.seq.positionMs}
         durationMs={snapshot.seq.durationMs}
+        repeat={snapshot.seq.repeat}
+        shuffle={snapshot.seq.shuffle}
         embed={snapshot.embed}
         hint={snapshot.hint}
         embedRef={embedHost}
         onPrev={() => act({ type: 'PREV' })}
         onToggle={() => act({ type: 'TOGGLE' })}
         onNext={() => act({ type: 'NEXT' })}
+        onStop={() => act({ type: 'STOP' })}
+        onRepeat={() => act({ type: 'TOGGLE_REPEAT' })}
+        // The seed the deck's MODE key sends (PlayerEngine.onAction).
+        onShuffle={() => act({ type: 'TOGGLE_SHUFFLE', seed: Date.now() })}
+        onSeek={(ms) => act({ type: 'SEEK', ms })}
       />
       <Hud />
       <EnterButton phase={boot.phase} failure={boot.failure} onStart={start} />

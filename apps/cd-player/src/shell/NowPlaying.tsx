@@ -1,14 +1,24 @@
 import type { RefObject } from 'react';
 import type { EmbedState } from '../playback/engine';
 import type { Status } from '../playback/sequencer';
-import { formatDuration } from '../view';
-import { NextIcon, PauseIcon, PlayIcon, PrevIcon } from './Icons';
+import {
+  NextIcon,
+  PauseIcon,
+  PlayIcon,
+  PrevIcon,
+  RepeatIcon,
+  ShuffleIcon,
+  StopIcon,
+} from './Icons';
+import { SeekSlider } from './SeekSlider';
 
 interface Props {
   now: { title: string; artists: string; trackNo: number; total: number } | null;
   status: Status;
   positionMs: number;
   durationMs: number;
+  repeat: boolean;
+  shuffle: boolean;
   embed: EmbedState;
   hint: boolean;
   /** Where Spotify's widget goes: React renders no children into it. */
@@ -16,6 +26,11 @@ interface Props {
   onPrev(): void;
   onToggle(): void;
   onNext(): void;
+  onStop(): void;
+  onRepeat(): void;
+  onShuffle(): void;
+  /** Seeks to `ms` into the track. */
+  onSeek(ms: number): void;
 }
 
 export function NowPlaying({
@@ -23,15 +38,20 @@ export function NowPlaying({
   status,
   positionMs,
   durationMs,
+  repeat,
+  shuffle,
   embed,
   hint,
   embedRef,
   onPrev,
   onToggle,
   onNext,
+  onStop,
+  onRepeat,
+  onShuffle,
+  onSeek,
 }: Props) {
   const playing = status === 'playing' || status === 'swapping';
-  const ratio = durationMs > 0 ? Math.min(1, positionMs / durationMs) : 0;
   return (
     <section className="cdp-now" aria-label="Now playing">
       <div className="cdp-now__head">
@@ -57,25 +77,50 @@ export function NowPlaying({
           </button>
         </div>
       </div>
-      <div
-        className="cdp-now__progress"
-        role="progressbar"
-        aria-label="Track progress"
-        aria-valuemin={0}
-        aria-valuemax={Math.round(durationMs / 1000)}
-        aria-valuenow={Math.round(positionMs / 1000)}
-        aria-valuetext={`${formatDuration(positionMs)} of ${formatDuration(durationMs)}`}
-      >
-        <span style={{ transform: `scaleX(${ratio})` }} />
+      {/* The deck's knob and its Stop, Repeat and MODE (Shuffle) keys, which on a phone are a few
+          pixels wide in the 3D view. DOM order is visual order, and so the Tab order. */}
+      <div className="cdp-now__row">
+        <SeekSlider
+          positionMs={positionMs}
+          durationMs={durationMs}
+          disabled={status === 'idle' || durationMs <= 0}
+          onSeek={onSeek}
+        />
+        <button
+          type="button"
+          className="cdp-round cdp-round--small"
+          onClick={onStop}
+          aria-label="Stop"
+        >
+          <StopIcon />
+        </button>
+        <button
+          type="button"
+          className="cdp-round cdp-round--small"
+          onClick={onRepeat}
+          aria-label="Repeat"
+          aria-pressed={repeat}
+        >
+          <RepeatIcon />
+        </button>
+        <button
+          type="button"
+          className="cdp-round cdp-round--small"
+          onClick={onShuffle}
+          aria-label="Shuffle"
+          aria-pressed={shuffle}
+        >
+          <ShuffleIcon />
+        </button>
       </div>
       <div className="cdp-now__embed" ref={embedRef} />
       {embed === 'off' && (
-        <p className="cdp-now__note">
+        <p className="cdp-now__note cdp-now__note--lead">
           Press play to connect Spotify. Log in to Spotify in this browser to hear full tracks.
         </p>
       )}
       {embed === 'blocked' && (
-        <p className="cdp-now__note" role="alert">
+        <p className="cdp-now__note cdp-now__note--lead" role="alert">
           The Spotify player could not load here. An ad blocker or a privacy setting may be blocking
           it.
         </p>

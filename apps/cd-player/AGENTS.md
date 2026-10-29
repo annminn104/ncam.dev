@@ -177,8 +177,40 @@ the start its own way: a playing track restarts (the controller's `restart()`), 
 at its first second, since a restart would play it.
 
 Keyboard (`App.tsx`): Space plays or pauses, N and P change tracks, never with a modifier or while
-focus is in a field or on a button, and a held key is one press. Every music action from the DOM
-also opens the scene from the poster.
+focus is in a field or on a button (so Space on a button, or on the slider, is the browser's own),
+and a held key is one press. Every music action from the DOM also opens the scene from the poster.
+
+**The card's controls** (`src/shell/NowPlaying.tsx`) give every 3D control a DOM equivalent, for
+the keyboard, a screen reader and a phone. The head has Previous, Play or Pause and Next; the row
+under it, which replaced the old progress bar, has the **Seek** slider (`src/shell/SeekSlider.tsx`,
+the knob's counterpart) and the small round **Stop**, **Repeat** and **Shuffle** keys (28 px,
+`cdp-round--small`). DOM order is the Tab order: Previous, Play, Next, Seek, Stop, Repeat, Shuffle
+(Tab skips the slider while it is disabled). Repeat and Shuffle are switches: `aria-pressed`, and
+when on a blush tint, a gold icon and a dot under it, so the state is not colour alone. Shuffle
+sends `TOGGLE_SHUFFLE` with `Date.now()` as the seed, as the deck's MODE key does (`onAction` in
+`engine.ts`). All of them go through `act`, so a press from the poster also opens the scene.
+
+The slider is a native `<input type="range">` counted in whole seconds (`seekRange` in `src/view.ts`
+floors, as `formatDuration` does), disabled while the status is `idle` or the duration is 0, with an
+`aria-valuetext` like "1:23 of 3:45". **One seek per gesture**: React's `onChange` is the `input`
+event, one per step of a drag, and only sets a held value that the thumb shows, so the position
+updates that keep arriving cannot pull it from under the finger. The native `change` event (bound
+through a ref, since React does not hand it out) sends `SEEK` once, when the visitor lets go or at
+each arrow-key press, and ends the hold. A gesture that ends with no `change` (Chrome sends none
+for a cancelled touch) ends it on its own, a task after the pointer is released or cancelled. A
+seek under a second goes through `restart()` (above), so a drag or Home to 0 needs nothing here.
+The thumb is laid out and drawn only while it shows: on hover, keyboard focus and press, and always
+where there is no hover (`@media (hover: none)`). `--cdp-shown` in `styles/app.css` is 1 then, so
+at rest the bar fills exactly to the position, as the old bar did, and with the thumb out the fill
+ends under its centre (the end moves a few px as the thumb comes in). The `::-webkit-slider-*`
+rules have been looked at in Chromium; the `::-moz-range-*` ones in no browser yet.
+
+**The row's height is budgeted.** It replaced a 14 + 4 + 12 px block and may grow the card by 12 px
+at most (8 + 28 + 6 px): a narrow screen's framing lifts the player clear of the card by a fixed
+aim (`src/scene/framing.ts`), not by the card's height. A note that stands where the embed would be
+(`cdp-now__note--lead`) therefore has no top margin of its own: it would collapse with the row's 6
+px into 10 and cost 4 px more. Measured at 1280 × 720 and 390 × 844, with the note and with the
+embed in: +12.00 px each.
 
 **When a track has ended** (`hasEnded`): an update paused within 500 ms of the end, or snapped back
 to 0 just after being within 1.5 s of it (the same uri), never while buffering. ENDED then moves
@@ -193,9 +225,9 @@ would not let play by itself), and the note goes once playback starts. A slow ma
 longer than that over the first track (7 to 11 s from the press in headless Chromium on
 SwiftShader), so the hint may show for a moment and go by itself.
 
-**No volume.** The iFrame API has no volume, so the knob scrubs (see "The scene"). Per Spotify's
-Widget Terms the widget stays visible in the card while it plays: never hide it, and never play
-the audio any other way.
+**No volume.** The iFrame API has no volume, so the knob scrubs (see "The scene"), and the card's
+Seek slider does the same in the DOM. Per Spotify's Widget Terms the widget stays visible in the
+card while it plays: never hide it, and never play the audio any other way.
 
 ## The scene
 
@@ -296,12 +328,13 @@ arrives after its change began.
   the pointer counts. On pointerdown `btn_prev`, `btn_next`, `btn_play` (play or pause), `btn_stop`,
   `btn_rpt` (Repeat) and `btn_mode` (Shuffle) emit their `PlayerAction` through the bridge
   (`BUTTON_ACTIONS`), and the key sinks 1.2 mm and comes back over 160 ms (`PRESS_MS`). The cursor
-  turns to a hand over a key or the knob.
+  turns to a hand over a key or the knob. Every key has a DOM equivalent in the now-playing card
+  (see "Playback").
 - **The knob scrubs the track.** A turn is followed on the window, read around the middle of the
   knob's top (its pivot sits at its base), and one full turn is 30 s (`KNOB_MS_PER_TURN`). It emits
   one `seek {deltaMs}` only on a real release; a cancelled turn, or a mouse that moves with no
   button down (a native menu took the release), puts the knob back where the turn began and seeks
-  nothing.
+  nothing. The card's Seek slider is its DOM equivalent.
 - **A drag elsewhere orbits the view** (the primary button or a touch), within ±25° of yaw and ±10°
   of pitch, eased (`orbit.ts`). It **recentres on a mouse double-click, or a touch double tap**
   (two taps within 350 ms and 30 px, neither moving more than 10 px), unless that lands on a
@@ -417,14 +450,16 @@ after any change to the model, the lights, the camera or the framing, or the def
 
 ## Tests
 
-Unit tests (`src/**/*.test.ts`, node environment, run by the root `pnpm test`; 40 files and 267
+Unit tests (`src/**/*.test.ts`, node environment, run by the root `pnpm test`; 41 files and 279
 tests today):
 
 - the shell: `App.test.ts` and `ssr.test.ts` (the server render: the collection and its tracks, the
   state script, the fonts and the app's CSS, the head on a collection route only, the poster as the
   one high-priority image, no canvas, a render that still completes when Spotify fails or hangs),
   `ssr-graph.test.ts` (the import graphs), `ssr-state.test.ts`, `boot.test.ts`, `autoplay.test.ts`,
-  `failure.test.ts`, `webgl.test.ts`, `shell/EnterButton.test.ts`, `capture.test.ts` and
+  `failure.test.ts`, `webgl.test.ts`, `shell/EnterButton.test.ts`, `shell/NowPlaying.test.ts` (the
+  card's controls in Tab order, the switches' `aria-pressed`, the slider's numbers and when it is
+  disabled; its `change` handling needs a DOM, so that is by hand), `capture.test.ts` and
   `assets/poster/poster.test.ts`;
 - routes and personalisation: `routes.test.ts`, `route-controller.test.ts`, `persist.test.ts`,
   `spotify/link.test.ts`;
@@ -442,11 +477,12 @@ tests today):
 **By hand:** `art:build` and `capture:poster` (above), Lighthouse, and a pass in a real browser:
 the default page, a pasted playlist and album, the error messages, every control (the DOM card, the
 3D keys, the knob, the keyboard), the orbit, the poster's hand-over, reduced motion, WebGL off and
-the embed blocked. Logged-in full tracks, Safari, real phones and a real GPU need the owner's
-browsers. In headless Chromium on SwiftShader a Playwright click waits for its element to hold
-still over two frames (seconds while the scene draws), and two touch taps reach the page 500 ms or
-more apart, so a timed press (Previous within 3 s) or a double tap needs input sent straight to
-the page.
+the embed blocked. Logged-in full tracks, Safari, Firefox (the Seek slider's `::-moz-range-*`
+rules), real phones and a real GPU need the owner's browsers. In headless Chromium on SwiftShader a
+Playwright click waits for its element to hold still over two frames (seconds while the scene
+draws), and two touch taps reach the page 500 ms or more apart, so a timed press (Previous within
+3 s) or a double tap needs input sent straight to the page. A preview lasts under 30 s: a check
+that seeks, with the scene drawing slowly, pauses the track while it looks around.
 
 **Lighthouse.** The page is one of the audited paths (`/projects/cd-player`, the 13th of
 `AUDITED_PATHS` in `scripts/lighthouse/config.cjs`), so `LH_SHARD=13/13` audits it alone (the index
@@ -508,9 +544,12 @@ site"), in this order:
 - **The embed ignores a seek to under a second** (`seek(0)` included), and a paused embed reports a
   seek only once it plays again; Previous and Stop rewind through `restart()` and a seek to 1 s
   (see "Playback").
-- Stop, Repeat, Shuffle and the scrub exist only on the 3D deck; the now-playing card has Previous,
-  Play and Next, and the keyboard Space, N and P. On a 390 px phone a deck key is about 9 px
-  across and the knob 18, and from the hero view the knob hides much of the MODE key (Shuffle).
+- The deck's Stop, Repeat, MODE (Shuffle) and knob are small targets: on a 390 px phone a key is
+  about 9 px across and the knob 18, and from the hero view the knob hides much of the MODE key.
+  The now-playing card therefore has a DOM control for each (Stop, Repeat, Shuffle and the Seek
+  slider, besides Previous, Play and Next), and the keyboard keeps Space, N and P. The tracklist
+  does not reorder under Shuffle: it lists the playlist, and only the play order (`seq.order`)
+  changes.
 - Console noise that is not this app's: `THREE.Clock: This module has been deprecated` comes from
   R3F 9.8.2 itself, and `Allow attribute will take precedence over 'allowfullscreen'` from
   Spotify's iframe.

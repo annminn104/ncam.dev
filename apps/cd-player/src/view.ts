@@ -85,3 +85,13 @@ export function formatDuration(ms: number): string {
   const total = Math.max(0, Math.floor(ms / 1000));
   return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
 }
+
+/**
+ * The seek slider's range in whole seconds, floored like `formatDuration`, so the number the
+ * slider holds is the one the time reads. The position never reads past the end.
+ */
+export function seekRange(positionMs: number, durationMs: number): { max: number; value: number } {
+  const max = Math.max(0, Math.floor(durationMs / 1000));
+  const value = Math.min(max, Math.max(0, Math.floor(positionMs / 1000)));
+  return { max, value };
+}

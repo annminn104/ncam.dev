@@ -26,3 +26,26 @@ export const NextIcon = () => (
     <path d="M16 5h2v14h-2zM5 5.5v13l9.5-6.5L5 5.5z" fill="currentColor" />
   </svg>
 );
+export const StopIcon = () => (
+  <svg {...common}>
+    <path d="M6.5 6.5h11v11h-11z" fill="currentColor" />
+  </svg>
+);
+/** Two arrows chasing each other round a loop. */
+export const RepeatIcon = () => (
+  <svg {...common}>
+    <path
+      d="M3 13V9a2 2 0 0 1 2-2h10V4l5 4-5 4V9H5v4zM21 11v4a2 2 0 0 1-2 2H9v3l-5-4 5-4v3h10v-4z"
+      fill="currentColor"
+    />
+  </svg>
+);
+/** Two lines crossing, each ending in an arrow. */
+export const ShuffleIcon = () => (
+  <svg {...common}>
+    <path
+      d="M3 16h3.47l6-9H17V4.5L21.5 8 17 11.5V9h-3.47l-6 9H3zM3 8h3.47l6 9H17v2.5l4.5-3.5-4.5-3.5V15h-3.47l-6-9H3z"
+      fill="currentColor"
+    />
+  </svg>
+);

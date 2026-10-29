@@ -395,18 +395,120 @@
   background: linear-gradient(180deg, #fff 0%, #f6dfe4 100%);
   border-color: transparent;
 }
-.cdp-now__progress {
+/* The deck's Stop, Repeat and MODE keys and its knob, which are a few pixels wide in the 3D view on a
+   phone: the knob's seek slider, then the three small keys. This row takes the place of the old
+   progress bar (14 + 4 + 12 px) and may grow the card by 12 px at most, since a narrow screen's
+   framing lifts the player clear of the card by a fixed aim (src/scene/framing.ts). */
+.cdp-now__row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 0 6px;
+}
+.cdp-round--small {
+  position: relative;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+}
+.cdp-round--small svg {
+  width: 14px;
+  height: 14px;
+}
+/* A switch that is on is tinted and has a dot under its icon, so its state is not colour alone. */
+.cdp-round--small[aria-pressed='true'] {
+  color: var(--cdp-gold);
+  background: rgb(226 150 164 / 0.24);
+  border-color: var(--cdp-blush);
+}
+.cdp-round--small[aria-pressed='true']::after {
+  content: '';
+  position: absolute;
+  bottom: 3px;
+  left: calc(50% - 2px);
+  width: 4px;
   height: 4px;
-  margin: 14px 0 12px;
-  overflow: hidden;
+  background: currentcolor;
+  border-radius: 50%;
+}
+
+/* The seek slider is a native range input drawn as the 4 px bar it replaced, in a 28 px tall hit
+   area. `--cdp-ratio` (set inline) is how much is filled. The thumb shows on hover, on keyboard
+   focus, while pressed, and always where there is no hover; `--cdp-shown` is 1 then. Only then is
+   the thumb laid out, so at rest the bar fills exactly to the ratio, and with the thumb out the
+   fill ends under its centre, as the browser places it. Each engine's pseudo-elements are rules of
+   their own: a selector list with one it does not know is dropped whole. */
+.cdp-now__seek {
+  --cdp-thumb: 14px;
+  --cdp-shown: 0;
+  --cdp-fill: calc(
+    var(--cdp-thumb) / 2 * var(--cdp-shown) + (100% - var(--cdp-thumb) * var(--cdp-shown)) *
+      var(--cdp-ratio)
+  );
+  flex: 1;
+  min-width: 0;
+  height: 28px;
+  margin: 0;
+  padding: 0;
+  background: none;
+  border-radius: 999px;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.cdp-now__seek:hover:not(:disabled),
+.cdp-now__seek:active:not(:disabled),
+.cdp-now__seek:focus-visible {
+  --cdp-shown: 1;
+}
+@media (hover: none) {
+  .cdp-now__seek:not(:disabled) {
+    --cdp-shown: 1;
+  }
+}
+.cdp-now__seek:disabled {
+  cursor: default;
+}
+.cdp-now__seek::-webkit-slider-runnable-track {
+  height: 4px;
+  background:
+    linear-gradient(90deg, var(--cdp-blush), var(--cdp-gold)) 0 0 / var(--cdp-fill) 100% no-repeat,
+    rgb(255 255 255 / 0.14);
+  border-radius: 999px;
+}
+.cdp-now__seek::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: calc(var(--cdp-thumb) * var(--cdp-shown));
+  height: var(--cdp-thumb);
+  margin-top: calc((4px - var(--cdp-thumb)) / 2);
+  background: #fff;
+  border: 0;
+  border-radius: 50%;
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.4);
+  transform: scale(var(--cdp-shown));
+  transition: transform 120ms ease;
+}
+.cdp-now__seek::-moz-range-track {
+  height: 4px;
   background: rgb(255 255 255 / 0.14);
   border-radius: 999px;
 }
-.cdp-now__progress span {
-  display: block;
-  height: 100%;
+.cdp-now__seek::-moz-range-progress {
+  height: 4px;
   background: linear-gradient(90deg, var(--cdp-blush), var(--cdp-gold));
-  transform-origin: left center;
+  border-radius: 999px;
+}
+.cdp-now__seek::-moz-range-thumb {
+  width: calc(var(--cdp-thumb) * var(--cdp-shown));
+  height: var(--cdp-thumb);
+  background: #fff;
+  border: 0;
+  border-radius: 50%;
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.4);
+  transform: scale(var(--cdp-shown));
+  transition: transform 120ms ease;
 }
 .cdp-now__embed:empty {
   display: none;
@@ -422,6 +524,11 @@
   font-size: 12px;
   line-height: 1.45;
   color: var(--cdp-ink-soft);
+}
+/* A note that stands where the embed would be follows the row directly. Its own 10 px top margin
+   would collapse with the row's 6 px into 10, and grow the card 4 px past the row's budget. */
+.cdp-now__note--lead {
+  margin-top: 0;
 }
 
 /* ── help line and the way in ────────────────────────────────────────────── */
@@ -531,6 +638,12 @@
   }
   .cdp-scene,
   .cdp-tracks {
+    transition: none;
+  }
+  .cdp-now__seek::-webkit-slider-thumb {
+    transition: none;
+  }
+  .cdp-now__seek::-moz-range-thumb {
     transition: none;
   }
 }
