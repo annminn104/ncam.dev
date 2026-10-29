@@ -3,7 +3,8 @@ import { useMemo, useRef } from 'react';
 import type { SceneBridge } from '../bridge';
 import type { PlayerModel } from './model';
 import { rigFor } from './rig';
-import { useDirector, type Painter } from './useDirector';
+import { useSceneTextures } from './textures/useSceneTextures';
+import { useDirector } from './useDirector';
 
 interface Props {
   model: PlayerModel;
@@ -21,12 +22,10 @@ function useReadyProbe(onReady: () => void) {
   });
 }
 
-/** Until each track's art is printed on its disc and booklet, changes run on blank prints. */
-const blankPaint: Painter = async () => {};
-
 export function PlayerRig({ model, bridge, onReady }: Props) {
   const rig = useMemo(() => rigFor(model), [model]);
-  useDirector(rig, bridge, blankPaint);
+  const paint = useSceneTextures(rig, bridge);
+  useDirector(rig, bridge, paint);
   useReadyProbe(onReady);
   return <primitive object={model.root} />;
 }
