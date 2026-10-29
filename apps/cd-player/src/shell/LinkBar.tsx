@@ -8,18 +8,34 @@ interface Props {
   onSubmit(input: string): void;
 }
 
+/**
+ * Copies `text`: false when there is no clipboard (a page on plain http) or it refuses (a denied
+ * permission). It never rejects.
+ */
+export function copyText(
+  text: string,
+  clipboard: Pick<Clipboard, 'writeText'> | undefined,
+): Promise<boolean> {
+  if (!clipboard) return Promise.resolve(false);
+  return clipboard.writeText(text).then(
+    () => true,
+    () => false,
+  );
+}
+
 /** The collection's name, the link input (the page's personalisation) and Share. */
 export function LinkBar({ collection, loading, error, onSubmit }: Props) {
   const [value, setValue] = useState('');
-  const [copied, setCopied] = useState(false);
+  // What Share last did, said on its button for two seconds.
+  const [shared, setShared] = useState<'copied' | 'failed' | null>(null);
   const submit = (event: FormEvent) => {
     event.preventDefault();
     onSubmit(value);
   };
   const share = () => {
-    void navigator.clipboard?.writeText(window.location.href).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+    void copyText(window.location.href, navigator.clipboard).then((copied) => {
+      setShared(copied ? 'copied' : 'failed');
+      setTimeout(() => setShared(null), 2000);
     });
   };
   return (
@@ -49,7 +65,7 @@ export function LinkBar({ collection, loading, error, onSubmit }: Props) {
           {loading ? 'Loading…' : 'Load'}
         </button>
         <button type="button" className="cdp-button" onClick={share}>
-          {copied ? 'Copied' : 'Share'}
+          {shared === 'copied' ? 'Copied' : shared === 'failed' ? "Couldn't copy" : 'Share'}
         </button>
       </form>
       {error && (
