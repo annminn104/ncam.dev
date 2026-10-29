@@ -525,6 +525,36 @@ describe('PlayerEngine', () => {
       expect(engine.getSnapshot().seq).toMatchObject({ status: 'playing', cursor: 1 });
     });
 
+    // Inside the grace the visitor pauses (or stops) a track whose embed has gone quiet. The
+    // sequencer says `paused` by itself, and the `pause` throws inside the dead iframe, so no paused
+    // update comes back to clear the watch; a live embed answers with one ("is cleared by a paused
+    // update"). A watch still valid while `paused` is therefore a dead embed.
+    const presses: { name: string; event: SeqEvent }[] = [
+      { name: 'Pause', event: { type: 'TOGGLE' } },
+      { name: 'Stop', event: { type: 'STOP' } },
+    ];
+    it.each(presses)(
+      'still ends the track when $name was pressed after the embed went quiet, and the next one loads',
+      async ({ event }) => {
+        const ctx = await playingA();
+        const { engine, player, timers, swap, flush, cb } = ctx;
+        cb().onUpdate(at(28_000));
+        const watch = latest(ctx);
+        engine.user(event);
+        await flush();
+        expect(engine.getSnapshot().seq).toMatchObject({ status: 'paused', cursor: 0 });
+        expect(player.pause).toHaveBeenCalledTimes(1);
+        timers[watch]();
+        expect(engine.getSnapshot().seq).toMatchObject({ status: 'swapping', cursor: 1 });
+        // ENDED sends no `pause` of its own: nothing reaches the dead embed until the next load.
+        expect(player.pause).toHaveBeenCalledTimes(1);
+        swap();
+        await flush();
+        expect(player.load).toHaveBeenLastCalledWith('spotify:track:b');
+        expect(engine.getSnapshot().seq).toMatchObject({ status: 'playing', cursor: 1 });
+      },
+    );
+
     it('is cleared by a paused update', async () => {
       const ctx = await playingA();
       const { engine, timers, delays, cleared, cb } = ctx;

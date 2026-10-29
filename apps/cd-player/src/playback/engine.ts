@@ -369,9 +369,12 @@ export class PlayerEngine {
    * update, no end), which would leave the sequencer `playing` in silence while the embed has
    * dropped its list: any command after that throws inside its iframe. So every update of a track
    * that plays re-arms one timer for the rest of it plus END_GRACE_MS; if that runs out with the
-   * track still playing, the track has ended. ENDED changes the disc without a `pause`, and the
-   * next `load` gives the embed a list again. A paused update (an end the embed reports among
-   * them), a load, a new collection and dispose clear it.
+   * track `playing` or `paused`, the track has ended. `paused` counts: a Pause or Stop pressed
+   * inside the grace sets it with no help from the embed, and its `pause` throws inside the dead
+   * iframe, so no paused update comes back. A live embed answers a pause with one, which clears
+   * the watch, so a watch still valid while `paused` means that no answer came. ENDED changes the
+   * disc without a `pause`, and the next `load` gives the embed a list again. A paused update (an
+   * end the embed reports among them), a load, a new collection and dispose clear it.
    */
   private watchEnd(update: PlaybackUpdate): void {
     this.clearEndWatch();
@@ -381,7 +384,8 @@ export class PlayerEngine {
       () => {
         if (watch !== this.endWatch || this.disposed) return;
         this.endTimer = null;
-        if (this.snapshot.seq.status === 'playing') this.send({ type: 'ENDED' });
+        const { status } = this.snapshot.seq;
+        if (status === 'playing' || status === 'paused') this.send({ type: 'ENDED' });
       },
       Math.max(0, update.durationMs - update.positionMs) + END_GRACE_MS,
     );
