@@ -54,6 +54,14 @@ export async function handleSpotify(
     if (error instanceof EmbedError && error.kind === 'not_found') {
       return json(404, { error: 'not_found' }, CACHE_MISSING);
     }
+    // Why, for the deployment's logs (an EmbedError names the stage or the shape that failed, so a
+    // layout change on Spotify's side shows); the answer stays opaque. This is @ncam/logger's line,
+    // written without it: the package's entry is TypeScript source, and the Function's graph keeps
+    // to relative `.js` imports (api/spotify.ts).
+    console.warn('[cd-player] cd-player.upstream-failed', {
+      ref: `${type}:${id}`,
+      error: String(error),
+    });
     return json(502, { error: 'upstream' }, 'no-store');
   }
 }

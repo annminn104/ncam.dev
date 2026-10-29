@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest';
 import { ARTIST, notFoundPage, page, PLAYLIST, TRACK } from '../spotify/fixtures';
 import { handleSpotify } from './spotify-handler';
 
@@ -6,6 +6,20 @@ const ask = (query: string, method = 'GET') =>
   new Request(`http://localhost/api/spotify?${query}`, { method });
 const serving = (body: unknown, status = 200) =>
   vi.fn(async () => new Response(page(body), { status }));
+
+/** The line a 502 logs; the fields after it say which item failed and why. */
+const UPSTREAM = expect.stringContaining('cd-player.upstream-failed');
+
+let warn: MockInstance<typeof console.warn>;
+
+beforeEach(() => {
+  // A 502 is logged on purpose: keep that out of the test output, and look at it here.
+  warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+});
+
+afterEach(() => {
+  warn.mockRestore();
+});
 
 describe('handleSpotify', () => {
   it('serves a playlist with CORS and a short shared cache', async () => {
@@ -56,5 +70,35 @@ describe('handleSpotify', () => {
       serving({ type: 'playlist' }),
     );
     expect(changed.status).toBe(502);
+  });
+
+  it('logs why it answered 502, with the item, and keeps the answer opaque', async () => {
+    const ref = `playlist:${PLAYLIST.id}`;
+    const down = await handleSpotify(
+      ask(`type=playlist&id=${PLAYLIST.id}`),
+      serving(PLAYLIST, 503),
+    );
+    expect(await down.json()).toEqual({ error: 'upstream' });
+    expect(warn).toHaveBeenLastCalledWith(UPSTREAM, {
+      ref,
+      error: expect.stringContaining('status 503'),
+    });
+    // A layout change on Spotify's side names the shape that no longer fits.
+    const changed = await handleSpotify(
+      ask(`type=playlist&id=${PLAYLIST.id}`),
+      serving({ type: 'playlist' }),
+    );
+    expect(await changed.json()).toEqual({ error: 'upstream' });
+    expect(warn).toHaveBeenLastCalledWith(UPSTREAM, {
+      ref,
+      error: expect.stringContaining('unexpected shape'),
+    });
+    expect(warn).toHaveBeenCalledTimes(2);
+    // A 404 is an answer, not a failure: nothing is logged.
+    await handleSpotify(
+      ask(`type=artist&id=${ARTIST.id}`),
+      vi.fn(async () => new Response(notFoundPage())),
+    );
+    expect(warn).toHaveBeenCalledTimes(2);
   });
 });
