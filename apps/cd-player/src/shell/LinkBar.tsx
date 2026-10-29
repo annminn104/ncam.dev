@@ -4,7 +4,11 @@ import type { Collection } from '../spotify/types';
 interface Props {
   collection: Collection | null;
   loading: boolean;
+  /** Nothing is loaded or loading: a first load failed (the tracklist says why). */
+  failed?: boolean;
   error: string | null;
+  /** Loads the link again, beside an error that trying again may fix (a 502, a stall). */
+  onRetry?: () => void;
   onSubmit(input: string): void;
 }
 
@@ -24,7 +28,7 @@ export function copyText(
 }
 
 /** The collection's name, the link input (the page's personalisation) and Share. */
-export function LinkBar({ collection, loading, error, onSubmit }: Props) {
+export function LinkBar({ collection, loading, failed = false, error, onRetry, onSubmit }: Props) {
   const [value, setValue] = useState('');
   // What Share last did, said on its button for two seconds.
   const [shared, setShared] = useState<'copied' | 'failed' | null>(null);
@@ -42,7 +46,7 @@ export function LinkBar({ collection, loading, error, onSubmit }: Props) {
     <header className="cdp-bar">
       <div className="cdp-bar__title">
         <p className="cdp-eyebrow">Now spinning</p>
-        <h1>{collection?.name ?? 'Loading…'}</h1>
+        <h1>{collection?.name ?? (failed ? 'No tracks' : 'Loading…')}</h1>
         {collection?.subtitle && <p className="cdp-bar__subtitle">{collection.subtitle}</p>}
       </div>
       <form className="cdp-link" onSubmit={submit} noValidate>
@@ -69,9 +73,16 @@ export function LinkBar({ collection, loading, error, onSubmit }: Props) {
         </button>
       </form>
       {error && (
-        <p id="cdp-link-error" className="cdp-link__error" role="alert">
-          {error}
-        </p>
+        <div className="cdp-link__error">
+          <p id="cdp-link-error" role="alert">
+            {error}
+          </p>
+          {onRetry && (
+            <button type="button" className="cdp-button cdp-button--small" onClick={onRetry}>
+              Retry
+            </button>
+          )}
+        </div>
       )}
     </header>
   );

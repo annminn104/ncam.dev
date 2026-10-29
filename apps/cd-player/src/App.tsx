@@ -20,7 +20,7 @@ import { NowPlaying } from './shell/NowPlaying';
 import { Poster } from './shell/Poster';
 import { SceneHost } from './shell/SceneHost';
 import { Tracklist } from './shell/Tracklist';
-import { createSpotifyClient, requestErrorMessage } from './spotify/client';
+import { canRetry, createSpotifyClient, requestErrorMessage } from './spotify/client';
 import { linkErrorMessage, parseSpotifyLink } from './spotify/link';
 import { backdropFor, nowPlayingFor } from './view';
 
@@ -110,7 +110,11 @@ export default function App({ controller, initial = null, assetBase = '' }: AppP
     [engine],
   );
 
-  const [linkError, setLinkError] = useState<string | null>(null);
+  // The bar's own error, a link that did not parse or load, with the input to load again when
+  // trying again may help (Spotify or the proxy did not answer).
+  const [linkError, setLinkError] = useState<{ message: string; retry: string | null } | null>(
+    null,
+  );
   const [linkBusy, setLinkBusy] = useState(false);
   const [tracksOpen, setTracksOpen] = useState(false);
   const restored = useRef(false);
@@ -129,7 +133,7 @@ export default function App({ controller, initial = null, assetBase = '' }: AppP
     async (input: string) => {
       const link = parseSpotifyLink(input);
       if (!link.ok) {
-        setLinkError(linkErrorMessage(link.reason));
+        setLinkError({ message: linkErrorMessage(link.reason), retry: null });
         return;
       }
       setLinkError(null);
@@ -139,7 +143,10 @@ export default function App({ controller, initial = null, assetBase = '' }: AppP
         writeLast(safeStorage(), link.ref);
         controller.navigate(collectionPath(link.ref));
       } catch (error) {
-        setLinkError(requestErrorMessage(error, link.ref.type));
+        setLinkError({
+          message: requestErrorMessage(error, link.ref.type),
+          retry: canRetry(error) ? input : null,
+        });
       } finally {
         setLinkBusy(false);
       }
@@ -165,6 +172,11 @@ export default function App({ controller, initial = null, assetBase = '' }: AppP
   }, [act]);
 
   const backdrop = backdropFor(snapshot);
+  // A first load that failed leaves nothing to show: the tracklist's empty shelf says why, with
+  // Retry, and the bar does not say it again. (A failed change of collection keeps the one shown,
+  // and its message stays in the bar.)
+  const shelfError = !snapshot.collection && !snapshot.loading ? snapshot.error : null;
+  const retryInput = linkError?.retry ?? null;
   return (
     <div className="cdp-root">
       <Backdrop artUrl={backdrop.artUrl} palette={backdrop.palette} />
@@ -181,14 +193,23 @@ export default function App({ controller, initial = null, assetBase = '' }: AppP
       <LinkBar
         collection={snapshot.collection}
         loading={snapshot.loading || linkBusy}
-        error={linkError ?? snapshot.error}
+        failed={shelfError !== null}
+        error={linkError?.message ?? (shelfError ? null : (snapshot.error?.message ?? null))}
+        onRetry={retryInput === null ? undefined : () => void loadLink(retryInput)}
         onSubmit={(input) => void loadLink(input)}
       />
       <Tracklist
         tracks={snapshot.seq.tracks}
         currentIndex={currentIndex(snapshot.seq)}
         status={snapshot.seq.status}
-        open={tracksOpen}
+        // On a phone the sheet opens by itself to show an empty shelf.
+        open={tracksOpen || shelfError !== null}
+        failure={
+          shelfError && {
+            message: shelfError.message,
+            onRetry: shelfError.retry ? () => engine.open(ref) : undefined,
+          }
+        }
         onToggle={() => setTracksOpen((open) => !open)}
         onSelect={(index) => {
           setTracksOpen(false);

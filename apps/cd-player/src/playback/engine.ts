@@ -1,7 +1,7 @@
 import type { PlayerAction } from '../actions';
 import type { SceneBridge } from '../bridge';
 import { sameCollection, type CollectionRef } from '../routes';
-import { requestErrorMessage, type SpotifyClient } from '../spotify/client';
+import { canRetry, requestErrorMessage, type SpotifyClient } from '../spotify/client';
 import type { ArtistDetail, Collection, TrackDetail } from '../spotify/types';
 import { sceneView, trackView } from '../view';
 import type { EmbedCallbacks, EmbedPlayer, PlaybackUpdate } from './embed-controller';
@@ -29,7 +29,8 @@ export interface EngineSnapshot {
   ref: CollectionRef | null;
   collection: Collection | null;
   loading: boolean;
-  error: string | null;
+  /** Why the collection did not load, and whether trying again may help (Retry). */
+  error: { message: string; retry: boolean } | null;
   seq: SeqState;
   details: ReadonlyMap<string, TrackDetail>;
   artists: ReadonlyMap<string, ArtistDetail>;
@@ -142,7 +143,10 @@ export class PlayerEngine {
     this.player = null;
   }
 
-  /** Shows `ref`: the collection already here, or fetched. */
+  /**
+   * Shows `ref`: the collection already here, or fetched. A first load that failed leaves no
+   * collection, so opening the same `ref` again asks again (the empty shelf's Retry).
+   */
   open(ref: CollectionRef): void {
     const { snapshot } = this;
     if (sameCollection(snapshot.ref, ref) && (snapshot.collection || snapshot.loading)) return;
@@ -155,7 +159,10 @@ export class PlayerEngine {
       },
       (error: unknown) => {
         if (this.disposed || !sameCollection(this.snapshot.ref, ref)) return;
-        this.set({ loading: false, error: requestErrorMessage(error, ref.type) });
+        this.set({
+          loading: false,
+          error: { message: requestErrorMessage(error, ref.type), retry: canRetry(error) },
+        });
       },
     );
   }

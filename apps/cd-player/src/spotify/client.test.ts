@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createSpotifyClient, requestErrorMessage, SpotifyRequestError } from './client';
+import { canRetry, createSpotifyClient, requestErrorMessage, SpotifyRequestError } from './client';
 
 const ok = (body: unknown) => new Response(JSON.stringify(body), { status: 200 });
 const ID = '37i9dQZEVXbMDoHDwVN2tF';
@@ -67,5 +67,14 @@ describe('createSpotifyClient', () => {
       /try again/i,
     );
     expect(requestErrorMessage(new Error('x'), 'playlist')).toMatch(/try again/i);
+  });
+
+  it('tells a failure that trying again may fix from one it cannot', () => {
+    expect(canRetry(new SpotifyRequestError('upstream', 502))).toBe(true);
+    expect(canRetry(new SpotifyRequestError('network', 0))).toBe(true);
+    // A body that is not JSON: Spotify's side too.
+    expect(canRetry(new SyntaxError('Unexpected token'))).toBe(true);
+    expect(canRetry(new SpotifyRequestError('not_found', 404))).toBe(false);
+    expect(canRetry(new SpotifyRequestError('bad_request', 400))).toBe(false);
   });
 });

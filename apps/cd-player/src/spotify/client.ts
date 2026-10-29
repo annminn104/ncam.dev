@@ -79,6 +79,17 @@ export function createSpotifyClient(
   };
 }
 
+/**
+ * Whether trying again may fix `error`: Spotify or the proxy did not answer (a 502, a stall that
+ * became one, the network, a body that would not read), not a 404 or a request it refused.
+ */
+export function canRetry(error: unknown): boolean {
+  return !(
+    error instanceof SpotifyRequestError &&
+    (error.code === 'not_found' || error.code === 'bad_request')
+  );
+}
+
 /** What the visitor reads when the collection `type` was asked for and `error` came back. */
 export function requestErrorMessage(error: unknown, type: CollectionType): string {
   if (error instanceof SpotifyRequestError && error.code === 'not_found') {

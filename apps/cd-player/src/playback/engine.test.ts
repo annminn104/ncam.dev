@@ -299,22 +299,47 @@ describe('PlayerEngine', () => {
     }
   });
 
-  it('words a failed collection and ignores answers for a collection no longer asked for', async () => {
+  it('words a failed collection, and says that trying again may help', async () => {
     const { engine, client, flush } = setup();
     vi.mocked(client.collection).mockRejectedValueOnce(new Error('down'));
     engine.open(ref);
     await flush();
-    expect(engine.getSnapshot().error).toMatch(/try again/i);
+    expect(engine.getSnapshot().error).toEqual({
+      message: expect.stringMatching(/try again/i),
+      retry: true,
+    });
   });
 
-  it('names an album it cannot open as an album', async () => {
+  it('names an album it cannot open as an album, with no Retry', async () => {
     const { engine, client, flush } = setup();
     vi.mocked(client.collection).mockRejectedValueOnce(new SpotifyRequestError('not_found', 404));
     engine.open({ type: 'album', id: collection.id });
     await flush();
-    expect(engine.getSnapshot().error).toBe(
-      "We couldn't open that album. It may be private or deleted.",
-    );
+    expect(engine.getSnapshot().error).toEqual({
+      message: "We couldn't open that album. It may be private or deleted.",
+      retry: false,
+    });
+  });
+
+  it('asks again when the collection whose first load failed is opened again (Retry)', async () => {
+    const { engine, client, flush } = setup();
+    vi.mocked(client.collection).mockRejectedValueOnce(new SpotifyRequestError('upstream', 502));
+    engine.open(ref);
+    await flush();
+    expect(engine.getSnapshot()).toMatchObject({
+      collection: null,
+      loading: false,
+      error: { retry: true },
+    });
+    engine.open(ref);
+    expect(engine.getSnapshot()).toMatchObject({ loading: true, error: null });
+    await flush();
+    expect(engine.getSnapshot()).toMatchObject({
+      loading: false,
+      error: null,
+      collection: { name: 'Top 50 - Global' },
+    });
+    expect(client.collection).toHaveBeenCalledTimes(2);
   });
 
   // With no player there is no music, so the sequencer must not stay `playing` (the next press of
