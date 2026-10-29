@@ -1,7 +1,7 @@
 import { BoxGeometry, Group, Mesh, MeshPhysicalMaterial, Object3D, Vector3 } from 'three';
 import { describe, expect, it, vi } from 'vitest';
 import type { RequiredNode } from './contract';
-import { restingPose } from './director';
+import { restingPose, swapPose } from './director';
 import type { Slots } from './materials';
 import type { PlayerModel } from './model';
 import { applyPose, rigFor } from './rig';
@@ -87,5 +87,32 @@ describe('rigFor', () => {
     const slot = rig.cases[0].object.localToWorld(new Vector3(0.003, 0.006, 0));
     expect(rig.discs[0].object.visible).toBe(true);
     expect(rig.discs[0].object.position.distanceTo(slot)).toBeLessThan(1e-6);
+  });
+
+  it('lifts a sliding case past the lid’s rim before it moves across, and shrinks it away with its disc', () => {
+    const { model } = fakeModel();
+    const rig = rigFor(model);
+    const leaving = rig.cases[0];
+    const seat = leaving.object.position.clone();
+    const out = new Vector3(0, 1, 0).applyQuaternion(leaving.object.quaternion);
+    // The lid's rim stands 26.5 mm above the lining the case rests on (Blender: HL - 13.5).
+    const rim = 0.0265;
+    let size = 1;
+    for (let i = 0; i < 100; i++) {
+      const slide = -i / 100;
+      const pose = { ...swapPose('change', 1500), oldCase: { slide, open: 0 } };
+      applyPose(rig, { ...pose, oldDisc: { along: 1, rise: 0 } }, 'change', 0);
+      expect(leaving.object.visible).toBe(true);
+      const moved = leaving.object.position.clone().sub(seat);
+      if (Math.abs(moved.x) > 1e-6) expect(moved.dot(out), `slide ${slide}`).toBeGreaterThan(rim);
+      expect(leaving.object.scale.x).toBeLessThanOrEqual(size + 1e-9);
+      size = leaving.object.scale.x;
+      expect(rig.discs[0].object.scale.x).toBeCloseTo(size, 6);
+    }
+    expect(size).toBeLessThan(0.01);
+    // Back at rest it sits in its seat again, at its full size.
+    applyPose(rig, restingPose(true, true, false), null, 0);
+    expect(leaving.object.position.distanceTo(seat)).toBeLessThan(1e-9);
+    expect(leaving.object.scale.x).toBe(1);
   });
 });

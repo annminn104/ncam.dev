@@ -1,4 +1,5 @@
 import {
+  MathUtils,
   Matrix4,
   Quaternion,
   Vector3,
@@ -11,7 +12,20 @@ import type { PlayerModel } from './model';
 
 /** Where a disc sits inside a case, in the case's space (Blender's (3, 0, 6) mm, Y-up). */
 const DISC_IN_CASE = new Vector3(0.003, 0.006, 0);
-const CASE_SLIDE_M = 0.32;
+/**
+ * A case changing places flies out of the tray, across and away, shrinking to nothing (the next
+ * one grows from a point the other way round), so it never cuts through the lid's walls or pops
+ * in or out of view. It all follows |slide|, so the director's timeline stays as it is:
+ * - up to CASE_RISE_SHARE it only lifts, out of the tray towards the visitor and past the lid's
+ *   rim (26.5 mm above the lining, Blender's HL - 13.5) with room to spare; coming in, that last
+ *   stretch only lowers it into the tray;
+ * - from there it flies CASE_ACROSS_M across (by eye: on a phone it vanishes inside the view);
+ * - from CASE_SHRINK_SHARE on it shrinks, to nothing at the end.
+ */
+const CASE_ACROSS_M = 0.16;
+const CASE_LIFT_M = 0.034;
+const CASE_RISE_SHARE = 0.12;
+const CASE_SHRINK_SHARE = 0.3;
 /**
  * The case's own lid opening, about its hinge (Blender's Y, three's Z): positive swings it out of
  * the tray, toward the visitor (checked against cd-player.glb).
@@ -34,6 +48,8 @@ export interface CaseInstance {
   lidBaseZ: number;
   booklet: MeshPhysicalMaterial;
   seat: Vector3;
+  /** Out of the tray, towards the visitor: the case's own up, in the lid's space. */
+  out: Vector3;
 }
 
 export interface Rig {
@@ -74,6 +90,7 @@ function caseInstance(object: Object3D): CaseInstance {
     lidBaseZ: lid.rotation.z,
     booklet: ownMaterial(object, 'art_booklet'),
     seat: object.position.clone(),
+    out: new Vector3(0, 1, 0).applyQuaternion(object.quaternion),
   };
 }
 
@@ -128,12 +145,19 @@ export function rigFor(model: PlayerModel): Rig {
 }
 
 function placeCase(item: CaseInstance, pose: CasePose | null): void {
-  if (!pose || Math.abs(pose.slide) >= 0.999) {
+  const away = pose ? Math.abs(pose.slide) : 1;
+  if (!pose || away >= 0.999) {
     item.object.visible = false;
     return;
   }
   item.object.visible = true;
-  item.object.position.copy(item.seat).x += pose.slide * CASE_SLIDE_M;
+  const lift = MathUtils.smoothstep(away, 0, CASE_RISE_SHARE);
+  const across = MathUtils.smoothstep(away, CASE_RISE_SHARE, 1);
+  item.object.position.copy(item.seat).addScaledVector(item.out, lift * CASE_LIFT_M);
+  item.object.position.x += Math.sign(pose.slide) * across * CASE_ACROSS_M;
+  // Never quite 0: a zero scale leaves no rotation for the disc inside to take.
+  const size = 1 - MathUtils.smoothstep(away, CASE_SHRINK_SHARE, 1);
+  item.object.scale.setScalar(Math.max(size, 1e-3));
   item.lid.rotation.z = item.lidBaseZ + pose.open * CASE_OPEN_RAD;
 }
 
@@ -141,6 +165,7 @@ const inCase = new Matrix4();
 const offset = new Matrix4().makeTranslation(DISC_IN_CASE.x, DISC_IN_CASE.y, DISC_IN_CASE.z);
 const casePosition = new Vector3();
 const caseQuaternion = new Quaternion();
+const caseScale = new Vector3();
 const start = new Vector3();
 const control = new Vector3();
 const spinQuaternion = new Quaternion();
@@ -154,9 +179,11 @@ function placeDisc(rig: Rig, disc: DiscInstance, owner: CaseInstance, pose: Disc
   owner.object.updateWorldMatrix(true, false);
   inCase
     .multiplyMatrices(owner.object.matrixWorld, offset)
-    .decompose(casePosition, caseQuaternion, start);
+    .decompose(casePosition, caseQuaternion, caseScale);
   start.copy(rig.seat.position).addScaledVector(UP, RISE_M * pose.rise);
   const a = Math.min(1, Math.max(0, pose.along));
+  // In its case a disc takes the case's size, so a case flying off takes its disc with it.
+  disc.object.scale.setScalar(1 + (caseScale.x - 1) * a);
   if (a <= 0) {
     disc.object.position.copy(start);
   } else {

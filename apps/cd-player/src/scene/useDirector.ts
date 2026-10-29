@@ -8,8 +8,13 @@ import { createSwapController, type SwapClock, type SwapController } from './swa
 
 const log = createLogger({ scope: 'cd-player' });
 
-/** Prints `view` on disc `index` and its case's booklet. It must settle: a change waits for it. */
-export type Painter = (index: 0 | 1, view: TrackView) => Promise<void>;
+/**
+ * Prints `view` on disc `index` and its case's booklet. A change waits for it at most
+ * PRINT_WAIT_MS, then runs on the prints the disc has; a print that lands later still shows. The
+ * director aborts `signal` once a newer print of the same disc starts: check it before drawing, so
+ * a stale print never covers a newer one.
+ */
+export type Painter = (index: 0 | 1, view: TrackView, signal?: AbortSignal) => Promise<void>;
 
 const clock: SwapClock = {
   now: () => performance.now(),
@@ -36,19 +41,15 @@ export function useDirector(rig: Rig, bridge: SceneBridge, paint: Painter): void
       onPrintFailed: (error, view) =>
         log.warn('cd-player.print-failed', { track: view.id, error: String(error) }),
     });
-    // Booted mid-playback: the disc of the current track is already on the spindle.
-    const view = bridge.getView();
-    if (
-      rig.seated === null &&
-      view.current &&
-      (view.status === 'playing' || view.status === 'paused')
-    ) {
-      rig.seated = rig.lidCase;
-      void controller.print(rig.lidCase, view.current);
-    }
+    // A track can play with no change for its disc (the scene booted mid-playback, or Play
+    // reloaded the current track after its player failed): its disc is on the spindle then.
+    const follow = () => controller.seat(bridge.getView());
+    follow();
+    const unsubscribe = bridge.subscribe(follow);
     changes.current = controller;
     bridge.setSwapper(controller.swap);
     return () => {
+      unsubscribe();
       bridge.setSwapper(null);
       controller.dispose();
       changes.current = null;

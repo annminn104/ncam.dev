@@ -1,8 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { TrackView } from '../bridge';
+import { EMPTY_VIEW, type SceneView, type TrackView } from '../bridge';
 import { DURATION, type SwapKind } from './director';
 import type { ChangeState } from './rig';
-import { createSwapController, REDUCED_MOTION_MS, type SwapClock } from './swap-controller';
+import {
+  createSwapController,
+  PRINT_WAIT_MS,
+  REDUCED_MOTION_MS,
+  type SwapClock,
+} from './swap-controller';
 
 const track = (id: string): TrackView => ({
   id,
@@ -12,6 +17,8 @@ const track = (id: string): TrackView => ({
   artistUrl: null,
   palette: null,
 });
+
+const view = (patch: Partial<SceneView>): SceneView => ({ ...EMPTY_VIEW, ...patch });
 
 /** Lets every pending promise callback run. */
 const flush = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
@@ -31,16 +38,22 @@ function harness(options: { reduced?: boolean; rig?: ChangeState } = {}) {
       };
     },
   };
-  const prints: { index: 0 | 1; id: string; land(): void; fail(error: Error): void }[] = [];
+  const prints: {
+    index: 0 | 1;
+    id: string;
+    signal: AbortSignal | undefined;
+    land(): void;
+    fail(error: Error): void;
+  }[] = [];
   const failed = vi.fn();
   const controller = createSwapController({
     rig,
     reduced: options.reduced ?? false,
     clock,
     onPrintFailed: failed,
-    paint: (index, view) =>
+    paint: (index, view, signal) =>
       new Promise<void>((resolve, reject) => {
-        prints.push({ index, id: view.id, land: resolve, fail: reject });
+        prints.push({ index, id: view.id, signal, land: resolve, fail: reject });
       }),
   });
   /** Each pose drawn: the change's kind, the ms into it, and the lid's case as it was drawn. */
@@ -125,7 +138,24 @@ describe('createSwapController', () => {
     expect(h.rig).toEqual({ lidCase: 0, seated: 0, swapping: false });
   });
 
-  it('never throws a print, for a change or the boot, even from a painter that throws', async () => {
+  it('runs the change anyway once its print has kept it waiting PRINT_WAIT_MS', async () => {
+    const h = harness({ rig: { lidCase: 0, seated: 0, swapping: false } });
+    const change = h.swap('b');
+    h.advance(PRINT_WAIT_MS - 1);
+    expect(h.frame(PRINT_WAIT_MS - 1)).toBe(true);
+    expect(h.poses.at(-1)).toEqual(['change', 0, 0]);
+    h.advance(PRINT_WAIT_MS);
+    h.frame(PRINT_WAIT_MS + 1000);
+    expect(h.poses.at(-1)).toEqual(['change', 1000, 0]);
+    h.frame(PRINT_WAIT_MS + DURATION.change);
+    await flush();
+    expect(change.settled).toBe(true);
+    expect(h.rig).toEqual({ lidCase: 1, seated: 1, swapping: false });
+    // The print was never told to give up: it still lands on its disc whenever it can.
+    expect(h.prints[0].signal?.aborted).toBe(false);
+  });
+
+  it('never throws a print, for a change or a seat, even from a painter that throws', async () => {
     const error = new Error('no 2D canvas');
     const failed = vi.fn();
     const rig: ChangeState = { lidCase: 0, seated: null, swapping: false };
@@ -149,16 +179,15 @@ describe('createSwapController', () => {
     expect(rig).toEqual({ lidCase: 0, seated: 0, swapping: false });
   });
 
-  it('settles a change still printing when the scene goes, as its print returns, with no timeline', async () => {
+  it('settles a change at once when the scene goes mid-print, and its late print starts nothing', async () => {
     const h = harness();
     const change = h.swap('a');
     h.controller.dispose();
     await flush();
-    expect(change.settled).toBe(false);
-    h.prints[0].land();
-    await flush();
     expect(change.settled).toBe(true);
     expect(h.rig).toEqual({ lidCase: 0, seated: 0, swapping: false });
+    h.prints[0].land();
+    await flush();
     expect(h.frame(500)).toBe(false);
   });
 
@@ -211,6 +240,19 @@ describe('createSwapController', () => {
     expect(second.settled).toBe(false);
   });
 
+  it('tells a disc’s older print to give up once a newer print of that disc starts', () => {
+    const h = harness();
+    h.swap('a');
+    h.swap('b');
+    h.swap('c');
+    expect(h.prints.map(({ index, id }) => [index, id])).toEqual([
+      [0, 'a'],
+      [1, 'b'],
+      [0, 'c'],
+    ]);
+    expect(h.prints.map(({ signal }) => signal?.aborted)).toEqual([true, false, false]);
+  });
+
   it('makes a change instant under reduced motion, and lets the music wait a beat', async () => {
     const h = harness({ reduced: true, rig: { lidCase: 0, seated: 0, swapping: false } });
     const change = h.swap('b');
@@ -242,5 +284,39 @@ describe('createSwapController', () => {
     await flush();
     expect(second.settled).toBe(true);
     expect(h.rig).toEqual({ lidCase: 0, seated: 0, swapping: false });
+  });
+});
+
+describe('createSwapController: seat', () => {
+  it.each(['playing', 'paused'] as const)(
+    'seats the lid’s disc for a track %s with no change for it, and prints it',
+    (status) => {
+      const h = harness({ rig: { lidCase: 1, seated: null, swapping: false } });
+      h.controller.seat(view({ current: track('a'), status }));
+      expect(h.rig).toEqual({ lidCase: 1, seated: 1, swapping: false });
+      expect(h.prints.map(({ index, id }) => [index, id])).toEqual([[1, 'a']]);
+      // Once seated, the views that follow change nothing.
+      h.controller.seat(view({ current: track('b'), status: 'playing' }));
+      expect(h.prints).toHaveLength(1);
+    },
+  );
+
+  it('seats nothing with no track playing, or while a change runs', () => {
+    const quiet: Partial<SceneView>[] = [
+      { current: track('a'), status: 'idle' },
+      { current: track('a'), status: 'swapping' },
+      { current: null, status: 'playing' },
+    ];
+    for (const patch of quiet) {
+      const h = harness();
+      h.controller.seat(view(patch));
+      expect(h.rig.seated, patch.status).toBeNull();
+      expect(h.prints).toHaveLength(0);
+    }
+    const h = harness();
+    h.swap('a');
+    h.controller.seat(view({ current: track('a'), status: 'paused' }));
+    expect(h.rig.seated).toBeNull();
+    expect(h.prints).toHaveLength(1);
   });
 });
