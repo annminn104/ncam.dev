@@ -94,8 +94,10 @@ describe('NowPlaying controls', () => {
     expect(slider).toContain('value="208"');
   });
 
-  it('keeps the slider off while nothing is loaded', () => {
+  it('keeps the slider off while nothing is loaded or the disc is changing', () => {
     expect(tagOf(render({ status: 'idle', positionMs: 0 }), 'Seek')).toContain('disabled');
+    // A seek does nothing while swapping: the thumb would snap back under the finger.
+    expect(tagOf(render({ status: 'swapping', positionMs: 0 }), 'Seek')).toContain('disabled');
     expect(tagOf(render({ status: 'playing', durationMs: 0, positionMs: 0 }), 'Seek')).toContain(
       'disabled',
     );

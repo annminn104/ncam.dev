@@ -83,7 +83,7 @@ export function NowPlaying({
         <SeekSlider
           positionMs={positionMs}
           durationMs={durationMs}
-          disabled={status === 'idle' || durationMs <= 0}
+          disabled={status === 'idle' || status === 'swapping' || durationMs <= 0}
           onSeek={onSeek}
         />
         <button
