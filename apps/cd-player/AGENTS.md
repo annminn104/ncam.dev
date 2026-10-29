@@ -34,17 +34,17 @@ The owner's decisions (2026-10-28), which the rest of this guide assumes:
 `vite.config.ts` (`defineRemote`, which sets `shared: {}` and `dts: false`) exposes three entries:
 
 - `./mount` (`src/mount.tsx`): `mount(target, config?)`, a client render. It injects
-  `styles/app.css` as `<style id="cd-player-styles">` (removed on unmount) and imports the fonts
-  (`src/fonts.ts`).
+  `src/styles/app.css` as `<style id="cd-player-styles">` (removed on unmount) and imports the
+  fonts (`src/fonts.ts`).
 - `./ssr` (`src/ssr.tsx`): `renderHeroSSR({ config?, assetBase? })` returns `{ html, css, head? }`.
   `html` is the whole shell (link bar, tracklist, now-playing card, backdrop, poster, help line,
   the "Open the player" button) for the collection the server fetched, followed by
   `<script type="application/json" id="cdp-state">` holding that data (`src/ssr-state.ts`, escaped
-  so it can never end the script). `css` is `styles/fonts.css`, its `url()`s rebased onto this
-  remote's origin, plus `styles/app.css`. `head` (`src/head.ts`: the collection's name and a
-  description with its owner or artist and its track count) comes only on `/playlist/<id>` and
-  `/album/<id>` once the collection has loaded; on `/` the host keeps its own head. `assetBase` is
-  accepted for the contract and ignored.
+  so it can never end the script). `css` is `src/styles/fonts.css`, its `url()`s rebased onto
+  this remote's origin, plus `src/styles/app.css`. `head` (`src/head.ts`: the collection's name
+  and a description with its owner or artist and its track count) comes only on `/playlist/<id>`
+  and `/album/<id>` once the collection has loaded; on `/` the host keeps its own head.
+  `assetBase` is accepted for the contract and ignored.
 - `./hydrate` (`src/hydrate.tsx`): `hydrate(target, config?)` reads `#cdp-state` back, hydrates
   the server markup (the host inlined the CSS) and renders the state script again, so the trees
   match.
@@ -103,18 +103,25 @@ that does not parse (`no-store`); 405 for a method other than GET, HEAD and OPTI
 OPTIONS. Collections are cached `public, max-age=300, s-maxage=3600, stale-while-revalidate=86400`
 (Top 50 changes daily), tracks and artists `public, max-age=3600, s-maxage=86400,
 stale-while-revalidate=604800`. The handler sends its own `Access-Control-Allow-Origin: *`, and
-`vercel.json` keeps its blanket header off `/api/`, so it is never doubled.
+`vercel.json` keeps its blanket header off `/api/`, so it is never doubled. A 502 is logged
+(`cd-player.upstream-failed`, with the ref and the error, whose message names the stage or the
+shape that failed) so a layout change on Spotify's side shows in the deployment's logs; the answer
+stays opaque. The line has `@ncam/logger`'s format but is a plain `console.warn`: that package's
+entry is TypeScript source, and the Function's graph keeps to relative `.js` imports (below).
 
 One handler runs in three places:
 
 - **The Vercel Function** `api/spotify.ts` (a default export with `fetch(request)`). The runtime
   imports of its graph end in `.js` (`spotify-handler.ts` imports `../routes.js` and
   `../spotify/embed.js`, which imports `./schema.js`): Node ESM in the Function resolves
-  specifiers as written. Keep that for any runtime import added to those files (type imports are
-  erased); no test covers it, and only the deployed Function would fail.
+  specifiers as written. Keep that for any runtime import added to those files, and add no
+  workspace package to them; no test covers it, and only the deployed Function would fail.
 - **Vite middleware** on the dev and preview servers (`spotifyProxy()` in `vite.config.ts`), at the
   same path. Vite's own CORS middleware (on, from `defineRemote`) runs first and answers a
-  preflight itself; on every other request the handler's header replaces its Allow-Origin.
+  preflight itself; on every other request the handler's header replaces its Allow-Origin. Since
+  the config loads that graph too, its relative imports, type imports included (`embed.ts`'s
+  `../routes.js` and `./types.js`), and the config's own end in `.js`: Vite prints an advisory
+  about its `configLoader: 'native'` on every start for each one that does not.
 - **In-process for the server render.** `src/server/initial.ts` (`loadInitial`) calls
   `src/spotify/embed.ts` directly for the collection, its first playable track and that track's
   first artist (the backdrop and the lid's case), one after another inside a **1.5 s budget** they
@@ -135,9 +142,23 @@ fails as upstream. zod and the server code stay out of the client entries' graph
 The browser's client (`src/spotify/client.ts`) resolves `/api/spotify` against the remote's
 origin, makes one request per item at a time, keeps answers for the page's life (failures are not
 kept) and is seeded with what the server render fetched. A 404 reads "We couldn't open that
-playlist. It may be private or deleted.", anything else "Spotify didn't answer. Try again in a
-moment." The engine fetches the details and artist of the current track and the next three
-(`PREFETCH` in `src/playback/engine.ts`).
+playlist. It may be private or deleted." (or "that album": `requestErrorMessage` names the type
+asked for), anything else "Spotify didn't answer. Try again in a moment." The engine fetches the
+details and artist of the current track and the next three (`PREFETCH` in
+`src/playback/engine.ts`).
+
+**Retry** (`canRetry` in `client.ts`: a 502, a stall the proxy turned into one, the network, a
+body that would not read; never a 404 or a refused request). A pasted link that failed that way
+shows its message under the input with a small **Retry** beside it, which loads the same link
+again (`loadLink` in `App.tsx`). A first load that failed (no collection, nothing loading, an
+error: Spotify down on `/` or on a shared link) shows an **empty shelf** in the tracklist's place,
+the message and, for those failures, Retry, which calls `engine.open(ref)` again: `open` asks
+again for a ref whose collection never came. The bar's title then says "No tracks" rather than
+"Loading…", the message is not repeated under the input, and on a phone the sheet opens by itself
+to show the shelf. The engine's snapshot keeps the failure as `error: { message, retry }`. A
+failed change of collection keeps the one shown, with its message in the bar and no Retry (`open`
+does not ask again while a collection is shown); a pasted link is fetched before the page goes to
+it, so that case is rare.
 
 **Pictures.** Spotify's image CDN answers with `Access-Control-Allow-Origin: *`, so the scene loads
 the art and the artist photos straight into textures with `crossOrigin = 'anonymous'`
@@ -157,6 +178,15 @@ iframe, 80 px high and the card's width. The script gets 15 s, building the play
 (`PLAYER_TIMEOUT_MS`). If either fails (an ad blocker, a privacy setting), the card says "The
 Spotify player could not load here…", the sequencer goes back to idle keeping the track, the
 order, Repeat and Shuffle, and the visitor's next press tries again.
+
+**The first load only plays.** `createController(el, { uri })` already loads the track the player
+is built on, and Spotify's script never takes a uri for the one it holds (its `currentUri` is never
+set), so a `loadUri` of the same track would load the embed's page a second time. The first
+`load()` of that uri in `createEmbedPlayer` therefore calls `play()` alone, which the script holds
+until its iframe is ready. Every other load is `loadUri` then `play`, a later load of that same
+track too: once a track has ended, the embed has dropped its list. Spotify's `'error'` events (a
+uri it refuses, a command its player could not carry out) are logged as `cd-player.embed-error`
+with whatever they carry.
 
 **The sequencer and its commands** (`src/playback/sequencer.ts`): a pure reducer,
 `step(state, event)` returns the next state and the commands for the world outside: `swap {to}`
@@ -191,19 +221,21 @@ sends `TOGGLE_SHUFFLE` with `Date.now()` as the seed, as the deck's MODE key doe
 `engine.ts`). All of them go through `act`, so a press from the poster also opens the scene.
 
 The slider is a native `<input type="range">` counted in whole seconds (`seekRange` in `src/view.ts`
-floors, as `formatDuration` does), disabled while the status is `idle` or the duration is 0, with an
-`aria-valuetext` like "1:23 of 3:45". **One seek per gesture**: React's `onChange` is the `input`
-event, one per step of a drag, and only sets a held value that the thumb shows, so the position
+floors, as `formatDuration` does), disabled while the status is `idle` or `swapping` (a seek does
+nothing while the disc changes) or the duration is 0, with an `aria-valuetext` like "1:23 of
+3:45". **One seek per gesture**: React's `onChange` is the `input` event, one per step of a drag,
+and only sets a held value that the thumb shows, so the position
 updates that keep arriving cannot pull it from under the finger. The native `change` event (bound
 through a ref, since React does not hand it out) sends `SEEK` once, when the visitor lets go or at
 each arrow-key press, and ends the hold. A gesture that ends with no `change` (Chrome sends none
 for a cancelled touch) ends it on its own, a task after the pointer is released or cancelled. A
 seek under a second goes through `restart()` (above), so a drag or Home to 0 needs nothing here.
 The thumb is laid out and drawn only while it shows: on hover, keyboard focus and press, and always
-where there is no hover (`@media (hover: none)`). `--cdp-shown` in `styles/app.css` is 1 then, so
-at rest the bar fills exactly to the position, as the old bar did, and with the thumb out the fill
-ends under its centre (the end moves a few px as the thumb comes in). The `::-webkit-slider-*`
-rules have been looked at in Chromium; the `::-moz-range-*` ones in no browser yet.
+where there is no hover (`@media (hover: none)`). `--cdp-shown` in `src/styles/app.css` is 1 then,
+so at rest the bar fills exactly to the position, as the old bar did, and with the thumb out the
+fill ends under its centre (the end moves a few px as the thumb comes in). The
+`::-webkit-slider-*` rules have been looked at in Chromium; the `::-moz-range-*` ones in no browser
+yet.
 
 **The row's height is budgeted.** It replaced a 14 + 4 + 12 px block and may grow the card by 12 px
 at most (8 + 28 + 6 px): a narrow screen's framing lifts the player clear of the card by a fixed
@@ -217,6 +249,20 @@ to 0 just after being within 1.5 s of it (the same uri), never while buffering. 
 on, or goes idle at the end of the list without Repeat. After a `load`, an event that still names
 the track just left is dropped (a late "paused at its end" would end the new one); any other uri
 passes, because Spotify may report a relinked track under another id.
+
+**The end watchdog** (`watchEnd` in `engine.ts`). Logged out, the embed often lets a preview run
+out without a word: no paused update, no end. The sequencer would stay `playing` in silence while
+the embed has dropped its list, and any command after that (a pause, a seek, a restart, the
+collection load's pause) throws "Cannot perform operation; no list was loaded." inside its iframe.
+So every update of a track that plays (neither paused nor buffering) re-arms one timer for the rest
+of the track plus 2.5 s (`END_GRACE_MS`); a paused update (an end the embed reports among them), a
+load, a new collection and dispose clear it, and a timer that fires after a newer update does
+nothing. If it runs out with the status still `playing`, the engine sends ENDED itself: the disc
+changes without a `pause` (the sequencer's ENDED path sends none), and the next `load` gives the
+embed a new list. `hasEnded` still asks for a paused update, since a `restart()` near the end also
+snaps to 0. A buffering update neither arms nor clears it, so an embed that keeps reporting
+buffering at the end does not hold it off; a stall longer than the rest of the track and 2.5 s
+moves on.
 
 **The hint.** Right after `loadUri` the embed reports itself paused until the audio starts, so the
 engine ignores paused updates until `playback_started`. If that has not come 3.5 s after a load
@@ -246,7 +292,7 @@ failure that can be retried in place), `autostart`, `ready` (three frames of the
 when the page has settled on a hardware GPU and with every music action from the DOM, so a failed
 boot is retried by "Try again" alone. While booting the scene layer is invisible and `inert`; on
 `ready` it fades in over 600 ms (`FADE_MS` in `src/App.tsx` equals the `.cdp-scene` transition in
-`styles/app.css`; keep them equal), then the poster unmounts.
+`src/styles/app.css`; keep them equal), then the poster unmounts.
 
 **Autostart on a hardware GPU** (`src/autoplay.ts`, the same logic as mini-store's and
 garden-home's copies; keep the three in step): once the page has loaded and the main thread is
@@ -361,13 +407,15 @@ lid's top rim.
 **Reduced motion** (`prefers-reduced-motion: reduce`): no autostart; a disc change is instant (the
 rig jumps to its end and the music still waits a 300 ms beat, `REDUCED_MOTION_MS`); the backdrop's
 cross-fade, the tracklist's equaliser, the canvas's fade-in and the phone sheet's slide are off
-(`styles/app.css`). The disc still spins while a track plays, and the orbit still eases.
+(`src/styles/app.css`). The disc still spins while a track plays, and the orbit still eases.
 
 ## Personalisation
 
 The URL names the collection: `/playlist/<id>` or `/album/<id>` (`src/routes.ts`), that is
 `/projects/cd-player/playlist/<id>` in the host, so a page can be shared; **Share** in the link bar
-copies `location.href`. Loading a pasted link (`loadLink` in `src/App.tsx`):
+copies `location.href` and says "Copied" on its button for two seconds, or "Couldn't copy" when the
+clipboard refuses (a denied permission) or there is none (a page on plain http): `copyText` in
+`src/shell/LinkBar.tsx` never rejects. Loading a pasted link (`loadLink` in `src/App.tsx`):
 
 1. `parseSpotifyLink` (`src/spotify/link.ts`) takes an `open.spotify.com` or `play.spotify.com` link
    with or without `https://`, `intl-xx/`, `embed/` or a query string, a `spotify:` URI, or a bare
@@ -375,7 +423,8 @@ copies `location.href`. Loading a pasted link (`loadLink` in `src/App.tsx`):
    not a playlist or an album; `spotify.link` short links are not followed.
 2. The collection is fetched; only once that succeeds is `{ type, id }` saved in `localStorage`
    under **`ncam.cd-player.last`** (`src/persist.ts`) and the page navigated there. The engine
-   then loads the new collection into the same mount.
+   then loads the new collection into the same mount. A failure shows under the input, with Retry
+   when trying again may help (see "Data").
 
 **Restore on `/`**: an App that mounts on `/` navigates to the saved collection (`restoreTarget`),
 never to the default playlist, and it looks only when it mounts, so Back to `/` (a route update,
@@ -450,8 +499,7 @@ after any change to the model, the lights, the camera or the framing, or the def
 
 ## Tests
 
-Unit tests (`src/**/*.test.ts`, node environment, run by the root `pnpm test`; 41 files and 279
-tests today):
+Unit tests (`src/**/*.test.ts`, node environment, run by the root `pnpm test`):
 
 - the shell: `App.test.ts` and `ssr.test.ts` (the server render: the collection and its tracks, the
   state script, the fonts and the app's CSS, the head on a collection route only, the poster as the
@@ -459,16 +507,18 @@ tests today):
   `ssr-graph.test.ts` (the import graphs), `ssr-state.test.ts`, `boot.test.ts`, `autoplay.test.ts`,
   `failure.test.ts`, `webgl.test.ts`, `shell/EnterButton.test.ts`, `shell/NowPlaying.test.ts` (the
   card's controls in Tab order, the switches' `aria-pressed`, the slider's numbers and when it is
-  disabled; its `change` handling needs a DOM, so that is by hand), `capture.test.ts` and
-  `assets/poster/poster.test.ts`;
+  disabled; its `change` handling needs a DOM, so that is by hand), `shell/LinkBar.test.ts` (Retry
+  beside an error, the title after a failed first load, `copyText`), `shell/Tracklist.test.ts`
+  (the empty shelf), `capture.test.ts` and `assets/poster/poster.test.ts`;
 - routes and personalisation: `routes.test.ts`, `route-controller.test.ts`, `persist.test.ts`,
   `spotify/link.test.ts`;
 - data: `spotify/embed.test.ts` (fixture pages for a playlist, a track, an artist and the not-found
-  page, and layout changes), `spotify/types.test.ts`, `spotify/client.test.ts`,
-  `server/spotify-handler.test.ts` (statuses, cache headers, CORS) and `server/initial.test.ts` (the
-  shared budget, the cache and its cap, the log);
+  page, and layout changes), `spotify/types.test.ts`, `spotify/client.test.ts` (the messages,
+  `canRetry`), `server/spotify-handler.test.ts` (statuses, cache headers, CORS, the 502's log) and
+  `server/initial.test.ts` (the shared budget, the cache and its cap, the log);
 - playback: `playback/sequencer.test.ts`, `embed-controller.test.ts` (ended detection, the script
-  loader, late events, the rewind), `engine.test.ts`, `bridge.test.ts`, `view.test.ts`;
+  loader, late events, the rewind and the seeks, the first load, the error log), `engine.test.ts`
+  (the end watchdog on injected timers, Retry's second ask), `bridge.test.ts`, `view.test.ts`;
 - the scene: `scene/model-contract.test.ts` (the committed GLB), `glb.test.ts`, `materials.test.ts`,
   `rig.test.ts`, `director.test.ts`, `swap-controller.test.ts`, `framing.test.ts`,
   `controls.test.ts`, `interaction.test.ts`, `orbit.test.ts`, and `textures/` (`grain`, `images`,
@@ -486,15 +536,16 @@ that seeks, with the scene drawing slowly, pauses the track while it looks aroun
 
 **Lighthouse.** The page is one of the audited paths (`/projects/cd-player`, the 13th of
 `AUDITED_PATHS` in `scripts/lighthouse/config.cjs`), so `LH_SHARD=13/13` audits it alone (the index
-moves when a path is added). When Chrome renders in software, as on the GitHub runner, it scores
-100 in all four categories on mobile and on desktop (TBT 0, CLS 0): the poster waits, and the embed
-loads nothing before a press, so no third-party cookie is set. The LCP is the now-playing card's
-note, `.cdp-now__note` (about 0.7 s on mobile, 0.2 s on desktop), which is plain from the first
-paint, as the monorepo's rule asks; keep it so. On a machine with a GPU Chrome opens the scene by
-itself during the run: desktop then scores 98 (TBT about 110 ms, the scene's boot) and mobile 100.
-To measure what the runner measures there, add `--disable-gpu` to the `chromeFlags` of a copy of
-`lighthouserc.cjs`. A Spotify failure during a run (the proxy's 502 for a prefetch) logs a console
-error, which costs that run 4 points of Best Practices.
+moves when a path is added). When Chrome renders in software, as on the GitHub runner, the page
+has, at the time of writing, scored at the top of all four categories on mobile and on desktop,
+with no blocking time and no layout shift: the poster waits, and the embed loads nothing before a
+press, so no third-party cookie is set. The LCP is the now-playing card's note, `.cdp-now__note`,
+which is plain from the first paint, as the monorepo's rule asks; keep it so. On a machine with a
+GPU Chrome opens the scene by itself during the run, and the scene's boot costs desktop a few
+points of Performance (blocking time). To measure what the runner measures there, add
+`--disable-gpu` to the `chromeFlags` of a copy of `lighthouserc.cjs`. A Spotify failure during a
+run (the proxy's 502 for a prefetch) logs a console error, which costs that run Best Practices
+points.
 
 ## Deploying
 
@@ -544,6 +595,14 @@ site"), in this order:
 - **The embed ignores a seek to under a second** (`seek(0)` included), and a paused embed reports a
   seek only once it plays again; Previous and Stop rewind through `restart()` and a seek to 1 s
   (see "Playback").
+- **Spotify's iFrame API script** (`SpotifyEmbedController`) holds commands while its iframe loads
+  and sends them on the iframe's READY, so a command to a player still loading is not lost. Its
+  `loadUri` never skips the uri it already holds (`currentUri` is never set): every call loads the
+  embed's page again. Once a track has ended, the embed has dropped its list, and a command sent to
+  it throws "Cannot perform operation; no list was loaded." inside its iframe; only a `loadUri`
+  brings it back (hence the end watchdog and the first load's `play()`, in "Playback").
+- **iOS Safari zooms into a focused field set under 16 px**, and this full-screen page would stay
+  zoomed: the link input is 16 px in the phone layout (14 px elsewhere).
 - The deck's Stop, Repeat, MODE (Shuffle) and knob are small targets: on a 390 px phone a key is
   about 9 px across and the knob 18, and from the hero view the knob hides much of the MODE key.
   The now-playing card therefore has a DOM control for each (Stop, Repeat, Shuffle and the Seek

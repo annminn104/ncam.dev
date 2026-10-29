@@ -99,9 +99,9 @@ pnpm thumbnails <id>  # regenerates a gallery thumbnail (needs `pnpm dev` runnin
   (`packages/mf-remote/src/contract.ts`: `route`, `onNavigate`, `assetBase`),
   the same object for every remote, never the remote's own data. TOONHUB once
   read it as its own config, and every one of its entries threw in production.
-- A `MountHandle` is a disposer. A **route-aware** remote (Holodex; registry
-  `routeAware: true`) also gives it `update(route)`, which the host calls on
-  in-app navigation instead of remounting.
+- A `MountHandle` is a disposer. A **route-aware** remote (Holodex, CD Player;
+  registry `routeAware: true`) also gives it `update(route)`, which the host calls
+  on in-app navigation instead of remounting.
 - Remotes own their assets. Because the host and a remote can live on different
   origins, a remote must resolve its own asset URLs against its origin (see
   `apps/toonhub/src/mount.ts`), never assume the host origin. The host hands an
