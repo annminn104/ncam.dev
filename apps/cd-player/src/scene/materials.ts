@@ -1,6 +1,8 @@
 import {
   Color,
   DataTexture,
+  LinearFilter,
+  LinearMipmapLinearFilter,
   MeshBasicMaterial,
   MeshPhysicalMaterial,
   RepeatWrapping,
@@ -151,6 +153,13 @@ export function upgradeMaterials(root: Object3D): { slots: Slots; dispose(): voi
   const size = 256;
   const grain = new DataTexture(leatherNormal(size), size, size, RGBAFormat);
   grain.wrapS = grain.wrapT = RepeatWrapping;
+  // The grain is minified at the hero distance. Filtered and mip-mapped it fades with distance;
+  // sampled nearest (a DataTexture's default) it would shimmer whenever the camera moves.
+  grain.magFilter = LinearFilter;
+  grain.minFilter = LinearMipmapLinearFilter;
+  grain.generateMipmaps = true;
+  // No renderer to ask for its limit here: three clamps this to what the GPU supports.
+  grain.anisotropy = 4;
   grain.needsUpdate = true;
   const made = new Map<string, Material>();
   const slots: Partial<Slots> = {};

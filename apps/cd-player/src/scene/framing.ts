@@ -1,18 +1,26 @@
 /**
- * The camera of the approved Cycles still, in three's Y-up metres. Blender's camera sat at
- * (-0.42, -0.80, 0.47) looking at (0.06, -0.01, 0.132); three's axes are (x, z, -y).
+ * The hero camera, in three's Y-up metres, for cd-player.glb: the player alone, lid open, 0.30 m
+ * wide, 0.32 high and 0.32 deep, centred at x = 0. Its angle and lens are those of the approved
+ * Cycles still (Blender's camera sat at (-0.42, -0.80, 0.47); three's axes are (x, z, -y)); where it
+ * looks and how far back it stands are set so that the whole player shows, whatever the screen
+ * (src/scene/framing.test.ts projects the model's box through it).
  */
 export const FOV = 30;
-const TARGET: readonly [number, number, number] = [0.06, 0.132, 0.01];
+/** Where the camera looks before a wide or narrow screen shifts it: the player's centre line. */
+const TARGET: readonly [number, number, number] = [0, 0.132, 0.01];
 const DIRECTION = (() => {
   const d = [-0.48, 0.338, 0.79];
   const n = Math.hypot(d[0], d[1], d[2]);
   return [d[0] / n, d[1] / n, d[2] / n] as const;
 })();
-/** The player with its lid open fits in this sphere (metres). */
-const RADIUS = 0.23;
-/** The tracklist drawer covers the right of a wide screen: aim right so the player sits left. */
-const WIDE_SHIFT_X = 0.09;
+/** The player with its lid open fits in a sphere about this big (metres). */
+const RADIUS = 0.27;
+/** The tracklist drawer covers the right of a wide screen: aim right so the player sits left of it. */
+const WIDE_SHIFT_X = 0.11;
+/** A wide screen also aims higher, which seats the player below the link bar. */
+const WIDE_SHIFT_Y = 0.03;
+/** A narrow screen aims lower, which lifts the player clear of the now-playing card. */
+const NARROW_SHIFT_Y = -0.02;
 
 export interface Frame {
   position: [number, number, number];
@@ -29,8 +37,8 @@ export function frameDistance(aspect: number, fovDeg = FOV, radius = RADIUS): nu
 export function frameFor(aspect: number, wide: boolean, yaw = 0, pitch = 0): Frame {
   const distance = frameDistance(aspect) * (wide ? 1 : 1.08);
   const target: [number, number, number] = wide
-    ? [TARGET[0] + WIDE_SHIFT_X, TARGET[1] + 0.01, TARGET[2]]
-    : [TARGET[0], TARGET[1] - 0.02, TARGET[2]];
+    ? [TARGET[0] + WIDE_SHIFT_X, TARGET[1] + WIDE_SHIFT_Y, TARGET[2]]
+    : [TARGET[0], TARGET[1] + NARROW_SHIFT_Y, TARGET[2]];
   const [dx, dy, dz] = DIRECTION;
   const x = dx * Math.cos(yaw) + dz * Math.sin(yaw);
   const z = -dx * Math.sin(yaw) + dz * Math.cos(yaw);

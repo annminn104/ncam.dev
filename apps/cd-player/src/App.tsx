@@ -65,7 +65,13 @@ export default function App({ controller, initial = null, assetBase = '' }: AppP
   const [boot, dispatchBoot] = useReducer(bootReducer, INITIAL_BOOT);
   const [posterGone, setPosterGone] = useState(false);
   const live = boot.phase === 'live';
-  const start = useCallback(() => dispatchBoot({ type: 'start' }), []);
+  // "Open the player" and "Try again". A failure that says `reload` (a scene chunk that would not
+  // load) cannot be retried in place, so its "Try again" reloads the page.
+  const reload = boot.failure?.reload === true;
+  const start = useCallback(() => {
+    if (reload) window.location.reload();
+    else dispatchBoot({ type: 'start' });
+  }, [reload]);
   const onReady = useCallback(() => dispatchBoot({ type: 'ready' }), []);
   const onFail = useCallback((error: unknown) => {
     log.error('cd-player.scene-failed', { error: String(error) });

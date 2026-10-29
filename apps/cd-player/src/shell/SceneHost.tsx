@@ -1,6 +1,7 @@
 import { Component, useEffect, useState, type ComponentType, type ReactNode } from 'react';
-import { SceneChunkError } from '../failure';
+import { NoWebGLError, SceneChunkError } from '../failure';
 import type { PlayerSceneProps } from '../scene-props';
+import { hasWebGL2 } from '../webgl';
 
 /**
  * The scene chunk, loaded here and nowhere earlier. The server build never names it:
@@ -12,7 +13,7 @@ function loadPlayerScene(): Promise<{ PlayerScene: ComponentType<PlayerSceneProp
     : import('../scene/PlayerScene');
 }
 
-/** A render-time throw inside the canvas (no WebGL, a shader) becomes a boot failure. */
+/** A render-time throw inside the canvas (a shader, say) becomes a boot failure. */
 class SceneBoundary extends Component<
   { onFail(error: Error): void; children: ReactNode },
   { failed: boolean }
@@ -40,7 +41,10 @@ export function SceneHost({ live, onFail, ...rest }: Props) {
     let cancelled = false;
     loadPlayerScene().then(
       (module) => {
-        if (!cancelled) setScene(() => module.PlayerScene);
+        if (cancelled) return;
+        // Without WebGL 2 there is nothing to draw with and nothing to retry: no canvas is mounted.
+        if (!hasWebGL2()) onFail(new NoWebGLError('this browser cannot make a WebGL 2 context'));
+        else setScene(() => module.PlayerScene);
       },
       (error: unknown) => {
         if (!cancelled) onFail(new SceneChunkError(String(error)));
