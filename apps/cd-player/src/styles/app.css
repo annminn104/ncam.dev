@@ -600,6 +600,11 @@
     right: 12px;
     padding: 12px 14px;
   }
+  /* iOS Safari zooms into a focused field set under 16 px, and this full-screen page would stay
+     zoomed. The field keeps its 42 px height. */
+  .cdp-link input {
+    font-size: 16px;
+  }
   .cdp-tracks {
     top: auto;
     left: 12px;
