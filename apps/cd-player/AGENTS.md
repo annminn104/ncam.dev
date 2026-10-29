@@ -185,8 +185,9 @@ set), so a `loadUri` of the same track would load the embed's page a second time
 `load()` of that uri in `createEmbedPlayer` therefore calls `play()` alone, which the script holds
 until its iframe is ready. Every other load is `loadUri` then `play`, a later load of that same
 track too: once a track has ended, the embed has dropped its list. Spotify's `'error'` events (a
-uri it refuses, a command its player could not carry out) are logged as `cd-player.embed-error`
-with whatever they carry.
+uri its script refuses, a playback error its iframe posts) are logged as `cd-player.embed-error`
+with whatever they carry; a command the iframe cannot carry out ("no list was loaded") throws inside
+it and never arrives as one.
 
 **The sequencer and its commands** (`src/playback/sequencer.ts`): a pure reducer,
 `step(state, event)` returns the next state and the commands for the world outside: `swap {to}`

@@ -135,8 +135,9 @@ export async function createEmbedPlayer(
     }
     last = next;
   });
-  // What Spotify reports going wrong (a uri it refuses, a command its player could not carry out),
-  // kept in the console for the record; playback itself is followed through the updates above.
+  // What Spotify reports going wrong (a uri its script refuses, a playback error its iframe posts),
+  // kept in the console for the record; playback itself is followed through the updates above. A
+  // command the iframe cannot carry out ("no list was loaded") throws in there, never comes here.
   controller.addListener('error', (event) =>
     log.warn('cd-player.embed-error', { error: event.data }),
   );
