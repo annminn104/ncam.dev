@@ -154,11 +154,12 @@ again (`loadLink` in `App.tsx`). A first load that failed (no collection, nothin
 error: Spotify down on `/` or on a shared link) shows an **empty shelf** in the tracklist's place,
 the message and, for those failures, Retry, which calls `engine.open(ref)` again: `open` asks
 again for a ref whose collection never came. The bar's title then says "No tracks" rather than
-"Loading…", the message is not repeated under the input, and on a phone the sheet opens by itself
-to show the shelf. The engine's snapshot keeps the failure as `error: { message, retry }`. A
-failed change of collection keeps the one shown, with its message in the bar and no Retry (`open`
-does not ask again while a collection is shown); a pasted link is fetched before the page goes to
-it, so that case is rare.
+"Loading…", the message is not repeated under the input, and on a phone the sheet opens by itself,
+once per failure, to show the shelf (`App` sets `tracksOpen` when a new error appears, so the Tracks
+toggle can close the sheet and open it again; a Retry that fails again opens it again). The
+engine's snapshot keeps the failure as `error: { message, retry }`. A failed change of collection
+keeps the one shown, with its message in the bar and no Retry (`open` does not ask again while a
+collection is shown); a pasted link is fetched before the page goes to it, so that case is rare.
 
 **Pictures.** Spotify's image CDN answers with `Access-Control-Allow-Origin: *`, so the scene loads
 the art and the artist photos straight into textures with `crossOrigin = 'anonymous'`

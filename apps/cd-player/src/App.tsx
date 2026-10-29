@@ -176,6 +176,15 @@ export default function App({ controller, initial = null, assetBase = '' }: AppP
   // Retry, and the bar does not say it again. (A failed change of collection keeps the one shown,
   // and its message stays in the bar.)
   const shelfError = !snapshot.collection && !snapshot.loading ? snapshot.error : null;
+  // On a phone the sheet opens by itself, once per failure, to show the empty shelf; the Tracks
+  // toggle then closes and opens it as usual. Every failure is a new error object, so Retry failing
+  // again opens it again. The state is adjusted while rendering: the error is null on the server and
+  // on the first client render, so the markup is the same.
+  const [shelfSeen, setShelfSeen] = useState<typeof shelfError>(null);
+  if (shelfError !== shelfSeen) {
+    setShelfSeen(shelfError);
+    if (shelfError) setTracksOpen(true);
+  }
   const retryInput = linkError?.retry ?? null;
   return (
     <div className="cdp-root">
@@ -202,8 +211,8 @@ export default function App({ controller, initial = null, assetBase = '' }: AppP
         tracks={snapshot.seq.tracks}
         currentIndex={currentIndex(snapshot.seq)}
         status={snapshot.seq.status}
-        // On a phone the sheet opens by itself to show an empty shelf.
-        open={tracksOpen || shelfError !== null}
+        // The visitor's to open and close; an empty shelf opens it once per failure (above).
+        open={tracksOpen}
         failure={
           shelfError && {
             message: shelfError.message,
