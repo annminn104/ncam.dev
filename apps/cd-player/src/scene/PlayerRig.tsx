@@ -4,6 +4,7 @@ import type { SceneBridge } from '../bridge';
 import type { PlayerModel } from './model';
 import { rigFor } from './rig';
 import { useSceneTextures } from './textures/useSceneTextures';
+import { useControls } from './useControls';
 import { useDirector } from './useDirector';
 
 interface Props {
@@ -26,6 +27,7 @@ export function PlayerRig({ model, bridge, onReady }: Props) {
   const rig = useMemo(() => rigFor(model), [model]);
   const paint = useSceneTextures(rig, bridge);
   useDirector(rig, bridge, paint);
+  const handlers = useControls(rig, bridge);
   useReadyProbe(onReady);
-  return <primitive object={model.root} />;
+  return <primitive object={model.root} {...handlers} />;
 }
