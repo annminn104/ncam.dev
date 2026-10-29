@@ -1,9 +1,13 @@
 import { useFrame } from '@react-three/fiber';
-import { useRef } from 'react';
+import { useMemo, useRef } from 'react';
+import type { SceneBridge } from '../bridge';
 import type { PlayerModel } from './model';
+import { rigFor } from './rig';
+import { useDirector, type Painter } from './useDirector';
 
 interface Props {
   model: PlayerModel;
+  bridge: SceneBridge;
   onReady(): void;
 }
 
@@ -17,7 +21,12 @@ function useReadyProbe(onReady: () => void) {
   });
 }
 
-export function PlayerRig({ model, onReady }: Props) {
+/** Until each track's art is printed on its disc and booklet, changes run on blank prints. */
+const blankPaint: Painter = async () => {};
+
+export function PlayerRig({ model, bridge, onReady }: Props) {
+  const rig = useMemo(() => rigFor(model), [model]);
+  useDirector(rig, bridge, blankPaint);
   useReadyProbe(onReady);
   return <primitive object={model.root} />;
 }

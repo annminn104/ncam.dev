@@ -61,7 +61,7 @@ function ShadowFloor() {
 }
 
 export function PlayerScene(props: PlayerSceneProps) {
-  const { assetBase, onReady, onFail } = props;
+  const { assetBase, bridge, onReady, onFail } = props;
   const [model, setModel] = useState<PlayerModel | null>(null);
   const [narrow] = useState(() => !isWide(window.innerWidth));
   useEffect(() => {
@@ -100,7 +100,7 @@ export function PlayerScene(props: PlayerSceneProps) {
       <Studio narrow={narrow} />
       <ShadowFloor />
       <CameraRig />
-      {model && <PlayerRig model={model} onReady={onReady} />}
+      {model && <PlayerRig model={model} bridge={bridge} onReady={onReady} />}
     </Canvas>
   );
 }
