@@ -1,10 +1,11 @@
 import { createLogger } from '@ncam/logger';
 import { useFrame } from '@react-three/fiber';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { CanvasTexture, MeshBasicMaterial, MeshPhysicalMaterial } from 'three';
 import type { SceneBridge, TrackView } from '../../bridge';
+import type { Status } from '../../playback/sequencer';
 import type { Rig } from '../rig';
-import type { Painter } from '../useDirector';
+import type { Painter } from '../swap-controller';
 import { tryImage } from './images';
 import {
   canvasTexture,
@@ -16,9 +17,12 @@ import {
   paintLcd,
   paintPolaroid,
 } from './paint';
-import { createPainter, printKey, reprintFor } from './painter';
+import { createPainter, printKey, reprintFor, settlesWithin } from './painter';
 
 const log = createLogger({ scope: 'cd-player' });
+
+/** How long a print waits for the page's fonts: past it, it goes out in the fallback faces. */
+const FACES_WAIT_MS = 1000;
 
 function makeSurfaces() {
   const disc = [newCanvas(1024, 1024), newCanvas(1024, 1024)] as const;
@@ -45,7 +49,11 @@ interface Shown {
   card: string;
   photos: [string, string];
   lid: string;
-  lcd: string;
+  /**
+   * What the display shows: the three things it changes with, compared every frame (a key string
+   * would be an allocation per frame).
+   */
+  lcd: { track: number; second: number; status: Status | null };
   /** The track each disc and its booklet were last printed for, by whoever asked. */
   printed: [TrackView | null, TrackView | null];
   /** Whether a track's print has landed on each disc and its booklet (else they are blank). */
@@ -58,7 +66,7 @@ const nothingShown = (): Shown => ({
   card: NONE,
   photos: [NONE, NONE],
   lid: NONE,
-  lcd: '',
+  lcd: { track: -1, second: -1, status: null },
   printed: [null, null],
   landed: [false, false],
 });
@@ -76,6 +84,48 @@ function printBlank({ canvases, textures }: Surfaces, index: 0 | 1): void {
   textures.booklet[index].needsUpdate = true;
 }
 
+/** The hook's own prints (the lid, a track's art arriving) report a failure as the director's do. */
+const reportFailed = (track: TrackView) => (error: unknown) =>
+  log.warn('cd-player.print-failed', { track: track.id, error: String(error) });
+
+/**
+ * The painter the director calls, and the hook: a track's art and name printed on a disc and its
+ * booklet. It holds the order of the prints in flight, so it lives as long as the hook does.
+ */
+function makePainter(surfaces: Surfaces, shown: { current: Shown }): Painter {
+  const painter: Painter = (index, view, signal) => {
+    shown.current.printed[index] = view;
+    return print(index, view, signal);
+  };
+  const print = createPainter(
+    async (view) => {
+      const text = `${view.title} ${view.artists}`;
+      // The ring prints upper case; the booklet's own title, as it is.
+      const faces = loadFaces(text + text.toUpperCase());
+      const [art, photo, inTime] = await Promise.all([
+        tryImage(view.artUrl),
+        tryImage(view.artistUrl),
+        settlesWithin(faces, FACES_WAIT_MS),
+      ]);
+      return { art, photo, late: inTime ? null : faces };
+    },
+    (index, { art, photo, late }, view) => {
+      const { canvases, textures } = surfaces;
+      paintDisc(canvases.disc[index], photo ?? art, view);
+      textures.disc[index].needsUpdate = true;
+      paintBooklet(canvases.booklet[index], art, view);
+      textures.booklet[index].needsUpdate = true;
+      shown.current.landed[index] = true;
+      // Printed in the fallback faces: print it again once the page's are in, unless a newer
+      // print has taken the disc meanwhile.
+      void late?.then(() => {
+        if (shown.current.printed[index] === view) painter(index, view).catch(reportFailed(view));
+      });
+    },
+  );
+  return painter;
+}
+
 /**
  * Prints the bridge's view on the player: each disc and its case's booklet for the track they
  * carry (through the returned painter, which the director calls on a change; the hook prints a
@@ -85,6 +135,8 @@ function printBlank({ canvases, textures }: Surfaces, index: 0 | 1): void {
 export function useSceneTextures(rig: Rig, bridge: SceneBridge): Painter {
   const [surfaces] = useState(makeSurfaces);
   const shown = useRef<Shown>(nothingShown());
+  // State, not a memo: React may drop a memo, and the painter's order of prints with it.
+  const [paint] = useState(() => makePainter(surfaces, shown));
 
   useEffect(() => {
     const { canvases, textures } = surfaces;
@@ -114,51 +166,28 @@ export function useSceneTextures(rig: Rig, bridge: SceneBridge): Painter {
     };
   }, [rig, surfaces]);
 
-  const paint = useMemo<Painter>(() => {
-    const print = createPainter(
-      async (view) => {
-        const text = `${view.title} ${view.artists}`;
-        const [art, photo] = await Promise.all([
-          tryImage(view.artUrl),
-          tryImage(view.artistUrl),
-          // The ring prints upper case; the booklet's own title, as it is.
-          loadFaces(text + text.toUpperCase()),
-        ]);
-        return { art, photo };
-      },
-      (index, { art, photo }, view) => {
-        const { canvases, textures } = surfaces;
-        paintDisc(canvases.disc[index], photo ?? art, view);
-        textures.disc[index].needsUpdate = true;
-        paintBooklet(canvases.booklet[index], art, view);
-        textures.booklet[index].needsUpdate = true;
-        shown.current.landed[index] = true;
-      },
-    );
-    return (index, view, signal) => {
-      shown.current.printed[index] = view;
-      return print(index, view, signal);
-    };
-  }, [surfaces]);
-
   useEffect(() => {
     const { canvases, textures } = surfaces;
     let live = true;
-    // The director reports its own failed prints; these are the hook's (the lid, a track's art).
-    const print = (index: 0 | 1, track: TrackView) => {
-      paint(index, track).catch((error: unknown) =>
-        log.warn('cd-player.print-failed', { track: track.id, error: String(error) }),
-      );
+    const printTrack = (index: 0 | 1, track: TrackView) => {
+      paint(index, track).catch(reportFailed(track));
     };
     const update = () => {
       const view = bridge.getView();
       const card = view.collection ? `${view.collection.name}\n${view.collection.subtitle}` : '';
       if (card !== shown.current.card) {
         shown.current.card = card;
-        void loadFaces(card).then(() => {
+        const faces = loadFaces(card);
+        const printCard = () => {
           if (shown.current.card !== card) return;
           paintCard(canvases.card, view.collection);
           textures.card.needsUpdate = true;
+        };
+        // A font that stalls does not hold the card: it goes out in the fallback faces at worst,
+        // and again once the page's are in.
+        void settlesWithin(faces, FACES_WAIT_MS).then((inTime) => {
+          printCard();
+          if (!inTime) void faces.then(printCard);
         });
       }
       for (const index of [0, 1] as const) {
@@ -179,14 +208,14 @@ export function useSceneTextures(rig: Rig, bridge: SceneBridge): Painter {
         const key = next ? printKey(next) : '';
         if (key !== shown.current.lid) {
           shown.current.lid = key;
-          if (next) print(rig.lidCase, next);
+          if (next) printTrack(rig.lidCase, next);
         }
       }
       // A change prints its disc with what the view knew when it began: print it again once the
       // view knows more of that track (its art arrives while a track picked from the list turns).
       for (const index of [0, 1] as const) {
         const again = reprintFor(shown.current.printed[index], view);
-        if (again) print(index, again);
+        if (again) printTrack(index, again);
       }
     };
     update();
@@ -195,7 +224,7 @@ export function useSceneTextures(rig: Rig, bridge: SceneBridge): Painter {
     // again (the display on its next frame, and the discs no track has printed on yet).
     void loadFaces().then(() => {
       if (!live) return;
-      shown.current.lcd = '';
+      shown.current.lcd.track = -1;
       for (const index of [0, 1] as const) {
         if (!shown.current.landed[index]) printBlank(surfaces, index);
       }
@@ -208,9 +237,12 @@ export function useSceneTextures(rig: Rig, bridge: SceneBridge): Painter {
 
   useFrame(() => {
     const view = bridge.getView();
-    const key = `${view.trackNo}|${Math.floor(view.positionMs / 1000)}|${view.status}`;
-    if (key === shown.current.lcd) return;
-    shown.current.lcd = key;
+    const lcd = shown.current.lcd;
+    const second = Math.floor(view.positionMs / 1000);
+    if (lcd.track === view.trackNo && lcd.second === second && lcd.status === view.status) return;
+    lcd.track = view.trackNo;
+    lcd.second = second;
+    lcd.status = view.status;
     paintLcd(surfaces.canvases.lcd, view.trackNo, view.positionMs, view.status);
     surfaces.textures.lcd.needsUpdate = true;
   });

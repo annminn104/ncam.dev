@@ -7,12 +7,38 @@ import {
   MeshBasicMaterial,
   MeshPhysicalMaterial,
   MeshStandardMaterial,
+  Texture,
 } from 'three';
 import { describe, expect, it } from 'vitest';
 import { DYNAMIC_MATERIALS } from './contract';
-import { upgradeMaterials } from './materials';
+import { makeMaterial, upgradeMaterials } from './materials';
 
 const meshOf = (name: string) => new Mesh(new BoxGeometry(), new MeshStandardMaterial({ name }));
+
+describe('makeMaterial', () => {
+  const source = new MeshStandardMaterial({ name: 'from_the_glb' });
+  const grain = new Texture();
+
+  // The studio's panels are bright: reflected in full they lift the blacks of what is behind the
+  // glass (the booklet's art) and leave hot spots on it. The edges and a faint reflection still
+  // read as glass.
+  it('makes the crystal clear glass with a faint reflection, not a mirror-strong one', () => {
+    const glass = makeMaterial('crystal', source, grain) as MeshPhysicalMaterial;
+    expect(glass.transmission).toBe(1);
+    expect(glass.metalness).toBe(0);
+    expect(glass.roughness).toBeLessThanOrEqual(0.05);
+    expect(glass.specularIntensity).toBeGreaterThan(0);
+    expect(glass.specularIntensity).toBeLessThanOrEqual(0.4);
+  });
+
+  it('makes a print a paper with a soft sheen: no clearcoat, a reflection well under full', () => {
+    const print = makeMaterial('print', source, grain) as MeshPhysicalMaterial;
+    expect(print.clearcoat).toBe(0);
+    expect(print.roughness).toBeGreaterThanOrEqual(0.3);
+    expect(print.specularIntensity).toBeGreaterThan(0);
+    expect(print.specularIntensity).toBeLessThanOrEqual(0.4);
+  });
+});
 
 describe('upgradeMaterials', () => {
   it('samples the leather grain filtered and mip-mapped, so it fades with distance and does not shimmer', () => {

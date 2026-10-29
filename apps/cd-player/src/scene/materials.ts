@@ -90,7 +90,9 @@ export function makeMaterial(
         transmission: 1,
         thickness: 0.002,
         ior: 1.53,
-        specularIntensity: 1,
+        // The studio's bright panels, reflected in full, fog what sits behind the glass (the
+        // booklet's art). A faint reflection and the refracted edges still read as glass.
+        specularIntensity: 0.3,
       });
     case 'metal':
       return physical(source, {
@@ -133,12 +135,13 @@ export function makeMaterial(
         toneMapped: false,
       });
     case 'print':
+      // Paper with a soft sheen. A clearcoat, or the full specular strength, mirrors the studio's
+      // bright panels in the art: blacks lift to grey and hot spots sit on it.
       return new MeshPhysicalMaterial({
         name: source.name,
         color: new Color('#ffffff'),
         roughness: 0.38,
-        clearcoat: 0.5,
-        clearcoatRoughness: 0.12,
+        specularIntensity: 0.3,
       });
     case 'screen':
       return new MeshBasicMaterial({

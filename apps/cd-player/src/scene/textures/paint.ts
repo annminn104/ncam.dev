@@ -66,6 +66,11 @@ function blushGradient(ctx: CanvasRenderingContext2D, w: number, h: number): voi
   ctx.fillRect(0, 0, w, h);
 }
 
+/** `text`, or as much of it as fits `max` px in the font the context has now. */
+function fitted(ctx: CanvasRenderingContext2D, text: string, max: number): string {
+  return fitText((s) => ctx.measureText(s).width, text, max);
+}
+
 /** The disc's label: the artist's photo, a darkened rim and the title and artist printed round it. */
 export function paintDisc(
   canvas: HTMLCanvasElement,
@@ -112,7 +117,7 @@ export function paintDisc(
   ctx.fillStyle = 'rgba(255, 255, 255, 0.92)';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  const chars = [...fitText((s) => ctx.measureText(s).width, text, Math.PI * radius * 0.8)];
+  const chars = [...fitted(ctx, text, Math.PI * radius * 0.8)];
   const widths = chars.map((char) => ctx.measureText(char).width);
   for (const { char, angle } of arcLayout(chars, widths, radius, 0, size * 0.003)) {
     ctx.save();
@@ -141,13 +146,13 @@ export function paintBooklet(
   ctx.textAlign = 'left';
   ctx.textBaseline = 'alphabetic';
   ctx.font = title(Math.round(w * 0.11));
-  ctx.fillText(
-    fitText((s) => ctx.measureText(s).width, view?.title ?? 'Your playlist', w * 0.84),
-    w * 0.08,
-    h * 0.82,
-  );
+  ctx.fillText(fitted(ctx, view?.title ?? 'Your playlist', w * 0.84), w * 0.08, h * 0.82);
   ctx.font = semibold(Math.round(w * 0.032));
-  ctx.fillText(view?.artists ?? 'Paste a Spotify link to make this page yours', w * 0.08, h * 0.9);
+  ctx.fillText(
+    fitted(ctx, view?.artists ?? 'Paste a Spotify link to make this page yours', w * 0.84),
+    w * 0.08,
+    h * 0.9,
+  );
 }
 
 export function paintPolaroid(canvas: HTMLCanvasElement, image: HTMLImageElement | null): void {
@@ -174,15 +179,11 @@ export function paintCard(
   ctx.fillText('N O W   S P I N N I N G', w / 2, h * 0.24);
   ctx.fillStyle = INK;
   ctx.font = title(Math.round(h * 0.36));
-  ctx.fillText(
-    fitText((s) => ctx.measureText(s).width, collection?.name ?? 'Your playlist', w * 0.92),
-    w / 2,
-    h * 0.6,
-  );
+  ctx.fillText(fitted(ctx, collection?.name ?? 'Your playlist', w * 0.92), w / 2, h * 0.6);
   if (collection?.subtitle) {
     ctx.fillStyle = '#8f878c';
     ctx.font = semibold(Math.round(h * 0.12));
-    ctx.fillText(collection.subtitle, w / 2, h * 0.87);
+    ctx.fillText(fitted(ctx, collection.subtitle, w * 0.92), w / 2, h * 0.87);
   }
 }
 

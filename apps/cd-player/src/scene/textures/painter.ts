@@ -20,6 +20,21 @@ export function createPainter<Loaded>(
   };
 }
 
+/**
+ * Whether `work` settled (finished or failed) within `ms`: false once the wait runs out, with the
+ * work going on. A print waits for its fonts this way, so a stalled request never holds it.
+ */
+export function settlesWithin(work: Promise<unknown>, ms: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => resolve(false), ms);
+    const settled = () => {
+      clearTimeout(timer);
+      resolve(true);
+    };
+    work.then(settled, settled);
+  });
+}
+
 /** What a print shows of a track: it is made again when this changes. */
 export function printKey(track: TrackView): string {
   return `${track.id}\n${track.artUrl}\n${track.artistUrl}`;

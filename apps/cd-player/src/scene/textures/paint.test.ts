@@ -15,14 +15,19 @@ const view: TrackView = {
   palette: null,
 };
 
-/** A canvas whose 2D context draws nothing and notes every font it is given. */
-function recorder(size = 1024) {
+/**
+ * A canvas whose 2D context draws nothing: it notes every font it is given and every text it is
+ * asked to draw (in order), and measures a character as 8 px.
+ */
+function recorder(width = 1024, height = width) {
   const fonts = new Set<string>();
+  const texts: string[] = [];
   const context = new Proxy(
     {},
     {
       get: (_target, key) => {
         if (key === 'measureText') return (text: string) => ({ width: text.length * 8 });
+        if (key === 'fillText') return (text: string) => texts.push(text);
         if (key.toString().startsWith('create')) return () => ({ addColorStop: () => {} });
         return () => {};
       },
@@ -32,8 +37,8 @@ function recorder(size = 1024) {
       },
     },
   );
-  const canvas = { width: size, height: size, getContext: () => context };
-  return { canvas: canvas as unknown as HTMLCanvasElement, fonts };
+  const canvas = { width, height, getContext: () => context };
+  return { canvas: canvas as unknown as HTMLCanvasElement, fonts, texts };
 }
 
 const picture = { naturalWidth: 640, naturalHeight: 480 } as HTMLImageElement;
@@ -98,5 +103,38 @@ describe('loadFaces', () => {
     await expect(loadFaces()).resolves.toBeUndefined();
     vi.stubGlobal('document', {});
     await expect(loadFaces()).resolves.toBeUndefined();
+  });
+});
+
+describe('the lines of text', () => {
+  it("fits the card's subtitle to the card, as it does the name", () => {
+    const { canvas, texts } = recorder(1024, 182);
+    paintCard(canvas, {
+      name: 'Top 50 - Global',
+      subtitle: 'an owner with a long name '.repeat(20),
+    });
+    const subtitle = texts.at(-1) ?? '';
+    expect(subtitle.endsWith('…')).toBe(true);
+    expect(subtitle.length * 8).toBeLessThanOrEqual(1024 * 0.92);
+  });
+
+  it('leaves a subtitle that fits as it is', () => {
+    const { canvas, texts } = recorder(1024, 182);
+    paintCard(canvas, { name: 'Top 50 - Global', subtitle: 'Spotify' });
+    expect(texts.at(-1)).toBe('Spotify');
+  });
+
+  it('fits the artists of an art-less booklet to the cover, as it does the title', () => {
+    const { canvas, texts } = recorder();
+    paintBooklet(canvas, null, { ...view, artists: 'An Artist, '.repeat(60) });
+    const artists = texts.at(-1) ?? '';
+    expect(artists.endsWith('…')).toBe(true);
+    expect(artists.length * 8).toBeLessThanOrEqual(1024 * 0.84);
+  });
+
+  it('leaves the artists of an art-less booklet as they are when they fit', () => {
+    const { canvas, texts } = recorder();
+    paintBooklet(canvas, null, view);
+    expect(texts.at(-1)).toBe(view.artists);
   });
 });

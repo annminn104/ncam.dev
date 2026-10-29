@@ -1,6 +1,10 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { TrackView } from '../../bridge';
-import { createPainter, printKey, reprintFor } from './painter';
+import { createPainter, printKey, reprintFor, settlesWithin } from './painter';
+
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 const track = (id: string, art: string | null = null, photo: string | null = null): TrackView => ({
   id,
@@ -128,5 +132,40 @@ describe('reprintFor', () => {
   it('keys a print by the track and its pictures', () => {
     expect(printKey(known)).not.toBe(printKey(bare));
     expect(printKey(known)).toBe(printKey(track('picked', 'art', 'photo')));
+  });
+});
+
+describe('settlesWithin', () => {
+  it('says true as the work settles in time, and stops waiting', async () => {
+    vi.useFakeTimers();
+    await expect(settlesWithin(Promise.resolve(), 1000)).resolves.toBe(true);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('counts failed work as settled too: the wait is for it to be over, not for it to work', async () => {
+    vi.useFakeTimers();
+    const failed = Promise.reject(new Error('offline'));
+    await expect(settlesWithin(failed, 1000)).resolves.toBe(true);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('says false once the wait runs out, and the work goes on without error', async () => {
+    vi.useFakeTimers();
+    let finish = () => {};
+    const work = new Promise<void>((resolve) => {
+      finish = resolve;
+    });
+    let answer: boolean | null = null;
+    void settlesWithin(work, 1000).then((settled) => {
+      answer = settled;
+    });
+    await vi.advanceTimersByTimeAsync(999);
+    expect(answer).toBeNull();
+    await vi.advanceTimersByTimeAsync(1);
+    expect(answer).toBe(false);
+    // The work finishing afterwards changes nothing.
+    finish();
+    await vi.advanceTimersByTimeAsync(10);
+    expect(answer).toBe(false);
   });
 });
