@@ -1,5 +1,9 @@
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useReducer, useRef, useState, useSyncExternalStore } from 'react';
+import { createLogger } from '@ncam/logger';
+import { readAutoplaySignals, shouldAutoplay, whenSettled } from './autoplay';
+import { bootReducer, INITIAL_BOOT } from './boot';
 import { createBridge } from './bridge';
+import { describeFailure } from './failure';
 import { remoteBase } from './lib/asset-url';
 import { readLast, restoreTarget, safeStorage, writeLast } from './persist';
 import { createEmbedPlayer, type EmbedCallbacks } from './playback/embed-controller';
@@ -9,14 +13,21 @@ import { usePlayerEngine } from './playback/usePlayerEngine';
 import type { RouteController } from './route-controller';
 import { collectionPath, parseRoute, routeCollection } from './routes';
 import { Backdrop } from './shell/Backdrop';
+import { EnterButton } from './shell/EnterButton';
 import { Hud } from './shell/Hud';
 import { LinkBar } from './shell/LinkBar';
 import { NowPlaying } from './shell/NowPlaying';
 import { Poster } from './shell/Poster';
+import { SceneHost } from './shell/SceneHost';
 import { Tracklist } from './shell/Tracklist';
 import { createSpotifyClient, requestErrorMessage } from './spotify/client';
 import { linkErrorMessage, parseSpotifyLink } from './spotify/link';
 import { backdropFor, nowPlayingFor } from './view';
+
+const log = createLogger({ scope: 'cd-player' });
+
+/** The canvas's fade-in over the poster: .cdp-scene's transition in styles/app.css. */
+const FADE_MS = 600;
 
 export interface AppProps {
   controller: RouteController;
@@ -51,6 +62,48 @@ export default function App({ controller, initial = null, assetBase = '' }: AppP
     },
   }));
   const { engine, snapshot } = usePlayerEngine(deps, initial, ref);
+  const [boot, dispatchBoot] = useReducer(bootReducer, INITIAL_BOOT);
+  const [posterGone, setPosterGone] = useState(false);
+  const live = boot.phase === 'live';
+  const start = useCallback(() => dispatchBoot({ type: 'start' }), []);
+  const onReady = useCallback(() => dispatchBoot({ type: 'ready' }), []);
+  const onFail = useCallback((error: unknown) => {
+    log.error('cd-player.scene-failed', { error: String(error) });
+    dispatchBoot({ type: 'fail', failure: describeFailure(error) });
+  }, []);
+
+  // On a hardware GPU the player opens by itself once the page has settled; elsewhere the poster
+  // waits for the visitor (src/autoplay.ts). `autostart` only ever leaves the poster.
+  useEffect(
+    () =>
+      whenSettled(() => {
+        if (shouldAutoplay(readAutoplaySignals())) dispatchBoot({ type: 'autostart' });
+      }),
+    [],
+  );
+
+  // The poster stays under the canvas until the fade-in is over, and comes back with a failure.
+  useEffect(() => {
+    if (!live) {
+      setPosterGone(false);
+      return;
+    }
+    const id = setTimeout(() => setPosterGone(true), FADE_MS);
+    return () => clearTimeout(id);
+  }, [live]);
+
+  /**
+   * A visitor's action: it also opens the scene from the poster (the reducer ignores `autostart`
+   * anywhere else, so a failed boot is retried by "Try again" alone, never by another press).
+   */
+  const act = useCallback(
+    (event: Parameters<typeof engine.user>[0]) => {
+      dispatchBoot({ type: 'autostart' });
+      engine.user(event);
+    },
+    [engine],
+  );
+
   const [linkError, setLinkError] = useState<string | null>(null);
   const [linkBusy, setLinkBusy] = useState(false);
   const [tracksOpen, setTracksOpen] = useState(false);
@@ -88,27 +141,37 @@ export default function App({ controller, initial = null, assetBase = '' }: AppP
     [controller, deps.client],
   );
 
-  // Space plays or pauses, N and P change tracks; never while typing.
+  // Space plays or pauses, N and P change tracks; never while typing, and a held key is one press.
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.metaKey || event.ctrlKey || event.altKey) return;
       const target = event.target as Element | null;
       if (target?.closest?.('input, textarea, select, button, [contenteditable="true"]')) return;
-      if (event.code === 'Space') {
-        event.preventDefault();
-        engine.user({ type: 'TOGGLE' });
-      } else if (event.key === 'n' || event.key === 'N') engine.user({ type: 'NEXT' });
-      else if (event.key === 'p' || event.key === 'P') engine.user({ type: 'PREV' });
+      // Space is kept from scrolling the page even while it repeats.
+      if (event.code === 'Space') event.preventDefault();
+      if (event.repeat) return;
+      if (event.code === 'Space') act({ type: 'TOGGLE' });
+      else if (event.key === 'n' || event.key === 'N') act({ type: 'NEXT' });
+      else if (event.key === 'p' || event.key === 'P') act({ type: 'PREV' });
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [engine]);
+  }, [act]);
 
   const backdrop = backdropFor(snapshot);
   return (
     <div className="cdp-root">
       <Backdrop artUrl={backdrop.artUrl} palette={backdrop.palette} />
-      <Poster />
+      {!posterGone && <Poster />}
+      {(boot.phase === 'booting' || live) && (
+        <SceneHost
+          assetBase={remoteBase(assetBase)}
+          bridge={deps.bridge}
+          live={live}
+          onReady={onReady}
+          onFail={onFail}
+        />
+      )}
       <LinkBar
         collection={snapshot.collection}
         loading={snapshot.loading || linkBusy}
@@ -123,7 +186,7 @@ export default function App({ controller, initial = null, assetBase = '' }: AppP
         onToggle={() => setTracksOpen((open) => !open)}
         onSelect={(index) => {
           setTracksOpen(false);
-          engine.user({ type: 'SELECT', index });
+          act({ type: 'SELECT', index });
         }}
       />
       <NowPlaying
@@ -134,11 +197,12 @@ export default function App({ controller, initial = null, assetBase = '' }: AppP
         embed={snapshot.embed}
         hint={snapshot.hint}
         embedRef={embedHost}
-        onPrev={() => engine.user({ type: 'PREV' })}
-        onToggle={() => engine.user({ type: 'TOGGLE' })}
-        onNext={() => engine.user({ type: 'NEXT' })}
+        onPrev={() => act({ type: 'PREV' })}
+        onToggle={() => act({ type: 'TOGGLE' })}
+        onNext={() => act({ type: 'NEXT' })}
       />
       <Hud />
+      <EnterButton phase={boot.phase} failure={boot.failure} onStart={start} />
     </div>
   );
 }
