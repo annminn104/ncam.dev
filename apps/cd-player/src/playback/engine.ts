@@ -58,8 +58,11 @@ const PREFETCH = 3;
 const HINT_MS = 3500;
 /** How long building the Spotify player may take before the embed counts as blocked. */
 const PLAYER_TIMEOUT_MS = 20_000;
-/** How long past a track's expected end the end watchdog waits for the embed to report it. */
-const END_GRACE_MS = 2500;
+/**
+ * How long past a track's expected end the end watchdog waits for the embed to report it: the
+ * embed reports an end well within a second, and a longer wait only stretches the silence.
+ */
+const END_GRACE_MS = 1500;
 
 /**
  * Playback outside React: the sequencer's state, the commands it emits (disc changes through the

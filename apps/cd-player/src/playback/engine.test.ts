@@ -485,8 +485,10 @@ describe('PlayerEngine', () => {
   });
 
   // Logged out, the embed can let a preview run out without a word (no paused update, no end): the
-  // engine then counts the track as ended once the rest of it and 2.5 s have passed with no update.
+  // engine then counts the track as ended once the rest of it and 1.5 s have passed with no update.
   describe('the end watchdog', () => {
+    /** END_GRACE_MS in engine.ts: how long past a track's expected end the watchdog waits. */
+    const GRACE_MS = 1500;
     /** Track a playing: the player built, the disc seated, the track loaded and started. */
     async function playingA() {
       const ctx = setup();
@@ -509,12 +511,12 @@ describe('PlayerEngine', () => {
     /** The index in `timers` of the latest timer (its handle is the index + 1). */
     const latest = ({ timers }: Ctx) => timers.length - 1;
 
-    it('ends a track the embed stops reporting near its end, after the rest of it and 2.5 s, and the next one loads', async () => {
+    it('ends a track the embed stops reporting near its end, after the rest of it and 1.5 s, and the next one loads', async () => {
       const ctx = await playingA();
       const { engine, player, timers, delays, swap, flush, cb } = ctx;
       cb().onUpdate(at(28_000));
       const watch = latest(ctx);
-      expect(delays[watch]).toBe(2000 + 2500);
+      expect(delays[watch]).toBe(2000 + GRACE_MS);
       timers[watch]();
       expect(engine.getSnapshot().seq).toMatchObject({ status: 'swapping', cursor: 1 });
       // The embed dropped its list with the preview: nothing reaches it until the next load.
@@ -560,7 +562,7 @@ describe('PlayerEngine', () => {
       const { engine, timers, delays, cleared, cb } = ctx;
       cb().onUpdate(at(20_000));
       const watch = latest(ctx);
-      expect(delays[watch]).toBe(10_000 + 2500);
+      expect(delays[watch]).toBe(10_000 + GRACE_MS);
       cb().onUpdate(at(20_500, true));
       expect(cleared).toContain(watch + 1);
       // A timer that fires anyway (an injected one that cannot be cancelled) changes nothing.
@@ -573,11 +575,11 @@ describe('PlayerEngine', () => {
       const { engine, timers, delays, cleared, cb } = ctx;
       cb().onUpdate(at(10_000));
       const first = latest(ctx);
-      expect(delays[first]).toBe(20_000 + 2500);
+      expect(delays[first]).toBe(20_000 + GRACE_MS);
       cb().onUpdate(at(11_000));
       const second = latest(ctx);
       expect(second).toBe(first + 1);
-      expect(delays[second]).toBe(19_000 + 2500);
+      expect(delays[second]).toBe(19_000 + GRACE_MS);
       expect(cleared).toContain(first + 1);
       timers[first]();
       expect(engine.getSnapshot().seq).toMatchObject({ status: 'playing', cursor: 0 });
@@ -590,7 +592,7 @@ describe('PlayerEngine', () => {
       const { engine, delays, cleared, cb, swap, flush } = ctx;
       cb().onUpdate(at(5000));
       const beforeNext = latest(ctx);
-      expect(delays[beforeNext]).toBe(25_000 + 2500);
+      expect(delays[beforeNext]).toBe(25_000 + GRACE_MS);
       engine.user({ type: 'NEXT' });
       swap();
       await flush();
@@ -598,7 +600,7 @@ describe('PlayerEngine', () => {
       cb().onStarted('spotify:track:b');
       cb().onUpdate({ ...at(6000), uri: 'spotify:track:b' });
       const beforeLoad = latest(ctx);
-      expect(delays[beforeLoad]).toBe(24_000 + 2500);
+      expect(delays[beforeLoad]).toBe(24_000 + GRACE_MS);
       engine.send({ type: 'LOAD', tracks: collection.tracks });
       expect(cleared).toContain(beforeLoad + 1);
     });
@@ -608,7 +610,7 @@ describe('PlayerEngine', () => {
       const { engine, timers, delays, cleared, cb } = ctx;
       cb().onUpdate(at(28_000));
       const watch = latest(ctx);
-      expect(delays[watch]).toBe(2000 + 2500);
+      expect(delays[watch]).toBe(2000 + GRACE_MS);
       engine.dispose();
       expect(cleared).toContain(watch + 1);
       timers[watch]();
@@ -621,7 +623,7 @@ describe('PlayerEngine', () => {
       const send = vi.spyOn(engine, 'send');
       cb().onUpdate(at(28_500));
       const watch = latest(ctx);
-      expect(delays[watch]).toBe(1500 + 2500);
+      expect(delays[watch]).toBe(1500 + GRACE_MS);
       // What the embed controller does for an end it sees: the paused update, then the end.
       cb().onUpdate(at(30_000, true));
       cb().onEnded();

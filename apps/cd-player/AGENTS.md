@@ -256,7 +256,7 @@ out without a word: no paused update, no end. The sequencer would stay `playing`
 the embed has dropped its list, and any command after that (a pause, a seek, a restart, the
 collection load's pause) throws "Cannot perform operation; no list was loaded." inside its iframe.
 So every update of a track that plays (neither paused nor buffering) re-arms one timer for the rest
-of the track plus 2.5 s (`END_GRACE_MS`); a paused update (an end the embed reports among them), a
+of the track plus 1.5 s (`END_GRACE_MS`); a paused update (an end the embed reports among them), a
 load, a new collection and dispose clear it, and a timer that fires after a newer update does
 nothing. If it runs out with the status `playing` or `paused`, the engine sends ENDED itself: the
 disc changes without a `pause` (the sequencer's ENDED path sends none), and the next `load` gives
@@ -266,7 +266,7 @@ update comes back to clear the watch: a live embed answers a pause with one, so 
 while `paused` means no answer came. `hasEnded` still asks for a paused update, since a `restart()`
 near the end also snaps to 0. A buffering update neither arms nor clears it, so an embed that keeps
 reporting buffering at the end does not hold it off; a stall longer than the rest of the track and
-2.5 s moves on.
+1.5 s moves on.
 
 **The hint.** Right after `loadUri` the embed reports itself paused until the audio starts, so the
 engine ignores paused updates until `playback_started`. If that has not come 3.5 s after a load
