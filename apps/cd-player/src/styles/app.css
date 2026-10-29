@@ -160,7 +160,11 @@
   padding: 14px 16px 14px 22px;
 }
 .cdp-bar__title h1 {
-  margin: 2px 0 0;
+  /* The font's content area is taller than the 1.05 line box, and the ellipsis needs overflow:
+     hidden, which would clip the tails of g, j, p, q and y. The padding extends the clip box
+     downward; the negative margin takes its height back, so nothing moves. */
+  padding-bottom: 0.1em;
+  margin: 2px 0 -0.1em;
   font-family: var(--cdp-display);
   font-size: clamp(22px, 2.4vw, 32px);
   font-weight: 500;
