@@ -1,7 +1,8 @@
 /**
  * Spotify's iFrame API (https://open.spotify.com/embed/iframe-api/v1), as documented at
  * developer.spotify.com/documentation/embeds/references/iframe-api. Positions are milliseconds,
- * except `seek`, which takes seconds.
+ * except `seek`, which takes seconds. `restart` plays the loaded item from its start (the API
+ * script's `playFromStart`).
  */
 export interface SpotifyPlaybackData {
   playingURI?: string;
@@ -18,6 +19,7 @@ export interface SpotifyEmbedController {
   resume(): void;
   togglePlay(): void;
   seek(seconds: number): void;
+  restart(): void;
   destroy(): void;
   addListener(event: 'ready', callback: () => void): void;
   addListener(

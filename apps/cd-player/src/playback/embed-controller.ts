@@ -8,6 +8,9 @@ import type { SpotifyEmbedController, SpotifyIFrameAPI, SpotifyPlaybackData } fr
  */
 export const IFRAME_API_SRC = 'https://open.spotify.com/embed/iframe-api/v1';
 
+/** The shortest seek the embed acts on (ms): it ignores a target under a second. */
+const MIN_SEEK_MS = 1000;
+
 export interface PlaybackUpdate {
   uri: string | null;
   paused: boolean;
@@ -129,18 +132,33 @@ export async function createEmbedPlayer(
     }
     last = next;
   });
+  // Whether the page last told the embed to pause: a paused track must not play when it rewinds.
+  let paused = false;
   return {
     load(uri) {
       previous = expected;
       expected = uri;
       ended = false;
       last = null;
+      paused = false;
       controller.loadUri(uri);
       controller.play();
     },
-    pause: () => controller.pause(),
-    resume: () => controller.resume(),
-    seek: (ms) => controller.seek(ms / 1000),
+    pause: () => {
+      paused = true;
+      controller.pause();
+    },
+    resume: () => {
+      paused = false;
+      controller.resume();
+    },
+    // The embed ignores a seek to under a second, so the start takes its own way: a playing track
+    // restarts, a paused one (Stop) waits at its first second, since a restart would play it.
+    seek: (ms) => {
+      if (ms >= MIN_SEEK_MS) controller.seek(ms / 1000);
+      else if (paused) controller.seek(MIN_SEEK_MS / 1000);
+      else controller.restart();
+    },
     destroy: () => controller.destroy(),
   };
 }

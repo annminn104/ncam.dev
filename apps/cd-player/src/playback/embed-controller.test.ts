@@ -102,6 +102,7 @@ describe('createEmbedPlayer', () => {
       pause: vi.fn(),
       resume: vi.fn(),
       seek: vi.fn(),
+      restart: vi.fn(),
       destroy: vi.fn(),
       addListener: (name: string, fn: (event: { data: never }) => void) => {
         listeners[name] = fn;
@@ -136,6 +137,32 @@ describe('createEmbedPlayer', () => {
     emit('playback_update', end);
     expect(callbacks.onUpdate).toHaveBeenCalledTimes(2);
     expect(callbacks.onEnded).toHaveBeenCalledTimes(1);
+  });
+
+  it('goes back to the start by restarting a playing track, and to 1 s of a paused one', async () => {
+    // The embed ignores a seek to under a second; its restart plays from the start.
+    const { api, controller } = fakeApi();
+    const callbacks = { onStarted: vi.fn(), onUpdate: vi.fn(), onEnded: vi.fn() };
+    const player = await createEmbedPlayer({} as HTMLElement, 'spotify:track:a', callbacks, api);
+    player.load('spotify:track:a');
+    player.seek(0);
+    player.seek(800);
+    expect(controller.restart).toHaveBeenCalledTimes(2);
+    expect(controller.seek).not.toHaveBeenCalled();
+    // Stop: paused, back to the start, and still paused.
+    player.pause();
+    player.seek(0);
+    expect(controller.seek).toHaveBeenCalledWith(1);
+    expect(controller.restart).toHaveBeenCalledTimes(2);
+    player.resume();
+    player.seek(0);
+    expect(controller.restart).toHaveBeenCalledTimes(3);
+    player.pause();
+    player.load('spotify:track:b');
+    player.seek(0);
+    expect(controller.restart).toHaveBeenCalledTimes(4);
+    player.seek(1000);
+    expect(controller.seek).toHaveBeenLastCalledWith(1);
   });
 
   describe('after load()', () => {
