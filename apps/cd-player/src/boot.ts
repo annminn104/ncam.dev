@@ -1,6 +1,7 @@
 // The page's phases: the poster until the scene starts (by itself on a hardware GPU, see
-// src/autoplay.ts, else on the visitor's first interaction), the scene booting over it, the live
-// scene, or a failure over the poster. Pure, so node tests can walk every path.
+// src/autoplay.ts, else when the visitor presses "Open the player" or a music control), the scene
+// booting over it, the live scene, or a failure over the poster. Pure, so node tests can walk every
+// path.
 import type { Failure } from './failure';
 
 export type Phase = 'poster' | 'booting' | 'live' | 'error';
@@ -12,9 +13,13 @@ export interface BootState {
 }
 
 export type BootEvent =
-  /** The Enter button, or a pointer or wheel on the poster; also "Try again". */
+  /** The "Open the player" button; also "Try again", for a failure that can be retried in place. */
   | { type: 'start' }
-  /** The page settled on a device that may start the scene unasked; from the poster only. */
+  /**
+   * The scene starts unasked: the page settled on a device that may open it by itself, or the
+   * visitor used a music control (play, next, previous, a track). From the poster only, so it
+   * never retries a failure.
+   */
   | { type: 'autostart' }
   /** The scene's first frames are on screen. */
   | { type: 'ready' }

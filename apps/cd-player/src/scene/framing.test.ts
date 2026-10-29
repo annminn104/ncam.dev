@@ -1,6 +1,6 @@
 import { PerspectiveCamera, Vector3 } from 'three';
 import { describe, expect, it } from 'vitest';
-import { FOV, frameDistance, frameFor } from './framing';
+import { FOV, frameDistance, frameFor, frameForViewport, isWide } from './framing';
 
 const dist = (f: ReturnType<typeof frameFor>) =>
   Math.hypot(f.position[0] - f.target[0], f.position[1] - f.target[1], f.position[2] - f.target[2]);
@@ -8,14 +8,21 @@ const dist = (f: ReturnType<typeof frameFor>) =>
 // cd-player.glb's bounding box in three's Y-up metres: the player alone, lid open, centred at x = 0.
 const BOX = { min: [-0.151, -0.003, -0.198], max: [0.151, 0.318, 0.126] } as const;
 
+// Where the glass link bar ends, in CSS px from the top (src/styles/app.css), measured in the
+// browser with the collection loaded: one row above 1260 px wide; stacked from 821 to 1260, where
+// its title grows with the width (160 px at 821, 163 at 1024, 169 at 1260); and on a phone.
+const ROW_BAR_PX = 121;
+const STACKED_BAR_MAX_PX = 169;
+const PHONE_BAR_PX = 148;
+
 /**
  * The box's eight corners in normalised device coordinates (±1 is the viewport's edge), seen from
- * the hero camera. The corners are the worst case: the player's own silhouette keeps about 3% of
- * the height to spare at the bottom.
+ * the hero camera of a canvas this size. The corners are the worst case: the player's own
+ * silhouette keeps about 3% of the height to spare at the bottom.
  */
-function corners(width: number, height: number, wide: boolean): Vector3[] {
+function corners(width: number, height: number): Vector3[] {
   const aspect = width / height;
-  const frame = frameFor(aspect, wide);
+  const frame = frameForViewport(width, height);
   const camera = new PerspectiveCamera(FOV, aspect, 0.02, 10);
   camera.position.set(...frame.position);
   camera.lookAt(...frame.target);
@@ -51,20 +58,45 @@ describe('framing', () => {
     expect(turned.position[1]).toBeGreaterThan(base.position[1]);
   });
 
-  // `bar` is where the glass link bar ends, as a fraction of the viewport's height (measured in
-  // the browser); the player's top must stay below it.
+  it('is wide once the tracklist is a drawer beside the player, above 820 px', () => {
+    expect(isWide(820)).toBe(false);
+    expect(isWide(821)).toBe(true);
+  });
+
+  // `bar` is where the link bar ends, in px: the player's top must stay below it.
   it.each([
-    { name: '16:9 (1920×1080)', width: 1920, height: 1080, wide: true, bar: 0.093 },
-    { name: '16:10 (1440×900)', width: 1440, height: 900, wide: true, bar: 0.134 },
-    // The bar stacks on a screen this narrow and ends at 21%, so it covers the lid's top rim:
-    // only the viewport is held here.
-    { name: '4:3 (1024×768)', width: 1024, height: 768, wide: true, bar: 0 },
-    { name: 'a phone (390×844)', width: 390, height: 844, wide: false, bar: 0.175 },
-  ])('shows the whole player on $name', ({ width, height, wide, bar }) => {
-    for (const corner of corners(width, height, wide)) {
+    { name: '16:9 (1920×1080)', width: 1920, height: 1080, bar: ROW_BAR_PX },
+    { name: '16:10 (1440×900)', width: 1440, height: 900, bar: ROW_BAR_PX },
+    { name: '4:3 (1024×768), the bar stacked', width: 1024, height: 768, bar: 163 },
+    { name: '960×1080, narrower than tall', width: 960, height: 1080, bar: 161 },
+    { name: '834×1194, a tablet upright', width: 834, height: 1194, bar: 160 },
+    { name: '1024×1366, a large tablet upright', width: 1024, height: 1366, bar: 163 },
+    { name: '1000×900, nearly square', width: 1000, height: 900, bar: 162 },
+    { name: '1100×1000, nearly square', width: 1100, height: 1000, bar: 165 },
+    { name: 'a phone (390×844)', width: 390, height: 844, bar: PHONE_BAR_PX },
+  ])('shows the whole player, clear of the link bar, on $name', ({ width, height, bar }) => {
+    for (const corner of corners(width, height)) {
       expect(Math.abs(corner.x)).toBeLessThanOrEqual(1);
       expect(corner.y).toBeGreaterThanOrEqual(-1);
-      expect(corner.y).toBeLessThanOrEqual(1 - 2 * bar);
+      expect(corner.y).toBeLessThanOrEqual(1 - (2 * bar) / height);
+    }
+  });
+
+  it('keeps the whole player in view on every screen shape the layout has', () => {
+    const widths = [
+      360, 390, 820, 821, 834, 960, 1000, 1024, 1100, 1260, 1261, 1366, 1440, 1920, 2560,
+    ];
+    for (const width of widths) {
+      for (const height of [600, 768, 900, 1080, 1366]) {
+        // Where the link bar stacks, the player also stays clear of it.
+        const stacked = width > 820 && width <= 1260;
+        const top = stacked ? 1 - (2 * STACKED_BAR_MAX_PX) / height : 1;
+        for (const corner of corners(width, height)) {
+          expect(Math.abs(corner.x), `${width}×${height}, across`).toBeLessThanOrEqual(1);
+          expect(corner.y, `${width}×${height}, bottom`).toBeGreaterThanOrEqual(-1);
+          expect(corner.y, `${width}×${height}, top`).toBeLessThanOrEqual(top);
+        }
+      }
     }
   });
 });

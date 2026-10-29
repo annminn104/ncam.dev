@@ -34,7 +34,12 @@ function physical(
   });
 }
 
-/** One three material per Blender material, by role (material-roles.ts). */
+/**
+ * One three material per Blender material, by role (material-roles.ts). How strongly the studio
+ * lights a material is the scene's `environmentIntensity` (PlayerScene), not a value here: while
+ * the scene has an environment, three applies that to every material without its own `envMap`, so
+ * a per-material `envMapIntensity` would never take effect.
+ */
 export function makeMaterial(
   role: MaterialRole,
   source: MeshStandardMaterial,
@@ -86,20 +91,17 @@ export function makeMaterial(
         thickness: 0.002,
         ior: 1.53,
         specularIntensity: 1,
-        envMapIntensity: 1.2,
       });
     case 'metal':
       return physical(source, {
         metalness: 1,
         roughness: Math.min(source.roughness, 0.3),
-        envMapIntensity: 1.2,
       });
     case 'brushed':
       return physical(source, {
         metalness: 1,
         roughness: 0.28,
         anisotropy: 0.6,
-        envMapIntensity: 1.1,
       });
     case 'disc-data':
       return physical(source, {
@@ -108,7 +110,6 @@ export function makeMaterial(
         iridescence: 1,
         iridescenceIOR: 1.8,
         iridescenceThicknessRange: [250, 700],
-        envMapIntensity: 1.4,
       });
     case 'foil':
       return physical(source, {

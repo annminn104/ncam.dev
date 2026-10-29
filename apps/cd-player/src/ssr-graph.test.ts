@@ -11,7 +11,11 @@ const THREE = /^(three|three\/.*|@react-three\/.*)$/;
 const ZOD = /^zod(\/.*)?$/;
 
 function resolve(from: string, specifier: string): string | null {
-  const base = path.resolve(path.dirname(from), specifier.replace(/\?.*$/, ''));
+  // `./schema.js` names the TypeScript file `./schema.ts`: the server code imports that way.
+  const base = path.resolve(
+    path.dirname(from),
+    specifier.replace(/\?.*$/, '').replace(/\.js$/, ''),
+  );
   for (const ext of ['', '.ts', '.tsx', '/index.ts', '/index.tsx']) {
     const file = base + ext;
     if (existsSync(file) && /\.(tsx?|css)$/.test(file)) return file;
@@ -80,6 +84,7 @@ describe('import graphs', () => {
       'playback/engine.ts',
       'server/initial.ts',
       'spotify/embed.ts',
+      'spotify/schema.ts',
       'boot.ts',
       'autoplay.ts',
     ]) {

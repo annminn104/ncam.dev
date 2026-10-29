@@ -7,7 +7,10 @@ interface Props {
   onStart(): void;
 }
 
-/** The way in before the scene runs, "Opening the player…" while it boots, or the failure. */
+/**
+ * The way in before the scene runs, "Opening the player…" while it boots, or the failure. A
+ * failure that needs a page reload says so on its button: the reload stops the music.
+ */
 export function EnterButton({ phase, failure, onStart }: Props) {
   if (phase === 'live') return null;
   if (phase === 'error' && failure) {
@@ -16,7 +19,7 @@ export function EnterButton({ phase, failure, onStart }: Props) {
         <p>{failure.message}</p>
         {failure.retry && (
           <button type="button" className="cdp-enter" onClick={onStart}>
-            Try again
+            {failure.reload ? 'Reload the page' : 'Try again'}
           </button>
         )}
       </div>

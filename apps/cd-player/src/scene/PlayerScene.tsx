@@ -5,11 +5,9 @@ import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment
 import { assetUrl } from '../lib/asset-url';
 import type { PlayerSceneProps } from '../scene-props';
 import { CameraRig } from './CameraRig';
-import { FOV } from './framing';
+import { FOV, isWide } from './framing';
 import { loadPlayerModel, type PlayerModel } from './model';
 import { PlayerRig } from './PlayerRig';
-
-const NARROW = '(max-width: 820px)';
 
 /** A studio: a PMREM'd RoomEnvironment for reflections, a soft key that casts, a warm rim. */
 function Studio({ narrow }: { narrow: boolean }) {
@@ -18,12 +16,13 @@ function Studio({ narrow }: { narrow: boolean }) {
   useEffect(() => {
     const pmrem = new PMREMGenerator(gl);
     const room = new RoomEnvironment();
-    const environment = pmrem.fromScene(room, 0.04).texture;
-    scene.environment = environment;
+    // The target, not only its texture: disposing it frees the texture and the framebuffer with it.
+    const target = pmrem.fromScene(room, 0.04);
+    scene.environment = target.texture;
     scene.environmentIntensity = 0.85;
     return () => {
       scene.environment = null;
-      environment.dispose();
+      target.dispose();
       pmrem.dispose();
       room.dispose();
     };
@@ -64,7 +63,7 @@ function ShadowFloor() {
 export function PlayerScene(props: PlayerSceneProps) {
   const { assetBase, onReady, onFail } = props;
   const [model, setModel] = useState<PlayerModel | null>(null);
-  const [narrow] = useState(() => window.matchMedia(NARROW).matches);
+  const [narrow] = useState(() => !isWide(window.innerWidth));
   useEffect(() => {
     let cancelled = false;
     let loaded: PlayerModel | null = null;

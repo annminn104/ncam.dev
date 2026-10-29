@@ -66,7 +66,7 @@ export default function App({ controller, initial = null, assetBase = '' }: AppP
   const [posterGone, setPosterGone] = useState(false);
   const live = boot.phase === 'live';
   // "Open the player" and "Try again". A failure that says `reload` (a scene chunk that would not
-  // load) cannot be retried in place, so its "Try again" reloads the page.
+  // load) cannot be retried in place, so its button, "Reload the page", reloads the page.
   const reload = boot.failure?.reload === true;
   const start = useCallback(() => {
     if (reload) window.location.reload();

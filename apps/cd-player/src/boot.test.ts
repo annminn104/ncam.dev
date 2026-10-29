@@ -13,4 +13,10 @@ describe('bootReducer', () => {
     expect(bootReducer(failed, { type: 'start' }).phase).toBe('booting');
     expect(bootReducer(failed, { type: 'autostart' }).phase).toBe('error');
   });
+
+  it('stays in the error of a failure that cannot be retried, whatever starts it', () => {
+    const final = { phase: 'error' as const, failure: { message: 'x', retry: false } };
+    expect(bootReducer(final, { type: 'start' })).toBe(final);
+    expect(bootReducer(final, { type: 'autostart' })).toBe(final);
+  });
 });
