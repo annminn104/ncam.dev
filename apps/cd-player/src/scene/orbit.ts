@@ -34,3 +34,30 @@ export function stepOrbit(orbit: Orbit, dt: number, damping = 6): Orbit {
 export function resetOrbit(orbit: Orbit): Orbit {
   return { ...orbit, targetYaw: 0, targetPitch: 0 };
 }
+
+/** A press that strays further than this (CSS px) from where it went down is a drag, not a tap. */
+export const TAP_SLOP_PX = 10;
+/** Two taps this close in time (ms) and place (CSS px) are a double tap. */
+export const DOUBLE_TAP_MS = 350;
+export const DOUBLE_TAP_PX = 30;
+
+/** A touch that ended as a tap: when (ms) and where (CSS px). */
+export interface Tap {
+  at: number;
+  x: number;
+  y: number;
+}
+
+/**
+ * Whether `next` is the second tap of a double tap that `previous` began. Touch has no reliable
+ * dblclick (some browsers send none), so the camera counts the taps itself.
+ */
+export function isDoubleTap(previous: Tap | null, next: Tap): boolean {
+  if (!previous) return false;
+  const elapsed = next.at - previous.at;
+  return (
+    elapsed >= 0 &&
+    elapsed <= DOUBLE_TAP_MS &&
+    Math.hypot(next.x - previous.x, next.y - previous.y) <= DOUBLE_TAP_PX
+  );
+}

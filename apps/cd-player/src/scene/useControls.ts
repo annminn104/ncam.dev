@@ -2,54 +2,66 @@ import { useFrame, useThree, type ThreeEvent } from '@react-three/fiber';
 import { useEffect, useMemo, useRef } from 'react';
 import { Box3, Vector3 } from 'three';
 import type { SceneBridge } from '../bridge';
-import type { RequiredNode } from './contract';
 import {
   angleDelta,
-  BUTTON_ACTIONS,
+  BUTTON_NODES,
   hitFor,
   knobSeekMs,
   leaveOnDeck,
+  PRESS_MS,
   pressDepth,
+  type ButtonNode,
 } from './controls';
-import { interaction } from './interaction';
+import { interaction, releaseLost } from './interaction';
 import type { Rig } from './rig';
+
+/** The turn of the knob that one pointer is making. */
+interface Turn {
+  id: number;
+  /** The pointer's last angle around the knob (radians). */
+  last: number;
+  /** How far it has turned the knob since it went down (radians): the seek, once it lets go. */
+  total: number;
+  /** The knob's rotation when it went down, to give back if the turn is abandoned. */
+  from: number;
+}
+
+/**
+ * R3F reports a pointer event once per mesh under the pointer, nearest first: only the nearest
+ * counts, for a press as for the cursor, so both agree about what hides a control.
+ */
+const isNearest = (event: ThreeEvent<PointerEvent>) =>
+  event.object === event.intersections[0]?.object;
 
 /** Pointer handlers for the player: press the keys, turn the knob to scrub. */
 export function useControls(rig: Rig, bridge: SceneBridge) {
   const gl = useThree((state) => state.gl);
   const camera = useThree((state) => state.camera);
-  const presses = useRef(new Map<string, number>());
+  const presses = useRef(new Map<ButtonNode, number>());
   const keyBase = useMemo(
-    () =>
-      new Map(
-        Object.keys(BUTTON_ACTIONS).map((name) => [
-          name,
-          rig.model.nodes[name as RequiredNode].position.y,
-        ]),
-      ),
+    () => new Map(BUTTON_NODES.map((name) => [name, rig.model.nodes[name].position.y])),
     [rig],
   );
   const knob = rig.model.nodes.knob;
 
   // Only the keys and the knob move: what is printed around them stays on the deck.
   useEffect(() => {
-    for (const name of [...Object.keys(BUTTON_ACTIONS), 'knob']) {
-      leaveOnDeck(rig.model.nodes[name as RequiredNode]);
-    }
+    for (const name of BUTTON_NODES) leaveOnDeck(rig.model.nodes[name]);
+    leaveOnDeck(rig.model.nodes.knob);
   }, [rig]);
 
   useFrame(() => {
     const now = performance.now();
     for (const [name, at] of presses.current) {
-      rig.model.nodes[name as RequiredNode].position.y =
-        (keyBase.get(name) ?? 0) - pressDepth(now - at);
-      if (now - at > 200) presses.current.delete(name);
+      const elapsed = now - at;
+      rig.model.nodes[name].position.y = (keyBase.get(name) ?? 0) - pressDepth(elapsed);
+      if (elapsed >= PRESS_MS) presses.current.delete(name);
     }
   });
 
   // A turn of the knob is followed on the window, so it survives leaving the knob's mesh. It is
   // read around the middle of the knob's top, where the pointer lands (its pivot is at the base).
-  const turning = useRef<{ last: number; total: number } | null>(null);
+  const turning = useRef<Turn | null>(null);
   const centre = useRef(new Vector3());
   const lift = useMemo(
     () => new Box3().setFromObject(knob).max.y - knob.getWorldPosition(new Vector3()).y,
@@ -66,41 +78,52 @@ export function useControls(rig: Rig, bridge: SceneBridge) {
   angleRef.current = angleAt;
 
   useEffect(() => {
+    // A turn that does not end in a release (cancelled, or its release lost) seeks nothing.
+    const abandon = (turn: Turn) => {
+      knob.rotation.y = turn.from;
+      turning.current = null;
+    };
     const move = (event: PointerEvent) => {
       const turn = turning.current;
-      if (!turn) return;
+      if (!turn || event.pointerId !== turn.id) return;
+      // A mouse that moves with no button down has lost its release (a native menu took it, say).
+      if (releaseLost(event)) {
+        abandon(turn);
+        return;
+      }
       const angle = angleRef.current(event.clientX, event.clientY);
       const delta = angleDelta(turn.last, angle);
       turn.last = angle;
       turn.total += delta;
       knob.rotation.y -= delta;
     };
-    const up = () => {
-      interaction.controlActive = false;
+    const up = (event: PointerEvent) => {
       const turn = turning.current;
+      if (!turn || event.pointerId !== turn.id) return;
       turning.current = null;
-      if (turn) {
-        const deltaMs = knobSeekMs(turn.total);
-        if (deltaMs !== 0) bridge.emit({ type: 'seek', deltaMs });
-      }
+      const deltaMs = knobSeekMs(turn.total);
+      if (deltaMs !== 0) bridge.emit({ type: 'seek', deltaMs });
+    };
+    const cancel = (event: PointerEvent) => {
+      const turn = turning.current;
+      if (turn && event.pointerId === turn.id) abandon(turn);
     };
     window.addEventListener('pointermove', move);
     window.addEventListener('pointerup', up);
-    window.addEventListener('pointercancel', up);
+    window.addEventListener('pointercancel', cancel);
     return () => {
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', up);
-      window.removeEventListener('pointercancel', up);
+      window.removeEventListener('pointercancel', cancel);
     };
   }, [bridge, knob]);
 
   return {
     onPointerDown: (event: ThreeEvent<PointerEvent>) => {
+      // The primary button (or a touch) on the nearest mesh: a press does what the cursor says.
+      if (event.button !== 0 || !isNearest(event)) return;
       const hit = hitFor(event.object);
       if (!hit) return;
-      event.stopPropagation();
-      // R3F answers a stopped event by dropping the player's hover, and out resets the cursor.
-      gl.domElement.style.cursor = 'pointer';
       interaction.controlActive = true;
       if (hit.kind === 'button') {
         presses.current.set(hit.node, performance.now());
@@ -108,17 +131,17 @@ export function useControls(rig: Rig, bridge: SceneBridge) {
         return;
       }
       turning.current = {
+        id: event.pointerId,
         last: angleAt(event.nativeEvent.clientX, event.nativeEvent.clientY),
         total: 0,
+        from: knob.rotation.y,
       };
     },
     // R3F hovers the player as one (its handlers sit on the root) for as long as the first mesh it
     // met stays under the pointer, so over would miss a key met from the deck: the cursor follows
     // every move instead.
     onPointerMove: (event: ThreeEvent<PointerEvent>) => {
-      // A move is reported once per mesh under the pointer, nearest first: the nearest decides.
-      if (event.object !== event.intersections[0]?.object) return;
-      gl.domElement.style.cursor = hitFor(event.object) ? 'pointer' : '';
+      if (isNearest(event)) gl.domElement.style.cursor = hitFor(event.object) ? 'pointer' : '';
     },
     onPointerOut: () => {
       gl.domElement.style.cursor = '';

@@ -110,6 +110,9 @@
   position: absolute !important;
   inset: 0;
   touch-action: none;
+  /* A drag or a double-click on the player is not a text selection. */
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 /* ── glass surfaces ──────────────────────────────────────────────────────── */

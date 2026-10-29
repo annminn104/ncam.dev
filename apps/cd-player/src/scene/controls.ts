@@ -1,8 +1,12 @@
 import type { Object3D } from 'three';
 import type { PlayerAction } from '../actions';
+import type { RequiredNode } from './contract';
 
-/** The deck's keys, by their GLB node (src/scene/contract.ts). Mode is shuffle. */
-export const BUTTON_ACTIONS: Readonly<Record<string, PlayerAction>> = {
+/** The deck's keys: the `btn_` nodes of the model contract (src/scene/contract.ts). */
+export type ButtonNode = Extract<RequiredNode, `btn_${string}`>;
+
+/** What each key does, by its GLB node. Mode is shuffle. */
+export const BUTTON_ACTIONS: Readonly<Record<ButtonNode, PlayerAction>> = {
   btn_prev: { type: 'prev' },
   btn_next: { type: 'next' },
   btn_play: { type: 'toggle' },
@@ -11,19 +15,24 @@ export const BUTTON_ACTIONS: Readonly<Record<string, PlayerAction>> = {
   btn_mode: { type: 'shuffle' },
 };
 
-export type Hit = { kind: 'button'; node: string; action: PlayerAction } | { kind: 'knob' };
+/** The keys, in the order above. */
+export const BUTTON_NODES = Object.keys(BUTTON_ACTIONS) as ButtonNode[];
+
+export type Hit = { kind: 'button'; node: ButtonNode; action: PlayerAction } | { kind: 'knob' };
 
 interface Named {
   name: string;
   parent: Named | null;
 }
 
+const isButton = (name: string): name is ButtonNode => Object.hasOwn(BUTTON_ACTIONS, name);
+
 /** The control a hit mesh belongs to: the first key or knob among it and its parents. */
 export function hitFor(object: Named | null): Hit | null {
   for (let node = object; node; node = node.parent) {
-    const action = BUTTON_ACTIONS[node.name];
-    if (action) return { kind: 'button', node: node.name, action };
-    if (node.name === 'knob') return { kind: 'knob' };
+    const { name } = node;
+    if (isButton(name)) return { kind: 'button', node: name, action: BUTTON_ACTIONS[name] };
+    if (name === 'knob') return { kind: 'knob' };
   }
   return null;
 }
@@ -50,9 +59,12 @@ export function knobSeekMs(deltaRad: number): number {
   return Math.round((deltaRad / (2 * Math.PI)) * KNOB_MS_PER_TURN);
 }
 
+/** How long a pressed key takes to sink and come back (ms). */
+export const PRESS_MS = 160;
+
 /** How far a pressed key sinks (metres), `elapsedMs` after the press. */
 export function pressDepth(elapsedMs: number): number {
-  const t = elapsedMs / 160;
+  const t = elapsedMs / PRESS_MS;
   return t <= 0 || t >= 1 ? 0 : Math.sin(Math.PI * t) * 0.0012;
 }
 

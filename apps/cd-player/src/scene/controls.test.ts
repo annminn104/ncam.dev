@@ -5,11 +5,14 @@ import { describe, expect, it } from 'vitest';
 import {
   angleDelta,
   BUTTON_ACTIONS,
+  BUTTON_NODES,
   hitFor,
   knobSeekMs,
   leaveOnDeck,
+  PRESS_MS,
   pressDepth,
 } from './controls';
+import { REQUIRED_NODES } from './contract';
 import { readGlbJson } from './glb';
 
 const GLB = fileURLToPath(new URL('../../public/assets/cd-player.glb', import.meta.url));
@@ -47,6 +50,21 @@ describe('controls', () => {
   it('measures the shortest turn between two angles', () => {
     expect(angleDelta(3, -3)).toBeCloseTo(2 * Math.PI - 6);
     expect(angleDelta(0, 0.5)).toBeCloseTo(0.5);
+  });
+
+  it('keys the deck by the btn_ nodes of the model contract, and by nothing else', () => {
+    const contract = REQUIRED_NODES.filter((name) => name.startsWith('btn_')).sort();
+    expect([...BUTTON_NODES].sort()).toEqual(contract);
+    expect(Object.keys(BUTTON_ACTIONS).sort()).toEqual(contract);
+    // A node that is only named like something every object has is not a key.
+    expect(hitFor(chain('player', 'toString'))).toBeNull();
+    expect(hitFor(chain('constructor', 'hasOwnProperty'))).toBeNull();
+  });
+
+  it('presses over PRESS_MS: down to the deepest at the middle, back at the end', () => {
+    expect(pressDepth(PRESS_MS / 2)).toBeCloseTo(0.0012);
+    expect(pressDepth(PRESS_MS * 0.9)).toBeGreaterThan(0);
+    expect(pressDepth(PRESS_MS)).toBe(0);
   });
 });
 
