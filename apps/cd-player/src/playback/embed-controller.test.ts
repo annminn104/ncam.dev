@@ -139,6 +139,22 @@ describe('createEmbedPlayer', () => {
     expect(callbacks.onEnded).toHaveBeenCalledTimes(1);
   });
 
+  it("logs the embed's errors with what they carry", async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      const { api, emit } = fakeApi();
+      const callbacks = { onStarted: vi.fn(), onUpdate: vi.fn(), onEnded: vi.fn() };
+      await createEmbedPlayer({} as HTMLElement, 'spotify:track:a', callbacks, api);
+      const payload = { code: 'playback_error', message: 'no list was loaded', recoverable: true };
+      emit('error', payload);
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining('cd-player.embed-error'), {
+        error: payload,
+      });
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
   it('goes back to the start by restarting a playing track, and to 1 s of a paused one', async () => {
     // The embed ignores a seek to under a second; its restart plays from the start.
     const { api, controller } = fakeApi();

@@ -4,7 +4,7 @@ import { sameCollection, type CollectionRef } from '../routes';
 import { requestErrorMessage, type SpotifyClient } from '../spotify/client';
 import type { ArtistDetail, Collection, TrackDetail } from '../spotify/types';
 import { sceneView, trackView } from '../view';
-import type { EmbedCallbacks, EmbedPlayer } from './embed-controller';
+import type { EmbedCallbacks, EmbedPlayer, PlaybackUpdate } from './embed-controller';
 import {
   currentIndex,
   initialSeq,
@@ -57,6 +57,8 @@ const PREFETCH = 3;
 const HINT_MS = 3500;
 /** How long building the Spotify player may take before the embed counts as blocked. */
 const PLAYER_TIMEOUT_MS = 20_000;
+/** How long past a track's expected end the end watchdog waits for the embed to report it. */
+const END_GRACE_MS = 2500;
 
 /**
  * Playback outside React: the sequencer's state, the commands it emits (disc changes through the
@@ -75,6 +77,12 @@ export class PlayerEngine {
    * finishing late is never taken for a newer one.
    */
   private swapToken = 0;
+  /**
+   * The end watchdog's timer (`watchEnd`), and which arming may fire: each takes the next number,
+   * so a timer that goes off after a newer update, a pause, a load or dispose does nothing.
+   */
+  private endTimer: unknown = null;
+  private endWatch = 0;
   private detachBridge: (() => void) | null = null;
   private disposed = false;
 
@@ -126,6 +134,7 @@ export class PlayerEngine {
     this.detachBridge?.();
     this.detachBridge = null;
     this.clearHint();
+    this.clearEndWatch();
     void this.player?.then(
       (player) => player.destroy(),
       () => {},
@@ -164,8 +173,11 @@ export class PlayerEngine {
   }
 
   send(event: SeqEvent): void {
-    // A new collection ends any disc change still turning.
-    if (event.type === 'LOAD') this.swapToken++;
+    // A new collection ends any disc change still turning, and the watch on the track's end.
+    if (event.type === 'LOAD') {
+      this.swapToken++;
+      this.clearEndWatch();
+    }
     const { state, commands } = step(this.snapshot.seq, event);
     if (state !== this.snapshot.seq) this.set({ seq: state });
     for (const command of commands) this.run(command);
@@ -215,6 +227,7 @@ export class PlayerEngine {
           durationMs: update.durationMs,
           paused: update.paused,
         });
+        this.watchEnd(update);
       },
       onEnded: () => this.send({ type: 'ENDED' }),
     });
@@ -279,6 +292,7 @@ export class PlayerEngine {
         return;
       }
       case 'load':
+        this.clearEndWatch();
         this.withPlayer((player) => {
           this.awaitingStart = true;
           player.load(command.uri);
@@ -343,6 +357,37 @@ export class PlayerEngine {
     }
   }
 
+  /**
+   * The end watchdog. Logged out, the embed can let a preview run out without a word (no paused
+   * update, no end), which would leave the sequencer `playing` in silence while the embed has
+   * dropped its list: any command after that throws inside its iframe. So every update of a track
+   * that plays re-arms one timer for the rest of it plus END_GRACE_MS; if that runs out with the
+   * track still playing, the track has ended. ENDED changes the disc without a `pause`, and the
+   * next `load` gives the embed a list again. A paused update (an end the embed reports among
+   * them), a load, a new collection and dispose clear it.
+   */
+  private watchEnd(update: PlaybackUpdate): void {
+    this.clearEndWatch();
+    if (update.paused || update.durationMs <= 0 || this.snapshot.seq.status !== 'playing') return;
+    const watch = this.endWatch;
+    this.endTimer = this.startTimer(
+      () => {
+        if (watch !== this.endWatch || this.disposed) return;
+        this.endTimer = null;
+        if (this.snapshot.seq.status === 'playing') this.send({ type: 'ENDED' });
+      },
+      Math.max(0, update.durationMs - update.positionMs) + END_GRACE_MS,
+    );
+  }
+
+  private clearEndWatch(): void {
+    this.endWatch++;
+    if (this.endTimer !== null) {
+      this.stopTimer(this.endTimer);
+      this.endTimer = null;
+    }
+  }
+
   private armHint(): void {
     this.clearHint();
     this.hintTimer = this.startTimer(() => {
@@ -358,7 +403,7 @@ export class PlayerEngine {
     if (this.snapshot.hint) this.set({ hint: false });
   }
 
-  /** The injected timer, else the real one (the hint's and the player's wait share it). */
+  /** The injected timer, else the real one (the hint, the player's wait and the end watchdog). */
   private startTimer(fn: () => void, ms: number): unknown {
     const setTimer = this.deps.setTimer ?? ((run, delay) => setTimeout(run, delay));
     return setTimer(fn, ms);

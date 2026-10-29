@@ -30,6 +30,11 @@ export interface SpotifyEmbedController {
     event: 'playback_update',
     callback: (event: { data: SpotifyPlaybackData }) => void,
   ): void;
+  /**
+   * The API script's own errors carry `{ code, message, recoverable }` (`invalid_uri`,
+   * `playback_error`); the iframe's are passed on as they came, so the payload is not typed.
+   */
+  addListener(event: 'error', callback: (event: { data: unknown }) => void): void;
 }
 
 export interface SpotifyIFrameAPI {

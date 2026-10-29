@@ -1,4 +1,7 @@
+import { createLogger } from '@ncam/logger';
 import type { SpotifyEmbedController, SpotifyIFrameAPI, SpotifyPlaybackData } from './iframe-types';
+
+const log = createLogger({ scope: 'cd-player' });
 
 /**
  * The official Spotify embed, driven from our own controls. The script loads on the visitor's first
@@ -132,6 +135,11 @@ export async function createEmbedPlayer(
     }
     last = next;
   });
+  // What Spotify reports going wrong (a uri it refuses, a command its player could not carry out),
+  // kept in the console for the record; playback itself is followed through the updates above.
+  controller.addListener('error', (event) =>
+    log.warn('cd-player.embed-error', { error: event.data }),
+  );
   // Whether the page last told the embed to pause: a paused track must not play when it rewinds.
   let paused = false;
   return {
