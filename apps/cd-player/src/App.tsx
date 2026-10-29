@@ -22,7 +22,10 @@ export interface AppProps {
   controller: RouteController;
   /** What the server render fetched (src/ssr-state.ts); null on a plain client mount. */
   initial?: InitialData | null;
-  /** This remote's origin (lib/asset-url remoteBase); never read on the server. */
+  /**
+   * This remote's origin (lib/asset-url remoteBase). It only names the proxy's base for the
+   * requests made once mounted, never anything in the markup, so the server render leaves it out.
+   */
   assetBase?: string;
 }
 

@@ -17,6 +17,7 @@ describe('ssr-state', () => {
   it('reads nothing from junk', () => {
     expect(parseState('{nope')).toBeNull();
     expect(parseState('null')).toBeNull();
+    expect(parseState('{"collection":null}')).toBeNull();
     expect(parseState(undefined)).toBeNull();
   });
 });

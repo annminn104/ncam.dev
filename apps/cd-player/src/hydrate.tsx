@@ -17,17 +17,20 @@ export function hydrate(target: HTMLElement, config: MountConfig = {}): MountHan
   }
   const controller = createRouteController(config);
   // Written by ./ssr inside the markup the host injected. Read before hydrateRoot, and rendered
-  // back with the same text so the element has its counterpart in the tree.
+  // back with the same text so the element has its counterpart in the tree. Markup without it has
+  // no element to match, so none is rendered then: it would be a mismatch at the root.
   const initial = readState(target.ownerDocument ?? document);
   const root = hydrateRoot(
     target,
     <StrictMode>
       <App controller={controller} initial={initial} assetBase={remoteBase(config.assetBase)} />
-      <script
-        type="application/json"
-        id={SSR_STATE_ID}
-        dangerouslySetInnerHTML={{ __html: serialiseState(initial) }}
-      />
+      {initial && (
+        <script
+          type="application/json"
+          id={SSR_STATE_ID}
+          dangerouslySetInnerHTML={{ __html: serialiseState(initial) }}
+        />
+      )}
     </StrictMode>,
   );
   roots.set(target, { root, controller });
