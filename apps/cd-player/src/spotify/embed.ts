@@ -1,4 +1,4 @@
-import type { CollectionRef, CollectionType } from '../routes';
+import type { CollectionRef, CollectionType } from '../routes.js';
 import {
   ArtistEntity,
   CollectionEntity,
@@ -6,7 +6,7 @@ import {
   TrackListItem,
   type VisualIdentityInput,
 } from './schema.js';
-import type { ArtistDetail, Collection, Palette, Picture, TrackDetail } from './types';
+import type { ArtistDetail, Collection, Palette, Picture, TrackDetail } from './types.js';
 
 /**
  * Reads Spotify's public embed pages (open.spotify.com/embed/<type>/<id>). Each holds its data as

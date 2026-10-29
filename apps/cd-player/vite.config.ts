@@ -1,8 +1,8 @@
 import react from '@vitejs/plugin-react';
 import type { Connect, Plugin } from 'vite';
 import { defineRemote } from '@ncam/mf-remote';
-import { handleSpotify } from './src/server/spotify-handler';
-import { SPOTIFY_ROUTE } from './src/spotify/api-route';
+import { handleSpotify } from './src/server/spotify-handler.js';
+import { SPOTIFY_ROUTE } from './src/spotify/api-route.js';
 
 /**
  * The Spotify proxy on the dev and preview servers, at the route the deployed Vercel Function
