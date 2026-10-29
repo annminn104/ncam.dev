@@ -62,6 +62,20 @@ describe('renderHeroSSR', () => {
     expect(result.head).toBeUndefined();
   });
 
+  it('renders the poster as the one high-priority image, and no canvas', async () => {
+    stubSpotify();
+    const { html } = await renderHeroSSR({ config: { route: '/' } });
+    const picture = /<picture class="cdp-poster">[\s\S]*?<\/picture>/.exec(html)?.[0] ?? '';
+    // renderToString keeps the JSX casing (`fetchPriority`); the browser reads it case-insensitively.
+    expect(html.match(/fetchpriority="high"/gi)).toHaveLength(1);
+    expect(picture).toMatch(/<img\b[^>]*fetchpriority="high"/i);
+    expect(picture).toContain('landscape-1920.webp');
+    expect(picture).toContain('landscape-2560.avif 2560w');
+    expect(picture).toContain('portrait-750.avif 750w');
+    expect(picture).toContain('media="(max-aspect-ratio: 1/1)"');
+    expect(html).not.toContain('<canvas');
+  });
+
   it('still renders, without a head, when Spotify fails or hangs', async () => {
     stubSpotify(async () => new Response('', { status: 503 }));
     const failed = await renderHeroSSR({ config: { route: `/playlist/${PLAYLIST.id}` } });

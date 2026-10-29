@@ -79,6 +79,8 @@ describe('import graphs', () => {
     const { files } = graph(path.join(SRC, 'ssr.tsx'));
     for (const file of [
       'App.tsx',
+      'shell/Poster.tsx',
+      'assets/poster/index.ts',
       'shell/SceneHost.tsx',
       'shell/NowPlaying.tsx',
       'playback/engine.ts',
