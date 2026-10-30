@@ -4,6 +4,7 @@ import type { ArtistDetail, Collection, TrackDetail } from './spotify/types';
 import {
   backdropFor,
   formatDuration,
+  loaderLine,
   nowPlayingFor,
   sceneView,
   seekRange,
@@ -113,5 +114,21 @@ describe('view model', () => {
     expect(seekRange(209_900, 208_810).value).toBe(208);
     expect(seekRange(-500, 208_810).value).toBe(0);
     expect(seekRange(5_000, 0)).toEqual({ max: 0, value: 0 });
+  });
+});
+
+describe('loaderLine', () => {
+  it("words the loader's line, with the download once its size is known", () => {
+    expect(loaderLine(null)).toBe('Loading the player');
+    expect(loaderLine(0)).toBe('Loading the player 0%');
+    expect(loaderLine(0.63)).toBe('Loading the player 63%');
+    expect(loaderLine(0.996)).toBe('Loading the player 100%');
+    expect(loaderLine(1)).toBe('Loading the player 100%');
+  });
+
+  it('holds the count between 0 and 100, and drops one that is no number', () => {
+    expect(loaderLine(1.4)).toBe('Loading the player 100%');
+    expect(loaderLine(-0.2)).toBe('Loading the player 0%');
+    expect(loaderLine(Number.NaN)).toBe('Loading the player');
   });
 });

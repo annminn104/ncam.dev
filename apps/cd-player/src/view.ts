@@ -95,3 +95,12 @@ export function seekRange(positionMs: number, durationMs: number): { max: number
   const value = Math.min(max, Math.max(0, Math.floor(positionMs / 1000)));
   return { max, value };
 }
+
+/**
+ * The loader's one line: the GLB's download once its size is known, rounded and held between 0 and
+ * 100 (a compressed transfer can report more than it named).
+ */
+export function loaderLine(progress: number | null): string {
+  if (progress === null || !Number.isFinite(progress)) return 'Loading the player';
+  return `Loading the player ${Math.min(100, Math.max(0, Math.round(progress * 100)))}%`;
+}

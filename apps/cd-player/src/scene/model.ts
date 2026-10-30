@@ -18,10 +18,33 @@ export interface PlayerModel {
   dispose(): void;
 }
 
-export async function loadPlayerModel(url: string): Promise<PlayerModel> {
+/** What GLTFLoader's progress events carry (`ProgressEvent`'s fields), so node tests can make one. */
+export type DownloadProgress = Pick<ProgressEvent, 'lengthComputable' | 'loaded' | 'total'>;
+
+/**
+ * How much of the GLB has come, 0–1, or null when the response names no length. Over a compressed
+ * transfer the decoded bytes are counted against the encoded length and can pass it: held at 1.
+ */
+export function downloadFraction({
+  lengthComputable,
+  loaded,
+  total,
+}: DownloadProgress): number | null {
+  if (!lengthComputable || !(total > 0)) return null;
+  return Math.min(1, Math.max(0, loaded / total));
+}
+
+/** Loads the player; `onProgress` hears the GLB's download as it comes (see `downloadFraction`). */
+export async function loadPlayerModel(
+  url: string,
+  onProgress?: (fraction: number | null) => void,
+): Promise<PlayerModel> {
   const loader = new GLTFLoader();
   loader.setMeshoptDecoder(MeshoptDecoder);
-  const gltf = await loader.loadAsync(url);
+  const gltf = await loader.loadAsync(
+    url,
+    onProgress ? (event: ProgressEvent) => onProgress(downloadFraction(event)) : undefined,
+  );
   const root = gltf.scene;
   const nodes = {} as Record<RequiredNode, Object3D>;
   const missing: string[] = [];
