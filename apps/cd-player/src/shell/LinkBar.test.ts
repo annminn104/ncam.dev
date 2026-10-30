@@ -12,6 +12,8 @@ const render = (over: Partial<Props> = {}) =>
       loading: false,
       error: null,
       onSubmit: () => {},
+      skin: 'blush',
+      onSkin: () => {},
       ...over,
     }),
   );
@@ -37,6 +39,18 @@ describe('LinkBar', () => {
   it('stops saying "Loading…" once a first load has failed', () => {
     expect(render()).toContain('<h1>Loading…</h1>');
     expect(render({ failed: true })).toContain('<h1>No tracks</h1>');
+  });
+});
+
+describe('LinkBar and Player', () => {
+  it('puts Player after Share, inside the link form', () => {
+    const html = render({ skin: 'sage' });
+    const share = html.indexOf('>Share</button>');
+    const picker = html.indexOf('<div class="cdp-skin">');
+    expect(share).toBeGreaterThan(-1);
+    expect(picker).toBeGreaterThan(share);
+    expect(picker).toBeLessThan(html.indexOf('</form>'));
+    expect(html).toContain('<span class="cdp-sr"> colour: Sage</span>');
   });
 });
 

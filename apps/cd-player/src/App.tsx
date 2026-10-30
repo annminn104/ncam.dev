@@ -1,11 +1,19 @@
-import { useCallback, useEffect, useReducer, useRef, useState, useSyncExternalStore } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useReducer,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type CSSProperties,
+} from 'react';
 import { createLogger } from '@ncam/logger';
 import { readAutoplaySignals, shouldAutoplay, whenSettled } from './autoplay';
 import { bootReducer, INITIAL_BOOT } from './boot';
 import { createBridge } from './bridge';
 import { describeFailure } from './failure';
 import { remoteBase } from './lib/asset-url';
-import { readLast, restoreTarget, safeStorage, writeLast } from './persist';
+import { readLast, readSkin, restoreTarget, safeStorage, writeLast, writeSkin } from './persist';
 import { createEmbedPlayer, type EmbedCallbacks } from './playback/embed-controller';
 import type { EngineDeps, InitialData } from './playback/engine';
 import { currentIndex } from './playback/sequencer';
@@ -20,6 +28,7 @@ import { Loader } from './shell/Loader';
 import { NowPlaying } from './shell/NowPlaying';
 import { SceneHost } from './shell/SceneHost';
 import { Tracklist } from './shell/Tracklist';
+import { DEFAULT_SKIN, skinById, type SkinId } from './skins';
 import { canRetry, createSpotifyClient, requestErrorMessage } from './spotify/client';
 import { linkErrorMessage, parseSpotifyLink } from './spotify/link';
 import { backdropFor, nowPlayingFor } from './view';
@@ -65,6 +74,19 @@ export default function App({ controller, initial = null, assetBase = '' }: AppP
     },
   }));
   const { engine, snapshot } = usePlayerEngine(deps, initial, ref);
+  // The player's colourway (src/skins.ts). Blush on the server and on the first client render, so
+  // the markup matches; the visitor's saved one right after hydration (the accent may show Blush
+  // for that one frame; the scene mounts later and boots in the saved one); saved on each change.
+  // A skin is never in the URL.
+  const [skin, setSkin] = useState<SkinId>(DEFAULT_SKIN);
+  useEffect(() => {
+    setSkin(readSkin(safeStorage()));
+  }, []);
+  const changeSkin = useCallback((id: SkinId) => {
+    setSkin(id);
+    writeSkin(safeStorage(), id);
+  }, []);
+  const look = skinById(skin);
   const [boot, dispatchBoot] = useReducer(bootReducer, INITIAL_BOOT);
   // The page settled and the scene did not start by itself (a software rasteriser, reduced
   // motion): "Open the player" stands where the loader was until the visitor starts it.
@@ -203,12 +225,17 @@ export default function App({ controller, initial = null, assetBase = '' }: AppP
   const showLoader =
     (boot.phase === 'waiting' && !manual) || boot.phase === 'booting' || (live && !loaderGone);
   return (
-    <div className="cdp-root">
+    <div
+      className="cdp-root"
+      // The skin's accent, read by every accent use in styles/app.css.
+      style={{ '--cdp-accent': look.accent, '--cdp-on-accent': look.onAccent } as CSSProperties}
+    >
       <Backdrop artUrl={backdrop.artUrl} palette={backdrop.palette} />
       {(boot.phase === 'booting' || live) && (
         <SceneHost
           assetBase={remoteBase(assetBase)}
           bridge={deps.bridge}
+          skin={skin}
           live={live}
           onReady={onReady}
           onFail={onFail}
@@ -224,6 +251,8 @@ export default function App({ controller, initial = null, assetBase = '' }: AppP
         error={linkError?.message ?? (shelfError ? null : (snapshot.error?.message ?? null))}
         onRetry={retryInput === null ? undefined : () => void loadLink(retryInput)}
         onSubmit={(input) => void loadLink(input)}
+        skin={skin}
+        onSkin={changeSkin}
       />
       <Tracklist
         tracks={snapshot.seq.tracks}

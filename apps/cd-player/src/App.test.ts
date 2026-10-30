@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import App from './App';
 import type { InitialData } from './playback/engine';
 import { createRouteController } from './route-controller';
+import { DEFAULT_SKIN, skinById } from './skins';
 
 const initial: InitialData = {
   ref: { type: 'playlist', id: '37i9dQZEVXbMDoHDwVN2tF' },
@@ -88,5 +89,20 @@ describe('App (the loader and the scene layer)', () => {
     const loader = source.search(/<Loader\b/);
     expect(scene, 'App.tsx renders <SceneHost>').toBeGreaterThan(-1);
     expect(loader, 'App.tsx renders <Loader> after <SceneHost>').toBeGreaterThan(scene);
+  });
+});
+
+describe('App and the skins', () => {
+  it('renders the default skin accent inline on the root, and Player closed', () => {
+    const html = renderToString(
+      createElement(App, { controller: createRouteController({ route: '/' }), initial }),
+    );
+    const { accent, onAccent } = skinById(DEFAULT_SKIN);
+    expect(html).toMatch(
+      new RegExp(
+        `<div class="cdp-root"[^>]*style="--cdp-accent:${accent};--cdp-on-accent:${onAccent}"`,
+      ),
+    );
+    expect(html).toContain('class="cdp-button cdp-skin__button" aria-expanded="false"');
   });
 });

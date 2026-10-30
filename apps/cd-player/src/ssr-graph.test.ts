@@ -83,6 +83,8 @@ describe('import graphs', () => {
       'shell/EnterButton.tsx',
       'shell/SceneHost.tsx',
       'shell/NowPlaying.tsx',
+      'shell/SkinPicker.tsx',
+      'skins.ts',
       'playback/engine.ts',
       'server/initial.ts',
       'spotify/embed.ts',

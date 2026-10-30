@@ -1,5 +1,7 @@
 import { useState, type FormEvent } from 'react';
+import type { SkinId } from '../skins';
 import type { Collection } from '../spotify/types';
+import { SkinPicker } from './SkinPicker';
 
 interface Props {
   collection: Collection | null;
@@ -10,6 +12,9 @@ interface Props {
   /** Loads the link again, beside an error that trying again may fix (a 502, a stall). */
   onRetry?: () => void;
   onSubmit(input: string): void;
+  /** The player's colourway, picked after Share. */
+  skin: SkinId;
+  onSkin(id: SkinId): void;
 }
 
 /**
@@ -27,8 +32,17 @@ export function copyText(
   );
 }
 
-/** The collection's name, the link input (the page's personalisation) and Share. */
-export function LinkBar({ collection, loading, failed = false, error, onRetry, onSubmit }: Props) {
+/** The collection's name, the link input (the page's personalisation), Share and Player. */
+export function LinkBar({
+  collection,
+  loading,
+  failed = false,
+  error,
+  onRetry,
+  onSubmit,
+  skin,
+  onSkin,
+}: Props) {
   const [value, setValue] = useState('');
   // What Share last did, said on its button for two seconds.
   const [shared, setShared] = useState<'copied' | 'failed' | null>(null);
@@ -71,6 +85,7 @@ export function LinkBar({ collection, loading, failed = false, error, onRetry, o
         <button type="button" className="cdp-button" onClick={share}>
           {shared === 'copied' ? 'Copied' : shared === 'failed' ? "Couldn't copy" : 'Share'}
         </button>
+        <SkinPicker skin={skin} onChange={onSkin} />
       </form>
       {error && (
         <div className="cdp-link__error">

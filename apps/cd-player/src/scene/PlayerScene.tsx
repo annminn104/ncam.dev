@@ -1,11 +1,13 @@
 import { Canvas, useThree } from '@react-three/fiber';
-import { useEffect, useEffectEvent, useState } from 'react';
+import { useEffect, useEffectEvent, useLayoutEffect, useState } from 'react';
 import { AgXToneMapping, PMREMGenerator } from 'three';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { assetUrl } from '../lib/asset-url';
 import type { PlayerSceneProps } from '../scene-props';
+import { skinById } from '../skins';
 import { CameraRig } from './CameraRig';
 import { FOV, isWide } from './framing';
+import { skinColours } from './materials';
 import { loadPlayerModel, type PlayerModel } from './model';
 import { PlayerRig } from './PlayerRig';
 
@@ -61,15 +63,18 @@ function ShadowFloor() {
 }
 
 export function PlayerScene(props: PlayerSceneProps) {
-  const { assetBase, bridge, onReady, onFail, onProgress } = props;
+  const { assetBase, bridge, skin, onReady, onFail, onProgress } = props;
   const [model, setModel] = useState<PlayerModel | null>(null);
   const [narrow] = useState(() => !isWide(window.innerWidth));
+  // A skin names its model. The four share one GLB, so a change recolours it in place (below);
+  // a skin with another model would load that one instead, through the effect that follows.
+  const modelPath = skinById(skin).model;
   // Read when the download reports, so a new callback never starts the download again.
   const report = useEffectEvent((fraction: number | null) => onProgress(fraction));
   useEffect(() => {
     let cancelled = false;
     let loaded: PlayerModel | null = null;
-    loadPlayerModel(assetUrl('assets/cd-player.glb', assetBase), (fraction) => {
+    loadPlayerModel(assetUrl(modelPath, assetBase), (fraction) => {
       // A load this effect has let go of (StrictMode's first run, a remount) says nothing.
       if (!cancelled) report(fraction);
     }).then(
@@ -84,9 +89,29 @@ export function PlayerScene(props: PlayerSceneProps) {
     );
     return () => {
       cancelled = true;
+      // The model goes with its path: a disposed one is never drawn.
+      setModel(null);
       loaded?.dispose();
     };
-  }, [assetBase, onFail]);
+  }, [assetBase, modelPath, onFail]);
+
+  // The skin, in place: before the model's first frame (a layout effect runs before any frame the
+  // canvas draws) and on every change.
+  useLayoutEffect(() => {
+    model?.applySkin(skinById(skin));
+  }, [model, skin]);
+
+  // Dev builds only (production builds drop the branch): the live check reads the recoloured
+  // materials here.
+  useEffect(() => {
+    if (!import.meta.env.DEV || !model) return;
+    const probe = window as Window & { __cdpSkinColours?: () => Record<string, string> };
+    probe.__cdpSkinColours = () => skinColours(model.root);
+    return () => {
+      delete probe.__cdpSkinColours;
+    };
+  }, [model]);
+
   return (
     <Canvas
       className="cdp-canvas"
