@@ -155,6 +155,35 @@ describe('sequencer', () => {
     expect(upcomingIndices(run(playingAt(2), { type: 'TOGGLE_REPEAT' }), 5)).toEqual([3, 0]);
   });
 
+  it('lists five in play order: shuffled, wrapping with Repeat, never the current track', () => {
+    const tracks = [...'abcdefgh'].map((id) => track(id, id !== 'c'));
+    const at = (index: number, ...events: SeqEvent[]) =>
+      run(
+        initialSeq(),
+        { type: 'LOAD', tracks },
+        { type: 'SELECT', index },
+        { type: 'SWAP_DONE' },
+        ...events,
+      );
+    expect(upcomingIndices(run(initialSeq(), { type: 'LOAD', tracks }), 5)).toEqual([
+      0, 1, 3, 4, 5,
+    ]);
+    expect(upcomingIndices(at(0), 5)).toEqual([1, 3, 4, 5, 6]);
+    expect(upcomingIndices(at(5), 5)).toEqual([6, 7]);
+    expect(upcomingIndices(at(5, { type: 'TOGGLE_REPEAT' }), 5)).toEqual([6, 7, 0, 1, 3]);
+    // Seed 7: 0, 4, 6, 1, 2, 3, 5, 7.
+    expect(upcomingIndices(at(0, { type: 'TOGGLE_SHUFFLE', seed: 7 }), 5)).toEqual([4, 6, 1, 3, 5]);
+    // A list shorter than the rack, on Repeat: each other playable track once.
+    const short = run(
+      initialSeq(),
+      { type: 'LOAD', tracks: tracks.slice(0, 3) },
+      { type: 'TOGGLE_REPEAT' },
+      { type: 'SELECT', index: 1 },
+      { type: 'SWAP_DONE' },
+    );
+    expect(upcomingIndices(short, 5)).toEqual([0]);
+  });
+
   it('LOAD resets the queue and pauses a playing embed', () => {
     const reload = step(playingAt(0), { type: 'LOAD', tracks: [track('x')] });
     expect(reload.state).toMatchObject({ cursor: -1, status: 'idle', order: [0] });

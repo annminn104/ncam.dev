@@ -18,6 +18,8 @@ export interface ViewSource {
 }
 
 const ART_PX = 640;
+/** How many of the next tracks the scene shows: the rack in the lid has a slot for each. */
+export const UPCOMING = 5;
 
 export function trackView(
   track: Track,
@@ -48,7 +50,7 @@ export function sceneView(source: ViewSource): SceneView {
       ? { name: source.collection.name, subtitle: source.collection.subtitle }
       : null,
     current: index === null ? null : view(index),
-    upcoming: upcomingIndices(seq, 2).map(view),
+    upcoming: upcomingIndices(seq, UPCOMING).map(view),
     trackNo: index === null ? 0 : index + 1,
     total: seq.tracks.length,
     status: seq.status,

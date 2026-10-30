@@ -22,7 +22,10 @@ export interface SceneView {
   collection: { name: string; subtitle: string } | null;
   /** The track in the player (or arriving), null before the first play. */
   current: TrackView | null;
-  /** The next playable tracks; the first is what the lid's case holds before anything plays. */
+  /**
+   * The next playable tracks in play order, at most five (`UPCOMING` in src/view.ts): rack slot
+   * `i` in the lid holds `upcoming[i]`.
+   */
   upcoming: TrackView[];
   /** 1-based; 0 before the first play. */
   trackNo: number;

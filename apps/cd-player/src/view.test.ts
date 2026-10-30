@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { initialSeq, step } from './playback/sequencer';
-import type { ArtistDetail, Collection, TrackDetail } from './spotify/types';
+import { initialSeq, step, type SeqEvent, type SeqState } from './playback/sequencer';
+import type { ArtistDetail, Collection, Track, TrackDetail } from './spotify/types';
 import {
   backdropFor,
   formatDuration,
@@ -130,5 +130,42 @@ describe('loaderLine', () => {
     expect(loaderLine(1.4)).toBe('Loading the player 100%');
     expect(loaderLine(-0.2)).toBe('Loading the player 0%');
     expect(loaderLine(Number.NaN)).toBe('Loading the player');
+  });
+});
+
+describe('the next five', () => {
+  // c cannot play.
+  const eight: Track[] = [...'abcdefgh'].map((id) => ({
+    id,
+    uri: `spotify:track:${id}`,
+    title: id.toUpperCase(),
+    artists: 'X',
+    durationMs: 1000,
+    playable: id !== 'c',
+    explicit: false,
+  }));
+  const list: Collection = { ...collection, tracks: eight };
+  const ids = (seq: SeqState) =>
+    sceneView({ collection: list, seq, details: new Map(), artists: new Map() }).upcoming.map(
+      ({ id }) => id,
+    );
+  const playing = (index: number, ...more: SeqEvent[]) => {
+    const events: SeqEvent[] = [{ type: 'SELECT', index }, { type: 'SWAP_DONE' }, ...more];
+    return events.reduce((seq, event) => step(seq, event).state, initialSeq(eight));
+  };
+
+  it('holds the next five playable tracks in play order, skipping one that cannot play', () => {
+    expect(ids(initialSeq(eight))).toEqual(['a', 'b', 'd', 'e', 'f']);
+    expect(ids(playing(0))).toEqual(['b', 'd', 'e', 'f', 'g']);
+  });
+
+  it('runs out at the end of the list, and wraps round it with Repeat', () => {
+    expect(ids(playing(5))).toEqual(['g', 'h']);
+    expect(ids(playing(5, { type: 'TOGGLE_REPEAT' }))).toEqual(['g', 'h', 'a', 'b', 'd']);
+  });
+
+  it('follows the shuffled play order under Shuffle', () => {
+    // Seed 7 orders the eight as 0, 4, 6, 1, 2, 3, 5, 7 (a first, as it plays).
+    expect(ids(playing(0, { type: 'TOGGLE_SHUFFLE', seed: 7 }))).toEqual(['e', 'g', 'b', 'd', 'f']);
   });
 });
