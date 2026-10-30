@@ -8,7 +8,7 @@ function rule(selector: string): string {
   return new RegExp(`(?:^|\\n|\\})\\s*${escaped}\\s*\\{([^}]*)\\}`).exec(css)?.[1] ?? '';
 }
 
-/** Everything from the reduced-motion block, the last of the file, to the end. */
+/** From the reduced-motion block to the end of the file; the skin picker's rules come after it. */
 const reduced = css.slice(css.indexOf('@media (prefers-reduced-motion: reduce)'));
 /** The phone layout's block. */
 const phone = /@media \(max-width: 820px\)\s*\{([\s\S]*?)\n\}/.exec(css)?.[1] ?? '';
@@ -125,5 +125,22 @@ describe('app.css: the hi-fi panel', () => {
     expect(phone).toMatch(
       /\.cdp-tracks__toggle::before\s*\{[^}]*border-radius:\s*var\(--cdp-radius-control\)/,
     );
+  });
+});
+
+describe('app.css: the skin picker', () => {
+  /** The block that cuts the picker's button down to its swatch. */
+  const swatchOnly = /@media \(max-width: 920px\)\s*\{([\s\S]*?)\n\}/.exec(css)?.[1] ?? '';
+
+  // The bar stacks from 821 px, and with its label the button left the paste field 106 px wide
+  // there, and under 200 px until about 915: the swatch stands alone up to 920 px, not only 820.
+  it('shows only its swatch at 920 px and under, where the stacked bar is tight', () => {
+    expect(swatchOnly).toMatch(/\.cdp-skin__button\s*\{[^}]*aspect-ratio:\s*1;/);
+    expect(swatchOnly).toMatch(/\.cdp-skin__label\s*\{[^}]*clip-path:\s*inset\(50%\);/);
+  });
+
+  it('leaves the phone layout block (820 px) to the phone layout alone', () => {
+    expect(phone).toContain('.cdp-tracks');
+    expect(phone).not.toContain('.cdp-skin');
   });
 });

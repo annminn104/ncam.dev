@@ -75,9 +75,9 @@ export default function App({ controller, initial = null, assetBase = '' }: AppP
   }));
   const { engine, snapshot } = usePlayerEngine(deps, initial, ref);
   // The player's colourway (src/skins.ts). Blush on the server and on the first client render, so
-  // the markup matches; the visitor's saved one right after hydration (the accent may show Blush
-  // for that one frame; the scene mounts later and boots in the saved one); saved on each change.
-  // A skin is never in the URL.
+  // the markup matches; the visitor's saved one right after hydration (the accent is Blush from
+  // the first paint until then; the scene mounts later and boots in the saved one); saved on each
+  // change. A skin is never in the URL.
   const [skin, setSkin] = useState<SkinId>(DEFAULT_SKIN);
   useEffect(() => {
     setSkin(readSkin(safeStorage()));

@@ -964,9 +964,10 @@
   height: 14px;
   color: var(--cdp-accent);
 }
-/* On a phone the button is its swatch alone, square, so the link field keeps its width; "Player"
-   stays in its accessible name. */
-@media (max-width: 820px) {
+/* At 920 px and under the button is its swatch alone, square, so the link field keeps its width:
+   the bar stacks from 821 px, and with its label the button left the field 106 px wide there.
+   "Player" stays in its accessible name. */
+@media (max-width: 920px) {
   .cdp-skin__button {
     justify-content: center;
     aspect-ratio: 1;

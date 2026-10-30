@@ -47,10 +47,12 @@ interface MenuProps {
 
 /**
  * The popover: the four colourways as a radio group. The checked one is the group's only tab
- * stop, and the arrows choose as they move, so the player recolours while the visitor looks.
+ * stop, and the arrows choose as they move, so the player recolours while the visitor looks. A key
+ * held with Alt, Ctrl or Cmd is the browser's (Alt+Arrow is Back and Forward), never a choice.
  */
 export function SkinMenu({ skin, open, onPick, options }: MenuProps) {
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.altKey || event.ctrlKey || event.metaKey) return;
     const next = skinForKey(event.key, skin);
     if (!next) return;
     event.preventDefault();

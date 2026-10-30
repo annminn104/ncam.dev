@@ -1,6 +1,6 @@
-import { createElement } from 'react';
+import { createElement, type KeyboardEvent, type ReactElement } from 'react';
 import { renderToString } from 'react-dom/server';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { SKINS, skinById, type SkinId } from '../skins';
 import { SkinMenu, SkinPicker, skinForKey } from './SkinPicker';
 
@@ -57,6 +57,43 @@ describe('SkinMenu', () => {
   it('is hidden while closed and shown while open', () => {
     expect(menu('blush', false)).toContain('aria-label="Player colour" hidden=""');
     expect(menu('blush', true)).not.toContain('hidden=""');
+  });
+});
+
+describe('SkinMenu keys', () => {
+  type Held = { altKey?: boolean; ctrlKey?: boolean; metaKey?: boolean };
+
+  /**
+   * Presses `key` on the menu with Blush checked: what it picked, and whether it kept the key from
+   * the browser. SkinMenu holds no hook, so calling it gives back the element, and the real
+   * handler is on its props (no DOM is needed to run it).
+   */
+  function press(key: string, held: Held = {}) {
+    const picked: SkinId[] = [];
+    const menu = SkinMenu({ skin: 'blush', open: true, onPick: (id) => picked.push(id) });
+    const { onKeyDown } = (menu as ReactElement<{ onKeyDown(event: KeyboardEvent): void }>).props;
+    const preventDefault = vi.fn();
+    const event = { key, altKey: false, ctrlKey: false, metaKey: false, ...held, preventDefault };
+    onKeyDown(event as unknown as KeyboardEvent);
+    return { picked, kept: preventDefault.mock.calls.length > 0 };
+  }
+
+  it('picks on an arrow, Home or End, and keeps the key from the page', () => {
+    expect(press('ArrowRight')).toEqual({ picked: ['sage'], kept: true });
+    expect(press('ArrowUp')).toEqual({ picked: ['cherry'], kept: true });
+    expect(press('End')).toEqual({ picked: ['cherry'], kept: true });
+  });
+
+  it('leaves Alt, Ctrl and Cmd with a key to the browser: Alt+Arrow is Back and Forward', () => {
+    const keys = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'];
+    for (const held of [{ altKey: true }, { ctrlKey: true }, { metaKey: true }]) {
+      for (const key of keys) {
+        expect(press(key, held), `${Object.keys(held)[0]} + ${key}`).toEqual({
+          picked: [],
+          kept: false,
+        });
+      }
+    }
   });
 });
 

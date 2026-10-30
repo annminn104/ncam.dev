@@ -513,17 +513,19 @@ in), **Sage**, **Cream** and **Cherry**. **Player**, after Share in the link bar
 - **The picker** (`src/shell/SkinPicker.tsx`): a button showing the current skin's swatch (its
   leather), named "Player colour: Blush" and so on, that opens a popover holding the four as a
   radio group. The arrow keys move and choose at once (they wrap), Home and End go to the first
-  and the last; the choice is `aria-checked` and a tick, not colour alone. Escape closes it and
-  gives focus back to the button, as the button itself does; a click or tap outside, or Tab out
-  of it, closes it. On a phone the button is the swatch alone, so the link field keeps its width.
-  The server markup is always the closed picker.
+  and the last, but a key held with Alt, Ctrl or Cmd is the browser's (Alt+Arrow is Back and
+  Forward); the choice is `aria-checked` and a tick, not colour alone. Escape closes it and gives
+  focus back to the button, as the button itself does; a click or tap outside, or Tab out of it,
+  closes it. At 920 px and under (every phone, and the bar stacked from 821 px) the button is the
+  swatch alone, so the link field keeps its width: the labelled button left it about 106 px at
+  821 px. "Player" stays in its accessible name. The server markup is always the closed picker.
 - **Persistence**: `localStorage` key **`ncam.cd-player.skin`** (`SKIN_KEY`, `readSkin` and
   `writeSkin` in `src/persist.ts`, through `safeStorage`); an unknown value, nothing saved or
   blocked storage is Blush. The server and the first client render use Blush, so the markup
-  matches; the saved skin applies right after hydration (the accent can show Blush for that one
-  frame; the scene, which mounts later, boots in the saved skin). A skin is never in the URL, so
-  a shared link never imposes the sharer's colours, and the scene never reads storage: `App`
-  hands it `skin` (`PlayerSceneProps.skin`).
+  matches; the saved skin applies right after hydration (the accent is Blush from the first paint
+  until then; the scene, which mounts later, boots in the saved skin). A skin is never in the
+  URL, so a shared link never imposes the sharer's colours, and the scene never reads storage:
+  `App` hands it `skin` (`PlayerSceneProps.skin`).
 - **The live check's probe**: in dev builds only, `window.__cdpSkinColours()` returns the live
   model's recoloured materials as sRGB hex (`skinColours` in `materials.ts`).
 
@@ -604,22 +606,24 @@ Unit tests (`src/**/*.test.ts`, node environment, run by the root `pnpm test`):
   scene's place with no `<picture>`, no `<img>`, no `fetchpriority` and no canvas, "Open the player"
   left for after the page settles, a render that still completes when Spotify fails or hangs;
   `App.test.ts` also reads `App.tsx` to hold the loader after the scene layer, as the fade-out's `~`
-  selector needs, since the server draws no scene layer), `ssr-graph.test.ts` (the import graphs),
+  selector needs, since the server draws no scene layer, and renders the default skin's accent
+  inline on the root with the picker closed), `ssr-graph.test.ts` (the import graphs),
   `ssr-state.test.ts`, `boot.test.ts` (the phases from `waiting`), `autoplay.test.ts`,
   `failure.test.ts`, `webgl.test.ts`, `shell/EnterButton.test.ts`,
   `shell/Loader.test.ts` (the disc and the line), `shell/NowPlaying.test.ts` (the card's controls
   in Tab order as `cdp-key` squares, the track label for the eye and for a screen reader, the
   switches' `aria-pressed`, the slider's numbers and when it is disabled; its `change` handling
   needs a DOM, so that is by hand), `shell/LinkBar.test.ts` (Retry beside an error, the title after
-  a failed first load, `copyText`), `shell/Tracklist.test.ts` (the empty shelf, the playing row's
-  equaliser, the explicit badge) and `styles/app-css.test.ts` (the loader plain from the first
-  paint, its spin and its fade, `FADE_MS` equal to both transitions, reduced motion; the hi-fi
-  panel's tokens, the accent's uses, no other colour, pill, italic, Fraunces, layered shadow or blur
-  over 8 px, square controls, the breakpoints and the phone rules);
+  a failed first load, Player after Share inside the form, `copyText`), `shell/Tracklist.test.ts`
+  (the empty shelf, the playing row's equaliser, the explicit badge) and `styles/app-css.test.ts`
+  (the loader plain from the first paint, its spin and its fade, `FADE_MS` equal to both
+  transitions, reduced motion; the hi-fi panel's tokens, the accent's uses, no other colour, pill,
+  italic, Fraunces, layered shadow or blur over 8 px, square controls, the breakpoints and the
+  phone rules; the picker cut down to its swatch at 920 px and under);
 - routes and personalisation: `routes.test.ts`, `route-controller.test.ts`, `persist.test.ts`
   (the saved collection and the saved skin), `spotify/link.test.ts`, `skins.test.ts` (a colour
   for every role in every skin, the colours' format, the accents' contrast, `skinById`) and
-  `shell/SkinPicker.test.ts` (the picker's markup and its keys);
+  `shell/SkinPicker.test.ts` (the picker's markup and its keys, modified ones left to the browser);
 - data: `spotify/embed.test.ts` (fixture pages for a playlist, a track, an artist and the not-found
   page, and layout changes), `spotify/types.test.ts`, `spotify/client.test.ts` (the messages,
   `canRetry`), `server/spotify-handler.test.ts` (statuses, cache headers, CORS, the 502's log) and
