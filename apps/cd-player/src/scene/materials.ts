@@ -18,9 +18,19 @@ import {
 import type { Skin, SkinRole } from '../skins';
 import { DYNAMIC_MATERIALS, type DynamicMaterial } from './contract';
 import { MATERIAL_ROLES, SKIN_ROLES, type MaterialRole } from './material-roles';
-import { leatherNormal } from './textures/grain';
+import { leatherNormal, quiltNormal, weaveNormal } from './textures/grain';
 
 export type Slots = Record<DynamicMaterial, MeshPhysicalMaterial | MeshBasicMaterial>;
+
+/** The runtime normal maps the roles tile (src/scene/textures/grain.ts). */
+export interface GrainMaps {
+  /** The leather's pebble grain. */
+  grain: Texture;
+  /** The lining's diamond quilting. */
+  quilt: Texture;
+  /** The speaker cloth's and the strap's weave. */
+  weave: Texture;
+}
 
 /** The skin role of a GLB material, or undefined for one no skin recolours. */
 function skinRoleOf(name: string): SkinRole | undefined {
@@ -66,7 +76,7 @@ function physical(
 export function makeMaterial(
   role: MaterialRole,
   source: MeshStandardMaterial,
-  grain: Texture,
+  maps: GrainMaps,
 ): Material {
   switch (role) {
     case 'leather':
@@ -77,7 +87,7 @@ export function makeMaterial(
         sheenColor: leatherSheen(source.color),
         clearcoat: 0.1,
         clearcoatRoughness: 0.4,
-        normalMap: grain,
+        normalMap: maps.grain,
         normalScale: new Vector2(0.45, 0.45),
       });
     case 'fabric':
@@ -86,8 +96,8 @@ export function makeMaterial(
         sheen: 1,
         sheenRoughness: 0.8,
         sheenColor: new Color('#4a4046'),
-        normalMap: grain,
-        normalScale: new Vector2(0.8, 0.8),
+        normalMap: maps.weave,
+        normalScale: new Vector2(0.9, 0.9),
       });
     case 'lining':
       return physical(source, {
@@ -95,6 +105,8 @@ export function makeMaterial(
         sheen: 0.6,
         sheenRoughness: 0.6,
         sheenColor: new Color('#ffffff'),
+        normalMap: maps.quilt,
+        normalScale: new Vector2(0.6, 0.6),
       });
     case 'plastic':
       return physical(source, {
@@ -208,17 +220,26 @@ export function skinColours(root: Object3D): Record<string, string> {
 
 /** Swaps every GLB material for its role's three material, once per name; keeps the printed ones. */
 export function upgradeMaterials(root: Object3D): UpgradedMaterials {
-  const size = 256;
-  const grain = new DataTexture(leatherNormal(size), size, size, RGBAFormat);
-  grain.wrapS = grain.wrapT = RepeatWrapping;
-  // The grain is minified at the hero distance. Filtered and mip-mapped it fades with distance;
-  // sampled nearest (a DataTexture's default) it would shimmer whenever the camera moves.
-  grain.magFilter = LinearFilter;
-  grain.minFilter = LinearMipmapLinearFilter;
-  grain.generateMipmaps = true;
-  // No renderer to ask for its limit here: three clamps this to what the GPU supports.
-  grain.anisotropy = 4;
-  grain.needsUpdate = true;
+  // The maps are minified at the hero distance. Filtered and mip-mapped they fade with distance;
+  // sampled nearest (a DataTexture's default) they would shimmer whenever the camera moves.
+  const dataTexture = (bytes: Uint8Array, size: number, repeat: number) => {
+    const texture = new DataTexture(bytes, size, size, RGBAFormat);
+    texture.wrapS = texture.wrapT = RepeatWrapping;
+    texture.repeat.set(repeat, repeat);
+    texture.magFilter = LinearFilter;
+    texture.minFilter = LinearMipmapLinearFilter;
+    texture.generateMipmaps = true;
+    // No renderer to ask for its limit here: three clamps this to what the GPU supports.
+    texture.anisotropy = 4;
+    texture.needsUpdate = true;
+    return texture;
+  };
+  const maps: GrainMaps = {
+    grain: dataTexture(leatherNormal(256), 256, 1),
+    // Two diamonds per 5 cm tile; the weave's 16 threads tiled three times are about 1 mm apart.
+    quilt: dataTexture(quiltNormal(256, 2), 256, 1),
+    weave: dataTexture(weaveNormal(128, 16), 128, 3),
+  };
   const made = new Map<string, Material>();
   const slots: Partial<Slots> = {};
   root.traverse((object) => {
@@ -227,7 +248,7 @@ export function upgradeMaterials(root: Object3D): UpgradedMaterials {
     const source = mesh.material as MeshStandardMaterial;
     let material = made.get(source.name);
     if (!material) {
-      material = makeMaterial(MATERIAL_ROLES[source.name] ?? 'plastic', source, grain);
+      material = makeMaterial(MATERIAL_ROLES[source.name] ?? 'plastic', source, maps);
       made.set(source.name, material);
       if ((DYNAMIC_MATERIALS as readonly string[]).includes(source.name)) {
         slots[source.name as DynamicMaterial] = material as
@@ -244,7 +265,9 @@ export function upgradeMaterials(root: Object3D): UpgradedMaterials {
     applySkin: (skin: Skin) => applySkin(made.values(), skin),
     dispose: () => {
       for (const material of made.values()) material.dispose();
-      grain.dispose();
+      maps.grain.dispose();
+      maps.quilt.dispose();
+      maps.weave.dispose();
     },
   };
 }

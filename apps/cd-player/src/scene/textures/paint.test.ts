@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { TrackView } from '../../bridge';
-import { loadFaces, paintBooklet, paintCard, paintDisc, paintLcd, paintPolaroid } from './paint';
+import { loadFaces, paintBooklet, paintCard, paintDisc, paintLcd, paintTag } from './paint';
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -74,7 +74,8 @@ describe('loadFaces', () => {
       [(c: HTMLCanvasElement) => paintCard(c, null), 1024],
       [(c: HTMLCanvasElement) => paintLcd(c, 3, 84_000, 'playing'), 256],
       [(c: HTMLCanvasElement) => paintLcd(c, 0, 0, 'idle'), 256],
-      [(c: HTMLCanvasElement) => paintPolaroid(c, null), 512],
+      [(c: HTMLCanvasElement) => paintTag(c, { name: 'Top 50', subtitle: '50 songs' }), 512],
+      [(c: HTMLCanvasElement) => paintTag(c, null), 512],
     ] as const) {
       const { canvas, fonts: used } = recorder(size);
       paint(canvas);
@@ -136,5 +137,21 @@ describe('the lines of text', () => {
     const { canvas, texts } = recorder();
     paintBooklet(canvas, null, view);
     expect(texts.at(-1)).toBe(view.artists);
+  });
+
+  it('wraps a long collection name over three lines on the tag, the last fitted', () => {
+    const { canvas, texts } = recorder(512, 768);
+    paintTag(canvas, { name: 'word '.repeat(40).trim(), subtitle: 'Spotify' });
+    const lines = texts.filter((text) => text.startsWith('word'));
+    expect(lines).toHaveLength(3);
+    expect(lines[2].endsWith('…')).toBe(true);
+    for (const line of lines) expect(line.length * 8).toBeLessThanOrEqual(512 * 0.84);
+  });
+
+  it('engraves the plate: every line is drawn twice, the cut over its light edge', () => {
+    const { canvas, texts } = recorder(1024, 182);
+    paintCard(canvas, { name: 'Top 50 - Global', subtitle: 'Spotify' });
+    expect(texts.filter((text) => text === 'Top 50 - Global')).toHaveLength(2);
+    expect(texts.at(-1)).toBe('Spotify');
   });
 });

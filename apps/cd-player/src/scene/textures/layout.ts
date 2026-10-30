@@ -84,3 +84,59 @@ export function lcdDigits(trackNo: number, positionMs: number): { track: string;
     time: `${minutes}:${String(seconds).padStart(2, '0')}`,
   };
 }
+
+/**
+ * `text` over at most `maxLines` lines of `max` width, broken at spaces; what does not fit the
+ * last line ends in an ellipsis, as does any single word wider than a line.
+ */
+export function wrapLines(
+  measure: (text: string) => number,
+  text: string,
+  max: number,
+  maxLines: number,
+): string[] {
+  const words = text.trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0 || maxLines < 1) return [];
+  const lines: string[] = [];
+  let line = words[0];
+  for (let i = 1; i < words.length; i++) {
+    const next = `${line} ${words[i]}`;
+    if (measure(next) <= max) {
+      line = next;
+    } else if (lines.length < maxLines - 1) {
+      lines.push(line);
+      line = words[i];
+    } else {
+      line = [line, ...words.slice(i)].join(' ');
+      break;
+    }
+  }
+  lines.push(line);
+  return lines.map((each) => fitText(measure, each, max));
+}
+
+/** The luggage tag's three ruled lines (px from the top of an `h` px tag): under each name line. */
+export function tagRules(h: number): number[] {
+  return [0.33, 0.45, 0.57].map((share) => h * share);
+}
+
+/**
+ * The brushed plate's strokes: `count` faint horizontal lines at deterministic heights and
+ * alphas (xorshift on `seed`), so the plate repaints identically.
+ */
+export function brushLines(h: number, count: number, seed: number): { y: number; alpha: number }[] {
+  let s = seed >>> 0 || 1;
+  const random = () => {
+    s ^= s << 13;
+    s >>>= 0;
+    s ^= s >>> 17;
+    s ^= s << 5;
+    s >>>= 0;
+    return s / 4294967296;
+  };
+  const out: { y: number; alpha: number }[] = [];
+  for (let i = 0; i < count; i++) {
+    out.push({ y: Math.floor(random() * h), alpha: 0.04 + random() * 0.08 });
+  }
+  return out;
+}

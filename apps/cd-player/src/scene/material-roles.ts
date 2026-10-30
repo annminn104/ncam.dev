@@ -3,7 +3,7 @@ import type { SkinRole } from '../skins';
 /**
  * What each Blender material becomes in three (src/scene/materials.ts). The GLB carries the base
  * colour, roughness and metalness tuned in Blender; the role adds what glTF cannot say (sheen,
- * grain, transmission, iridescence). Three-free so the contract test can read it.
+ * grain, quilting, weave, transmission, iridescence). Three-free so the contract test can read it.
  */
 export type MaterialRole =
   | 'leather'
@@ -23,16 +23,15 @@ export type MaterialRole =
 
 export const MATERIAL_ROLES: Readonly<Record<string, MaterialRole>> = {
   leather: 'leather',
+  trim: 'leather',
   fabric: 'fabric',
+  strap: 'fabric',
   lining: 'lining',
   deck: 'plastic',
   grille: 'plastic',
   btn: 'plastic',
   arm: 'plastic',
   well: 'plastic',
-  pin_blue: 'plastic',
-  pin_pink: 'plastic',
-  paper: 'matte',
   thread: 'matte',
   ink: 'matte',
   ink_dark: 'matte',
@@ -40,7 +39,7 @@ export const MATERIAL_ROLES: Readonly<Record<string, MaterialRole>> = {
   lcd_ghost: 'matte',
   crystal: 'crystal',
   polycarbonate: 'crystal',
-  gold: 'metal',
+  hardware: 'metal',
   chrome: 'metal',
   alu_side: 'metal',
   alu: 'brushed',
@@ -50,26 +49,26 @@ export const MATERIAL_ROLES: Readonly<Record<string, MaterialRole>> = {
   black_glass: 'gloss-black',
   led: 'emissive',
   lcd: 'emissive',
+  vu: 'emissive',
   art_disc: 'print',
   art_booklet: 'print',
-  art_photo_a: 'print',
-  art_photo_b: 'print',
   card_print: 'print',
+  tag_print: 'print',
   lcd_screen: 'screen',
 };
 
 /**
- * The materials a skin recolours (src/skins.ts), by GLB name: the skin's sRGB hex for the role
- * replaces the base colour Blender gave them (applySkin in materials.ts). `grille` is the slotted
- * plate on the front, not the dark cloth behind it (`fabric`); `gold` is every metal fitting (the
- * hinges, the latch, the feet, the tonearm's collar and weight, the display's bezel). No material
- * is `trim` in this model. Every other material keeps Blender's colour in every skin.
+ * GLB material name → the skin role that colours it (src/skins.ts). One material per role:
+ * `hardware` is every metal fitting (the caps, clasps, rivets, D-rings, nameplate, grille frame,
+ * feet, hinges, bezel and the tonearm's metal), `trim` the piping, the handle, the tag and the
+ * rack's frame.
  */
 export const SKIN_ROLES: Readonly<Record<string, SkinRole>> = {
   leather: 'leather',
+  trim: 'trim',
   thread: 'thread',
   lining: 'lining',
-  gold: 'hardware',
+  hardware: 'hardware',
   deck: 'deck',
   grille: 'grille',
 };

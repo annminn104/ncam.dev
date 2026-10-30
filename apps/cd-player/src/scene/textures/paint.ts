@@ -1,7 +1,17 @@
 import { CanvasTexture, SRGBColorSpace } from 'three';
 import type { TrackView } from '../../bridge';
 import type { Status } from '../../playback/sequencer';
-import { arcLayout, coverCrop, fitText, lcdDigits, SEGMENTS, segmentRects } from './layout';
+import {
+  arcLayout,
+  brushLines,
+  coverCrop,
+  fitText,
+  lcdDigits,
+  SEGMENTS,
+  segmentRects,
+  tagRules,
+  wrapLines,
+} from './layout';
 
 const DISPLAY = "'Fraunces Variable', Georgia, serif";
 const UI = "'Manrope Variable', Arial, sans-serif";
@@ -155,35 +165,76 @@ export function paintBooklet(
   );
 }
 
-export function paintPolaroid(canvas: HTMLCanvasElement, image: HTMLImageElement | null): void {
+/** The luggage tag on the handle: the collection's name on a cream card, ruled like a real tag. */
+export function paintTag(
+  canvas: HTMLCanvasElement,
+  collection: { name: string; subtitle: string } | null,
+): void {
   const ctx = context(canvas);
   const { width: w, height: h } = canvas;
-  ctx.clearRect(0, 0, w, h);
-  if (image) cover(ctx, image, w, h);
-  else blushGradient(ctx, w, h);
+  ctx.fillStyle = '#f6efe6';
+  ctx.fillRect(0, 0, w, h);
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillStyle = '#8f878c';
+  ctx.font = bold(Math.round(h * 0.034));
+  ctx.fillText('N A M E', w * 0.08, h * 0.12);
+  ctx.fillStyle = 'rgba(42, 31, 36, 0.14)';
+  for (const y of tagRules(h)) ctx.fillRect(w * 0.08, y, w * 0.84, Math.max(1, h * 0.003));
+  ctx.fillStyle = INK;
+  ctx.font = title(Math.round(h * 0.085));
+  const lines = wrapLines(
+    (s) => ctx.measureText(s).width,
+    collection?.name ?? 'Your playlist',
+    w * 0.84,
+    3,
+  );
+  lines.forEach((line, i) => ctx.fillText(line, w * 0.08, h * (0.31 + i * 0.12)));
+  if (collection?.subtitle) {
+    ctx.fillStyle = '#8f878c';
+    ctx.font = semibold(Math.round(h * 0.04));
+    ctx.fillText(fitted(ctx, collection.subtitle, w * 0.84), w * 0.08, h * 0.76);
+  }
+  ctx.fillStyle = '#8f878c';
+  ctx.font = bold(Math.round(h * 0.03));
+  ctx.fillText('ncam · CD player', w * 0.08, h * 0.93);
 }
 
-/** The "NOW SPINNING" card in the lid: the collection's name. */
+/**
+ * The brushed-metal plate in the lid: "NOW SPINNING" and the collection's name, read as engraved
+ * (a light edge under a dark cut) on a steel gradient with fine horizontal strokes.
+ */
 export function paintCard(
   canvas: HTMLCanvasElement,
   collection: { name: string; subtitle: string } | null,
 ): void {
   const ctx = context(canvas);
   const { width: w, height: h } = canvas;
-  ctx.fillStyle = '#faf7f2';
+  const steel = ctx.createLinearGradient(0, 0, 0, h);
+  steel.addColorStop(0, '#d9d7d9');
+  steel.addColorStop(0.5, '#efeeef');
+  steel.addColorStop(1, '#cfccd0');
+  ctx.fillStyle = steel;
   ctx.fillRect(0, 0, w, h);
-  ctx.fillStyle = '#8f878c';
+  for (const { y, alpha } of brushLines(h, 90, 11)) {
+    ctx.fillStyle = `rgba(90, 86, 92, ${alpha})`;
+    ctx.fillRect(0, y, w, 1);
+  }
+  const engrave = (text: string, x: number, y: number) => {
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
+    ctx.fillText(text, x, y + Math.max(1, h * 0.008));
+    ctx.fillStyle = '#2a2528';
+    ctx.fillText(text, x, y);
+  };
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.font = bold(Math.round(h * 0.13));
-  ctx.fillText('N O W   S P I N N I N G', w / 2, h * 0.24);
-  ctx.fillStyle = INK;
+  engrave('N O W   S P I N N I N G', w / 2, h * 0.24);
   ctx.font = title(Math.round(h * 0.36));
-  ctx.fillText(fitted(ctx, collection?.name ?? 'Your playlist', w * 0.92), w / 2, h * 0.6);
+  engrave(fitted(ctx, collection?.name ?? 'Your playlist', w * 0.92), w / 2, h * 0.6);
   if (collection?.subtitle) {
-    ctx.fillStyle = '#8f878c';
     ctx.font = semibold(Math.round(h * 0.12));
-    ctx.fillText(fitted(ctx, collection.subtitle, w * 0.92), w / 2, h * 0.87);
+    engrave(fitted(ctx, collection.subtitle, w * 0.92), w / 2, h * 0.87);
   }
 }
 

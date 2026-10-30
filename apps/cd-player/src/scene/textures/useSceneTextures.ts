@@ -15,7 +15,7 @@ import {
   paintCard,
   paintDisc,
   paintLcd,
-  paintPolaroid,
+  paintTag,
 } from './paint';
 import { createPainter, printKey, reprintFor, settlesWithin } from './painter';
 
@@ -27,16 +27,16 @@ const FACES_WAIT_MS = 1000;
 function makeSurfaces() {
   const disc = [newCanvas(1024, 1024), newCanvas(1024, 1024)] as const;
   const booklet = [newCanvas(1024, 1024), newCanvas(1024, 1024)] as const;
-  const photos = [newCanvas(512, 512), newCanvas(512, 512)] as const;
   const card = newCanvas(1024, 182);
+  const tag = newCanvas(512, 768);
   const lcd = newCanvas(256, 112);
   return {
-    canvases: { disc, booklet, photos, card, lcd },
+    canvases: { disc, booklet, card, tag, lcd },
     textures: {
       disc: [canvasTexture(disc[0]), canvasTexture(disc[1])] as const,
       booklet: [canvasTexture(booklet[0]), canvasTexture(booklet[1])] as const,
-      photos: [canvasTexture(photos[0]), canvasTexture(photos[1])] as const,
       card: canvasTexture(card),
+      tag: canvasTexture(tag),
       lcd: canvasTexture(lcd),
     },
   };
@@ -46,8 +46,8 @@ type Surfaces = ReturnType<typeof makeSurfaces>;
 
 /** What the prints show, so that each is made again only when what it shows changes. */
 interface Shown {
+  /** The collection the plate and the tag were printed for. */
   card: string;
-  photos: [string, string];
   lid: string;
   /**
    * What the display shows: the three things it changes with, compared every frame (a key string
@@ -64,7 +64,6 @@ const NONE = '\u0000';
 
 const nothingShown = (): Shown => ({
   card: NONE,
-  photos: [NONE, NONE],
   lid: NONE,
   lcd: { track: -1, second: -1, status: null },
   printed: [null, null],
@@ -129,8 +128,8 @@ function makePainter(surfaces: Surfaces, shown: { current: Shown }): Painter {
 /**
  * Prints the bridge's view on the player: each disc and its case's booklet for the track they
  * carry (through the returned painter, which the director calls on a change; the hook prints a
- * track again once its art is known), the polaroids with the next artists, the card with the
- * collection's name, and the display, at most once a second.
+ * track again once its art is known), the plate and the luggage tag with the collection's name,
+ * and the display, at most once a second.
  */
 export function useSceneTextures(rig: Rig, bridge: SceneBridge): Painter {
   const [surfaces] = useState(makeSurfaces);
@@ -142,24 +141,15 @@ export function useSceneTextures(rig: Rig, bridge: SceneBridge): Painter {
     const { canvases, textures } = surfaces;
     rig.discs.forEach((disc, index) => setMap(disc.label, textures.disc[index]));
     rig.cases.forEach((item, index) => setMap(item.booklet, textures.booklet[index]));
-    setMap(rig.model.slots.art_photo_a, textures.photos[0]);
-    setMap(rig.model.slots.art_photo_b, textures.photos[1]);
+    setMap(rig.model.slots.tag_print, textures.tag);
     setMap(rig.model.slots.card_print, textures.card);
     setMap(rig.model.slots.lcd_screen, textures.lcd);
     shown.current = nothingShown();
-    for (const index of [0, 1] as const) {
-      printBlank(surfaces, index);
-      paintPolaroid(canvases.photos[index], null);
-    }
+    for (const index of [0, 1] as const) printBlank(surfaces, index);
     paintCard(canvases.card, null);
+    paintTag(canvases.tag, null);
     paintLcd(canvases.lcd, 0, 0, 'idle');
-    const all = [
-      ...textures.disc,
-      ...textures.booklet,
-      ...textures.photos,
-      textures.card,
-      textures.lcd,
-    ];
+    const all = [...textures.disc, ...textures.booklet, textures.tag, textures.card, textures.lcd];
     for (const texture of all) texture.needsUpdate = true;
     return () => {
       for (const texture of all) texture.dispose();
@@ -182,24 +172,14 @@ export function useSceneTextures(rig: Rig, bridge: SceneBridge): Painter {
           if (shown.current.card !== card) return;
           paintCard(canvases.card, view.collection);
           textures.card.needsUpdate = true;
+          paintTag(canvases.tag, view.collection);
+          textures.tag.needsUpdate = true;
         };
         // A font that stalls does not hold the card: it goes out in the fallback faces at worst,
         // and again once the page's are in.
         void settlesWithin(faces, FACES_WAIT_MS).then((inTime) => {
           printCard();
           if (!inTime) void faces.then(printCard);
-        });
-      }
-      for (const index of [0, 1] as const) {
-        const next = view.upcoming[index] ?? null;
-        const url = next?.artistUrl ?? next?.artUrl ?? null;
-        const key = url ?? '';
-        if (key === shown.current.photos[index]) continue;
-        shown.current.photos[index] = key;
-        void tryImage(url).then((image) => {
-          if (shown.current.photos[index] !== key) return;
-          paintPolaroid(canvases.photos[index], image);
-          textures.photos[index].needsUpdate = true;
         });
       }
       // Before the first play, the lid's case holds what will play first.

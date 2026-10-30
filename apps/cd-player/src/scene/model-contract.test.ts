@@ -6,15 +6,57 @@ import { readGlbJson, triangleCount } from './glb';
 import { MATERIAL_ROLES, SKIN_ROLES } from './material-roles';
 
 const GLB = fileURLToPath(new URL('../../public/assets/cd-player.glb', import.meta.url));
-/** Box-mapped in export.py (one UV unit per 5 cm), for the grain the page tiles over them. */
-const TILED = ['leather', 'lining', 'fabric', 'deck', 'grille'];
+/** Box-mapped in export.py (one UV unit per 5 cm), for the maps the page tiles over them. */
+const TILED = ['leather', 'trim', 'lining', 'fabric', 'strap', 'deck', 'grille'];
+/** What left with the polaroids and the latch: nothing may bring the names back by accident. */
+const GONE = [
+  'polaroid_a',
+  'polaroid_b',
+  'art_photo_a',
+  'art_photo_b',
+  'paper',
+  'pin_pink',
+  'pin_blue',
+  'gold',
+];
+/** The marks printed on the deck round a key or the knob: the scripts parent them to the deck. */
+const DECK_MARK = /^player_(btn_gap_|btn_lbl_|tick_|vol$)/;
+const PIVOTS = ['btn_prev', 'btn_next', 'btn_play', 'btn_stop', 'btn_rpt', 'btn_mode', 'knob'];
+const ARM_PARTS = [
+  'player_arm_tube',
+  'player_arm_cw',
+  'player_arm_head',
+  'player_arm_cart',
+  'player_arm_lift',
+  'player_arm_yoke_l',
+];
 
 describe('public/assets/cd-player.glb (art/pipeline/build.mjs)', () => {
   const json = readGlbJson(readFileSync(GLB));
+  const index = new Map(json.nodes.map((node, i) => [node.name ?? '', i]));
+  const node = (name: string) => json.nodes[index.get(name) ?? -1];
+  const childrenOf = (name: string) =>
+    (node(name)?.children ?? []).map((child) => json.nodes[child].name ?? '');
+  const parentOf = (name: string) =>
+    json.nodes.find((candidate) => candidate.children?.includes(index.get(name) ?? -1))?.name;
+  const materialOf = (name: string) => {
+    const mesh = node(name)?.mesh;
+    if (mesh === undefined) return undefined;
+    const material = json.meshes[mesh].primitives[0].material;
+    return material === undefined ? undefined : json.materials[material].name;
+  };
 
   it('has every node the page drives', () => {
     const names = new Set(json.nodes.map((node) => node.name));
     for (const name of REQUIRED_NODES) expect(names.has(name), name).toBe(true);
+  });
+
+  it('has nothing left of the polaroids, the paper, the pins or the gold', () => {
+    const names = new Set([
+      ...json.nodes.map((node) => node.name),
+      ...json.materials.map((material) => material.name),
+    ]);
+    for (const name of GONE) expect(names.has(name), name).toBe(false);
   });
 
   it('has every printed material and a role for every material', () => {
@@ -23,9 +65,12 @@ describe('public/assets/cd-player.glb (art/pipeline/build.mjs)', () => {
     for (const name of names) expect(MATERIAL_ROLES[name], name).toBeDefined();
   });
 
-  it('has every material a skin recolours', () => {
+  it('gives every skin role one material the model has', () => {
     const names = new Set(json.materials.map((material) => material.name ?? ''));
     for (const name of Object.keys(SKIN_ROLES)) expect(names.has(name), name).toBe(true);
+    expect(new Set(Object.values(SKIN_ROLES))).toEqual(
+      new Set(['leather', 'trim', 'thread', 'lining', 'hardware', 'deck', 'grille']),
+    );
   });
 
   it('keeps the UVs of every printed and tiled primitive', () => {
@@ -41,6 +86,36 @@ describe('public/assets/cd-player.glb (art/pipeline/build.mjs)', () => {
       }
     }
     expect([...seen].sort()).toEqual([...mapped].sort());
+  });
+
+  it('hangs the five rack slots from the lid, as empties', () => {
+    for (let i = 0; i < 5; i++) {
+      const name = `rack_slot_${i}`;
+      expect(node(name)?.mesh, name).toBeUndefined();
+      expect(childrenOf(name), name).toEqual([]);
+      expect(parentOf(name), name).toBe('lid_hinge');
+    }
+  });
+
+  it('prints the tag on the tag node, and lights the ten VU segments with one material', () => {
+    expect(materialOf('tag')).toBe('tag_print');
+    for (let i = 0; i < 10; i++) expect(materialOf(`vu_seg_${i}`), `vu_seg_${i}`).toBe('vu');
+    expect(MATERIAL_ROLES.vu).toBe('emissive');
+  });
+
+  it('keeps the deck’s printed marks off the keys and the knob', () => {
+    for (const pivot of PIVOTS) {
+      const children = childrenOf(pivot);
+      expect(children.length, pivot).toBeGreaterThan(0);
+      for (const child of children) expect(child, pivot).not.toMatch(DECK_MARK);
+    }
+  });
+
+  it('hangs the moving tonearm parts from arm_pivot and leaves its rest on the deck', () => {
+    const under = childrenOf('arm_pivot');
+    for (const part of ARM_PARTS) expect(under, part).toContain(part);
+    expect(parentOf('player_arm_rest')).toBeDefined();
+    expect(parentOf('player_arm_rest')).not.toBe('arm_pivot');
   });
 
   it('stays inside its budget, meshopt-compressed', () => {

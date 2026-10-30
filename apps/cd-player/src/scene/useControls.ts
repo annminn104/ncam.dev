@@ -7,7 +7,6 @@ import {
   BUTTON_NODES,
   hitFor,
   knobSeekMs,
-  leaveOnDeck,
   PRESS_MS,
   pressDepth,
   type ButtonNode,
@@ -43,12 +42,6 @@ export function useControls(rig: Rig, bridge: SceneBridge) {
     [rig],
   );
   const knob = rig.model.nodes.knob;
-
-  // Only the keys and the knob move: what is printed around them stays on the deck.
-  useEffect(() => {
-    for (const name of BUTTON_NODES) leaveOnDeck(rig.model.nodes[name]);
-    leaveOnDeck(rig.model.nodes.knob);
-  }, [rig]);
 
   useFrame(() => {
     const now = performance.now();

@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { arcLayout, coverCrop, fitText, lcdDigits, segmentRects, SEGMENTS } from './layout';
+import {
+  arcLayout,
+  brushLines,
+  coverCrop,
+  fitText,
+  lcdDigits,
+  segmentRects,
+  SEGMENTS,
+  tagRules,
+  wrapLines,
+} from './layout';
 
 describe('texture layout', () => {
   it('cover-crops to the box', () => {
@@ -37,5 +47,38 @@ describe('texture layout', () => {
     expect(lcdDigits(0, 0)).toEqual({ track: '--', time: '-:--' });
     expect(lcdDigits(3, 84_000)).toEqual({ track: '03', time: '1:24' });
     expect(lcdDigits(12, 6_000_000)).toEqual({ track: '12', time: '99:00' });
+  });
+
+  it('wraps a name over at most three lines, broken at spaces, the rest fitted with an ellipsis', () => {
+    const measure = (s: string) => s.length * 10;
+    expect(wrapLines(measure, 'Top 50 Global Hits Weekly', 100, 3)).toEqual([
+      'Top 50',
+      'Global',
+      'Hits Week…',
+    ]);
+    expect(wrapLines(measure, 'Top 50', 100, 3)).toEqual(['Top 50']);
+    expect(wrapLines(measure, 'Supercalifragilistic', 100, 2)).toEqual(['Supercali…']);
+    expect(wrapLines(measure, '   ', 100, 3)).toEqual([]);
+  });
+
+  it('rules the tag under each line of the name', () => {
+    const rules = tagRules(768);
+    expect(rules).toHaveLength(3);
+    expect(rules[0]).toBeGreaterThan(768 * 0.3);
+    expect(rules[2]).toBeLessThan(768 * 0.7);
+    expect(rules[1] - rules[0]).toBeCloseTo(rules[2] - rules[1]);
+  });
+
+  it('brushes the plate with the same strokes every time, inside the plate', () => {
+    const strokes = brushLines(182, 90, 11);
+    expect(strokes).toHaveLength(90);
+    expect(brushLines(182, 90, 11)).toEqual(strokes);
+    for (const { y, alpha } of strokes) {
+      expect(y).toBeGreaterThanOrEqual(0);
+      expect(y).toBeLessThan(182);
+      expect(alpha).toBeGreaterThanOrEqual(0.04);
+      expect(alpha).toBeLessThanOrEqual(0.12);
+    }
+    expect(brushLines(182, 90, 12)).not.toEqual(strokes);
   });
 });

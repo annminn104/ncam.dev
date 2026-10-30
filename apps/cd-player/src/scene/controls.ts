@@ -1,4 +1,3 @@
-import type { Object3D } from 'three';
 import type { PlayerAction } from '../actions';
 import type { RequiredNode } from './contract';
 
@@ -35,21 +34,6 @@ export function hitFor(object: Named | null): Hit | null {
     if (name === 'knob') return { kind: 'knob' };
   }
   return null;
-}
-
-/**
- * What the model hangs from the pivot of a key or the knob although it is printed on the deck: the
- * dark ring around a key and its label, the dial's ticks and its name.
- */
-const PRINTED = /^player_(btn_gap_|btn_lbl_|tick_|vol$)/;
-
-/** Hands a pivot's printed marks to the deck, so that only the key or the knob itself moves. */
-export function leaveOnDeck(pivot: Object3D): void {
-  const deck = pivot.parent;
-  if (!deck) return;
-  for (const child of [...pivot.children]) {
-    if (PRINTED.test(child.name)) deck.attach(child);
-  }
 }
 
 /** The iFrame API has no volume, so the knob scrubs: one full turn is this much time. */

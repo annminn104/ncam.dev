@@ -21,13 +21,13 @@ const meshOf = (name: string, color = '#ffffff') =>
 
 describe('makeMaterial', () => {
   const source = new MeshStandardMaterial({ name: 'from_the_glb' });
-  const grain = new Texture();
+  const maps = { grain: new Texture(), quilt: new Texture(), weave: new Texture() };
 
   // The studio's panels are bright: reflected in full they lift the blacks of what is behind the
   // glass (the booklet's art) and leave hot spots on it. The edges and a faint reflection still
   // read as glass.
   it('makes the crystal clear glass with a faint reflection, not a mirror-strong one', () => {
-    const glass = makeMaterial('crystal', source, grain) as MeshPhysicalMaterial;
+    const glass = makeMaterial('crystal', source, maps) as MeshPhysicalMaterial;
     expect(glass.transmission).toBe(1);
     expect(glass.metalness).toBe(0);
     expect(glass.roughness).toBeLessThanOrEqual(0.05);
@@ -36,7 +36,7 @@ describe('makeMaterial', () => {
   });
 
   it('makes a print a paper with a soft sheen: no clearcoat, a reflection well under full', () => {
-    const print = makeMaterial('print', source, grain) as MeshPhysicalMaterial;
+    const print = makeMaterial('print', source, maps) as MeshPhysicalMaterial;
     expect(print.clearcoat).toBe(0);
     expect(print.roughness).toBeGreaterThanOrEqual(0.3);
     expect(print.specularIntensity).toBeGreaterThan(0);
@@ -59,7 +59,28 @@ describe('upgradeMaterials', () => {
     upgraded.dispose();
   });
 
-  it('hands each of the six printed materials to the page as a slot, and puts it on its mesh', () => {
+  it('quilts the lining and weaves the cloth and the strap with maps of their own', () => {
+    const root = new Group();
+    const [leather, lining, fabric, strap] = ['leather', 'lining', 'fabric', 'strap'].map(
+      (name) => {
+        const mesh = meshOf(name);
+        root.add(mesh);
+        return mesh;
+      },
+    );
+    const upgraded = upgradeMaterials(root);
+    const mapOf = (mesh: Mesh) => (mesh.material as MeshPhysicalMaterial).normalMap;
+    expect(mapOf(lining)).not.toBeNull();
+    expect(mapOf(fabric)).not.toBeNull();
+    expect(mapOf(lining)).not.toBe(mapOf(leather));
+    expect(mapOf(fabric)).not.toBe(mapOf(leather));
+    expect(mapOf(fabric)).not.toBe(mapOf(lining));
+    expect(mapOf(strap)).toBe(mapOf(fabric));
+    expect(mapOf(fabric)?.repeat.x).toBe(3);
+    upgraded.dispose();
+  });
+
+  it('hands each of the five printed materials to the page as a slot, and puts it on its mesh', () => {
     const root = new Group();
     const meshes = DYNAMIC_MATERIALS.map((name) => {
       const mesh = meshOf(name);
@@ -72,6 +93,7 @@ describe('upgradeMaterials', () => {
     // The prints are lit surfaces; the LCD is a lamp, drawn as it is painted.
     expect(slots.art_disc).toBeInstanceOf(MeshPhysicalMaterial);
     expect(slots.lcd_screen).toBeInstanceOf(MeshBasicMaterial);
+    expect(slots.tag_print).toBeInstanceOf(MeshPhysicalMaterial);
     dispose();
   });
 
