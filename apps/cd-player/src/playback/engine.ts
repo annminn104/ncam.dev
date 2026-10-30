@@ -53,8 +53,8 @@ export interface EngineDeps {
   clearTimer?(handle: unknown): void;
 }
 
-/** How many tracks ahead get their art and artist fetched. */
-const PREFETCH = 3;
+/** How many tracks ahead get their art and artist fetched: the rack in the lid shows five. */
+const PREFETCH = 5;
 const HINT_MS = 3500;
 /** How long building the Spotify player may take before the embed counts as blocked. */
 const PLAYER_TIMEOUT_MS = 20_000;

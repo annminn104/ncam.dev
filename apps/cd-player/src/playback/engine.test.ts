@@ -163,6 +163,24 @@ describe('PlayerEngine', () => {
     expect(bridge.getView().upcoming[0]).toMatchObject({ id: 'a', artistUrl: 'artist-x' });
   });
 
+  it('prefetches the five tracks the rack shows', async () => {
+    const { engine, client, flush } = setup();
+    const ids = ['a', 'b', 'c', 'd', 'e', 'f', 'g'];
+    vi.mocked(client.collection).mockResolvedValueOnce({
+      ...collection,
+      tracks: ids.map((id) => ({
+        ...collection.tracks[0],
+        id,
+        uri: `spotify:track:${id}`,
+        title: id.toUpperCase(),
+      })),
+    });
+    engine.open(ref);
+    await flush();
+    const asked = new Set(vi.mocked(client.track).mock.calls.map(([id]) => id));
+    expect(asked).toEqual(new Set(['a', 'b', 'c', 'd', 'e']));
+  });
+
   it('plays: builds the Spotify player on the action, changes the disc, then loads the track', async () => {
     const { engine, player, flush, swap } = setup();
     engine.open(ref);
