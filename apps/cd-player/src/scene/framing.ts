@@ -1,6 +1,6 @@
 /**
- * The hero camera, in three's Y-up metres, for cd-player.glb: the player alone, lid open, 0.30 m
- * wide, 0.32 high and 0.32 deep, centred at x = 0. Its angle and lens are those of the approved
+ * The hero camera, in three's Y-up metres, for cd-player.glb: the player alone, lid open, 0.31 m
+ * wide, 0.32 high and 0.35 deep, centred at x = 0. Its angle and lens are those of the approved
  * Cycles still (Blender's camera sat at (-0.42, -0.80, 0.47); three's axes are (x, z, -y)). Where it
  * looks and how far back it stands are set for each screen shape so that the whole player shows
  * (src/scene/framing.test.ts projects the model's box through `frameForViewport` at the shapes the
@@ -16,7 +16,7 @@ const DIRECTION = (() => {
   return [d[0] / n, d[1] / n, d[2] / n] as const;
 })();
 /** The player with its lid open fits in a sphere about this big (metres). */
-const RADIUS = 0.27;
+const RADIUS = 0.285;
 /** The tracklist drawer covers the right of a wide screen: aim right so the player sits left of it. */
 const WIDE_SHIFT_X = 0.11;
 /** A wide screen also aims higher, which seats the player below the link bar. */

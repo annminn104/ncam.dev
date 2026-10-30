@@ -6,7 +6,7 @@ const dist = (f: ReturnType<typeof frameFor>) =>
   Math.hypot(f.position[0] - f.target[0], f.position[1] - f.target[1], f.position[2] - f.target[2]);
 
 // cd-player.glb's bounding box in three's Y-up metres: the player alone, lid open, centred at x = 0.
-const BOX = { min: [-0.151, -0.003, -0.198], max: [0.151, 0.318, 0.126] } as const;
+const BOX = { min: [-0.152, -0.003, -0.199], max: [0.152, 0.319, 0.152] } as const;
 
 // Where the glass link bar ends, in CSS px from the top (src/styles/app.css), measured in the
 // browser with the collection loaded: one row above 1260 px wide; stacked from 821 to 1260, where
