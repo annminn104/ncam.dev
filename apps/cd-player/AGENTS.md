@@ -4,12 +4,12 @@
 
 **CD Player**: any Spotify playlist or album, played on a 3D pink suitcase CD player. When a track
 is about to play, its disc flies out of the crystal case held in the open lid onto the spindle,
-printed with the first artist's photo; the case's booklet shows the album art, two polaroids show
-the artists coming next, a "NOW SPINNING" card names the collection, and the page behind the
-player is the album art blurred under the track's own colours. A self-contained Module Federation
-remote (`cd_player`, :9011) that the host mounts at `/projects/cd-player`. The default collection
-is the playlist `37i9dQZEVXbMDoHDwVN2tF`, "Top 50 - Global" (`DEFAULT_COLLECTION` in
-`src/routes.ts`).
+printed with the first artist's photo; the case's booklet shows the album art, a brushed plate in
+the lid and a luggage tag on the handle name the collection, a five-slot rack in the lid waits
+for the discs to come, and the page behind the player is the album art blurred under the track's
+own colours. A self-contained Module Federation remote (`cd_player`, :9011) that the host mounts
+at `/projects/cd-player`. The default collection is the playlist `37i9dQZEVXbMDoHDwVN2tF`,
+"Top 50 - Global" (`DEFAULT_COLLECTION` in `src/routes.ts`).
 
 The stack: React 19, React Three Fiber 9 and three 0.186 (in the lazy scene chunk only), zod (in
 the server code only), `@ncam/logger`, and Manrope (the page's text) and Fraunces (the canvas
@@ -321,26 +321,39 @@ throw caught by `SceneBoundary`): the same message with **Try again**. Each is l
 
 **The GLB contract** (`src/scene/contract.ts`): `REQUIRED_NODES` are the pivots `lid_hinge`,
 `arm_pivot`, `knob` and `btn_prev`, `btn_next`, `btn_play`, `btn_stop`, `btn_rpt`, `btn_mode`, the
-templates `disc` and `case` (with `case_lid_hinge`), `polaroid_a`, `polaroid_b`, `card`, and the
-empties `disc_seat` (on the spindle) and `case_seat`; `DYNAMIC_MATERIALS` are the six materials the
-page paints (`art_disc`, `art_booklet`, `art_photo_a`, `art_photo_b`, `card_print`, `lcd_screen`).
-`loadPlayerModel` (`src/scene/model.ts`, GLTFLoader with the meshopt decoder) throws
-`ModelContractError` naming what is missing. `src/scene/model-contract.test.ts` reads the committed
-GLB: every required node, every printed material and a role for every material, UVs on every
-printed and tiled primitive, the budget, and meshes on leaf nodes only.
+templates `disc` and `case` (with `case_lid_hinge`), `card` (the plate) and `tag` (the luggage
+tag's printed face), the empties `disc_seat` (on the spindle), `case_seat` and `rack_slot_0` …
+`rack_slot_4` (under `lid_hinge`, each the pose of a disc in the rack: slot 0 is the lowest,
+nearest the deck, and leans out most), and the VU strip's `vu_seg_0` … `vu_seg_9`;
+`DYNAMIC_MATERIALS` are the five materials the page paints (`art_disc`, `art_booklet`,
+`card_print`, `tag_print`, `lcd_screen`). `loadPlayerModel` (`src/scene/model.ts`, GLTFLoader with
+the meshopt decoder) throws `ModelContractError` naming what is missing.
+`src/scene/model-contract.test.ts` reads the committed GLB: every required node, every printed
+material and a role for every material, a material for every skin role, UVs on every printed and
+tiled primitive, the rack slots as empties under the lid, the tag's and the VU segments'
+materials, the deck's printed marks off the keys and the knob, the tonearm's moving parts under
+`arm_pivot` and its rest on the deck, nothing left of the polaroids or the gold, the budget, and
+meshes on leaf nodes only.
 
 **Material roles** (`src/scene/material-roles.ts`, three-free so the contract test can read it;
 `materials.ts` builds them). The GLB carries the base colour, roughness and metalness tuned in
 Blender; the role adds what glTF cannot say: leather (sheen, a light clearcoat and a pebble-grain
-normal map made at runtime, `textures/grain.ts`), fabric, lining, plastic, matte, crystal
-(transmission 1, IOR 1.53, a faint specular so the booklet reads through it), metal, brushed
-(anisotropy), disc-data and foil (iridescence), gloss-black, emissive, print and screen. A name
-without a role falls back to plastic, but the contract test fails first. A skin then recolours
-the materials `SKIN_ROLES` names, in place (see "Skins"). The studio is in
-`PlayerScene.tsx`: a PMREM'd `RoomEnvironment` (`scene.environmentIntensity` sets every material's
-reflections), a key light that casts (2048 px shadow map, 1024 on a narrow screen), a rim and a
-hemisphere light, AgX tone mapping, a device pixel ratio of at most 2 (1.5 on a narrow screen), a
-transparent canvas and a shadow-only floor, so the page's backdrop shows round the player.
+normal map made at runtime; `trim`, the piping, handle, tag and rack frame, is leather too),
+fabric (a plain-weave normal map, for the speaker cloth and the lid's `strap`), lining (a
+diamond-quilt normal map, 25 mm diamonds over the 5 cm box UVs), plastic, matte, crystal
+(transmission 1, IOR 1.53, a faint specular so the booklet reads through it), metal (`hardware`,
+every fitting that used to be gold, chrome, the plate's `alu_side`), brushed (anisotropy),
+disc-data and foil (iridescence), gloss-black, emissive (`led`, `lcd`, and `vu`, which the page
+clones per segment), print and screen. The three maps are `leatherNormal`, `weaveNormal` and
+`quiltNormal` in `textures/grain.ts`, tileable height fields turned into normals; `SKIN_ROLES`
+maps the seven recolourable materials (`leather`, `trim`, `thread`, `lining`, `hardware`, `deck`,
+`grille`) to the skins' roles. A name without a role falls back to plastic, but the contract test
+fails first. A skin then recolours the materials `SKIN_ROLES` names, in place (see "Skins"). The
+studio is in `PlayerScene.tsx`: a PMREM'd `RoomEnvironment` (`scene.environmentIntensity` sets
+every material's reflections), a key light that casts (2048 px shadow map, 1024 on a narrow
+screen), a rim and a hemisphere light, AgX tone mapping, a device pixel ratio of at most 2 (1.5 on
+a narrow screen), a transparent canvas and a shadow-only floor, so the page's backdrop shows round
+the player.
 
 **The rig** (`src/scene/rig.ts`, `rigFor`, one per model): **two discs and two cases**, so one pair
 can leave while the next arrives, each with its own copies of `art_disc` and `art_booklet` so they
@@ -364,19 +377,30 @@ when a track plays with no change for it (the scene booted mid-playback, or Play
 current track after its player failed). `src/scene/useDirector.ts` draws the poses in R3F's frame
 loop.
 
+**The VU strip** (`src/scene/vu.ts`, `vu-materials.ts`, `useVu.ts`): the ten segments share one
+emissive `vu` material in the GLB and get a clone each at load (`vuMaterialsFor`, once per model,
+disposed with it). `vuLevels(timeMs, playing, reducedMotion)` is pure: a smooth signal of the
+play time (three sines under a slow swell) lights a prefix of the strip, with the highest segment
+of the last 400 ms held at half; `playing` false is every segment off. The hook keeps its own
+clock, which only advances while the status is `playing`, so the strip holds still while paused
+and goes dark when idle or while a disc changes; under reduced motion it uses half the strip,
+slowly. Amber, orange and red (`VU_COLOURS`) are the page's, not the GLB's. The audio stays
+inside Spotify's iframe: the strip is paced, never measured.
+
 **Printed textures** (`src/scene/textures/`): canvases, painted in the page's own faces
 (`loadFaces` loads them first, because canvas text never asks the page for a font): each disc's
 label (1024 px square: the artist's photo, else the album art, with the title and artists round
-the rim in capitals), its case's booklet (1024 px square, the album art), the two polaroids (512 px,
-the next two tracks' artists), the card (1024 × 182, "NOW SPINNING" and the collection) and the LCD
-(256 × 112, the track and the time, repainted at most once a second). Before any art they show the
-page's own defaults. `canvasTexture` keeps **`flipY = false`**: `export.py` lays each print's UVs
-over its mesh's local bounds in Blender and the glTF exporter flips V, so the canvas's top row is
-the print's top, as GLTFLoader's own maps assume; with three's default `flipY` a print would come
-out flipped top to bottom. The last print started on a disc wins (`painter.ts`; the director aborts
-the older one), a print that fails or stalls never stops a change, a print made in the fallback
-faces is made again once the fonts are in, and `reprintFor` prints a track again when its art
-arrives after its change began.
+the rim in capitals), its case's booklet (1024 px square, the album art), the plate (1024 × 182,
+"NOW SPINNING" and the collection as dark engraving on brushed steel, `paintCard`), the luggage
+tag (512 × 768, the collection's name wrapped over up to three ruled lines, `paintTag` with
+`wrapLines`) and the LCD (256 × 112, the track and the time, repainted at most once a second).
+Before any art they show the page's own defaults. `canvasTexture` keeps **`flipY = false`**:
+`export.py` lays each print's UVs over its mesh's local bounds in Blender and the glTF exporter
+flips V, so the canvas's top row is the print's top, as GLTFLoader's own maps assume; with three's
+default `flipY` a print would come out flipped top to bottom. The last print started on a disc
+wins (`painter.ts`; the director aborts the older one), a print that fails or stalls never stops a
+change, a print made in the fallback faces is made again once the fonts are in, and `reprintFor`
+prints a track again when its art arrives after its change began.
 
 **Controls and the orbit** (`src/scene/controls.ts`, `useControls.ts`, `interaction.ts`,
 `orbit.ts`, `CameraRig.tsx`):
@@ -398,11 +422,10 @@ arrives after its change began.
   control. `interaction.controlActive` tells the camera that the latest pointerdown went to a key
   or the knob (R3F's handler runs after the camera's), so that press neither orbits nor recentres;
   a mouse release that was lost (`releaseLost`) disarms both drags.
-- **`leaveOnDeck`** re-parents, at runtime, what the model hangs from the moving pivots although it
-  is printed on the deck: each key's dark ring and label (`player_btn_gap_*`, `player_btn_lbl_*`),
-  the dial's ticks (`player_tick_*`) and its VOLUME label (`player_vol`), so only the key or the
-  knob moves. A model rebuild whose Blender scripts already parent those to the deck can drop it
-  (and its tests in `controls.test.ts`).
+- The deck's printed marks (each key's dark ring `player_btn_gap_*` and label `player_btn_lbl_*`,
+  the dial's ticks `player_tick_*` and its `player_vol`) are the deck's children in the model, so
+  only the key or the knob itself moves; `model-contract.test.ts` holds that, and nothing is
+  re-parented at runtime any more.
 - `.cdp-canvas` sets `touch-action: none` and `user-select: none`.
 
 **The one framing rule** (`src/scene/framing.ts`): `frameForViewport(width, height, yaw, pitch)`
@@ -489,12 +512,13 @@ in), **Sage**, **Cream** and **Cherry**. **Player**, after Share in the link bar
   which answers Blush for an id it does not know. A palette gives each role an sRGB hex:
   `leather`, `trim`, `thread`, `lining`, `hardware`, `deck` and `grille`. `model` names the GLB;
   the four share `assets/cd-player.glb`.
-- **Which material is which role**: `SKIN_ROLES` in `src/scene/material-roles.ts`. `leather`,
-  `thread` (the stitching), `lining` (the lid's inside), `deck` and `grille` (the slotted plate on
-  the front; the dark cloth behind it, `fabric`, stays dark) by their own names, and `gold`,
-  every metal fitting (the hinges, the latch, the feet, the tonearm's collar and weight, the
-  display's bezel), as `hardware`. No material is `trim` yet. The keys, the arm, the disc well,
-  the chrome, the knob, the speaker cloth and the prints keep Blender's colours in every skin.
+- **Which material is which role**: `SKIN_ROLES` in `src/scene/material-roles.ts`, one material
+  per role, each by the role's own name: `leather`, `trim` (the piping, the handle, the tag and
+  the rack's frame), `thread` (the stitching), `lining` (the lid's inside), `hardware` (every
+  metal fitting: the caps, clasps, rivets, D-rings, nameplate, grille frame, feet, hinges, bezel
+  and the tonearm's metal), `deck` and `grille` (the slotted plate on the front; the dark cloth
+  behind it, `fabric`, stays dark). The keys, the arm, the disc well, the chrome, the knob, the
+  speaker cloth, the strap and the prints keep Blender's colours in every skin.
 - **Recolouring in place** (`applySkin` in `src/scene/materials.ts`, through
   `PlayerModel.applySkin`): each of those materials takes its role's hex through `Color.set`,
   which reads a hex string as sRGB and stores three's linear working colour, the conversion
@@ -532,13 +556,15 @@ in), **Sage**, **Cream** and **Cherry**. **Player**, after Share in the link bar
 ## Art pipeline (`art/`)
 
 ```
-art/blender/scripts/  cdkit.py (geometry helpers, Principled materials, millimetres), parts.py (the
-                      CD, the crystal case, the polaroid, the player), build_player.py (the web
-                      scene, with the names the page drives), export.py (the background entry),
-                      hero.py (the Cycles still)
+art/blender/scripts/  cdkit.py (geometry helpers, Principled materials, millimetres; the Cycles-only
+                      quilt and weave bumps; Metal and a headless render), parts.py (the CD, the
+                      crystal case, the player with its hardware, handle and tag, deck details,
+                      tonearm, quilted lid, strap, rack and plate; build_materials(palette)),
+                      build_player.py (the web scene, with the names the page drives), export.py
+                      (the background entry), hero.py (the Cycles stills: the hero and lid views)
 art/blender/tools/    bl.py: a client for a running Blender's add-on socket (design sessions only)
 art/pipeline/         build.mjs: Blender headless, then gltf-transform
-art/.out/             scratch: the raw export and the renders (gitignored)
+art/.out/             scratch: the raw export, the renders and one-off scripts (gitignored)
 ```
 
 `art/README.md` lists the scripts. `art:build` (`art/pipeline/build.mjs`) needs **Blender 5.2.2
@@ -546,21 +572,50 @@ LTS** (`/Applications/Blender.app`, or `BLENDER_BIN`) and runs it with `--backgr
 --factory-startup --python-exit-code 1` (Blender exits 0 when a script raises) on `export.py`,
 which execs `cdkit.py`, `parts.py` and `build_player.py`, sets **`WEB = True`** (cdkit's web
 quality: about half the segments, bevels at a resolution of 2 at most, none of the Cycles-only
-shader tricks), turns curves and text into meshes, gives the tiled materials (leather, lining,
-fabric, deck, grille) box-mapped UVs at one unit per 5 cm and the printed ones planar UVs over their
+shader tricks: the leather grain, the lining's quilt and the cloth's weave are normal maps the page
+makes at runtime), turns curves and text into meshes, gives the tiled materials (`leather`, `trim`,
+`lining`, `fabric`, `strap`, `deck`, `grille`) box-mapped UVs at one unit per 5 cm and the printed
+ones (`art_disc`, `art_booklet`, `card_print`, `tag_print`, `lcd_screen`) planar UVs over their
 bounds, and writes `art/.out/cd-player.raw.glb`. gltf-transform then dedups accessors, meshes and
-textures (never materials: the five prints start identical and would merge into one), welds, prunes
+textures (never materials: the prints start identical and would merge into one), welds, prunes
 (keeping the empty pivots, and the UVs that no texture in the file uses yet) and meshopt-compresses
-it into `public/assets/cd-player.glb`, which is **committed** (about 576 KB and 73,539 triangles
-today). **The budget** (`model-contract.test.ts`): 4 MB, 150k triangles, `EXT_meshopt_compression`,
-and meshes only on leaf nodes, so quantisation never scales a pivot. Rebuild after any change to the
-scripts. The deck's lettering uses macOS fonts (Avenir Next, DIN
+it into `public/assets/cd-player.glb`, which is **committed** (about 100,633 triangles and 777 KB
+at the time of writing). **The budget** (`model-contract.test.ts`): 4 MB, 150k triangles,
+`EXT_meshopt_compression`, and meshes only on leaf nodes, so quantisation never scales a pivot.
+Rebuild after any change to the scripts. The deck's lettering uses macOS fonts (Avenir Next, DIN
 Alternate and Futura, loaded by `use_scene` in `cdkit.py`); elsewhere Blender's own font stands in
 and the GLB changes.
 
-`hero.py` renders the Cycles product still the design was approved from, into `art/.out/` (the art
-it prints comes from `CDP_HERO_ART`). It is for docs; the build never runs it, and the approved
-still is not in the repository.
+**What the scripts parent where.** The deck's printed marks are the deck's children, never a
+key's or the knob's; the tonearm's moving parts (yoke, pin, tube, counterweight, headshell,
+cartridge, lift, stylus) hang from `arm_pivot` while its base, collar, ring, rest, cueing lever and
+anti-skate dial stay on the deck; the five rack slots are empties under `lid_hinge`, posed by
+`rack_pose(i)` in `parts.py` (slot 0 lowest and leaning out most, each slot up 20 mm higher, 1.6 mm
+closer to the lining and 1.5° straighter; `RACK_X`, `RACK_PITCH`); the VU segments share one
+material `vu`; the handle sits on the tub's front between the clasps and the tag hangs from its left
+D-ring over the grille. `model-contract.test.ts` holds the parenting. The lid's layout is the
+cascade (`RACK_LAYOUT` in `parts.py`); the grid without the crystal case is the other branch of the
+same code.
+
+**Materials and skins.** `build_materials(palette)` makes every material; the seven the skins
+recolour (`SKIN_ROLES` in `parts.py`: `leather`, `trim`, `thread`, `lining`, `hardware`, `deck`,
+`grille`) take their colours from a palette of sRGB hex values, Blush (`BLUSH`) by default, so a
+render of another skin passes its palette and nothing else changes. `hardware` is every metal
+fitting that used to be `gold`; the polaroids' `paper` and pins are gone.
+
+`hero.py` renders the Cycles stills headless (Metal through `enable_gpu` in `cdkit.py`; the first
+run compiles the kernels for about two minutes; `render()` renders by scene name under
+`--background`):
+
+    CDP_HERO_VIEW=hero|lid CDP_HERO_QUALITY=preview|final \
+      /Applications/Blender.app/Contents/MacOS/Blender --background --factory-startup \
+      --python-exit-code 1 --python apps/cd-player/art/blender/scripts/hero.py
+
+`hero` is the three-quarter product still the design was approved from, `lid` looks straight into
+the open lid; `preview` is 800 × 600 at 24 samples, `final` 1600 × 1200 at 160. The art it prints
+is the gallery's thumbnails (`apps/portfolio/public/thumbnails`), so anyone can rerun it; the PNG
+lands in `art/.out/v2-<view>-<quality>.png`. They are for the owner's gates and the docs; the build
+never runs them, and no render is in the repository.
 
 **The socket tool.** `art/blender/tools/bl.py` drives a running Blender through the Blender Lab MCP
 add-on's socket at `127.0.0.1:9876`: it sends `{"type": "execute", "code": …, "strict_json": false}`
@@ -633,8 +688,9 @@ Unit tests (`src/**/*.test.ts`, node environment, run by the root `pnpm test`):
   (the end watchdog on injected timers, Retry's second ask), `bridge.test.ts`, `view.test.ts` (with `loaderLine`);
 - the scene: `scene/model-contract.test.ts` (the committed GLB), `model.test.ts`
   (`downloadFraction`), `glb.test.ts`, `materials.test.ts`, `rig.test.ts`, `director.test.ts`,
-  `swap-controller.test.ts`, `framing.test.ts`, `controls.test.ts`, `interaction.test.ts`,
-  `orbit.test.ts`, and `textures/` (`grain`, `images`, `layout`, `paint`, `painter`).
+  `swap-controller.test.ts`, `framing.test.ts`, `controls.test.ts`, `vu.test.ts`,
+  `vu-materials.test.ts`, `interaction.test.ts`, `orbit.test.ts`, and `textures/` (`grain`,
+  `images`, `layout`, `paint`, `painter`).
 
 **By hand:** `art:build` (above), Lighthouse, and a pass in a real browser: the default page, a
 pasted playlist and album, the error messages, every control (the DOM card, the 3D keys, the knob,

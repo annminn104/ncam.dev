@@ -29,8 +29,8 @@ Needs Blender 5.2.2 LTS (`/Applications/Blender.app`, or `BLENDER_BIN`).
     pnpm --filter @ncam/cd-player art:build
 
 It writes `public/assets/cd-player.glb` (committed). `src/scene/model-contract.test.ts` checks the
-names, the materials, where things are parented and the budget (150k triangles, 4 MB). Rebuild
-after any change to the scripts.
+names, the materials, where things are parented and the budget (150k triangles, 4 MB). The
+committed model is about 100,633 triangles and 777 KB. Rebuild after any change to the scripts.
 
 ## Renders
 
