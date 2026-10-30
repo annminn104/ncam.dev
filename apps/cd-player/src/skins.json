@@ -24,7 +24,7 @@
       "onAccent": "#15241a",
       "palette": {
         "leather": "#9db39a",
-        "trim": "#7b9378",
+        "trim": "#3f5a3d",
         "thread": "#f4efe4",
         "lining": "#f3f1ea",
         "hardware": "#c8b26e",
@@ -44,7 +44,7 @@
         "thread": "#8a5a3c",
         "lining": "#f5efe3",
         "hardware": "#c8b26e",
-        "deck": "#8a5a3c",
+        "deck": "#efe4cf",
         "grille": "#8a5a3c"
       }
     },
@@ -55,8 +55,8 @@
       "accent": "#e5737b",
       "onAccent": "#2b0c10",
       "palette": {
-        "leather": "#9c2f35",
-        "trim": "#74222a",
+        "leather": "#7a1d2a",
+        "trim": "#4a0f18",
         "thread": "#f3e6d8",
         "lining": "#f4ece4",
         "hardware": "#ecc476",
