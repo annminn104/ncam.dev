@@ -60,17 +60,32 @@ def l_path(ox, oy, sx, sy, length, r, z, seg=8):
 
 
 # ------------------------------------------------------------------ materials
-# The default palette, Blush: today's colours, sRGB hex per skin role (src/skins.json holds the
-# four skins; a render of another skin passes its `palette` to build_materials).
-BLUSH = {
-    "leather": "#e296a4",
-    "trim": "#7d3352",
-    "thread": "#fcfaf6",
-    "lining": "#f8f5f1",
-    "hardware": "#ecc476",
-    "deck": "#f8f6f3",
-    "grille": "#f8f6f3",
-}
+# The skins' palettes, sRGB hex per skin role, live in src/skins.json, the file the page reads.
+# Blush is the default; a render of another skin passes its palette to build_materials.
+import json
+import os
+
+
+def _scripts_dir():
+    """These scripts' folder: from the exec'ing script's __file__, else its BASE or HERE."""
+    g = globals()
+    if g.get("__file__"):
+        return os.path.dirname(os.path.abspath(g["__file__"]))
+    return g.get("BASE") or g.get("HERE") or os.getcwd()
+
+
+def skin_palette(skin_id):
+    """A skin's palette (role -> sRGB hex) from src/skins.json."""
+    path = os.path.normpath(os.path.join(_scripts_dir(), "..", "..", "..", "src", "skins.json"))
+    with open(path, encoding="utf-8") as f:
+        skins = json.load(f)["skins"]
+    for skin in skins:
+        if skin["id"] == skin_id:
+            return dict(skin["palette"])
+    raise SystemExit("parts.py: no skin %r in %s (%s)" % (skin_id, path, ", ".join(s["id"] for s in skins)))
+
+
+BLUSH = skin_palette("blush")
 SKIN_ROLES = ("leather", "trim", "thread", "lining", "hardware", "deck", "grille")
 
 

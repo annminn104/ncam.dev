@@ -619,6 +619,18 @@ in), **Sage**, **Cream** and **Cherry**. **Player**, after Share in the link bar
   `App` hands it `skin` (`PlayerSceneProps.skin`).
 - **The live check's probe**: in dev builds only, `window.__cdpSkinColours()` returns the live
   model's recoloured materials as sRGB hex (`skinColours` in `materials.ts`).
+- **The Cycles renders read the same file.** `parts.py` takes Blush from `src/skins.json` as
+  `BLUSH`, the default palette of `build_materials`, and `hero.py` renders the skin `CDP_SKIN`
+  names (an id of that file) into `art/.out/skins/<id>/`. Blender colours each role through the
+  material named after it, which is why every `SKIN_ROLES` entry maps a material to the role of
+  its own name (`material-roles.test.ts`). The base colours match the page's exactly (`lin()` and
+  `Color.set` make the same sRGB-to-linear conversion); the rest is each renderer's own: the sheen
+  (three's at full weight and tinted toward the base, Blender's at 0.3 on the leather and 0.25 on
+  the trim, white), the coats, the leather grain, the quilting and the weaves (runtime normal maps
+  against Blender's bumps), the studio (a `RoomEnvironment` and three lights against an HDRI and
+  four area lights), the tone mapping (AgX against AgX with its Medium High Contrast look) and the
+  surroundings (the album art behind the page against a light floor). A render is a guide to a
+  skin; the page has the last word.
 
 ## Art pipeline (`art/`)
 

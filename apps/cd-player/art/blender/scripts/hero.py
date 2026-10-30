@@ -10,7 +10,8 @@ lid (the case, the rack and its discs, the strap and the plate). `preview` is 80
 samples, `final` 1600 x 1200 at 160. The art it prints is the gallery's thumbnails
 (apps/portfolio/public/thumbnails), so anyone can rerun it. The PNG lands in
 art/.out/v2-<view>-<quality>.png, or art/.out/v2-<view>-grid-<quality>.png when parts.py builds
-the grid layout. Also runs in a live Blender through tools/bl.py.
+the grid layout. CDP_SKIN=<id> (an id of src/skins.json) renders that skin instead of Blush, into
+art/.out/skins/<id>/. Also runs in a live Blender through tools/bl.py.
 """
 import math
 import os
@@ -25,10 +26,11 @@ THUMBS = os.path.join(ROOT, "apps", "portfolio", "public", "thumbnails") + "/"
 OUT = os.path.abspath(os.path.join(BASE, "..", "..", ".out")) + "/"
 VIEW = os.environ.get("CDP_HERO_VIEW", "hero")
 QUALITY = os.environ.get("CDP_HERO_QUALITY", "preview")
+SKIN = os.environ.get("CDP_SKIN")  # an id of src/skins.json; unset renders Blush
 os.makedirs(OUT, exist_ok=True)
 
 new_scene("cd_player_suitcase", res=(1600, 1200), samples=128)
-build_materials()
+build_materials(skin_palette(SKIN) if SKIN else None)
 
 artist = image_mat("art_disc", THUMBS + "viktor.jpg", 117, 117, coat=0.6, rough=0.3)
 album = image_mat("art_booklet", THUMBS + "mindloop.jpg", 120, 120, coat=0.3)
@@ -56,7 +58,9 @@ if VIEW == "lid":
 else:
     camera("cam", L(-420, -800, 470), L(60, -10, 132), lens=50, fstop=7.1, focus=L(-10, -40, 90))
 
-PNG = OUT + "v2-%s%s-%s.png" % (VIEW, "-grid" if RACK_LAYOUT == "grid" else "", QUALITY)
+PNG = OUT + ("skins/%s/" % SKIN if SKIN else "") + "v2-%s%s-%s.png" % (
+    VIEW, "-grid" if RACK_LAYOUT == "grid" else "", QUALITY)
+os.makedirs(os.path.dirname(PNG), exist_ok=True)
 if QUALITY == "final":
     render(PNG, res=(1600, 1200), samples=160)
 else:

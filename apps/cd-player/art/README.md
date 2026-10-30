@@ -40,3 +40,16 @@ committed model is about 100,633 triangles and 777 KB. Rebuild after any change 
 
 The first Cycles run on Metal compiles its kernels for about two minutes. The renders are not in
 the repository.
+
+## Skins
+
+`src/skins.json`, the file the page reads, holds every skin's palette; `parts.py` reads Blush
+from it as `BLUSH`, the default of `build_materials()`. `CDP_SKIN=<id>` (an id of that file)
+renders another skin with `hero.py`, into `.out/skins/<id>/v2-<view>-<quality>.png`:
+
+    CDP_SKIN=sage CDP_HERO_VIEW=hero CDP_HERO_QUALITY=final \
+      /Applications/Blender.app/Contents/MacOS/Blender --background --factory-startup \
+      --python-exit-code 1 --python blender/scripts/hero.py
+
+The skins change only the seven materials named after the skin roles; every other material keeps
+the colour `build_materials()` gives it.
