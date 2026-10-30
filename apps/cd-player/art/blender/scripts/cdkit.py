@@ -32,6 +32,12 @@ def lin(r, g, b, a=1.0):
     return (c(r), c(g), c(b), a)
 
 
+def hexrgb(h):
+    """'#rrggbb' -> (r, g, b) in 0..255, for lin()."""
+    h = h.lstrip("#")
+    return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
+
+
 # ------------------------------------------------------------------ materials
 _KEYS = {
     "metal": "Metallic", "rough": "Roughness", "trans": "Transmission Weight", "ior": "IOR",
@@ -120,6 +126,70 @@ def radial_aniso(m, rotation=0.0):
     t.axis = "Z"
     nt.links.new(t.outputs["Tangent"], p.inputs["Tangent"])
     p.inputs["Anisotropic Rotation"].default_value = rotation
+    return m
+
+
+def add_quilt(m, cell_mm=25.0, strength=0.6, distance=0.0012):
+    """Diamond quilting (Cycles only; the web paints it as a normal map): two bands of sine waves
+    at +45 and -45 degrees, multiplied into pillows whose diagonals are cell_mm long."""
+    nt = m.node_tree
+    p = bsdf(m)
+    vec = obj_coords(m, 1.0)
+    prod = None
+    for ang in (45.0, -45.0):
+        mp = nt.nodes.new("ShaderNodeMapping")
+        mp.inputs["Rotation"].default_value = (0.0, 0.0, math.radians(ang))
+        nt.links.new(vec, mp.inputs["Vector"])
+        wave = nt.nodes.new("ShaderNodeTexWave")
+        wave.wave_type = "BANDS"
+        wave.bands_direction = "X"
+        wave.wave_profile = "SIN"
+        # Blender's bands repeat every 2*pi/20 object units at scale 1: a period of cell/sqrt(2).
+        wave.inputs["Scale"].default_value = 0.31416 * math.sqrt(2.0) / (cell_mm * MM)
+        nt.links.new(mp.outputs["Vector"], wave.inputs["Vector"])
+        if prod is None:
+            prod = wave.outputs["Fac"]
+        else:
+            mul = nt.nodes.new("ShaderNodeMath")
+            mul.operation = "MULTIPLY"
+            nt.links.new(prod, mul.inputs[0])
+            nt.links.new(wave.outputs["Fac"], mul.inputs[1])
+            prod = mul.outputs["Value"]
+    bump = nt.nodes.new("ShaderNodeBump")
+    bump.inputs["Strength"].default_value = strength
+    bump.inputs["Distance"].default_value = distance
+    nt.links.new(prod, bump.inputs["Height"])
+    nt.links.new(bump.outputs["Normal"], p.inputs["Normal"])
+    return m
+
+
+def add_weave(m, pitch_mm=1.0, strength=0.5, distance=0.00012):
+    """Plain weave (Cycles only; the web paints it as a normal map): threads along X and along Y,
+    pitch_mm apart, the higher of the two bands making the surface."""
+    nt = m.node_tree
+    p = bsdf(m)
+    vec = obj_coords(m, 1.0)
+    prod = None
+    for direction in ("X", "Y"):
+        wave = nt.nodes.new("ShaderNodeTexWave")
+        wave.wave_type = "BANDS"
+        wave.bands_direction = direction
+        wave.wave_profile = "SIN"
+        wave.inputs["Scale"].default_value = 0.31416 / (pitch_mm * MM)
+        nt.links.new(vec, wave.inputs["Vector"])
+        if prod is None:
+            prod = wave.outputs["Fac"]
+        else:
+            mx = nt.nodes.new("ShaderNodeMath")
+            mx.operation = "MAXIMUM"
+            nt.links.new(prod, mx.inputs[0])
+            nt.links.new(wave.outputs["Fac"], mx.inputs[1])
+            prod = mx.outputs["Value"]
+    bump = nt.nodes.new("ShaderNodeBump")
+    bump.inputs["Strength"].default_value = strength
+    bump.inputs["Distance"].default_value = distance
+    nt.links.new(prod, bump.inputs["Height"])
+    nt.links.new(bump.outputs["Normal"], p.inputs["Normal"])
     return m
 
 
@@ -249,6 +319,35 @@ def annulus(name, ro_mm, ri_mm, mats, z_mm=0.0, seg=160, **kw):
     return from_bm(name, bm, mats if isinstance(mats, list) else [mats], **kw)
 
 
+def lathe_arc(name, prof_mm, a0, a1, mats, seg=24, **kw):
+    """Revolve an (r, z) mm profile around Z from a0 to a1 degrees: an open shell, no end caps
+    (a corner cap; solidify() gives it thickness)."""
+    seg = q(seg)
+    bm = bmesh.new()
+    rings = []
+    for i in range(seg + 1):
+        a = math.radians(a0 + (a1 - a0) * i / seg)
+        ca, sa = math.cos(a), math.sin(a)
+        rings.append([bm.verts.new((max(r, 1e-4) * ca * MM, max(r, 1e-4) * sa * MM, z * MM))
+                      for r, z in prof_mm])
+    for i in range(seg):
+        a, b = rings[i], rings[i + 1]
+        for k in range(len(prof_mm) - 1):
+            bm.faces.new((a[k], b[k], b[k + 1], a[k + 1]))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    return from_bm(name, bm, mats if isinstance(mats, list) else [mats], **kw)
+
+
+def solidify(ob, thickness_mm, offset=0.0):
+    """Gives an open surface a thickness (mm); offset 0 grows it half each way, so the surface's
+    normal direction never matters."""
+    md = ob.modifiers.new("Solidify", "SOLIDIFY")
+    md.thickness = thickness_mm * MM
+    md.offset = offset
+    md.use_even_offset = True
+    return ob
+
+
 # ------------------------------------------------------------------ 2D outlines (mm)
 def rrect(w, h, r, seg=10, cx=0.0, cy=0.0):
     r = max(min(r, w / 2 - 1e-3, h / 2 - 1e-3), 0.0)
@@ -272,6 +371,23 @@ def circle(r, seg=64, cx=0.0, cy=0.0, a0=0.0, a1=360.0, cw=False):
         a = math.radians(a0 + span * i / (seg if span >= 360 else seg))
         out.append((cx + r * math.cos(a), cy + r * math.sin(a)))
     return out[::-1] if cw else out
+
+
+def keyhole(cx, cy, r=1.6, slot_w=1.2, slot_h=3.4, seg=16):
+    """A keyhole outline (mm): a circle of radius r over a slot slot_w wide that reaches slot_h
+    below the circle's centre. Goes from the slot's bottom left, up the left side, over the top of
+    the circle and down the right side."""
+    half = slot_w / 2
+    drop = math.sqrt(r * r - half * half)
+    left = math.degrees(math.atan2(-drop, -half))
+    right = math.degrees(math.atan2(-drop, half))
+    span = 360.0 - (right - left)
+    pts = [(cx - half, cy - slot_h)]
+    for i in range(seg + 1):
+        a = math.radians(left - span * i / seg)
+        pts.append((cx + r * math.cos(a), cy + r * math.sin(a)))
+    pts.append((cx + half, cy - slot_h))
+    return pts
 
 
 def _poly(cu, pts, cyclic, z=0.0):
@@ -373,10 +489,12 @@ def text(name, body, size_mm, mats, font="avenir", align="CENTER", extrude_mm=0.
     return new_obj(name, cu, **kw)
 
 
-def stitches(name, path_mm, z_mm, mats, spacing=4.2, dash=2.6, width=0.75, height=0.55, **kw):
-    """Leather stitching: short capsules along a closed XY path at height z, oriented on its tangent."""
+def stitches(name, path_mm, z_mm, mats, spacing=4.2, dash=2.6, width=0.75, height=0.55, closed=True, **kw):
+    """Leather stitching: short capsules along an XY path at height z, oriented on its tangent.
+    The path is closed unless closed=False (a seam along a handle)."""
     n = len(path_mm)
-    seglen = [((Vector(path_mm[(i + 1) % n]) - Vector(path_mm[i])).length) for i in range(n)]
+    segs = n if closed else n - 1
+    seglen = [((Vector(path_mm[(i + 1) % n]) - Vector(path_mm[i])).length) for i in range(segs)]
     total = sum(seglen)
     bm = bmesh.new()
     count = int(total // spacing)
@@ -385,7 +503,7 @@ def stitches(name, path_mm, z_mm, mats, spacing=4.2, dash=2.6, width=0.75, heigh
         i = 0
         while s > seglen[i]:
             s -= seglen[i]
-            i = (i + 1) % n
+            i = (i + 1) % segs
         p0, p1 = Vector(path_mm[i]), Vector(path_mm[(i + 1) % n])
         tdir = (p1 - p0).normalized()
         p = p0 + tdir * s
@@ -402,6 +520,21 @@ def stitches(name, path_mm, z_mm, mats, spacing=4.2, dash=2.6, width=0.75, heigh
 
 
 # ------------------------------------------------------------------ scene plumbing
+def enable_gpu():
+    """Cycles on the Apple GPU. --factory-startup leaves the compute device at NONE, which renders
+    on the CPU without a word; returns the names of the devices in use ([] means the CPU)."""
+    try:
+        prefs = bpy.context.preferences.addons["cycles"].preferences
+        prefs.compute_device_type = "METAL"
+        devices = prefs.get_devices_for_type("METAL")
+        for dev in devices:
+            dev.use = dev.type != "CPU"
+        return [dev.name for dev in devices if dev.use]
+    except Exception as exc:
+        print("cdkit: no Metal device (%s); Cycles renders on the CPU" % exc)
+        return []
+
+
 def new_scene(name, res=(1600, 1200), samples=128, floor_rgb=(236, 234, 232)):
     global SC
     sc = bpy.data.scenes.get(name)
@@ -423,6 +556,7 @@ def new_scene(name, res=(1600, 1200), samples=128, floor_rgb=(236, 234, 232)):
     r.film_transparent = False
     c = sc.cycles
     c.device = "GPU"
+    print("cdkit: cycles on %s" % (enable_gpu() or "the CPU"))
     c.samples = samples
     c.use_denoising = True
     try:
@@ -515,6 +649,10 @@ def render(path, res=None, samples=None):
     if samples:
         SC.cycles.samples = samples
     SC.render.filepath = path
+    if bpy.app.background:
+        # --background has no window to override: render the scene by name.
+        bpy.ops.render.render(write_still=True, scene=SC.name)
+        return
     win = bpy.context.window_manager.windows[0]
     win.scene = SC
     with bpy.context.temp_override(window=win):

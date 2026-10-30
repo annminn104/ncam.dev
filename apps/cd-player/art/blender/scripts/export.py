@@ -17,8 +17,10 @@ for _file in ("cdkit.py", "parts.py", "build_player.py"):
     exec(compile(open(os.path.join(HERE, _file)).read(), _file, "exec"), globals())
 WEB = True  # cdkit's functions read it at call time
 
-TILED = {"leather", "lining", "fabric", "deck", "grille"}
-PLANAR = {"art_disc", "art_booklet", "art_photo_a", "art_photo_b", "card_print", "lcd_screen"}
+# Box-mapped at TILE_M per UV unit: the page tiles its grain, quilt and weave maps over these.
+TILED = {"leather", "trim", "lining", "fabric", "strap", "deck", "grille"}
+# Planar over the mesh's own XY bounds: the canvas the page paints covers each print exactly.
+PLANAR = {"art_disc", "art_booklet", "card_print", "tag_print", "lcd_screen"}
 TILE_M = 0.05
 
 
