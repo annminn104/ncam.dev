@@ -382,10 +382,12 @@ emissive `vu` material in the GLB and get a clone each at load (`vuMaterialsFor`
 disposed with it). `vuLevels(timeMs, playing, reducedMotion)` is pure: a smooth signal of the
 play time (three sines under a slow swell) lights a prefix of the strip, with the highest segment
 of the last 400 ms held at half; `playing` false is every segment off. The hook keeps its own
-clock, which only advances while the status is `playing`, so the strip holds still while paused
-and goes dark when idle or while a disc changes; under reduced motion it uses half the strip,
-slowly. Amber, orange and red (`VU_COLOURS`) are the page's, not the GLB's. The audio stays
-inside Spotify's iframe: the strip is paced, never measured.
+clock (`vuFrame`, pure too), which only advances while the status is `playing`, so the strip holds
+still while paused and goes dark when idle or while a disc changes. The clock starts empty, so a
+scene that boots on a paused track keeps the strip dark until a track plays. Under reduced motion
+it uses half the strip, slowly. Amber, orange and red (`VU_COLOURS`) are the page's, not the
+GLB's, drawn outside the tone mapping (the `emissive` role). The audio stays inside Spotify's
+iframe: the strip is paced, never measured.
 
 **Printed textures** (`src/scene/textures/`): canvases, painted in the page's own faces
 (`loadFaces` loads them first, because canvas text never asks the page for a font): each disc's

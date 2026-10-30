@@ -42,6 +42,12 @@ describe('makeMaterial', () => {
     expect(print.specularIntensity).toBeGreaterThan(0);
     expect(print.specularIntensity).toBeLessThanOrEqual(0.4);
   });
+
+  // The LED, the display and the VU strip are lamps, drawn at their own colour: tone-mapped (AgX),
+  // the strip's glow would come out dull.
+  it('draws an emissive part outside the tone mapping', () => {
+    expect(makeMaterial('emissive', source, maps).toneMapped).toBe(false);
+  });
 });
 
 describe('upgradeMaterials', () => {

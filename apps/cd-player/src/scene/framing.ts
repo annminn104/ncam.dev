@@ -1,5 +1,5 @@
 /**
- * The hero camera, in three's Y-up metres, for cd-player.glb: the player alone, lid open, 0.31 m
+ * The hero camera, in three's Y-up metres, for cd-player.glb: the player alone, lid open, 0.30 m
  * wide, 0.32 high and 0.35 deep, centred at x = 0. Its angle and lens are those of the approved
  * Cycles still (Blender's camera sat at (-0.42, -0.80, 0.47); three's axes are (x, z, -y)). Where it
  * looks and how far back it stands are set for each screen shape so that the whole player shows

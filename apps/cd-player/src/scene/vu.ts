@@ -1,8 +1,11 @@
+import type { Status } from '../playback/sequencer';
+
 /**
  * The deck's ten-segment VU strip, paced rather than measured: the audio stays inside Spotify's
  * iframe, so the levels are a smooth, deterministic signal of the play time (three sines at
  * unrelated rates under a slow swell), with a peak that holds for 400 ms. Still while paused (the
- * hook stops the clock), off when nothing is loaded, calm under reduced motion.
+ * clock stops, `vuFrame`), off when nothing is loaded or nothing has played yet, calm under
+ * reduced motion.
  */
 export const VU_SEGMENTS = 10;
 
@@ -66,4 +69,25 @@ export function vuLevels(
     out[top] = Math.max(out[top], 0.55);
   }
   return out;
+}
+
+/**
+ * One frame of the strip: from the clock the last frame left (ms of `performance.now()`, null
+ * until a track has played) and the bridge's `status` at `now`, fills `out` with the levels and
+ * returns the clock to keep. The clock follows `now` while a track plays and holds otherwise, so
+ * the strip moves, then stands still while paused. It is dark when nothing is loaded, while a disc
+ * changes, and on a paused track until one has played: a scene that boots on a paused track would
+ * otherwise freeze the signal's first level.
+ */
+export function vuFrame(
+  clock: number | null,
+  status: Status,
+  now: number,
+  reducedMotion: boolean,
+  out: number[],
+): number | null {
+  const next = status === 'playing' ? now : clock;
+  const loaded = next !== null && (status === 'playing' || status === 'paused');
+  vuLevels(next ?? 0, loaded, reducedMotion, out);
+  return next;
 }

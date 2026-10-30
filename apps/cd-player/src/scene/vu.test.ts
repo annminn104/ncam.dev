@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { VU_COLOURS, VU_SEGMENTS, vuLevels } from './vu';
+import { VU_COLOURS, VU_SEGMENTS, vuFrame, vuLevels } from './vu';
 
 const lit = (levels: number[]) => levels.filter((level) => level >= 1).length;
 
@@ -25,17 +25,28 @@ describe('vuLevels', () => {
     }
   });
 
-  it('moves while a track plays, and holds its peak', () => {
+  it('moves while a track plays', () => {
     const counts = new Set<number>();
     for (let t = 0; t < 3000; t += 100) counts.add(lit(vuLevels(t, true, false)));
     expect(counts.size).toBeGreaterThan(2);
-    // Peak hold: a segment above the lit prefix glows at half.
-    let held = 0;
-    for (let t = 0; t < 3000; t += 100) {
-      const levels = vuLevels(t, true, false);
-      if (levels.some((level) => level > 0.5 && level < 1)) held += 1;
+  });
+
+  it('holds the top segment it reached at half once the level has fallen', () => {
+    // When the strip reaches highest in three seconds of play.
+    let best = 0;
+    let at = 0;
+    for (let t = 0; t < 3000; t += 10) {
+      const count = lit(vuLevels(t, true, false));
+      if (count > best) {
+        best = count;
+        at = t;
+      }
     }
-    expect(held).toBeGreaterThan(0);
+    const top = Math.min(VU_SEGMENTS - 1, best);
+    const later = vuLevels(at + 200, true, false);
+    // 200 ms on, the live level is below that segment, and the hold still lights it at half.
+    expect(lit(later)).toBeLessThan(top);
+    expect(later[top]).toBeGreaterThanOrEqual(0.55);
   });
 
   it('is calm under reduced motion: half the strip at most, and slow', () => {
@@ -52,5 +63,34 @@ describe('vuLevels', () => {
     const out = new Array<number>(10).fill(-1);
     expect(vuLevels(500, true, false, out)).toBe(out);
     expect(out.every((level) => level >= 0)).toBe(true);
+  });
+});
+
+describe('vuFrame', () => {
+  const off = new Array(10).fill(0);
+
+  it('keeps the strip dark on a paused track until a track has played', () => {
+    const out = new Array<number>(10).fill(-1);
+    // The scene booted while a track was paused: nothing has played since.
+    expect(vuFrame(null, 'paused', 5000, false, out)).toBeNull();
+    expect(out).toEqual(off);
+    expect(vuFrame(null, 'paused', 9000, true, out)).toBeNull();
+    expect(out).toEqual(off);
+  });
+
+  it('runs its clock while a track plays and stops it while paused, so the strip stands still', () => {
+    const out = new Array<number>(10);
+    let clock = vuFrame(null, 'playing', 6000, false, out);
+    expect(clock).toBe(6000);
+    const playing = [...out];
+    expect(playing.some((level) => level > 0)).toBe(true);
+    clock = vuFrame(clock, 'paused', 9000, false, out);
+    expect(clock).toBe(6000);
+    expect(out).toEqual(playing);
+    // Dark while a disc changes and when nothing is loaded; the clock is kept as it was.
+    expect(vuFrame(clock, 'swapping', 9500, false, out)).toBe(6000);
+    expect(out).toEqual(off);
+    expect(vuFrame(clock, 'idle', 9600, false, out)).toBe(6000);
+    expect(out).toEqual(off);
   });
 });
