@@ -6,6 +6,7 @@ import { rigFor } from './rig';
 import { useSceneTextures } from './textures/useSceneTextures';
 import { useControls } from './useControls';
 import { useDirector } from './useDirector';
+import { useVu } from './useVu';
 
 interface Props {
   model: PlayerModel;
@@ -27,6 +28,7 @@ export function PlayerRig({ model, bridge, onReady }: Props) {
   const rig = useMemo(() => rigFor(model), [model]);
   const paint = useSceneTextures(rig, bridge);
   useDirector(rig, bridge, paint);
+  useVu(model, bridge);
   const handlers = useControls(rig, bridge);
   useReadyProbe(onReady);
   return <primitive object={model.root} {...handlers} />;
