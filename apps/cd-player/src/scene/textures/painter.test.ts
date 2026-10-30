@@ -21,7 +21,7 @@ const flush = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
 /** A painter whose loads finish when the test says; `drawn` lists what it drew, in order. */
 function harness() {
   const loads: { id: string; finish(): void; fail(error: Error): void }[] = [];
-  const drawn: [index: 0 | 1, id: string, loaded: string][] = [];
+  const drawn: [index: number, id: string, loaded: string, size: number][] = [];
   const paint = createPainter(
     (view) =>
       new Promise<string>((resolve, reject) => {
@@ -31,69 +31,74 @@ function harness() {
           fail: reject,
         });
       }),
-    (index, loaded, view) => drawn.push([index, view.id, loaded]),
+    (index, loaded, view, size) => drawn.push([index, view.id, loaded, size]),
   );
   return { paint, loads, drawn };
 }
 
 describe('createPainter', () => {
-  it('draws what the print loaded, once it has', async () => {
+  it('draws what the print loaded, once it has, at the size asked for', async () => {
     const h = harness();
-    const done = h.paint(0, track('a'));
+    const done = h.paint(0, track('a'), 1024);
     await flush();
     expect(h.drawn).toEqual([]);
     h.loads[0].finish();
     await done;
-    expect(h.drawn).toEqual([[0, 'a', 'print of a']]);
+    expect(h.drawn).toEqual([[0, 'a', 'print of a', 1024]]);
   });
 
   it.each([
     ['the newer finishes first', [1, 0]],
     ['the older finishes first', [0, 1]],
-  ])('lets only the last print of a disc draw when %s', async (_name, finishing) => {
+  ])('lets only the last print of a surface draw when %s', async (_name, finishing) => {
     const h = harness();
-    // The hook's own print for the lid, then the track a visitor picked: no signal on either.
-    const older = h.paint(0, track('first'));
-    const newer = h.paint(0, track('picked'));
+    // The director's print of a copy, then the hook's own as its art arrives: no signal on either.
+    const older = h.paint(0, track('first'), 512);
+    const newer = h.paint(0, track('picked'), 1024);
     for (const load of finishing) h.loads[load].finish();
     await Promise.all([older, newer]);
-    expect(h.drawn).toEqual([[0, 'picked', 'print of picked']]);
+    expect(h.drawn).toEqual([[0, 'picked', 'print of picked', 1024]]);
   });
 
-  it('keeps the discs apart', async () => {
+  it('keeps every surface apart, the seven copies’ and the booklet’s', async () => {
     const h = harness();
-    const first = h.paint(0, track('a'));
-    const second = h.paint(1, track('b'));
-    h.loads[1].finish();
+    const prints = [
+      h.paint(6, track('g'), 512),
+      h.paint(3, track('d'), 512),
+      h.paint(0, track('a'), 1024),
+    ];
+    h.loads[2].finish();
     h.loads[0].finish();
-    await Promise.all([first, second]);
+    h.loads[1].finish();
+    await Promise.all(prints);
     expect(h.drawn).toEqual([
-      [1, 'b', 'print of b'],
-      [0, 'a', 'print of a'],
+      [0, 'a', 'print of a', 1024],
+      [6, 'g', 'print of g', 512],
+      [3, 'd', 'print of d', 512],
     ]);
   });
 
   it('draws nothing once the director aborted the print', async () => {
     const h = harness();
     const director = new AbortController();
-    const aborted = h.paint(0, track('a'), director.signal);
-    const kept = h.paint(1, track('b'), new AbortController().signal);
+    const aborted = h.paint(0, track('a'), 512, director.signal);
+    const kept = h.paint(1, track('b'), 512, new AbortController().signal);
     director.abort();
     h.loads[0].finish();
     h.loads[1].finish();
     await Promise.all([aborted, kept]);
-    expect(h.drawn).toEqual([[1, 'b', 'print of b']]);
+    expect(h.drawn).toEqual([[1, 'b', 'print of b', 512]]);
   });
 
   it('reports a failed load and draws nothing, leaving a later print to draw', async () => {
     const h = harness();
-    const failing = h.paint(0, track('a'));
+    const failing = h.paint(0, track('a'), 512);
     h.loads[0].fail(new Error('no art'));
     await expect(failing).rejects.toThrow('no art');
-    const next = h.paint(0, track('b'));
+    const next = h.paint(0, track('b'), 512);
     h.loads[1].finish();
     await next;
-    expect(h.drawn).toEqual([[0, 'b', 'print of b']]);
+    expect(h.drawn).toEqual([[0, 'b', 'print of b', 512]]);
   });
 });
 

@@ -3,6 +3,7 @@ import { useMemo, useRef } from 'react';
 import type { SceneBridge } from '../bridge';
 import type { PlayerModel } from './model';
 import { rigFor } from './rig';
+import { useDiscPrints } from './textures/useDiscPrints';
 import { useSceneTextures } from './textures/useSceneTextures';
 import { useControls } from './useControls';
 import { useDirector } from './useDirector';
@@ -26,8 +27,9 @@ function useReadyProbe(onReady: () => void) {
 
 export function PlayerRig({ model, bridge, onReady }: Props) {
   const rig = useMemo(() => rigFor(model), [model]);
-  const paint = useSceneTextures(rig, bridge);
-  useDirector(rig, bridge, paint);
+  useSceneTextures(rig, bridge);
+  const printer = useDiscPrints(rig, bridge);
+  useDirector(rig, bridge, printer);
   useVu(model, bridge);
   const handlers = useControls(rig, bridge);
   useReadyProbe(onReady);

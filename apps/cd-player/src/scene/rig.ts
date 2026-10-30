@@ -1,4 +1,5 @@
 import {
+  Box3,
   MathUtils,
   Matrix4,
   Quaternion,
@@ -6,71 +7,82 @@ import {
   type Mesh,
   type MeshPhysicalMaterial,
   type Object3D,
+  type Texture,
 } from 'three';
-import type { CasePose, DiscPose, Pose, SwapKind } from './director';
+import type { RequiredNode } from './contract';
+import { ARM_REST, type DiscPose, type Pose } from './director';
 import type { PlayerModel } from './model';
+import { DISC_COPIES, emptyShelf, type Place, type StageState } from './stage';
 
-/** Where a disc sits inside a case, in the case's space (Blender's (3, 0, 6) mm, Y-up). */
-const DISC_IN_CASE = new Vector3(0.003, 0.006, 0);
-/**
- * A case changing places flies out of the tray, across and away, shrinking to nothing (the next
- * one grows from a point the other way round), so it never cuts through the lid's walls or pops
- * in or out of view. It all follows |slide|, so the director's timeline stays as it is:
- * - up to CASE_RISE_SHARE it only lifts, out of the tray towards the visitor and past the lid's
- *   rim (26.5 mm above the lining, Blender's HL - 13.5) with room to spare; coming in, that last
- *   stretch only lowers it into the tray;
- * - from there it flies CASE_ACROSS_M across (by eye: on a phone it vanishes inside the view);
- * - from CASE_SHRINK_SHARE on it shrinks, to nothing at the end.
- */
-const CASE_ACROSS_M = 0.16;
-const CASE_LIFT_M = 0.034;
-const CASE_RISE_SHARE = 0.12;
-const CASE_SHRINK_SHARE = 0.3;
-/**
- * The case's own lid opening, about its hinge (Blender's Y, three's Z): positive swings it out of
- * the tray, toward the visitor (checked against cd-player.glb).
- */
-const CASE_OPEN_RAD = (105 * Math.PI) / 180;
-/** From this share of the way out (a case's slide, a disc's way into a hidden case) it is hidden. */
-const HIDDEN_FROM = 0.999;
+/** The rack's slots in the model, slot 0 the next to play: each the pose of a disc in it. */
+const RACK_NODES = [
+  'rack_slot_0',
+  'rack_slot_1',
+  'rack_slot_2',
+  'rack_slot_3',
+  'rack_slot_4',
+] as const satisfies readonly RequiredNode[];
 const ARM_LIFT_M = 0.006;
-const RISE_M = 0.035;
-const ARC_M = 0.09;
 const SPIN_RAD_S = (200 / 60) * 2 * Math.PI;
+/**
+ * A disc flying to or from the spindle leaves its place, and reaches the other, along each one's
+ * normal: the Bézier's handles reach this far (out of the lid, past its rim, before it turns
+ * down to the deck). Between two slots a disc moves in a straight line: each slot stands behind
+ * the one below it, so a pop-out would cross a neighbour, and the straight way only widens the
+ * gaps, as between discs further apart.
+ */
+const HANDLE_M = 0.08;
+/** Out of sight from the spindle: up and to the left (where a disc from the side comes from too). */
+const ASIDE_UP_M = 0.06;
+const ASIDE_ACROSS_M = 0.16;
+/** Room between the turning case and the lid's lining, past the reach of its half-width. */
+const CASE_FLIP_MARGIN_M = 0.01;
+/** A disc this small is out of sight. */
+const HIDDEN_BELOW = 1e-3;
 const UP = new Vector3(0, 1, 0);
+const LEFT = new Vector3(-1, 0, 0);
+/** The case's own vertical in the open lid (Blender's Y): it turns over about it. */
+const CASE_AXIS = new Vector3(0, 0, 1);
 
-export interface DiscInstance {
+export interface DiscCopy {
   object: Object3D;
   label: MeshPhysicalMaterial;
 }
 
-export interface CaseInstance {
-  object: Object3D;
-  lid: Object3D;
-  lidBaseZ: number;
-  booklet: MeshPhysicalMaterial;
-  seat: Vector3;
-  /** Out of the tray, towards the visitor: the case's own up, in the lid's space. */
+/** A place's pose in world space, and its normal: the way a disc leaves and reaches it. */
+export interface PlaceFrame {
+  position: Vector3;
+  quaternion: Quaternion;
   out: Vector3;
 }
 
-export interface Rig {
-  model: PlayerModel;
-  /** Disc `i` belongs to case `i`. */
-  discs: [DiscInstance, DiscInstance];
-  cases: [CaseInstance, CaseInstance];
-  /** The case shown in the lid. */
-  lidCase: 0 | 1;
-  /** The disc on the spindle; null before the first play. */
-  seated: 0 | 1 | null;
-  /** A change is running: the textures hook leaves the lid alone. */
-  swapping: boolean;
-  spin: number;
-  arm: { node: Object3D; baseRotationY: number; baseY: number };
-  seat: { position: Vector3; quaternion: Quaternion };
+export interface CaseRig {
+  object: Object3D;
+  /** Its seat in the lid (its parent's space), and its own up there: out of the lid. */
+  seat: Vector3;
+  quaternion: Quaternion;
+  out: Vector3;
+  /** How far it rises before it turns over, measured from its meshes. */
+  lift: number;
+  booklet: MeshPhysicalMaterial;
 }
 
-/** Gives every mesh under `root` that wears `name` its own copy, so two instances print differently. */
+export interface Rig extends StageState {
+  model: PlayerModel;
+  /** DISC_COPIES copies of the disc, each with its own label. */
+  discs: DiscCopy[];
+  case: CaseRig;
+  /** The booklet's two prints (the print hook sets them): `bookletFront` shows. */
+  bookletMaps: [Texture | null, Texture | null];
+  spin: number;
+  arm: { node: Object3D; baseRotationY: number; baseY: number };
+  /** The spindle's seat, in world space (the discs live at the root). */
+  seat: { position: Vector3; quaternion: Quaternion };
+  /** Each rack slot, in world space. */
+  slots: PlaceFrame[];
+}
+
+/** Gives every mesh under `root` that wears `name` one copy of it, so each instance prints its own. */
 function ownMaterial(root: Object3D, name: string): MeshPhysicalMaterial {
   let copy: MeshPhysicalMaterial | null = null;
   root.traverse((object) => {
@@ -83,17 +95,37 @@ function ownMaterial(root: Object3D, name: string): MeshPhysicalMaterial {
   return copy;
 }
 
-function caseInstance(object: Object3D): CaseInstance {
-  const lid = object.getObjectByName('case_lid_hinge');
-  if (!lid) throw new Error('a case without case_lid_hinge');
-  return {
-    object,
-    lid,
-    lidBaseZ: lid.rotation.z,
-    booklet: ownMaterial(object, 'art_booklet'),
-    seat: object.position.clone(),
-    out: new Vector3(0, 1, 0).applyQuaternion(object.quaternion),
-  };
+function frameOf(node: Object3D): PlaceFrame {
+  const position = new Vector3();
+  const quaternion = new Quaternion();
+  node.matrixWorld.decompose(position, quaternion, new Vector3());
+  return { position, quaternion, out: UP.clone().applyQuaternion(quaternion) };
+}
+
+/**
+ * How far the case rises out of its seat before it turns over about CASE_AXIS: the reach of its
+ * meshes across the turn (its half-width and its depth) and a margin, so it never cuts into the
+ * lid, whatever its size.
+ */
+function flipLift(object: Object3D): number {
+  object.updateWorldMatrix(true, true);
+  const toCase = object.matrixWorld.clone().invert();
+  const box = new Box3();
+  const part = new Box3();
+  const local = new Matrix4();
+  object.traverse((child) => {
+    const mesh = child as Mesh;
+    if (!mesh.isMesh) return;
+    if (!mesh.geometry.boundingBox) mesh.geometry.computeBoundingBox();
+    const bounds = mesh.geometry.boundingBox;
+    if (bounds) {
+      box.union(part.copy(bounds).applyMatrix4(local.multiplyMatrices(toCase, mesh.matrixWorld)));
+    }
+  });
+  if (box.isEmpty()) return CASE_FLIP_MARGIN_M;
+  const across = Math.max(Math.abs(box.min.x), Math.abs(box.max.x));
+  const deep = Math.max(Math.abs(box.min.y), Math.abs(box.max.y));
+  return Math.hypot(across, deep) + CASE_FLIP_MARGIN_M;
 }
 
 const rigs = new WeakMap<PlayerModel, Rig>();
@@ -107,26 +139,35 @@ export function rigFor(model: PlayerModel): Rig {
   const seatPosition = new Vector3();
   const seatQuaternion = new Quaternion();
   nodes.disc_seat.matrixWorld.decompose(seatPosition, seatQuaternion, new Vector3());
-  // Discs fly in world space, so both live at the root (at the origin, unrotated).
-  const discA = nodes.disc;
-  root.attach(discA);
-  const labelA = ownMaterial(discA, 'art_disc');
-  const discB = discA.clone(true);
-  root.add(discB);
-  const labelB = ownMaterial(discB, 'art_disc');
-  const caseA = nodes.case;
-  const caseB = caseA.clone(true);
-  caseA.parent?.add(caseB);
+  const slots = RACK_NODES.map((name) => frameOf(nodes[name]));
+  // The discs fly in world space, so every copy lives at the root.
+  const template = nodes.disc;
+  root.attach(template);
+  const discs: DiscCopy[] = [{ object: template, label: ownMaterial(template, 'art_disc') }];
+  while (discs.length < DISC_COPIES) {
+    const object = template.clone(true);
+    root.add(object);
+    discs.push({ object, label: ownMaterial(object, 'art_disc') });
+  }
+  const caseSeat = nodes.case_seat;
+  const jewelCase: CaseRig = {
+    object: nodes.case,
+    seat: caseSeat.position.clone(),
+    quaternion: caseSeat.quaternion.clone(),
+    out: UP.clone().applyQuaternion(caseSeat.quaternion),
+    lift: flipLift(nodes.case),
+    booklet: ownMaterial(nodes.case, 'art_booklet'),
+  };
   const rig: Rig = {
     model,
-    discs: [
-      { object: discA, label: labelA },
-      { object: discB, label: labelB },
-    ],
-    cases: [caseInstance(caseA), caseInstance(caseB)],
-    lidCase: 0,
-    seated: null,
+    discs,
+    case: jewelCase,
+    bookletMaps: [null, null],
+    shelf: emptyShelf(),
+    bookletFront: 0,
+    filled: false,
     swapping: false,
+    last: { armAngle: ARM_REST, spin: 0 },
     spin: 0,
     arm: {
       node: nodes.arm_pivot,
@@ -134,9 +175,10 @@ export function rigFor(model: PlayerModel): Rig {
       baseY: nodes.arm_pivot.position.y,
     },
     seat: { position: seatPosition, quaternion: seatQuaternion },
+    slots,
   };
   // The model's own dispose knows only its shared materials: the copies go with it.
-  const prints = [labelA, labelB, rig.cases[0].booklet, rig.cases[1].booklet];
+  const prints = [...discs.map((disc) => disc.label), jewelCase.booklet];
   const disposeModel = model.dispose;
   model.dispose = () => {
     disposeModel();
@@ -146,93 +188,126 @@ export function rigFor(model: PlayerModel): Rig {
   return rig;
 }
 
-function placeCase(item: CaseInstance, pose: CasePose | null): void {
-  const away = pose ? Math.abs(pose.slide) : 1;
-  if (!pose || away >= HIDDEN_FROM) {
-    item.object.visible = false;
-    return;
-  }
-  item.object.visible = true;
-  const lift = MathUtils.smoothstep(away, 0, CASE_RISE_SHARE);
-  const across = MathUtils.smoothstep(away, CASE_RISE_SHARE, 1);
-  item.object.position.copy(item.seat).addScaledVector(item.out, lift * CASE_LIFT_M);
-  item.object.position.x += Math.sign(pose.slide) * across * CASE_ACROSS_M;
-  // Never quite 0: a zero scale leaves no rotation for the disc inside to take.
-  const size = 1 - MathUtils.smoothstep(away, CASE_SHRINK_SHARE, 1);
-  item.object.scale.setScalar(Math.max(size, 1e-3));
-  item.lid.rotation.z = item.lidBaseZ + pose.open * CASE_OPEN_RAD;
-}
-
-const inCase = new Matrix4();
-const offset = new Matrix4().makeTranslation(DISC_IN_CASE.x, DISC_IN_CASE.y, DISC_IN_CASE.z);
-const casePosition = new Vector3();
-const caseQuaternion = new Quaternion();
-const caseScale = new Vector3();
-const start = new Vector3();
-const control = new Vector3();
+const fromFrame: PlaceFrame = {
+  position: new Vector3(),
+  quaternion: new Quaternion(),
+  out: new Vector3(),
+};
+const toFrame: PlaceFrame = {
+  position: new Vector3(),
+  quaternion: new Quaternion(),
+  out: new Vector3(),
+};
+const handleA = new Vector3();
+const handleB = new Vector3();
 const spinQuaternion = new Quaternion();
+const turnQuaternion = new Quaternion();
 
-function placeDisc(rig: Rig, disc: DiscInstance, owner: CaseInstance, pose: DiscPose | null): void {
-  if (!pose || (pose.along >= HIDDEN_FROM && !owner.object.visible)) {
-    disc.object.visible = false;
-    return;
+/** Where `place` is now, into `into`: the spindle turns with the disc on it. */
+function placeAt(rig: Rig, place: Place, into: PlaceFrame): PlaceFrame {
+  if (place === 'spindle') {
+    into.position.copy(rig.seat.position);
+    into.quaternion
+      .copy(rig.seat.quaternion)
+      .multiply(spinQuaternion.setFromAxisAngle(UP, rig.spin));
+    into.out.copy(UP);
+    return into;
   }
-  disc.object.visible = true;
-  owner.object.updateWorldMatrix(true, false);
-  inCase
-    .multiplyMatrices(owner.object.matrixWorld, offset)
-    .decompose(casePosition, caseQuaternion, caseScale);
-  start.copy(rig.seat.position).addScaledVector(UP, RISE_M * pose.rise);
-  const a = Math.min(1, Math.max(0, pose.along));
-  // In its case a disc takes the case's size, so a case flying off takes its disc with it.
-  disc.object.scale.setScalar(1 + (caseScale.x - 1) * a);
-  if (a <= 0) {
-    disc.object.position.copy(start);
-  } else {
-    control.copy(start).add(casePosition).multiplyScalar(0.5).addScaledVector(UP, ARC_M);
-    // Quadratic Bézier start → control → the slot in the case.
-    const b0 = (1 - a) * (1 - a);
-    const b1 = 2 * (1 - a) * a;
-    const b2 = a * a;
-    disc.object.position.set(
-      start.x * b0 + control.x * b1 + casePosition.x * b2,
-      start.y * b0 + control.y * b1 + casePosition.y * b2,
-      start.z * b0 + control.z * b1 + casePosition.z * b2,
-    );
-  }
-  spinQuaternion.setFromAxisAngle(UP, rig.spin);
-  disc.object.quaternion
-    .copy(rig.seat.quaternion)
-    .multiply(spinQuaternion)
-    .slerp(caseQuaternion, a);
+  const slot = rig.slots[place];
+  into.position.copy(slot.position);
+  into.quaternion.copy(slot.quaternion);
+  into.out.copy(slot.out);
+  return into;
 }
 
-/** Puts every moving part where `pose` says. `swap` is null between changes. */
-export function applyPose(rig: Rig, pose: Pose, swap: SwapKind | null, dt: number): void {
+/**
+ * Out of sight from `place`: up and to the left of the spindle; for a slot, the slot itself (a
+ * rack disc shrinks away, or grows in, where it stands: any way out of the lid would pass
+ * through the discs in front of it).
+ */
+function asideOf(rig: Rig, place: Place, into: PlaceFrame): PlaceFrame {
+  placeAt(rig, place, into);
+  if (place === 'spindle') {
+    into.position.addScaledVector(UP, ASIDE_UP_M).addScaledVector(LEFT, ASIDE_ACROSS_M);
+  }
+  return into;
+}
+
+function placeDisc(rig: Rig, copy: DiscCopy, pose: DiscPose | null): void {
+  const { object } = copy;
+  if (!pose || (pose.from === null && pose.to === null)) {
+    object.visible = false;
+    return;
+  }
+  if (pose.from !== null && pose.from === pose.to) {
+    const at = placeAt(rig, pose.from, fromFrame);
+    object.visible = true;
+    object.position.copy(at.position);
+    object.quaternion.copy(at.quaternion);
+    object.scale.setScalar(1);
+    return;
+  }
+  const a = MathUtils.clamp(pose.along, 0, 1);
+  const start =
+    pose.from === null
+      ? asideOf(rig, pose.to as Place, fromFrame)
+      : placeAt(rig, pose.from, fromFrame);
+  const end =
+    pose.to === null ? asideOf(rig, pose.from as Place, toFrame) : placeAt(rig, pose.to, toFrame);
+  // Arriving it grows in, leaving it shrinks away; on its way between places it keeps its size.
+  const scale =
+    pose.from === null
+      ? MathUtils.smoothstep(a, 0, 0.65)
+      : pose.to === null
+        ? 1 - MathUtils.smoothstep(a, 0.35, 1)
+        : 1;
+  if (scale < HIDDEN_BELOW) {
+    object.visible = false;
+    return;
+  }
+  object.visible = true;
+  const flies = pose.from === 'spindle' || pose.to === 'spindle';
+  const reach = flies ? HANDLE_M : 0;
+  handleA.copy(start.position).addScaledVector(start.out, reach);
+  handleB.copy(end.position).addScaledVector(end.out, reach);
+  // A cubic Bézier: out of the one place along its normal, into the other along its own (with
+  // no reach, a straight line between two slots, or no way at all for a disc changing size).
+  const u = 1 - a;
+  object.position
+    .copy(start.position)
+    .multiplyScalar(u * u * u)
+    .addScaledVector(handleA, 3 * u * u * a)
+    .addScaledVector(handleB, 3 * u * a * a)
+    .addScaledVector(end.position, a * a * a);
+  object.quaternion.copy(start.quaternion).slerp(end.quaternion, a);
+  object.scale.setScalar(scale);
+}
+
+/** The case risen `lift` (0 … 1 of its lift) out of its seat and turned over `turn` (1: half a turn). */
+function placeCase(rig: Rig, lift: number, turn: number): void {
+  const item = rig.case;
+  item.object.position.copy(item.seat).addScaledVector(item.out, lift * item.lift);
+  item.object.quaternion
+    .copy(item.quaternion)
+    .multiply(turnQuaternion.setFromAxisAngle(CASE_AXIS, turn * Math.PI));
+}
+
+/** The booklet shows its front print, or from a turn's edge-on moment the other one. */
+function showBooklet(rig: Rig, next: boolean): void {
+  const map = rig.bookletMaps[next ? 1 - rig.bookletFront : rig.bookletFront];
+  if (!map || rig.case.booklet.map === map) return;
+  rig.case.booklet.map = map;
+  rig.case.booklet.needsUpdate = true;
+}
+
+/** Puts every moving part where `pose` says, and notes where it left the arm and the spin. */
+export function applyPose(rig: Rig, pose: Pose, dt: number): void {
   rig.arm.node.rotation.y = rig.arm.baseRotationY + pose.armAngle;
   rig.arm.node.position.y = rig.arm.baseY + pose.armLift * ARM_LIFT_M;
   rig.spin = (rig.spin + dt * SPIN_RAD_S * pose.spin) % (2 * Math.PI);
-  const lid = rig.lidCase;
-  const other: 0 | 1 = lid === 0 ? 1 : 0;
-  if (swap === 'change') {
-    placeCase(rig.cases[lid], pose.oldCase);
-    placeCase(rig.cases[other], pose.newCase);
-    placeDisc(rig, rig.discs[lid], rig.cases[lid], pose.oldDisc);
-    placeDisc(rig, rig.discs[other], rig.cases[other], pose.newDisc);
-    return;
-  }
-  placeCase(rig.cases[lid], pose.newCase);
-  placeCase(rig.cases[other], null);
-  placeDisc(rig, rig.discs[lid], rig.cases[lid], pose.newDisc);
-  placeDisc(rig, rig.discs[other], rig.cases[other], null);
-}
-
-/** What a change leaves behind on the rig. */
-export type ChangeState = Pick<Rig, 'lidCase' | 'seated' | 'swapping'>;
-
-/** After a change, the new case is the lid's and its disc is on the spindle. */
-export function finishSwap(rig: ChangeState, kind: SwapKind): void {
-  if (kind === 'change') rig.lidCase = rig.lidCase === 0 ? 1 : 0;
-  rig.seated = rig.lidCase;
-  rig.swapping = false;
+  rig.last.armAngle = pose.armAngle;
+  rig.last.spin = pose.spin;
+  rig.discs.forEach((copy, index) => placeDisc(rig, copy, pose.discs[index] ?? null));
+  placeCase(rig, pose.caseLift, pose.caseTurn);
+  showBooklet(rig, pose.bookletNew);
 }

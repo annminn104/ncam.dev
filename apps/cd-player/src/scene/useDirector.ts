@@ -2,16 +2,14 @@ import { createLogger } from '@ncam/logger';
 import { useFrame } from '@react-three/fiber';
 import { useEffect, useRef } from 'react';
 import type { SceneBridge } from '../bridge';
-import { restingPose, swapPose } from './director';
+import { posePlan, restingArm, restingPose, type Timeline } from './director';
 import { applyPose, type Rig } from './rig';
 import {
   createSwapController,
-  type Painter,
+  type DiscPrinter,
   type SwapClock,
   type SwapController,
 } from './swap-controller';
-
-export type { Painter } from './swap-controller';
 
 const log = createLogger({ scope: 'cd-player' });
 
@@ -23,43 +21,104 @@ const clock: SwapClock = {
   },
 };
 
+interface CopyReport {
+  copy: number;
+  /** The track the shelf says it carries, and the one its print was made for. */
+  track: string | null;
+  printed: string | null;
+  size: number;
+  landed: boolean;
+  visible: boolean;
+}
+
+/** What `window.__cdpStage()` reports on the dev server, for checks in a headless browser. */
+interface StageReport {
+  change: { timeline: Timeline; t: number } | null;
+  current: string | null;
+  upcoming: { id: string; title: string }[];
+  spindle: CopyReport | null;
+  rack: (CopyReport | null)[];
+  booklet: string | null;
+}
+
+function report(
+  rig: Rig,
+  bridge: SceneBridge,
+  controller: SwapController | null,
+  printer: DiscPrinter,
+): StageReport {
+  const view = bridge.getView();
+  const copy = (disc: number | null): CopyReport | null => {
+    if (disc === null) return null;
+    const printed = printer.printed?.(disc) ?? { track: null, size: 0, landed: false };
+    return {
+      copy: disc,
+      track: rig.shelf.tracks[disc]?.id ?? null,
+      printed: printed.track,
+      size: printed.size,
+      landed: printed.landed,
+      visible: rig.discs[disc].object.visible,
+    };
+  };
+  return {
+    change: controller?.inspect() ?? null,
+    current: view.current?.id ?? null,
+    upcoming: view.upcoming.map(({ id, title }) => ({ id, title })),
+    spindle: copy(rig.shelf.spindle),
+    rack: rig.shelf.rack.map(copy),
+    booklet: rig.shelf.booklet?.id ?? null,
+  };
+}
+
 /**
- * Takes the bridge's disc changes: prints the arriving disc and case, runs the timeline, resolves
- * when the disc is seated (src/scene/swap-controller.ts keeps every change settling). Between
- * changes it holds the resting pose for the playback status.
+ * Takes the bridge's disc changes and follows the views that change without one: prints the
+ * arriving discs, runs the timelines, resolves a swap when its disc is seated
+ * (src/scene/swap-controller.ts keeps every change settling). Between changes it holds the
+ * resting pose for the playback status.
  */
-export function useDirector(rig: Rig, bridge: SceneBridge, paint: Painter): void {
+export function useDirector(rig: Rig, bridge: SceneBridge, printer: DiscPrinter): void {
   const changes = useRef<SwapController | null>(null);
 
   useEffect(() => {
     const controller = createSwapController({
-      rig,
-      paint,
+      stage: rig,
+      printer,
+      view: bridge.getView,
       reduced: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
       hidden: () => document.hidden,
       clock,
       onPrintFailed: (error, view) =>
         log.warn('cd-player.print-failed', { track: view.id, error: String(error) }),
     });
-    // A track can play with no change for its disc (the scene booted mid-playback, or Play
-    // reloaded the current track after its player failed): its disc is on the spindle then.
-    const follow = () => controller.seat(bridge.getView());
-    follow();
-    const unsubscribe = bridge.subscribe(follow);
+    // The scene may boot mid-playback: the track in the player is on the spindle at once.
+    controller.seat(bridge.getView());
     changes.current = controller;
     bridge.setSwapper(controller.swap);
     return () => {
-      unsubscribe();
       bridge.setSwapper(null);
       controller.dispose();
       changes.current = null;
     };
-  }, [bridge, rig, paint]);
+  }, [bridge, rig, printer]);
+
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    const page = window as Window & { __cdpStage?: () => StageReport };
+    page.__cdpStage = () => report(rig, bridge, changes.current, printer);
+    return () => {
+      delete page.__cdpStage;
+    };
+  }, [bridge, rig, printer]);
 
   useFrame((_, dt) => {
-    if (changes.current?.frame((kind, t) => applyPose(rig, swapPose(kind, t), kind, dt))) return;
-    const { status } = bridge.getView();
-    const loaded = status === 'playing' || status === 'paused';
-    applyPose(rig, restingPose(rig.seated !== null, loaded, status === 'playing'), null, dt);
+    const controller = changes.current;
+    const view = bridge.getView();
+    // After the swap the engine published, so a view a swap leads to is never followed.
+    controller?.follow(view);
+    const loaded = view.status === 'playing' || view.status === 'paused';
+    const playing = view.status === 'playing';
+    const rest = restingArm(rig.shelf.spindle !== null, loaded, playing);
+    if (controller?.frame((plan, t) => applyPose(rig, posePlan(plan, t, rest), dt))) return;
+    applyPose(rig, restingPose(rig.shelf, loaded, playing), dt);
   });
 }

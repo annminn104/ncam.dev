@@ -1,22 +1,23 @@
 import type { SceneView, TrackView } from '../../bridge';
-import type { Painter } from '../swap-controller';
 
 /**
- * A painter that loads what a track's prints need, then draws them on a disc. Prints of one disc
- * overlap and finish in any order (the director's, and the hook's own for the lid before the first
- * play, which has no signal), and the last one started wins: a print that finishes after a newer
- * print of its disc has started, or after the director aborted it, draws nothing.
+ * A painter that loads what a print needs, then draws it on surface `index` (a disc copy, or a
+ * side of the booklet) at `size` px. Prints of one surface overlap and finish in any order (the
+ * director's, and the hook's own as art arrives, which have no signal), and the last one started
+ * wins: a print that finishes after a newer print of its surface has started, or after the
+ * director aborted it, draws nothing.
  */
 export function createPainter<Loaded>(
   load: (view: TrackView) => Promise<Loaded>,
-  draw: (index: 0 | 1, loaded: Loaded, view: TrackView) => void,
-): Painter {
-  const started: [number, number] = [0, 0];
-  return async (index, view, signal) => {
-    const mine = ++started[index];
+  draw: (index: number, loaded: Loaded, view: TrackView, size: number) => void,
+): (index: number, view: TrackView, size: number, signal?: AbortSignal) => Promise<void> {
+  const started: number[] = [];
+  return async (index, view, size, signal) => {
+    const mine = (started[index] ?? 0) + 1;
+    started[index] = mine;
     const loaded = await load(view);
     if (signal?.aborted || started[index] !== mine) return;
-    draw(index, loaded, view);
+    draw(index, loaded, view, size);
   };
 }
 
