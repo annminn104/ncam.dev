@@ -1,3 +1,5 @@
+import { xorshift } from './xorshift';
+
 /**
  * Tileable normal maps made at runtime instead of baked, so the art pipeline stays a single GLB:
  * a pebble grain for the leather, diamond quilting for the lid's lining, a plain weave for the
@@ -29,15 +31,7 @@ export function normalsFrom(height: Float32Array, size: number, strength: number
  * (Worley F1).
  */
 export function leatherNormal(size = 256, cells = 22, seed = 7, strength = 2.5): Uint8Array {
-  let s = seed >>> 0 || 1;
-  const random = () => {
-    s ^= s << 13;
-    s >>>= 0;
-    s ^= s >>> 17;
-    s ^= s << 5;
-    s >>>= 0;
-    return s / 4294967296;
-  };
+  const random = xorshift(seed);
   const points = new Float32Array(cells * cells * 2);
   for (let i = 0; i < points.length; i++) points[i] = random();
   const height = new Float32Array(size * size);

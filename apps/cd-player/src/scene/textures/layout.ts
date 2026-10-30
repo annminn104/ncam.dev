@@ -1,3 +1,5 @@
+import { xorshift } from './xorshift';
+
 /** The pure geometry of the printed textures (src/scene/textures/paint.ts draws with it). */
 export interface Crop {
   sx: number;
@@ -125,15 +127,7 @@ export function tagRules(h: number): number[] {
  * alphas (xorshift on `seed`), so the plate repaints identically.
  */
 export function brushLines(h: number, count: number, seed: number): { y: number; alpha: number }[] {
-  let s = seed >>> 0 || 1;
-  const random = () => {
-    s ^= s << 13;
-    s >>>= 0;
-    s ^= s >>> 17;
-    s ^= s << 5;
-    s >>>= 0;
-    return s / 4294967296;
-  };
+  const random = xorshift(seed);
   const out: { y: number; alpha: number }[] = [];
   for (let i = 0; i < count; i++) {
     out.push({ y: Math.floor(random() * h), alpha: 0.04 + random() * 0.08 });
