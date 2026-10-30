@@ -7,4 +7,6 @@ export interface PlayerSceneProps {
   /** The first frames of the player are on screen. */
   onReady(): void;
   onFail(error: Error): void;
+  /** The GLB's download, 0–1, or null while its size is unknown (no Content-Length). */
+  onProgress(fraction: number | null): void;
 }

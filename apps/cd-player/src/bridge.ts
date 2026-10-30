@@ -56,7 +56,7 @@ export interface SceneBridge {
   setView(view: SceneView): void;
   subscribe(listener: () => void): () => void;
   setSwapper(swapper: Swapper | null): void;
-  /** Without a live scene (poster, no WebGL) the change is instant. */
+  /** Without a running scene (before it boots, no WebGL) the change is instant. */
   swap(to: TrackView): Promise<void>;
   emit(action: PlayerAction): void;
   onAction(listener: (action: PlayerAction) => void): () => void;

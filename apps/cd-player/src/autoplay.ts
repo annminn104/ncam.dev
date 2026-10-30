@@ -12,7 +12,7 @@ export interface AutoplaySignals {
 /**
  * Open by itself only on a hardware GPU, for a visitor who welcomes motion. A software rasteriser
  * (SwiftShader: the Lighthouse runner, machines without a usable GPU) takes seconds to compile this
- * scene's shaders and draw its first frames, so there the poster waits for the visitor: the "Open
+ * scene's shaders and draw its first frames, so there the page waits for the visitor: the "Open
  * the player" button, or a play, next, previous or track press.
  */
 export function shouldAutoplay({ hardwareGpu, reducedMotion }: AutoplaySignals): boolean {

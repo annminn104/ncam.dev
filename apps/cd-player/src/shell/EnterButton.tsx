@@ -8,11 +8,12 @@ interface Props {
 }
 
 /**
- * The way in before the scene runs, "Opening the player…" while it boots, or the failure. A
- * failure that needs a page reload says so on its button: the reload stops the music.
+ * The way in once the page has settled without starting the scene, or the failure. Nothing while
+ * the scene boots (the loader shows that) or once it is live. A failure that needs a page reload
+ * says so on its button: the reload stops the music.
  */
 export function EnterButton({ phase, failure, onStart }: Props) {
-  if (phase === 'live') return null;
+  if (phase === 'live' || phase === 'booting') return null;
   if (phase === 'error' && failure) {
     return (
       <div className="cdp-gate" role="alert">
@@ -25,17 +26,10 @@ export function EnterButton({ phase, failure, onStart }: Props) {
       </div>
     );
   }
-  const booting = phase === 'booting';
   return (
     <div className="cdp-gate">
-      <button
-        type="button"
-        className="cdp-enter"
-        onClick={onStart}
-        disabled={booting}
-        aria-busy={booting}
-      >
-        {booting ? 'Opening the player…' : 'Open the player'}
+      <button type="button" className="cdp-enter" onClick={onStart}>
+        Open the player
       </button>
     </div>
   );

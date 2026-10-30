@@ -8,13 +8,11 @@ const render = (props: Parameters<typeof EnterButton>[0]) =>
 const onStart = () => {};
 
 describe('EnterButton', () => {
-  it('opens the player from the poster, and says so while it boots', () => {
-    const poster = render({ phase: 'poster', failure: null, onStart });
-    expect(poster).toContain('Open the player');
-    expect(poster).not.toContain('disabled');
-    const booting = render({ phase: 'booting', failure: null, onStart });
-    expect(booting).toContain('Opening the player…');
-    expect(booting).toContain('disabled');
+  it('opens the player while the scene waits, and leaves its boot to the loader', () => {
+    const waiting = render({ phase: 'waiting', failure: null, onStart });
+    expect(waiting).toContain('Open the player');
+    expect(waiting).not.toContain('disabled');
+    expect(render({ phase: 'booting', failure: null, onStart })).toBe('');
   });
 
   it('offers "Try again" for a failure that can be retried in place', () => {

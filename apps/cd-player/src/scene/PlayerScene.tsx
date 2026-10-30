@@ -1,5 +1,5 @@
 import { Canvas, useThree } from '@react-three/fiber';
-import { useEffect, useState } from 'react';
+import { useEffect, useEffectEvent, useState } from 'react';
 import { AgXToneMapping, PMREMGenerator } from 'three';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { assetUrl } from '../lib/asset-url';
@@ -61,13 +61,18 @@ function ShadowFloor() {
 }
 
 export function PlayerScene(props: PlayerSceneProps) {
-  const { assetBase, bridge, onReady, onFail } = props;
+  const { assetBase, bridge, onReady, onFail, onProgress } = props;
   const [model, setModel] = useState<PlayerModel | null>(null);
   const [narrow] = useState(() => !isWide(window.innerWidth));
+  // Read when the download reports, so a new callback never starts the download again.
+  const report = useEffectEvent((fraction: number | null) => onProgress(fraction));
   useEffect(() => {
     let cancelled = false;
     let loaded: PlayerModel | null = null;
-    loadPlayerModel(assetUrl('assets/cd-player.glb', assetBase)).then(
+    loadPlayerModel(assetUrl('assets/cd-player.glb', assetBase), (fraction) => {
+      // A load this effect has let go of (StrictMode's first run, a remount) says nothing.
+      if (!cancelled) report(fraction);
+    }).then(
       (next) => {
         loaded = next;
         if (cancelled) next.dispose();

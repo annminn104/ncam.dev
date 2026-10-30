@@ -91,23 +91,11 @@
   }
 }
 
-/* ── poster and scene (the poster stays under the canvas until it has faded in) ── */
-.cdp-poster,
+/* ── scene and loader: the loader holds the scene's place until it is live, then fades out as the
+   canvas fades in, both over 600 ms (FADE_MS in src/App.tsx) ───────────────────────────────── */
 .cdp-scene {
   position: absolute;
   inset: 0;
-  z-index: 1;
-}
-.cdp-poster {
-  pointer-events: none;
-}
-.cdp-poster img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-.cdp-scene {
   z-index: 2;
   opacity: 0;
   transition: opacity 600ms ease;
@@ -122,6 +110,57 @@
   /* A drag or a double-click on the player is not a text selection. */
   -webkit-user-select: none;
   user-select: none;
+}
+/* Plain from the first paint, in the server's markup: it never enters at opacity 0 (Chrome counts
+   text for LCP only at its next repaint), and only its disc moves. It stands where "Open the
+   player" will, and comes after the scene layer in the DOM, so it draws over the invisible canvas
+   and fades out with the canvas's fade-in. */
+.cdp-loader {
+  position: absolute;
+  z-index: 2;
+  left: 50%;
+  top: 58%;
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  transition: opacity 600ms ease;
+}
+.cdp-scene.is-live ~ .cdp-loader {
+  opacity: 0;
+}
+.cdp-loader__disc {
+  display: block;
+  width: 44px;
+  height: 44px;
+  animation: cdp-spin 1.6s linear infinite;
+}
+.cdp-loader__face {
+  fill: rgb(255 255 255 / 0.12);
+  stroke: rgb(255 255 255 / 0.4);
+  stroke-width: 1;
+}
+.cdp-loader__sheen {
+  fill: rgb(255 255 255 / 0.5);
+}
+.cdp-loader__hub {
+  fill: none;
+  stroke: rgb(255 255 255 / 0.4);
+  stroke-width: 1;
+}
+.cdp-loader__line {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--cdp-ink-soft);
+  white-space: nowrap;
+}
+@keyframes cdp-spin {
+  to {
+    transform: rotate(1turn);
+  }
 }
 
 /* ── glass surfaces ──────────────────────────────────────────────────────── */
@@ -667,10 +706,12 @@
 
 @media (prefers-reduced-motion: reduce) {
   .cdp-backdrop__layer.is-entering,
-  .cdp-eq {
+  .cdp-eq,
+  .cdp-loader__disc {
     animation: none;
   }
   .cdp-scene,
+  .cdp-loader,
   .cdp-tracks {
     transition: none;
   }

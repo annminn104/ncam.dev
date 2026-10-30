@@ -16,8 +16,9 @@ export interface RenderHeroSSROptions {
 }
 
 /**
- * Server render: the overlays with the collection and its tracks, the backdrop, the poster, and the
- * fetched data in a JSON script that ./hydrate reads back. The scene never runs here.
+ * Server render: the overlays with the collection and its tracks, the backdrop, the loader in the
+ * scene's place, and the fetched data in a JSON script that ./hydrate reads back. The scene never
+ * runs here.
  */
 export async function renderHeroSSR(options: RenderHeroSSROptions = {}): Promise<SsrResult> {
   // Imported here, not at the top, so `react-dom/server` stays out of the client graph.

@@ -65,4 +65,14 @@ describe('App (server render)', () => {
     );
     expect(html).toContain('Loading');
   });
+
+  it("holds the scene's place with the loader, and leaves the way in for after the page settles", () => {
+    const html = renderToString(
+      createElement(App, { controller: createRouteController({ route: '/' }), initial }),
+    );
+    expect(html).toContain('<div class="cdp-loader">');
+    expect(html).toContain('<p class="cdp-loader__line">Loading the player</p>');
+    expect(html).not.toContain('Open the player');
+    expect(html).not.toContain('<img');
+  });
 });

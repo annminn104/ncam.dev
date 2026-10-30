@@ -37,8 +37,8 @@ The owner's decisions (2026-10-28), which the rest of this guide assumes:
   `src/styles/app.css` as `<style id="cd-player-styles">` (removed on unmount) and imports the
   fonts (`src/fonts.ts`).
 - `./ssr` (`src/ssr.tsx`): `renderHeroSSR({ config?, assetBase? })` returns `{ html, css, head? }`.
-  `html` is the whole shell (link bar, tracklist, now-playing card, backdrop, poster, help line,
-  the "Open the player" button) for the collection the server fetched, followed by
+  `html` is the whole shell (link bar, tracklist, now-playing card, backdrop, the loader in the
+  scene's place, help line) for the collection the server fetched, followed by
   `<script type="application/json" id="cdp-state">` holding that data (`src/ssr-state.ts`, escaped
   so it can never end the script). `css` is `src/styles/fonts.css`, its `url()`s rebased onto
   this remote's origin, plus `src/styles/app.css`. `head` (`src/head.ts`: the collection's name
@@ -65,24 +65,23 @@ be on another origin.
 ## Commands
 
 ```bash
-pnpm --filter @ncam/cd-player dev             # standalone on :9011 (/, /playlist/<id>, /album/<id>, /?capture=<shape>)
+pnpm --filter @ncam/cd-player dev             # standalone on :9011 (/, /playlist/<id>, /album/<id>)
 pnpm --filter @ncam/cd-player build           # vite build --app (client + SSR graph)
 pnpm --filter @ncam/cd-player typecheck
 pnpm --filter @ncam/cd-player art:build       # Blender, then gltf-transform: rewrites public/assets/cd-player.glb
-pnpm --filter @ncam/cd-player capture:poster  # needs the dev server; rewrites src/assets/poster
 ```
 
 CI runs the unit tests (through the root `pnpm test`), the typecheck, lint and the build.
-`art:build` and `capture:poster` run **by hand** and their output is committed (see "Art
-pipeline" and "Poster"). The dev and preview servers also answer `/api/spotify` (see "Data").
+`art:build` runs **by hand** and its output is committed (see "Art pipeline"). The dev and preview
+servers also answer `/api/spotify` (see "Data").
 
 Smoke runs beside the owner's own stack (1337, 9000, 9006, and :9011 itself while `pnpm dev`
 runs) use **9111**, with `CD_PLAYER_PORT` set as well as `--port`:
 `env CD_PLAYER_PORT=9111 pnpm --filter @ncam/cd-player exec vite --port 9111 --strictPort --host 127.0.0.1`.
 `defineRemote` takes the dev server's origin from `CD_PLAYER_PORT`, so `--port` alone still names
-:9011 in the asset URLs; `capture:poster` reads the same variable (or `CD_PLAYER_URL`). A host
-smoke points `CD_PLAYER_REMOTE_URL` at `http://localhost:9111/remoteEntry.js`. Never build while
-a dev server of this app is watching.
+:9011 in the asset URLs. A host smoke points `CD_PLAYER_REMOTE_URL` at
+`http://localhost:9111/remoteEntry.js`. Never build while a dev server of this app is watching.
+Playwright (a devDependency) drives a smoke run's headless checks.
 
 ## Data
 
@@ -196,7 +195,7 @@ it and never arrives as one.
 status is `idle`, `swapping`, `playing` or `paused`. A track change emits `swap`; the engine runs it
 through the bridge (`src/bridge.ts`, `swap(trackView)`) and sends **`SWAP_DONE`** once the scene
 reports the disc seated, and only then does the sequencer emit **`load`**, so the music starts as
-the tonearm lands. Without a live scene (the poster, no WebGL) the bridge has no swapper and the
+the tonearm lands. Without a running scene (before it boots, no WebGL) the bridge has no swapper and the
 change is instant. Only the latest change may answer (a swap token), and a change that fails still
 counts as seated.
 
@@ -210,7 +209,7 @@ at its first second, since a restart would play it.
 
 Keyboard (`App.tsx`): Space plays or pauses, N and P change tracks, never with a modifier or while
 focus is in a field or on a button (so Space on a button, or on the slider, is the browser's own),
-and a held key is one press. Every music action from the DOM also opens the scene from the poster.
+and a held key is one press. Every music action from the DOM also starts the scene while it waits.
 
 **The card's controls** (`src/shell/NowPlaying.tsx`) give every 3D control a DOM equivalent, for
 the keyboard, a screen reader and a phone. The head has Previous, Play or Pause and Next; the row
@@ -220,7 +219,7 @@ the knob's counterpart) and the small round **Stop**, **Repeat** and **Shuffle**
 (Tab skips the slider while it is disabled). Repeat and Shuffle are switches: `aria-pressed`, and
 when on a blush tint, a gold icon and a dot under it, so the state is not colour alone. Shuffle
 sends `TOGGLE_SHUFFLE` with `Date.now()` as the seed, as the deck's MODE key does (`onAction` in
-`engine.ts`). All of them go through `act`, so a press from the poster also opens the scene.
+`engine.ts`). All of them go through `act`, so a press while the scene waits also starts it.
 
 The slider is a native `<input type="range">` counted in whole seconds (`seekRange` in `src/view.ts`
 floors, as `formatDuration` does), disabled while the status is `idle` or `swapping` (a seek does
@@ -290,29 +289,31 @@ the three entries' graphs and pins it. The files the scene shares with the shell
 three-free for that reason, and so do `boot.ts`, `failure.ts`, `webgl.ts` and `autoplay.ts`, which
 ask about WebGL without three.
 
-**The phases** (`src/boot.ts`, a pure reducer, garden-home's shape): `poster` → `booting` →
-`live`, or `error` over the poster. Events: `start` ("Open the player", and "Try again" for a
+**The phases** (`src/boot.ts`, a pure reducer, garden-home's shape): `waiting` → `booting` →
+`live`, or `error` over the backdrop. Events: `start` ("Open the player", and "Try again" for a
 failure that can be retried in place), `autostart`, `ready` (three frames of the player drawn,
-`useReadyProbe` in `PlayerRig.tsx`) and `fail`. `autostart` only ever leaves the poster: it comes
+`useReadyProbe` in `PlayerRig.tsx`) and `fail`. `autostart` only ever leaves `waiting`: it comes
 when the page has settled on a hardware GPU and with every music action from the DOM, so a failed
-boot is retried by "Try again" alone. While booting the scene layer is invisible and `inert`; on
-`ready` it fades in over 600 ms (`FADE_MS` in `src/App.tsx` equals the `.cdp-scene` transition in
-`src/styles/app.css`; keep them equal), then the poster unmounts.
+boot is retried by "Try again" alone. While booting the scene layer is invisible and `inert`, under
+the loader; on `ready` it fades in over 600 ms and the loader fades out with it (`FADE_MS` in
+`src/App.tsx` equals the `.cdp-scene` and `.cdp-loader` transitions in `src/styles/app.css`, which
+`src/styles/app-css.test.ts` holds), then the loader unmounts (see "First load").
 
 **Autostart on a hardware GPU** (`src/autoplay.ts`, the same logic as mini-store's and
 garden-home's copies; keep the three in step): once the page has loaded and the main thread is
 idle (`whenSettled`), the scene starts by itself when WebGL2 runs on a hardware GPU (a context made
 with `failIfMajorPerformanceCaveat`, and a renderer that is not SwiftShader, llvmpipe, softpipe or
 Microsoft Basic Render) and the visitor has not asked for reduced motion. On a software rasteriser
-(the Lighthouse runner) the poster waits for the visitor.
+(the Lighthouse runner) the page waits for the visitor: the loader gives way to "Open the player".
 
-**Failures** (`src/failure.ts`, shown by `src/shell/EnterButton.tsx` in a `role="alert"` over the
-poster; the music plays on): no WebGL2 (`hasWebGL2()` in `src/webgl.ts`, asked before any canvas
-mounts): "This browser can't draw the 3D player. The music still plays.", with no button; a chunk
-that would not load (`SceneChunkError`): "The 3D player couldn't start. The music still plays."
-with **Reload the page** (a browser remembers a failed dynamic import, and the reload stops the
-music, hence the label); anything else (the GLB, the model contract, a render-time throw caught by
-`SceneBoundary`): the same message with **Try again**. Each is logged as `cd-player.scene-failed`.
+**Failures** (`src/failure.ts`, shown by `src/shell/EnterButton.tsx` in a `role="alert"` where the
+loader stood, over the backdrop; the music plays on): no WebGL2 (`hasWebGL2()` in `src/webgl.ts`,
+asked before any canvas mounts): "This browser can't draw the 3D player. The music still plays.",
+with no button; a chunk that would not load (`SceneChunkError`): "The 3D player couldn't start. The
+music still plays." with **Reload the page** (a browser remembers a failed dynamic import, and the
+reload stops the music, hence the label); anything else (the GLB, the model contract, a render-time
+throw caught by `SceneBoundary`): the same message with **Try again**. Each is logged as
+`cd-player.scene-failed`.
 
 **The GLB contract** (`src/scene/contract.ts`): `REQUIRED_NODES` are the pivots `lid_hinge`,
 `arm_pivot`, `knob` and `btn_prev`, `btn_next`, `btn_play`, `btn_stop`, `btn_rpt`, `btn_mode`, the
@@ -401,18 +402,18 @@ arrives after its change began.
 
 **The one framing rule** (`src/scene/framing.ts`): `frameForViewport(width, height, yaw, pitch)`
 and `isWide(width)` (wide above 820 px, where the tracklist becomes a drawer beside the player).
-`CameraRig` holds that frame every frame (resizes included), `PlayerScene` sizes the shadow map and
-the pixel ratio by `isWide`, and the poster capture goes through the same code. A wide screen aims
-right of the player so it sits clear of the drawer; between 821 and 1260 px the link bar stacks and
-the framing keeps its height free; a narrow screen stands further back and aims lower, clear of the
-now-playing card. `framing.test.ts` projects the model's box through it at every screen shape the
-layout has. Known misses: on a single-row screen shorter than about 760 px the bar can cover the
-lid's top rim.
+`CameraRig` holds that frame every frame (resizes included), and `PlayerScene` sizes the shadow map
+and the pixel ratio by `isWide`. A wide screen aims right of the player so it sits clear of the
+drawer; between 821 and 1260 px the link bar stacks and the framing keeps its height free; a narrow
+screen stands further back and aims lower, clear of the now-playing card. `framing.test.ts`
+projects the model's box through it at every screen shape the layout has. Known misses: on a
+single-row screen shorter than about 760 px the bar can cover the lid's top rim.
 
 **Reduced motion** (`prefers-reduced-motion: reduce`): no autostart; a disc change is instant (the
 rig jumps to its end and the music still waits a 300 ms beat, `REDUCED_MOTION_MS`); the backdrop's
-cross-fade, the tracklist's equaliser, the canvas's fade-in and the phone sheet's slide are off
-(`src/styles/app.css`). The disc still spins while a track plays, and the orbit still eases.
+cross-fade, the tracklist's equaliser, the loader's spin, the canvas's fade-in (and the loader's
+fade-out) and the phone sheet's slide are off (`src/styles/app.css`). The disc still spins while a
+track plays, and the orbit still eases.
 
 ## Personalisation
 
@@ -462,7 +463,7 @@ textures (never materials: the five prints start identical and would merge into 
 it into `public/assets/cd-player.glb`, which is **committed** (about 576 KB and 73,539 triangles
 today). **The budget** (`model-contract.test.ts`): 4 MB, 150k triangles, `EXT_meshopt_compression`,
 and meshes only on leaf nodes, so quantisation never scales a pivot. Rebuild after any change to the
-scripts, then capture the poster again. The deck's lettering uses macOS fonts (Avenir Next, DIN
+scripts. The deck's lettering uses macOS fonts (Avenir Next, DIN
 Alternate and Futura, loaded by `use_scene` in `cdkit.py`); elsewhere Blender's own font stands in
 and the GLB changes.
 
@@ -478,43 +479,49 @@ sessions in a live Blender only: nothing in the build needs it. In a live Blende
 through the window's scene under `temp_override` (`render()` in `cdkit.py`), and the first Cycles
 render on Metal spends about two minutes compiling its kernels.
 
-## Poster
+## First load
 
-`src/assets/poster/` holds AVIF at three widths per shape (landscape 1280, 1920 and 2560; portrait
-480, 750 and 1080) plus one WebP per shape (landscape 1920, portrait 750), with alpha. They are
-imported from JS (`index.ts`), so `defineRemote`'s `renderBuiltUrl` names them from this remote's
-origin, on the server too; `poster.test.ts` pins the declared sizes, the capture and the alpha.
-`src/shell/Poster.tsx` shows the portrait one at or below a square viewport, the landscape one
-above, with `object-fit: cover`; its `<img>` is the page's one `fetchpriority="high"` image. The
-poster is the scene as it boots, **captured with alpha and the default prints** (a track's change
-daily): the page's own backdrop shows round the player, and the canvas fades in over it.
+Nothing on the first screen is a picture of the scene, so a change to the model, the lights, the
+framing or the prints never needs a new one. The server renders the page's own backdrop (the first
+track's art, blurred under its colours) and, in the scene's place, the **loader**
+(`src/shell/Loader.tsx`, `cdp-loader`): a 44 px disc glyph (inline SVG) spun by CSS from the first
+paint, and one line in the UI face, "Loading the player". It is plain from
+the first paint, with no entrance (text that enters at opacity 0 counts for LCP only at its next
+repaint), and stands where "Open the player" will (`.cdp-gate`'s place, 50 % across and 58 %
+down). Under `prefers-reduced-motion: reduce` its disc stands still.
 
-`capture:poster` (`scripts/capture-poster.mjs`) needs the dev server (`CD_PLAYER_PORT` set for both,
-or `CD_PLAYER_URL`) and Playwright's Chromium. It loads `/?capture=landscape|portrait`
-(`src/capture.ts`; `src/scene/CaptureScene.tsx` draws the scene alone with its default prints, the
-page's fonts loaded first and the page's own background cleared) at **1280 × 720, scale 2** and
-**390 × 844, scale 1080/390** on SwiftShader, waits for `window.__sceneReady`, takes a screenshot
-without a background and writes the eight files with sharp. Any page error fails the run.
-`CAPTURE` in `src/capture.ts`, `SHAPES` in the script and the sizes in `index.ts` move together.
+**The count.** While the scene boots the line gives the GLB's download, "Loading the player 63%"
+(`loaderLine` in `src/view.ts`, rounded and held between 0 and 100). GLTFLoader's progress events
+reach `loadPlayerModel(url, onProgress)` in `src/scene/model.ts`, where `downloadFraction` makes a
+fraction of them only when the response names its length (`Content-Length`; a compressed transfer
+whose decoded bytes outrun it is held at 1), then `PlayerSceneProps.onProgress` (`PlayerScene`
+drops a cancelled load's), then `App`'s state. The scene chunk's own download is not measured:
+until the GLB's request starts, and whenever its size is unknown, the line has no number. A failed
+boot clears the count, so "Try again" starts from none.
 
-The poster matches the live framing exactly only at those two aspects: the framing follows
-`isWide`, the poster the aspect ratio, so other shapes jump a little at the fade, and a portrait
-tablet wider than 820 px gets the phone capture while its framing is the wide one. **Capture again
-after any change to the model, the lights, the camera or the framing, or the default prints.**
+**Hand-overs.** The loader gives way to "Open the player" once the page has settled without
+starting the scene (a software rasteriser, reduced motion: `manual` in `App`, since the boot's
+events stay as they were), and to the failure when a boot fails, so no spinner runs forever; "Open
+the player" brings it back for the boot. On `ready` the canvas fades in over 600 ms and the loader
+fades out with it (`.cdp-scene.is-live ~ .cdp-loader`: the loader comes after the scene layer in
+the DOM, so it also draws over the invisible canvas, with `pointer-events: none`), then unmounts.
 
 ## Tests
 
 Unit tests (`src/**/*.test.ts`, node environment, run by the root `pnpm test`):
 
 - the shell: `App.test.ts` and `ssr.test.ts` (the server render: the collection and its tracks, the
-  state script, the fonts and the app's CSS, the head on a collection route only, the poster as the
-  one high-priority image, no canvas, a render that still completes when Spotify fails or hangs),
-  `ssr-graph.test.ts` (the import graphs), `ssr-state.test.ts`, `boot.test.ts`, `autoplay.test.ts`,
-  `failure.test.ts`, `webgl.test.ts`, `shell/EnterButton.test.ts`, `shell/NowPlaying.test.ts` (the
-  card's controls in Tab order, the switches' `aria-pressed`, the slider's numbers and when it is
-  disabled; its `change` handling needs a DOM, so that is by hand), `shell/LinkBar.test.ts` (Retry
-  beside an error, the title after a failed first load, `copyText`), `shell/Tracklist.test.ts`
-  (the empty shelf), `capture.test.ts` and `assets/poster/poster.test.ts`;
+  state script, the fonts and the app's CSS, the head on a collection route only, the loader in the
+  scene's place with no `<picture>`, no `<img>`, no `fetchpriority` and no canvas, "Open the player"
+  left for after the page settles, a render that still completes when Spotify fails or hangs),
+  `ssr-graph.test.ts` (the import graphs), `ssr-state.test.ts`, `boot.test.ts` (the phases from
+  `waiting`), `autoplay.test.ts`, `failure.test.ts`, `webgl.test.ts`, `shell/EnterButton.test.ts`,
+  `shell/Loader.test.ts` (the disc and the line), `shell/NowPlaying.test.ts` (the card's controls
+  in Tab order, the switches' `aria-pressed`, the slider's numbers and when it is disabled; its
+  `change` handling needs a DOM, so that is by hand), `shell/LinkBar.test.ts` (Retry beside an
+  error, the title after a failed first load, `copyText`), `shell/Tracklist.test.ts` (the empty
+  shelf) and `styles/app-css.test.ts` (the loader plain from the first paint, its spin and its
+  fade, `FADE_MS` equal to both transitions, reduced motion);
 - routes and personalisation: `routes.test.ts`, `route-controller.test.ts`, `persist.test.ts`,
   `spotify/link.test.ts`;
 - data: `spotify/embed.test.ts` (fixture pages for a playlist, a track, an artist and the not-found
@@ -523,16 +530,16 @@ Unit tests (`src/**/*.test.ts`, node environment, run by the root `pnpm test`):
   `server/initial.test.ts` (the shared budget, the cache and its cap, the log);
 - playback: `playback/sequencer.test.ts`, `embed-controller.test.ts` (ended detection, the script
   loader, late events, the rewind and the seeks, the first load, the error log), `engine.test.ts`
-  (the end watchdog on injected timers, Retry's second ask), `bridge.test.ts`, `view.test.ts`;
-- the scene: `scene/model-contract.test.ts` (the committed GLB), `glb.test.ts`, `materials.test.ts`,
-  `rig.test.ts`, `director.test.ts`, `swap-controller.test.ts`, `framing.test.ts`,
-  `controls.test.ts`, `interaction.test.ts`, `orbit.test.ts`, and `textures/` (`grain`, `images`,
-  `layout`, `paint`, `painter`).
+  (the end watchdog on injected timers, Retry's second ask), `bridge.test.ts`, `view.test.ts` (with `loaderLine`);
+- the scene: `scene/model-contract.test.ts` (the committed GLB), `model.test.ts`
+  (`downloadFraction`), `glb.test.ts`, `materials.test.ts`, `rig.test.ts`, `director.test.ts`,
+  `swap-controller.test.ts`, `framing.test.ts`, `controls.test.ts`, `interaction.test.ts`,
+  `orbit.test.ts`, and `textures/` (`grain`, `images`, `layout`, `paint`, `painter`).
 
-**By hand:** `art:build` and `capture:poster` (above), Lighthouse, and a pass in a real browser:
-the default page, a pasted playlist and album, the error messages, every control (the DOM card, the
-3D keys, the knob, the keyboard), the orbit, the poster's hand-over, reduced motion, WebGL off and
-the embed blocked. Logged-in full tracks, Safari, Firefox (the Seek slider's `::-moz-range-*`
+**By hand:** `art:build` (above), Lighthouse, and a pass in a real browser: the default page, a
+pasted playlist and album, the error messages, every control (the DOM card, the 3D keys, the knob,
+the keyboard), the orbit, the loader's hand-overs (its count over a slow network, the fade),
+reduced motion, WebGL off and the embed blocked. Logged-in full tracks, Safari, Firefox (the Seek slider's `::-moz-range-*`
 rules), real phones and a real GPU need the owner's browsers. In headless Chromium on SwiftShader a
 Playwright click waits for its element to hold still over two frames (seconds while the scene
 draws), and two touch taps reach the page 500 ms or more apart, so a timed press (Previous within
@@ -541,16 +548,18 @@ that seeks, with the scene drawing slowly, pauses the track while it looks aroun
 
 **Lighthouse.** The page is one of the audited paths (`/projects/cd-player`, the 13th of
 `AUDITED_PATHS` in `scripts/lighthouse/config.cjs`), so `LH_SHARD=13/13` audits it alone (the index
-moves when a path is added). When Chrome renders in software, as on the GitHub runner, the page
-has, at the time of writing, scored at the top of all four categories on mobile and on desktop,
-with no blocking time and no layout shift: the poster waits, and the embed loads nothing before a
-press, so no third-party cookie is set. The LCP is the now-playing card's note, `.cdp-now__note`,
-which is plain from the first paint, as the monorepo's rule asks; keep it so. On a machine with a
-GPU Chrome opens the scene by itself during the run, and the scene's boot costs desktop a few
-points of Performance (blocking time). To measure what the runner measures there, add
-`--disable-gpu` to the `chromeFlags` of a copy of `lighthouserc.cjs`. A Spotify failure during a
-run (the proxy's 502 for a prefetch) logs a console error, which costs that run Best Practices
-points.
+moves when a path is added). When Chrome renders in software, as on the GitHub runner, nothing
+boots during the run: the loader gives way to "Open the player" once the page settles, and the
+embed loads nothing before a press, so no third-party cookie is set. There is no image to wait for:
+the backdrop's art covers the whole viewport, which Chrome does not count for LCP, so the LCP is
+text, the now-playing card's note (`.cdp-now__note`), the largest block on the first screen and
+plain from the first paint, as the monorepo's rule asks; keep it so. The loader's line and "Open
+the player" are single short lines, far smaller than the note: neither can take the LCP from it,
+not even "Open the player", which appears only once the page has settled. On a machine with a GPU
+Chrome opens the scene by itself during the run, and the scene's boot costs desktop a few points of
+Performance (blocking time). To measure what the runner measures there, add `--disable-gpu` to the
+`chromeFlags` of a copy of `lighthouserc.cjs`. A Spotify failure during a run (the proxy's 502 for
+a prefetch) logs a console error, which costs that run Best Practices points.
 
 ## Deploying
 

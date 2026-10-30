@@ -62,18 +62,22 @@ describe('renderHeroSSR', () => {
     expect(result.head).toBeUndefined();
   });
 
-  it('renders the poster as the one high-priority image, and no canvas', async () => {
+  it("renders the loader in the scene's place, and no picture or canvas", async () => {
     stubSpotify();
-    const { html } = await renderHeroSSR({ config: { route: '/' } });
-    const picture = /<picture class="cdp-poster">[\s\S]*?<\/picture>/.exec(html)?.[0] ?? '';
-    // renderToString keeps the JSX casing (`fetchPriority`); the browser reads it case-insensitively.
-    expect(html.match(/fetchpriority="high"/gi)).toHaveLength(1);
-    expect(picture).toMatch(/<img\b[^>]*fetchpriority="high"/i);
-    expect(picture).toContain('landscape-1920.webp');
-    expect(picture).toContain('landscape-2560.avif 2560w');
-    expect(picture).toContain('portrait-750.avif 750w');
-    expect(picture).toContain('media="(max-aspect-ratio: 1/1)"');
+    const { html, css } = await renderHeroSSR({ config: { route: '/' } });
+    const loader = /<div class="cdp-loader">[\s\S]*?<\/div>/.exec(html)?.[0] ?? '';
+    expect(loader).toMatch(/<svg class="cdp-loader__disc"[^>]*aria-hidden="true"/);
+    expect(loader).toContain('<p class="cdp-loader__line">Loading the player</p>');
+    // Nothing on the first screen is a picture: no <picture>, no <img>, no high-priority fetch.
+    expect(html).not.toContain('<picture');
+    expect(html).not.toContain('<img');
+    expect(html).not.toContain('cdp-poster');
+    expect(html).not.toMatch(/fetchpriority/i);
+    // "Open the player" waits for the page to settle: the server shows the loader alone.
+    expect(html).not.toContain('Open the player');
     expect(html).not.toContain('<canvas');
+    // The stylesheet the host inlines spins the disc from the first paint.
+    expect(css).toMatch(/\.cdp-loader__disc\s*\{[^}]*animation:\s*cdp-spin/);
   });
 
   it('still renders, without a head, when Spotify fails or hangs', async () => {

@@ -16,8 +16,8 @@ import { Backdrop } from './shell/Backdrop';
 import { EnterButton } from './shell/EnterButton';
 import { Hud } from './shell/Hud';
 import { LinkBar } from './shell/LinkBar';
+import { Loader } from './shell/Loader';
 import { NowPlaying } from './shell/NowPlaying';
-import { Poster } from './shell/Poster';
 import { SceneHost } from './shell/SceneHost';
 import { Tracklist } from './shell/Tracklist';
 import { canRetry, createSpotifyClient, requestErrorMessage } from './spotify/client';
@@ -26,7 +26,10 @@ import { backdropFor, nowPlayingFor } from './view';
 
 const log = createLogger({ scope: 'cd-player' });
 
-/** The canvas's fade-in over the poster: .cdp-scene's transition in styles/app.css. */
+/**
+ * The canvas's fade-in, and the loader's fade-out with it: .cdp-scene's and .cdp-loader's
+ * transitions in styles/app.css (styles/app-css.test.ts holds the three equal).
+ */
 const FADE_MS = 600;
 
 export interface AppProps {
@@ -63,7 +66,12 @@ export default function App({ controller, initial = null, assetBase = '' }: AppP
   }));
   const { engine, snapshot } = usePlayerEngine(deps, initial, ref);
   const [boot, dispatchBoot] = useReducer(bootReducer, INITIAL_BOOT);
-  const [posterGone, setPosterGone] = useState(false);
+  // The page settled and the scene did not start by itself (a software rasteriser, reduced
+  // motion): "Open the player" stands where the loader was until the visitor starts it.
+  const [manual, setManual] = useState(false);
+  // The GLB's download while the scene boots, 0–1, or null while its size is unknown.
+  const [progress, setProgress] = useState<number | null>(null);
+  const [loaderGone, setLoaderGone] = useState(false);
   const live = boot.phase === 'live';
   // "Open the player" and "Try again". A failure that says `reload` (a scene chunk that would not
   // load) cannot be retried in place, so its button, "Reload the page", reloads the page.
@@ -75,31 +83,35 @@ export default function App({ controller, initial = null, assetBase = '' }: AppP
   const onReady = useCallback(() => dispatchBoot({ type: 'ready' }), []);
   const onFail = useCallback((error: unknown) => {
     log.error('cd-player.scene-failed', { error: String(error) });
+    // "Try again" boots from nothing: its loader never shows the failed boot's count.
+    setProgress(null);
     dispatchBoot({ type: 'fail', failure: describeFailure(error) });
   }, []);
 
-  // On a hardware GPU the player opens by itself once the page has settled; elsewhere the poster
-  // waits for the visitor (src/autoplay.ts). `autostart` only ever leaves the poster.
+  // On a hardware GPU the player opens by itself once the page has settled; elsewhere the page
+  // waits for the visitor (src/autoplay.ts). `autostart` only ever leaves `waiting`.
   useEffect(
     () =>
       whenSettled(() => {
         if (shouldAutoplay(readAutoplaySignals())) dispatchBoot({ type: 'autostart' });
+        else setManual(true);
       }),
     [],
   );
 
-  // The poster stays under the canvas until the fade-in is over, and comes back with a failure.
+  // The loader fades out with the canvas's fade-in and goes once it is over; the next boot brings
+  // it back.
   useEffect(() => {
     if (!live) {
-      setPosterGone(false);
+      setLoaderGone(false);
       return;
     }
-    const id = setTimeout(() => setPosterGone(true), FADE_MS);
+    const id = setTimeout(() => setLoaderGone(true), FADE_MS);
     return () => clearTimeout(id);
   }, [live]);
 
   /**
-   * A visitor's action: it also opens the scene from the poster (the reducer ignores `autostart`
+   * A visitor's action: it also starts the scene while it waits (the reducer ignores `autostart`
    * anywhere else, so a failed boot is retried by "Try again" alone, never by another press).
    */
   const act = useCallback(
@@ -186,10 +198,13 @@ export default function App({ controller, initial = null, assetBase = '' }: AppP
     if (shelfError) setTracksOpen(true);
   }
   const retryInput = linkError?.retry ?? null;
+  // The loader holds the scene's place while the page settles, while the scene boots and while the
+  // canvas fades in; "Open the player" or the failure takes it otherwise.
+  const showLoader =
+    (boot.phase === 'waiting' && !manual) || boot.phase === 'booting' || (live && !loaderGone);
   return (
     <div className="cdp-root">
       <Backdrop artUrl={backdrop.artUrl} palette={backdrop.palette} />
-      {!posterGone && <Poster />}
       {(boot.phase === 'booting' || live) && (
         <SceneHost
           assetBase={remoteBase(assetBase)}
@@ -197,8 +212,11 @@ export default function App({ controller, initial = null, assetBase = '' }: AppP
           live={live}
           onReady={onReady}
           onFail={onFail}
+          onProgress={setProgress}
         />
       )}
+      {/* After the scene layer, so it draws over the invisible canvas and fades out with it. */}
+      {showLoader && <Loader progress={progress} />}
       <LinkBar
         collection={snapshot.collection}
         loading={snapshot.loading || linkBusy}
@@ -245,7 +263,7 @@ export default function App({ controller, initial = null, assetBase = '' }: AppP
         onSeek={(ms) => act({ type: 'SEEK', ms })}
       />
       <Hud />
-      <EnterButton phase={boot.phase} failure={boot.failure} onStart={start} />
+      {!showLoader && <EnterButton phase={boot.phase} failure={boot.failure} onStart={start} />}
     </div>
   );
 }
