@@ -27,7 +27,8 @@ The owner's decisions (2026-10-28), which the rest of this guide assumes:
   `/album/<id>`), so it can be shared, and `localStorage` brings it back on the visitor's next
   visit.
 - **The suitcase design** was approved from a Cycles render of the Blender scene (the still that
-  `art/blender/scripts/hero.py` makes). There is **no finish or colour picker**.
+  `art/blender/scripts/hero.py` makes). There is **no finish picker**; visitors pick one of four
+  colourways (see "Skins").
 - **No volume control**: the iFrame API has none, so the knob printed VOLUME scrubs the track.
 
 ## What it exposes
@@ -334,7 +335,8 @@ Blender; the role adds what glTF cannot say: leather (sheen, a light clearcoat a
 normal map made at runtime, `textures/grain.ts`), fabric, lining, plastic, matte, crystal
 (transmission 1, IOR 1.53, a faint specular so the booklet reads through it), metal, brushed
 (anisotropy), disc-data and foil (iridescence), gloss-black, emissive, print and screen. A name
-without a role falls back to plastic, but the contract test fails first. The studio is in
+without a role falls back to plastic, but the contract test fails first. A skin then recolours
+the materials `SKIN_ROLES` names, in place (see "Skins"). The studio is in
 `PlayerScene.tsx`: a PMREM'd `RoomEnvironment` (`scene.environmentIntensity` sets every material's
 reflections), a key light that casts (2048 px shadow map, 1024 on a narrow screen), a rim and a
 hemisphere light, AgX tone mapping, a device pixel ratio of at most 2 (1.5 on a narrow screen), a
@@ -476,6 +478,55 @@ the row's budget (see "Playback"), or the player tucks under them. A restyle mea
 collection loaded, at 1440 × 900, 1260 × 900, 1024 × 768, 834 × 1194 and 390 × 844, before and
 after.
 
+## Skins
+
+The player comes in four colourways: **Blush** (the default, the pink the design was approved
+in), **Sage**, **Cream** and **Cherry**. **Player**, after Share in the link bar, picks one.
+
+- **One file holds every colour**: `src/skins.json`, typed by `src/skins.ts` (three-free, so the
+  shell and the scene both use it): `SkinId`, `SkinRole`, `Skin` (`id`, `name`, `model`,
+  `accent`, `onAccent`, `palette`), `DEFAULT_SKIN`, `SKINS` in the picker's order and `skinById`,
+  which answers Blush for an id it does not know. A palette gives each role an sRGB hex:
+  `leather`, `trim`, `thread`, `lining`, `hardware`, `deck` and `grille`. `model` names the GLB;
+  the four share `assets/cd-player.glb`.
+- **Which material is which role**: `SKIN_ROLES` in `src/scene/material-roles.ts`. `leather`,
+  `thread` (the stitching), `lining` (the lid's inside), `deck` and `grille` (the slotted plate on
+  the front; the dark cloth behind it, `fabric`, stays dark) by their own names, and `gold`,
+  every metal fitting (the hinges, the latch, the feet, the tonearm's collar and weight, the
+  display's bezel), as `hardware`. No material is `trim` yet. The keys, the arm, the disc well,
+  the chrome, the knob, the speaker cloth and the prints keep Blender's colours in every skin.
+- **Recolouring in place** (`applySkin` in `src/scene/materials.ts`, through
+  `PlayerModel.applySkin`): each of those materials takes its role's hex through `Color.set`,
+  which reads a hex string as sRGB and stores three's linear working colour, the conversion
+  `lin()` makes in `cdkit.py`, so Blush's values give back the GLB's own colours; a leather
+  material's sheen follows its new base (`leatherSheen`: the base lifted 40 % toward white). Only
+  uniforms change: no reload, no texture, no shader. `PlayerScene` applies the skin in a layout
+  effect, before the model's first frame and on every change. A material the rig copies is not
+  recoloured, so keep skin roles off the discs and the cases. A skin whose `model` differs from
+  the loaded one would load that model instead (the load effect follows it); no skin has one
+  yet.
+- **The accent**: `App` sets `--cdp-accent` and `--cdp-on-accent` inline on `.cdp-root` from the
+  skin's `accent` and `onAccent`; the stylesheet's own values are a fallback that never shows.
+  `skins.test.ts` keeps every pair readable: `onAccent` on `accent` at 4.5:1 or more, and
+  `accent` on the panels' colour, `rgb(16 12 14)`, at 3:1 or more (WCAG's ratio, computed in the
+  test).
+- **The picker** (`src/shell/SkinPicker.tsx`): a button showing the current skin's swatch (its
+  leather), named "Player colour: Blush" and so on, that opens a popover holding the four as a
+  radio group. The arrow keys move and choose at once (they wrap), Home and End go to the first
+  and the last; the choice is `aria-checked` and a tick, not colour alone. Escape closes it and
+  gives focus back to the button, as the button itself does; a click or tap outside, or Tab out
+  of it, closes it. On a phone the button is the swatch alone, so the link field keeps its width.
+  The server markup is always the closed picker.
+- **Persistence**: `localStorage` key **`ncam.cd-player.skin`** (`SKIN_KEY`, `readSkin` and
+  `writeSkin` in `src/persist.ts`, through `safeStorage`); an unknown value, nothing saved or
+  blocked storage is Blush. The server and the first client render use Blush, so the markup
+  matches; the saved skin applies right after hydration (the accent can show Blush for that one
+  frame; the scene, which mounts later, boots in the saved skin). A skin is never in the URL, so
+  a shared link never imposes the sharer's colours, and the scene never reads storage: `App`
+  hands it `skin` (`PlayerSceneProps.skin`).
+- **The live check's probe**: in dev builds only, `window.__cdpSkinColours()` returns the live
+  model's recoloured materials as sRGB hex (`skinColours` in `materials.ts`).
+
 ## Art pipeline (`art/`)
 
 ```
@@ -565,8 +616,10 @@ Unit tests (`src/**/*.test.ts`, node environment, run by the root `pnpm test`):
   paint, its spin and its fade, `FADE_MS` equal to both transitions, reduced motion; the hi-fi
   panel's tokens, the accent's uses, no other colour, pill, italic, Fraunces, layered shadow or blur
   over 8 px, square controls, the breakpoints and the phone rules);
-- routes and personalisation: `routes.test.ts`, `route-controller.test.ts`, `persist.test.ts`,
-  `spotify/link.test.ts`;
+- routes and personalisation: `routes.test.ts`, `route-controller.test.ts`, `persist.test.ts`
+  (the saved collection and the saved skin), `spotify/link.test.ts`, `skins.test.ts` (a colour
+  for every role in every skin, the colours' format, the accents' contrast, `skinById`) and
+  `shell/SkinPicker.test.ts` (the picker's markup and its keys);
 - data: `spotify/embed.test.ts` (fixture pages for a playlist, a track, an artist and the not-found
   page, and layout changes), `spotify/types.test.ts`, `spotify/client.test.ts` (the messages,
   `canRetry`), `server/spotify-handler.test.ts` (statuses, cache headers, CORS, the 502's log) and
