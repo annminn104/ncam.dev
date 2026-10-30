@@ -145,7 +145,7 @@ origin, makes one request per item at a time, keeps answers for the page's life 
 kept) and is seeded with what the server render fetched. A 404 reads "We couldn't open that
 playlist. It may be private or deleted." (or "that album": `requestErrorMessage` names the type
 asked for), anything else "Spotify didn't answer. Try again in a moment." The engine fetches the
-details and artist of the current track and the next three (`PREFETCH` in
+details and artist of the current track and the next five (`PREFETCH` in
 `src/playback/engine.ts`).
 
 **Retry** (`canRetry` in `client.ts`: a 502, a stall the proxy turned into one, the network, a
@@ -355,27 +355,87 @@ screen), a rim and a hemisphere light, AgX tone mapping, a device pixel ratio of
 a narrow screen), a transparent canvas and a shadow-only floor, so the page's backdrop shows round
 the player.
 
-**The rig** (`src/scene/rig.ts`, `rigFor`, one per model): **two discs and two cases**, so one pair
-can leave while the next arrives, each with its own copies of `art_disc` and `art_booklet` so they
-print differently. Disc `i` belongs to case `i`; `lidCase` is the case shown in the lid, `seated`
-the disc on the spindle (null before the first play), and `swapping` a change in progress (the
-texture hook leaves the lid alone meanwhile). The discs live at the root and fly in world space.
+**The rig** (`src/scene/rig.ts`, `rigFor`, one per model): **seven disc copies** (one on the
+spindle, five in the rack, one leaving) and **one crystal case**, each copy with its own `art_disc`
+material so each prints its own track. The copies live at the root and move in world space between
+the spindle (`disc_seat`) and the rack's slots (`rack_slot_0` … `rack_slot_4`, empties under
+`lid_hinge`, each the pose of a disc in it; slot `i` holds `view.upcoming[i]`). Slot 0 is the
+lowest and the frontmost, nearest the deck; each slot above it is 20 mm higher, 1.6 mm nearer the
+lining and leans out 1.5° less, so each disc stands behind the one below it, and the queue
+advancing moves each disc a slot down the lid. The ways follow from that: a disc flying to or from
+the spindle leaves one place and reaches the other along each one's normal (a cubic Bézier whose
+handles reach 8 cm, out past the lid's rim), and it takes off from a slot only when nothing stands
+in front of it; between slots a disc moves in a straight line (with neighbours moving 60 ms apart
+the gaps only widen, as between discs further apart, where a pop-out would cross them); a rack
+disc leaves and arrives by shrinking or growing where it stands (any way out of the lid would pass
+through the discs in front); a disc leaving the spindle rises and flies aside to the left,
+shrinking away, and one from the side comes in the same way. The case stays at `case_seat` and
+only turns over for a new booklet: it rises out of its seat by the reach of its half-width and a
+centimetre (measured from its meshes at load, so it never cuts into the lid), turns over about its
+own vertical axis and back, and settles, and it turns only while no disc flies to or from the
+spindle. The booklet has two prints, the one that shows and the next turn's (`bookletFront`),
+swapped as the case passes edge-on. What the stage holds is plain data the rig carries
+(`src/scene/stage.ts`, three-free): the `Shelf` (the copy on the spindle and in each slot, the
+track each carries, the booklet's track, the collection) and where the last pose left the arm.
 
-**The director's timelines** (`src/scene/director.ts`, pure functions of the time, tested):
-`insert`, the first play (1.1 s: the lid's case opens, its disc flies down onto the spindle, the
-case closes, the arm swings in and lowers), and `change` (2.8 s: the arm lifts and swings to its
-rest; the disc rises and flies back into the lid's case, which opens and closes on it; that case
-lifts out of the tray, flies aside and shrinks away while the next track's case grows in from the
-other side, opens, and its disc flies down; the arm swings in and lowers). `restingPose` holds
-between changes: the arm on the disc while a track is loaded, 200 rpm while it plays.
+**How a change reads** (`classifyChange` in `stage.ts`). The bridge hands the scene only
+`swap(to)`, and the engine publishes the view the change leads to before it asks, so the scene
+compares `to` and that view with what its shelf holds: the track in the player is the new
+`upcoming[0]` → **prev**; `to` is in slot 0 → **first** (nothing on the spindle) or **next** (a
+natural end too); `to` is in slot `k` ≥ 1 → **pick**; anything else, an empty rack included →
+**side**; a collection whose name or subtitle differs → **collection**. Tracks match by id: of two
+slots holding a track a playlist has twice, the one whose next slot holds the new `upcoming[0]` is
+the one played, else the first; a two-track list on Repeat reads Next as prev. A view that changes
+with no swap (a new collection, Shuffle, Repeat) is followed each frame between changes, as
+**collection** or **restack**. Whatever the reading, every change ends with the shelf exactly as
+the view says: a slot whose incoming disc does not hold its track gets a new disc.
+
+**The director's timelines** (`src/scene/director.ts`: a plan of moves per change, and pure
+functions of the time, tested). The arm moves as it always has: it lifts and swings to its rest over
+the first 400 ms and swings back in and lowers over 2400–2800 ms of a 2.8 s change, the spin
+following it.
+
+- _first_ (1.6 s): slot 0's disc flies down onto the spindle (100–800 ms), the discs behind it each
+  move a slot nearer (from 450 ms, slot 1's first, 60 ms apart), a new disc grows into slot 4
+  (1000–1350), the arm swings in and lowers (1150–1500);
+- _next_ (2.8 s, a track's natural end too): the spindle's disc rises and flies aside (450–1050),
+  slot 0's disc flies down (900–1600), the rack advances (from 1250) and a new disc grows into
+  slot 4 (1850–2200), the case turns for the new booklet once the disc has landed (1600–2500);
+- _prev_ (2.8 s): the case turns first (300–1200); slot 4's disc shrinks away (400–700) and the
+  rack moves back a slot (from 700, the top disc first), the spindle's disc goes back into slot 0
+  (1200–1900), the previous track's disc comes in from the side onto the spindle (1700–2350);
+- _pick_ (2.8 s): the discs in front of the picked one shrink away (from 300 ms, 90 ms apart) and
+  the spindle's leaves, the picked one flies down (900–1600), the ones behind it close the gap
+  (from 1250) and new ones grow in above them (from 1700, 90 ms apart), the case turns
+  (1600–2500);
+- _side_ (2.8 s, also a swap into another collection): the spindle's disc leaves, the track comes
+  in from the side (1100–1800), the slots whose track changes reprint as a cascade (shrinking from
+  450 ms and growing from 1500 ms, 90 ms apart), the case turns (1800–2700);
+- _cascade_ (1.6 s, a view that changed with no swap): the changed slots shrink from 0 ms and new
+  discs grow in from 800 ms, 90 ms apart; the spindle's disc leaves (450–1050, the arm lifting off
+  first) when nothing is in the player any more, and the case turns after it (1050–1950);
+  otherwise the arm holds its pose (Shuffle while a track plays never lifts it).
+
+The case's turn takes 900 ms: it rises for 200, turns over for 250, back for 250 and settles for
+200, and the booklet's print swaps as it passes edge-on, 325 ms in (`FLIP_EDGE_MS`). An arriving
+disc reuses a copy that went out of sight at least 200 ms before (`PRINT_LEAD_MS`), a spare one
+first. `director.test.ts` walks every timeline for these rules: nothing in front of a disc taking
+off, a slot empty before a disc comes into it, no disc flying while the case turns. `restingPose`
+holds between changes: every copy where the shelf puts it, the arm on the disc while a track is
+loaded, 200 rpm while it plays.
+
 `src/scene/swap-controller.ts` is the bridge's swapper, with no React and an injected clock so node
 tests drive it, and every change it runs settles: a new change first ends the one in progress, a
-change waits at most 1.5 s for its prints (`PRINT_WAIT_MS`), a change asked for in a hidden page
-finishes at once, a running one also ends on the clock (its duration + 250 ms) when no frame comes,
-and a teardown settles the one in progress at once. `seat(view)` puts the lid's disc on the spindle
-when a track plays with no change for it (the scene booted mid-playback, or Play reloaded the
-current track after its player failed). `src/scene/useDirector.ts` draws the poses in R3F's frame
-loop.
+change waits at most 1.5 s (`PRINT_WAIT_MS`) for its first prints and for the pictures of those it
+prints on the way (`preload`), a change asked for in a hidden page finishes at once, a running one
+also ends on the clock (its duration + 250 ms) when no frame comes, and a teardown settles the one
+in progress at once. A change gives out its later prints as its timeline reaches them (a reused
+copy once it is out of sight, a disc moving into slot 0 again at 1024 px as it moves), and all of
+them at once if it ends early. `seat(view)` fills the shelf at once as the scene boots (the track
+in the player on the spindle, mid-playback included; the rack; the booklet) and prints it;
+`follow(view)` runs each frame. `src/scene/useDirector.ts` draws the poses in R3F's frame loop and,
+on the dev server only, puts `window.__cdpStage()` on the page: the shelf, what each copy is
+printed with and at what size, and the change in progress.
 
 **The VU strip** (`src/scene/vu.ts`, `vu-materials.ts`, `useVu.ts`): the ten segments share one
 emissive `vu` material in the GLB and get a clone each at load (`vuMaterialsFor`, once per model,
@@ -390,19 +450,24 @@ GLB's, drawn outside the tone mapping (the `emissive` role). The audio stays ins
 iframe: the strip is paced, never measured.
 
 **Printed textures** (`src/scene/textures/`): canvases, painted in the page's own faces
-(`loadFaces` loads them first, because canvas text never asks the page for a font): each disc's
-label (1024 px square: the artist's photo, else the album art, with the title and artists round
-the rim in capitals), its case's booklet (1024 px square, the album art), the plate (1024 × 182,
-"NOW SPINNING" and the collection as dark engraving on brushed steel, `paintCard`), the luggage
-tag (512 × 768, the collection's name wrapped over up to three ruled lines, `paintTag` with
-`wrapLines`) and the LCD (256 × 112, the track and the time, repainted at most once a second).
-Before any art they show the page's own defaults. `canvasTexture` keeps **`flipY = false`**:
-`export.py` lays each print's UVs over its mesh's local bounds in Blender and the glTF exporter
-flips V, so the canvas's top row is the print's top, as GLTFLoader's own maps assume; with three's
-default `flipY` a print would come out flipped top to bottom. The last print started on a disc
-wins (`painter.ts`; the director aborts the older one), a print that fails or stalls never stops a
-change, a print made in the fallback faces is made again once the fonts are in, and `reprintFor`
-prints a track again when its art arrives after its change began.
+(`loadFaces` loads them first, because canvas text never asks the page for a font): each disc
+copy's label (the artist's photo, else the album art, with the title and artists round the rim in
+capitals: 1024 px on the spindle and in slot 0, 512 px in slots 1–4; a new size means a new
+texture), the booklet's two prints (1024 px square, the album art; `textures/useDiscPrints.ts`
+prints the discs and the booklet), the plate (1024 × 182, "NOW SPINNING" and the collection as
+dark engraving on brushed steel, `paintCard`), the luggage tag (512 × 768, the collection's name
+wrapped over up to three ruled lines, `paintTag` with `wrapLines`) and the LCD (256 × 112, the
+track and the time, repainted at most once a second). Before any art they show the page's own
+defaults. `canvasTexture` keeps **`flipY = false`**: `export.py` lays each print's UVs over its
+mesh's local bounds in Blender and the glTF exporter flips V, so the canvas's top row is the
+print's top, as GLTFLoader's own maps assume; with three's default `flipY` a print would come out
+flipped top to bottom. The last print started on a disc wins (`painter.ts`; the director aborts
+the older one); a copy printed for another track shows that track's name round the default label
+at once and its art once loaded, so no copy ever shows a track it no longer carries. A print that
+fails or stalls never stops a change, a print made in the fallback faces is made again once the
+fonts are in, and `reprintFor` prints a track again when its art arrives after its change began.
+The engine fetches the art of the current track and the next five (`PREFETCH` in `engine.ts`), so
+every slot prints its track's art once it arrives.
 
 **Controls and the orbit** (`src/scene/controls.ts`, `useControls.ts`, `interaction.ts`,
 `orbit.ts`, `CameraRig.tsx`):
@@ -439,11 +504,11 @@ screen stands further back and aims lower, clear of the now-playing card. `frami
 projects the model's box through it at every screen shape the layout has. Known misses: on a
 single-row screen shorter than about 760 px the bar can cover the lid's top rim.
 
-**Reduced motion** (`prefers-reduced-motion: reduce`): no autostart; a disc change is instant (the
-rig jumps to its end and the music still waits a 300 ms beat, `REDUCED_MOTION_MS`); the backdrop's
-cross-fade, the tracklist's equaliser, the loader's spin, the canvas's fade-in (and the loader's
-fade-out) and the phone sheet's slide are off (`src/styles/app.css`). The disc still spins while a
-track plays, and the orbit still eases.
+**Reduced motion** (`prefers-reduced-motion: reduce`): no autostart; a disc change and a cascade
+in the rack are instant (the rig jumps to its end and the music still waits a 300 ms beat,
+`REDUCED_MOTION_MS`); the backdrop's cross-fade, the tracklist's equaliser, the loader's spin, the
+canvas's fade-in (and the loader's fade-out) and the phone sheet's slide are off
+(`src/styles/app.css`). The disc still spins while a track plays, and the orbit still eases.
 
 ## Personalisation
 
@@ -689,10 +754,10 @@ Unit tests (`src/**/*.test.ts`, node environment, run by the root `pnpm test`):
   loader, late events, the rewind and the seeks, the first load, the error log), `engine.test.ts`
   (the end watchdog on injected timers, Retry's second ask), `bridge.test.ts`, `view.test.ts` (with `loaderLine`);
 - the scene: `scene/model-contract.test.ts` (the committed GLB), `model.test.ts`
-  (`downloadFraction`), `glb.test.ts`, `materials.test.ts`, `rig.test.ts`, `director.test.ts`,
-  `swap-controller.test.ts`, `framing.test.ts`, `controls.test.ts`, `vu.test.ts`,
-  `vu-materials.test.ts`, `interaction.test.ts`, `orbit.test.ts`, and `textures/` (`grain`,
-  `images`, `layout`, `paint`, `painter`).
+  (`downloadFraction`), `glb.test.ts`, `materials.test.ts`, `stage.test.ts`, `rig.test.ts`,
+  `director.test.ts`, `swap-controller.test.ts`, `framing.test.ts`, `controls.test.ts`,
+  `vu.test.ts`, `vu-materials.test.ts`, `interaction.test.ts`, `orbit.test.ts`, and `textures/`
+  (`grain`, `images`, `layout`, `paint`, `painter`).
 
 **By hand:** `art:build` (above), Lighthouse, and a pass in a real browser: the default page, a
 pasted playlist and album, the error messages, every control (the DOM card, the 3D keys, the knob,
