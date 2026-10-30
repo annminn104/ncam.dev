@@ -1,3 +1,5 @@
+import type { SkinRole } from '../skins';
+
 /**
  * What each Blender material becomes in three (src/scene/materials.ts). The GLB carries the base
  * colour, roughness and metalness tuned in Blender; the role adds what glTF cannot say (sheen,
@@ -54,4 +56,20 @@ export const MATERIAL_ROLES: Readonly<Record<string, MaterialRole>> = {
   art_photo_b: 'print',
   card_print: 'print',
   lcd_screen: 'screen',
+};
+
+/**
+ * The materials a skin recolours (src/skins.ts), by GLB name: the skin's sRGB hex for the role
+ * replaces the base colour Blender gave them (applySkin in materials.ts). `grille` is the slotted
+ * plate on the front, not the dark cloth behind it (`fabric`); `gold` is every metal fitting (the
+ * hinges, the latch, the feet, the tonearm's collar and weight, the display's bezel). No material
+ * is `trim` in this model. Every other material keeps Blender's colour in every skin.
+ */
+export const SKIN_ROLES: Readonly<Record<string, SkinRole>> = {
+  leather: 'leather',
+  thread: 'thread',
+  lining: 'lining',
+  gold: 'hardware',
+  deck: 'deck',
+  grille: 'grille',
 };

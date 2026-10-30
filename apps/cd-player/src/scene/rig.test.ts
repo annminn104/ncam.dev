@@ -44,6 +44,7 @@ function fakeModel() {
     root,
     nodes: nodes as Partial<Record<RequiredNode, Object3D>> as Record<RequiredNode, Object3D>,
     slots: {} as Slots,
+    applySkin: vi.fn(),
     dispose,
   };
   return { model, label, booklet, dispose };

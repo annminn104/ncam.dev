@@ -1,5 +1,6 @@
 import {
   BoxGeometry,
+  Color,
   Group,
   LinearFilter,
   LinearMipmapLinearFilter,
@@ -10,10 +11,13 @@ import {
   Texture,
 } from 'three';
 import { describe, expect, it } from 'vitest';
+import { SKINS, skinById, type Skin } from '../skins';
 import { DYNAMIC_MATERIALS } from './contract';
-import { makeMaterial, upgradeMaterials } from './materials';
+import { applySkin, leatherSheen, makeMaterial, skinColours, upgradeMaterials } from './materials';
+import { SKIN_ROLES } from './material-roles';
 
-const meshOf = (name: string) => new Mesh(new BoxGeometry(), new MeshStandardMaterial({ name }));
+const meshOf = (name: string, color = '#ffffff') =>
+  new Mesh(new BoxGeometry(), new MeshStandardMaterial({ name, color }));
 
 describe('makeMaterial', () => {
   const source = new MeshStandardMaterial({ name: 'from_the_glb' });
@@ -84,5 +88,95 @@ describe('upgradeMaterials', () => {
     expect(second.material).toBe(first.material);
     expect(Object.keys(slots)).toEqual([]);
     dispose();
+  });
+});
+
+describe('leatherSheen', () => {
+  it('lifts a colour 40 % of the way to white, in the linear working colour', () => {
+    expect(leatherSheen(new Color(0, 0, 0)).toArray()).toEqual([0.4, 0.4, 0.4]);
+    expect(leatherSheen(new Color(1, 1, 1)).toArray()).toEqual([1, 1, 1]);
+  });
+
+  it('is the sheen the leather gets from its GLB colour', () => {
+    const root = new Group();
+    const mesh = meshOf('leather', '#e296a4');
+    root.add(mesh);
+    const upgraded = upgradeMaterials(root);
+    expect((mesh.material as MeshPhysicalMaterial).sheenColor.getHexString()).toBe(
+      leatherSheen(new Color('#e296a4')).getHexString(),
+    );
+    upgraded.dispose();
+  });
+});
+
+describe('applySkin', () => {
+  /** Every material a skin recolours, two no skin touches (in colours of their own), a print. */
+  function scene() {
+    const root = new Group();
+    for (const name of Object.keys(SKIN_ROLES)) root.add(meshOf(name));
+    root.add(meshOf('chrome', '#8090a0'), meshOf('btn', '#d0c0b0'), meshOf('art_disc'));
+    return { root, upgraded: upgradeMaterials(root) };
+  }
+  function materialOf(root: Group, name: string): MeshPhysicalMaterial {
+    for (const child of root.children) {
+      const material = (child as Mesh).material as MeshPhysicalMaterial;
+      if (material.name === name) return material;
+    }
+    throw new Error(`no ${name}`);
+  }
+
+  it('recolours every material SKIN_ROLES names to its role colour, on the same material', () => {
+    const { root, upgraded } = scene();
+    const before = root.children.map((child) => (child as Mesh).material);
+    for (const skin of SKINS) {
+      upgraded.applySkin(skin);
+      const expected = Object.fromEntries(
+        Object.entries(SKIN_ROLES).map(([name, role]) => [name, skin.palette[role]]),
+      );
+      expect(skinColours(root), skin.id).toEqual(expected);
+    }
+    root.children.forEach((child, i) => expect((child as Mesh).material).toBe(before[i]));
+    upgraded.dispose();
+  });
+
+  it('leaves every other material as the GLB made it', () => {
+    const { root, upgraded } = scene();
+    upgraded.applySkin(skinById('cherry'));
+    expect(materialOf(root, 'chrome').color.getHexString()).toBe('8090a0');
+    expect(materialOf(root, 'btn').color.getHexString()).toBe('d0c0b0');
+    expect(materialOf(root, 'art_disc').color.getHexString()).toBe('ffffff');
+    upgraded.dispose();
+  });
+
+  it('lifts the leather sheen from its new base, and leaves the lining its white one', () => {
+    const { root, upgraded } = scene();
+    for (const skin of SKINS) {
+      upgraded.applySkin(skin);
+      expect(materialOf(root, 'leather').sheenColor.getHexString(), skin.id).toBe(
+        leatherSheen(new Color(skin.palette.leather)).getHexString(),
+      );
+    }
+    expect(materialOf(root, 'lining').sheenColor.getHexString()).toBe('ffffff');
+    upgraded.dispose();
+  });
+
+  it('reads a hex as sRGB and keeps the linear colour Blender wrote into the GLB', () => {
+    const { root, upgraded } = scene();
+    const blush = skinById('blush');
+    const probe: Skin = { ...blush, palette: { ...blush.palette, leather: '#e296a4' } };
+    upgraded.applySkin(probe);
+    // Blender's lin(226, 150, 164): the GLB's baseColorFactor for leather.
+    const { r, g, b } = materialOf(root, 'leather').color;
+    expect(r).toBeCloseTo(0.76052, 4);
+    expect(g).toBeCloseTo(0.30499, 4);
+    expect(b).toBeCloseTo(0.37124, 4);
+    upgraded.dispose();
+  });
+
+  it('works on any material by its name', () => {
+    const deck = new MeshPhysicalMaterial({ name: 'deck' });
+    const cream = skinById('cream');
+    applySkin([deck], cream);
+    expect(deck.color.getHexString()).toBe(cream.palette.deck.slice(1));
   });
 });

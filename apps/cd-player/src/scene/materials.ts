@@ -15,11 +15,34 @@ import {
   type Object3D,
   type Texture,
 } from 'three';
+import type { Skin, SkinRole } from '../skins';
 import { DYNAMIC_MATERIALS, type DynamicMaterial } from './contract';
-import { MATERIAL_ROLES, type MaterialRole } from './material-roles';
+import { MATERIAL_ROLES, SKIN_ROLES, type MaterialRole } from './material-roles';
 import { leatherNormal } from './textures/grain';
 
 export type Slots = Record<DynamicMaterial, MeshPhysicalMaterial | MeshBasicMaterial>;
+
+/** The skin role of a GLB material, or undefined for one no skin recolours. */
+function skinRoleOf(name: string): SkinRole | undefined {
+  return Object.hasOwn(SKIN_ROLES, name) ? SKIN_ROLES[name] : undefined;
+}
+
+export interface UpgradedMaterials {
+  slots: Slots;
+  /** Recolours the skin's roles in place (applySkin, below). */
+  applySkin(skin: Skin): void;
+  dispose(): void;
+}
+
+const WHITE = new Color('#ffffff');
+
+/**
+ * The leather's sheen: its base lifted 40 % toward white, in three's linear working colour. A skin
+ * that changes the base brings the sheen with it, so every colourway keeps the same soft highlight.
+ */
+export function leatherSheen(base: Color, target: Color = new Color()): Color {
+  return target.copy(base).lerp(WHITE, 0.4);
+}
 
 function physical(
   source: MeshStandardMaterial,
@@ -51,7 +74,7 @@ export function makeMaterial(
         roughness: 0.55,
         sheen: 1,
         sheenRoughness: 0.45,
-        sheenColor: source.color.clone().lerp(new Color('#ffffff'), 0.4),
+        sheenColor: leatherSheen(source.color),
         clearcoat: 0.1,
         clearcoatRoughness: 0.4,
         normalMap: grain,
@@ -152,8 +175,39 @@ export function makeMaterial(
   }
 }
 
+/**
+ * Recolours `materials` in place for `skin`: each one SKIN_ROLES names takes its role's sRGB hex.
+ * `Color.set` reads a hex string as sRGB and stores three's linear working colour, the conversion
+ * Blender's lin() makes, so Blush's values give back the GLB's own colours. A leather material's
+ * sheen follows its new base. Every other material keeps its colour. Only uniforms change: no
+ * texture, no shader, no reload.
+ */
+export function applySkin(materials: Iterable<Material>, skin: Skin): void {
+  for (const material of materials) {
+    const role = skinRoleOf(material.name);
+    if (!role) continue;
+    const surface = material as MeshPhysicalMaterial;
+    surface.color.set(skin.palette[role]);
+    if (MATERIAL_ROLES[material.name] === 'leather') {
+      leatherSheen(surface.color, surface.sheenColor);
+    }
+  }
+}
+
+/** The materials under `root` a skin recolours, by name, as sRGB hex (for the live check). */
+export function skinColours(root: Object3D): Record<string, string> {
+  const colours: Record<string, string> = {};
+  root.traverse((object) => {
+    const mesh = object as Mesh;
+    if (!mesh.isMesh) return;
+    const material = mesh.material as MeshStandardMaterial;
+    if (skinRoleOf(material.name)) colours[material.name] = `#${material.color.getHexString()}`;
+  });
+  return colours;
+}
+
 /** Swaps every GLB material for its role's three material, once per name; keeps the printed ones. */
-export function upgradeMaterials(root: Object3D): { slots: Slots; dispose(): void } {
+export function upgradeMaterials(root: Object3D): UpgradedMaterials {
   const size = 256;
   const grain = new DataTexture(leatherNormal(size), size, size, RGBAFormat);
   grain.wrapS = grain.wrapT = RepeatWrapping;
@@ -187,6 +241,7 @@ export function upgradeMaterials(root: Object3D): { slots: Slots; dispose(): voi
   });
   return {
     slots: slots as Slots,
+    applySkin: (skin: Skin) => applySkin(made.values(), skin),
     dispose: () => {
       for (const material of made.values()) material.dispose();
       grain.dispose();

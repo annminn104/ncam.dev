@@ -1,6 +1,7 @@
 import type { Group, Mesh, Object3D } from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
+import type { Skin } from '../skins';
 import { REQUIRED_NODES, type RequiredNode } from './contract';
 import { upgradeMaterials, type Slots } from './materials';
 
@@ -15,6 +16,8 @@ export interface PlayerModel {
   root: Group;
   nodes: Record<RequiredNode, Object3D>;
   slots: Slots;
+  /** Recolours the model for `skin` in place: no reload, no new download (materials.ts). */
+  applySkin(skin: Skin): void;
   dispose(): void;
 }
 
@@ -67,6 +70,7 @@ export async function loadPlayerModel(
     root,
     nodes,
     slots: materials.slots,
+    applySkin: materials.applySkin,
     dispose: () => {
       materials.dispose();
       root.traverse((object) => {

@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { DYNAMIC_MATERIALS, REQUIRED_NODES } from './contract';
 import { readGlbJson, triangleCount } from './glb';
-import { MATERIAL_ROLES } from './material-roles';
+import { MATERIAL_ROLES, SKIN_ROLES } from './material-roles';
 
 const GLB = fileURLToPath(new URL('../../public/assets/cd-player.glb', import.meta.url));
 /** Box-mapped in export.py (one UV unit per 5 cm), for the grain the page tiles over them. */
@@ -21,6 +21,11 @@ describe('public/assets/cd-player.glb (art/pipeline/build.mjs)', () => {
     const names = json.materials.map((material) => material.name ?? '');
     for (const name of DYNAMIC_MATERIALS) expect(names).toContain(name);
     for (const name of names) expect(MATERIAL_ROLES[name], name).toBeDefined();
+  });
+
+  it('has every material a skin recolours', () => {
+    const names = new Set(json.materials.map((material) => material.name ?? ''));
+    for (const name of Object.keys(SKIN_ROLES)) expect(names.has(name), name).toBe(true);
   });
 
   it('keeps the UVs of every printed and tiled primitive', () => {
