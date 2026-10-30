@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { createElement } from 'react';
 import { renderToString } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
@@ -74,5 +75,18 @@ describe('App (server render)', () => {
     expect(html).toContain('<p class="cdp-loader__line">Loading the player</p>');
     expect(html).not.toContain('Open the player');
     expect(html).not.toContain('<img');
+  });
+});
+
+describe('App (the loader and the scene layer)', () => {
+  it('draws the loader after the scene layer, so it fades out with the canvas', () => {
+    // `.cdp-scene.is-live ~ .cdp-loader` (styles/app.css) matches only a loader that comes later in
+    // the DOM than the scene layer. The server renders the waiting phase, which mounts no scene
+    // layer, so its markup cannot show the order: it is read from the JSX instead.
+    const source = readFileSync(new URL('./App.tsx', import.meta.url), 'utf8');
+    const scene = source.search(/<SceneHost\b/);
+    const loader = source.search(/<Loader\b/);
+    expect(scene, 'App.tsx renders <SceneHost>').toBeGreaterThan(-1);
+    expect(loader, 'App.tsx renders <Loader> after <SceneHost>').toBeGreaterThan(scene);
   });
 });

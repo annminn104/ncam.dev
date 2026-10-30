@@ -2,14 +2,20 @@
   --cdp-ink: #fff;
   --cdp-ink-soft: rgb(255 255 255 / 0.72);
   --cdp-ink-faint: rgb(255 255 255 / 0.5);
-  --cdp-glass: rgb(24 14 19 / 0.4);
-  --cdp-glass-hi: rgb(255 255 255 / 0.1);
+  --cdp-panel: rgb(16 12 14 / 0.88);
   --cdp-line: rgb(255 255 255 / 0.16);
-  --cdp-blush: #e296a4;
-  --cdp-gold: #ecc476;
-  --cdp-radius: 22px;
-  --cdp-display: 'Fraunces Variable', 'Fraunces Fallback', Georgia, serif;
+  --cdp-line-strong: rgb(255 255 255 / 0.32);
+  --cdp-hairline: rgb(255 255 255 / 0.08);
+  --cdp-control: rgb(255 255 255 / 0.06);
+  --cdp-control-hover: rgb(255 255 255 / 0.12);
+  --cdp-control-press: rgb(255 255 255 / 0.18);
+  --cdp-error: #ffb4ab;
+  --cdp-accent: #e8a3b0;
+  --cdp-on-accent: #2a1a1e;
+  --cdp-radius: 6px;
+  --cdp-radius-control: 4px;
   --cdp-ui: 'Manrope Variable', 'Manrope Fallback', system-ui, sans-serif;
+  --cdp-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   position: relative;
   isolation: isolate;
   min-height: 100dvh;
@@ -138,7 +144,7 @@
 }
 .cdp-loader__face {
   fill: rgb(255 255 255 / 0.12);
-  stroke: rgb(255 255 255 / 0.4);
+  stroke: var(--cdp-line-strong);
   stroke-width: 1;
 }
 .cdp-loader__sheen {
@@ -146,16 +152,18 @@
 }
 .cdp-loader__hub {
   fill: none;
-  stroke: rgb(255 255 255 / 0.4);
+  stroke: var(--cdp-line-strong);
   stroke-width: 1;
 }
 .cdp-loader__line {
   margin: 0;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 500;
+  line-height: 18px;
   font-variant-numeric: tabular-nums;
   color: var(--cdp-ink-soft);
   white-space: nowrap;
+  text-shadow: 0 1px 2px rgb(0 0 0 / 0.5);
 }
 @keyframes cdp-spin {
   to {
@@ -163,26 +171,28 @@
   }
 }
 
-/* ── glass surfaces ──────────────────────────────────────────────────────── */
+/* ── panels: near-solid, a hairline, one soft shadow ─────────────────────── */
 .cdp-bar,
 .cdp-tracks,
 .cdp-now {
   position: absolute;
   z-index: 3;
-  background: var(--cdp-glass);
+  background: var(--cdp-panel);
   border: 1px solid var(--cdp-line);
   border-radius: var(--cdp-radius);
-  box-shadow:
-    0 24px 70px rgb(0 0 0 / 0.28),
-    inset 0 1px 0 rgb(255 255 255 / 0.14);
-  backdrop-filter: blur(22px) saturate(1.4);
-  -webkit-backdrop-filter: blur(22px) saturate(1.4);
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.28);
+  /* Only so the text stays legible over the brightest art. */
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
 }
+/* The small labels: uppercase mono with letter spacing. */
 .cdp-eyebrow {
   margin: 0;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.18em;
+  font-family: var(--cdp-mono);
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 14px;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--cdp-ink-faint);
 }
@@ -196,19 +206,17 @@
   grid-template-columns: minmax(0, 1fr) minmax(300px, 520px);
   gap: 8px 24px;
   align-items: center;
-  padding: 14px 16px 14px 22px;
+  padding: 12px 14px 12px 18px;
 }
 .cdp-bar__title h1 {
-  /* The font's content area is taller than the 1.05 line box, and the ellipsis needs overflow:
+  /* Manrope's content area is taller than the 1.2 line box, and the ellipsis needs overflow:
      hidden, which would clip the tails of g, j, p, q and y. The padding extends the clip box
      downward; the negative margin takes its height back, so nothing moves. */
   padding-bottom: 0.1em;
-  margin: 2px 0 -0.1em;
-  font-family: var(--cdp-display);
-  font-size: clamp(22px, 2.4vw, 32px);
-  font-weight: 500;
-  font-style: italic;
-  line-height: 1.05;
+  margin: 4px 0 -0.1em;
+  font-size: clamp(20px, 1.9vw, 26px);
+  font-weight: 600;
+  line-height: 1.2;
   letter-spacing: -0.01em;
   white-space: nowrap;
   overflow: hidden;
@@ -217,6 +225,8 @@
 .cdp-bar__subtitle {
   margin: 2px 0 0;
   font-size: 13px;
+  font-weight: 500;
+  line-height: 1.35;
   color: var(--cdp-ink-soft);
 }
 .cdp-link {
@@ -226,20 +236,26 @@
 .cdp-link input {
   flex: 1;
   min-width: 0;
-  height: 42px;
-  padding: 0 16px;
+  height: 40px;
+  padding: 0 12px;
   font: inherit;
   font-size: 14px;
   color: var(--cdp-ink);
-  background: rgb(255 255 255 / 0.08);
+  background: rgb(255 255 255 / 0.04);
   border: 1px solid var(--cdp-line);
-  border-radius: 999px;
+  border-radius: var(--cdp-radius-control);
 }
 .cdp-link input::placeholder {
   color: var(--cdp-ink-faint);
 }
+.cdp-link input:hover {
+  border-color: var(--cdp-line-strong);
+}
+.cdp-link input:focus-visible {
+  border-color: var(--cdp-accent);
+}
 .cdp-link input[aria-invalid='true'] {
-  border-color: #ffb4bf;
+  border-color: var(--cdp-error);
 }
 .cdp-link__error {
   grid-column: 2;
@@ -247,37 +263,54 @@
   align-items: center;
   gap: 10px;
   font-size: 13px;
-  color: #ffd2d9;
+  line-height: 1.4;
+  color: var(--cdp-error);
 }
 .cdp-link__error p {
   margin: 0;
 }
 .cdp-button {
-  height: 42px;
-  padding: 0 18px;
+  height: 40px;
+  padding: 0 16px;
   font: inherit;
-  font-size: 14px;
-  font-weight: 700;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
   color: var(--cdp-ink);
-  background: rgb(255 255 255 / 0.1);
+  background: var(--cdp-control);
   border: 1px solid var(--cdp-line);
-  border-radius: 999px;
+  border-radius: var(--cdp-radius-control);
   cursor: pointer;
 }
+.cdp-button:hover:not(:disabled) {
+  background: var(--cdp-control-hover);
+  border-color: var(--cdp-line-strong);
+}
+.cdp-button:active:not(:disabled) {
+  background: var(--cdp-control-press);
+}
 .cdp-button--primary {
-  color: #2a1f24;
-  background: linear-gradient(180deg, #fff 0%, #f6dfe4 100%);
-  border-color: transparent;
+  color: var(--cdp-on-accent);
+  background: var(--cdp-accent);
+  border-color: var(--cdp-accent);
+}
+.cdp-button--primary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--cdp-accent) 88%, var(--cdp-ink));
+  border-color: color-mix(in srgb, var(--cdp-accent) 88%, var(--cdp-ink));
+}
+.cdp-button--primary:active:not(:disabled) {
+  background: color-mix(in srgb, var(--cdp-accent) 86%, rgb(0 0 0));
+  border-color: color-mix(in srgb, var(--cdp-accent) 86%, rgb(0 0 0));
 }
 .cdp-button:disabled {
-  opacity: 0.6;
+  opacity: 0.55;
   cursor: progress;
 }
 /* Retry beside the bar's error line, which it should not make much taller. */
 .cdp-button--small {
   flex: none;
   height: 28px;
-  padding: 0 12px;
+  padding: 0 10px;
   font-size: 12px;
 }
 
@@ -291,40 +324,55 @@
   flex-direction: column;
   overflow: hidden;
 }
+/* "TRACKS · 50": a small label over the list. Wide screens always show the drawer, so it only
+   toggles the phone's sheet. */
 .cdp-tracks__toggle {
   display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  padding: 18px 22px 12px;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  height: 48px;
+  padding: 0 18px;
   font: inherit;
-  font-family: var(--cdp-display);
-  font-size: 20px;
-  font-style: italic;
-  color: var(--cdp-ink);
+  font-family: var(--cdp-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--cdp-ink-soft);
   background: none;
   border: 0;
+  border-bottom: 1px solid var(--cdp-line);
   cursor: default;
 }
 .cdp-tracks__count {
-  font-family: var(--cdp-ui);
-  font-size: 12px;
-  font-style: normal;
   color: var(--cdp-ink-faint);
+}
+/* The middle dot is drawn, not read: its alternative text is empty. */
+.cdp-tracks__count::before {
+  content: '\00b7';
+  content: '\00b7' / '';
+  margin-right: 8px;
 }
 .cdp-tracks__list {
   flex: 1;
   margin: 0;
-  padding: 0 10px 12px;
+  padding: 4px 8px 8px;
   overflow-y: auto;
   list-style: none;
   scrollbar-width: thin;
+  scrollbar-color: var(--cdp-line-strong) transparent;
+}
+/* Flat rows, a hairline between them. */
+.cdp-tracks__list li + li {
+  border-top: 1px solid var(--cdp-hairline);
 }
 /* A first load that failed: why, and Retry, where the tracks would be. */
 .cdp-tracks__empty {
   display: grid;
   gap: 12px;
   justify-items: start;
-  padding: 4px 22px 22px;
+  padding: 16px 18px 18px;
   font-size: 13px;
   line-height: 1.45;
   color: var(--cdp-ink-soft);
@@ -333,25 +381,39 @@
   margin: 0;
 }
 .cdp-track {
+  position: relative;
   display: grid;
-  grid-template-columns: 30px minmax(0, 1fr) auto;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
   gap: 12px;
   align-items: center;
   width: 100%;
-  padding: 9px 12px;
+  padding: 8px 10px;
   font: inherit;
   text-align: left;
   color: var(--cdp-ink);
   background: none;
   border: 0;
-  border-radius: 14px;
+  border-radius: var(--cdp-radius-control);
   cursor: pointer;
 }
 .cdp-track:hover:not(:disabled) {
-  background: var(--cdp-glass-hi);
+  background: var(--cdp-control);
+}
+.cdp-track:active:not(:disabled) {
+  background: var(--cdp-control-hover);
 }
 .cdp-track.is-current {
-  background: rgb(255 255 255 / 0.14);
+  background: var(--cdp-control);
+}
+/* The playing row's 2 px bar. */
+.cdp-track.is-current::before {
+  content: '';
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  left: 0;
+  width: 2px;
+  background: var(--cdp-accent);
 }
 .cdp-track:disabled {
   opacity: 0.4;
@@ -359,7 +421,8 @@
 }
 .cdp-track__no,
 .cdp-track__time {
-  font-size: 12px;
+  font-family: var(--cdp-mono);
+  font-size: 11px;
   font-variant-numeric: tabular-nums;
   color: var(--cdp-ink-faint);
 }
@@ -376,33 +439,62 @@
 .cdp-track__title {
   font-size: 14px;
   font-weight: 600;
+  line-height: 1.35;
 }
 .cdp-track__artists {
   font-size: 12px;
+  line-height: 1.35;
   color: var(--cdp-ink-soft);
 }
+/* The explicit badge: a small outlined E. */
 .cdp-track__explicit {
-  margin-left: 6px;
-  padding: 0 4px;
-  font-size: 10px;
-  text-decoration: none;
-  color: #2a1f24;
-  background: var(--cdp-ink-soft);
-  border-radius: 3px;
-}
-.cdp-eq {
   display: inline-block;
-  width: 9px;
-  height: 9px;
-  background: var(--cdp-blush);
-  border-radius: 50%;
-  box-shadow: 0 0 10px var(--cdp-blush);
-  animation: cdp-pulse 900ms ease-in-out infinite alternate;
+  min-width: 14px;
+  margin-left: 6px;
+  padding: 0 3px;
+  font-family: var(--cdp-mono);
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 12px;
+  text-align: center;
+  text-decoration: none;
+  vertical-align: 1px;
+  color: var(--cdp-ink-soft);
+  border: 1px solid var(--cdp-line-strong);
+  border-radius: 2px;
 }
-@keyframes cdp-pulse {
+/* The playing row's equaliser: three bars, each at its own height when still. */
+.cdp-eq {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 10px;
+  vertical-align: -1px;
+}
+.cdp-eq span {
+  width: 2px;
+  height: 10px;
+  background: var(--cdp-accent);
+  transform-origin: 50% 100%;
+  animation: cdp-eq 900ms ease-in-out infinite alternate;
+}
+.cdp-eq span:nth-child(1) {
+  transform: scaleY(0.55);
+}
+.cdp-eq span:nth-child(2) {
+  transform: scaleY(1);
+  animation-delay: -300ms;
+}
+.cdp-eq span:nth-child(3) {
+  transform: scaleY(0.75);
+  animation-delay: -600ms;
+}
+@keyframes cdp-eq {
+  from {
+    transform: scaleY(0.25);
+  }
   to {
-    opacity: 0.4;
-    transform: scale(0.7);
+    transform: scaleY(1);
   }
 }
 
@@ -411,7 +503,7 @@
   left: 24px;
   bottom: 24px;
   width: min(400px, calc(100% - 48px));
-  padding: 18px;
+  padding: 16px;
 }
 .cdp-now__head {
   display: flex;
@@ -424,10 +516,9 @@
 }
 .cdp-now__title {
   margin: 4px 0 0;
-  font-family: var(--cdp-display);
-  font-size: 22px;
-  font-weight: 500;
-  line-height: 1.1;
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.25;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -435,6 +526,7 @@
 .cdp-now__artists {
   margin: 2px 0 0;
   font-size: 13px;
+  line-height: 1.35;
   color: var(--cdp-ink-soft);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -445,26 +537,46 @@
   gap: 6px;
   flex: none;
 }
-.cdp-round {
+/* The transport keys: 32 px squares with a hairline; Play in the accent. */
+.cdp-key {
   display: grid;
   place-items: center;
-  width: 40px;
-  height: 40px;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  padding: 0;
   color: var(--cdp-ink);
-  background: rgb(255 255 255 / 0.1);
+  background: var(--cdp-control);
   border: 1px solid var(--cdp-line);
-  border-radius: 50%;
+  border-radius: var(--cdp-radius-control);
   cursor: pointer;
 }
-.cdp-round--main {
-  width: 48px;
-  height: 48px;
-  color: #2a1f24;
-  background: linear-gradient(180deg, #fff 0%, #f6dfe4 100%);
-  border-color: transparent;
+.cdp-key svg {
+  width: 18px;
+  height: 18px;
 }
-/* The deck's Stop, Repeat and MODE keys and its knob, which are a few pixels wide in the 3D view on a
-   phone: the knob's seek slider, then the three small keys. This row takes the place of the old
+.cdp-key:hover {
+  background: var(--cdp-control-hover);
+  border-color: var(--cdp-line-strong);
+}
+.cdp-key:active {
+  background: var(--cdp-control-press);
+}
+.cdp-key--main {
+  color: var(--cdp-on-accent);
+  background: var(--cdp-accent);
+  border-color: var(--cdp-accent);
+}
+.cdp-key--main:hover {
+  background: color-mix(in srgb, var(--cdp-accent) 88%, var(--cdp-ink));
+  border-color: color-mix(in srgb, var(--cdp-accent) 88%, var(--cdp-ink));
+}
+.cdp-key--main:active {
+  background: color-mix(in srgb, var(--cdp-accent) 86%, rgb(0 0 0));
+  border-color: color-mix(in srgb, var(--cdp-accent) 86%, rgb(0 0 0));
+}
+/* The deck's Stop, Repeat and MODE keys and its knob, which are a few pixels wide in the 3D view on
+   a phone: the knob's seek slider, then the three small keys. This row took the place of the old
    progress bar (14 + 4 + 12 px) and may grow the card by 12 px at most, since a narrow screen's
    framing lifts the player clear of the card by a fixed aim (src/scene/framing.ts). */
 .cdp-now__row {
@@ -473,24 +585,29 @@
   gap: 6px;
   margin: 8px 0 6px;
 }
-.cdp-round--small {
+.cdp-key--small {
   position: relative;
-  flex: none;
   width: 28px;
   height: 28px;
-  padding: 0;
 }
-.cdp-round--small svg {
+.cdp-key--small svg {
   width: 14px;
   height: 14px;
 }
-/* A switch that is on is tinted and has a dot under its icon, so its state is not colour alone. */
-.cdp-round--small[aria-pressed='true'] {
-  color: var(--cdp-gold);
-  background: rgb(226 150 164 / 0.24);
-  border-color: var(--cdp-blush);
+/* A switch that is on takes the accent, with a dot under its icon, so its state is not colour
+   alone. */
+.cdp-key--small[aria-pressed='true'] {
+  color: var(--cdp-accent);
+  background: color-mix(in srgb, var(--cdp-accent) 14%, transparent);
+  border-color: var(--cdp-accent);
 }
-.cdp-round--small[aria-pressed='true']::after {
+.cdp-key--small[aria-pressed='true']:hover {
+  background: color-mix(in srgb, var(--cdp-accent) 22%, transparent);
+}
+.cdp-key--small[aria-pressed='true']:active {
+  background: color-mix(in srgb, var(--cdp-accent) 30%, transparent);
+}
+.cdp-key--small[aria-pressed='true']::after {
   content: '';
   position: absolute;
   bottom: 3px;
@@ -498,17 +615,18 @@
   width: 4px;
   height: 4px;
   background: currentcolor;
-  border-radius: 50%;
+  border-radius: 1px;
 }
 
-/* The seek slider is a native range input drawn as the 4 px bar it replaced, in a 28 px tall hit
-   area. `--cdp-ratio` (set inline) is how much is filled. The thumb shows on hover, on keyboard
-   focus, while pressed, and always where there is no hover; `--cdp-shown` is 1 then. Only then is
-   the thumb laid out, so at rest the bar fills exactly to the ratio, and with the thumb out the
-   fill ends under its centre, as the browser places it. Each engine's pseudo-elements are rules of
-   their own: a selector list with one it does not know is dropped whole. */
+/* The seek slider: a native range input drawn as a 2 px track in a 28 px tall hit area, filled in
+   the accent up to the position. `--cdp-ratio` (set inline) is how much is filled. The square thumb
+   shows on hover, on keyboard focus, while pressed, and always where there is no hover;
+   `--cdp-shown` is 1 then. Only then is the thumb laid out, so at rest the track fills exactly to the
+   ratio, and with the thumb out the fill ends under its centre, as the browser places it. Each
+   engine's pseudo-elements are rules of their own: a selector list with one it does not know is
+   dropped whole. */
 .cdp-now__seek {
-  --cdp-thumb: 14px;
+  --cdp-thumb: 10px;
   --cdp-shown: 0;
   --cdp-fill: calc(
     var(--cdp-thumb) / 2 * var(--cdp-shown) + (100% - var(--cdp-thumb) * var(--cdp-shown)) *
@@ -520,7 +638,6 @@
   margin: 0;
   padding: 0;
   background: none;
-  border-radius: 999px;
   cursor: pointer;
   -webkit-appearance: none;
   appearance: none;
@@ -537,44 +654,42 @@
 }
 .cdp-now__seek:disabled {
   cursor: default;
+  opacity: 0.55;
 }
 .cdp-now__seek::-webkit-slider-runnable-track {
-  height: 4px;
+  height: 2px;
   background:
-    linear-gradient(90deg, var(--cdp-blush), var(--cdp-gold)) 0 0 / var(--cdp-fill) 100% no-repeat,
-    rgb(255 255 255 / 0.14);
-  border-radius: 999px;
+    linear-gradient(var(--cdp-accent), var(--cdp-accent)) 0 0 / var(--cdp-fill) 100% no-repeat,
+    var(--cdp-line);
 }
 .cdp-now__seek::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
   width: calc(var(--cdp-thumb) * var(--cdp-shown));
   height: var(--cdp-thumb);
-  margin-top: calc((4px - var(--cdp-thumb)) / 2);
-  background: #fff;
+  margin-top: calc((2px - var(--cdp-thumb)) / 2);
+  background: var(--cdp-ink);
   border: 0;
-  border-radius: 50%;
-  box-shadow: 0 1px 4px rgb(0 0 0 / 0.4);
+  border-radius: 1px;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.35);
   transform: scale(var(--cdp-shown));
   transition: transform 120ms ease;
 }
 .cdp-now__seek::-moz-range-track {
-  height: 4px;
-  background: rgb(255 255 255 / 0.14);
-  border-radius: 999px;
+  height: 2px;
+  background: var(--cdp-line);
 }
 .cdp-now__seek::-moz-range-progress {
-  height: 4px;
-  background: linear-gradient(90deg, var(--cdp-blush), var(--cdp-gold));
-  border-radius: 999px;
+  height: 2px;
+  background: var(--cdp-accent);
 }
 .cdp-now__seek::-moz-range-thumb {
   width: calc(var(--cdp-thumb) * var(--cdp-shown));
   height: var(--cdp-thumb);
-  background: #fff;
+  background: var(--cdp-ink);
   border: 0;
-  border-radius: 50%;
-  box-shadow: 0 1px 4px rgb(0 0 0 / 0.4);
+  border-radius: 1px;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.35);
   transform: scale(var(--cdp-shown));
   transition: transform 120ms ease;
 }
@@ -585,7 +700,7 @@
   display: block;
   width: 100%;
   border: 0;
-  border-radius: 12px;
+  border-radius: var(--cdp-radius-control);
 }
 .cdp-now__note {
   margin: 10px 0 0;
@@ -608,15 +723,24 @@
   margin: 0;
   transform: translateX(-50%);
   font-size: 12px;
-  color: var(--cdp-ink-faint);
+  line-height: 18px;
+  color: var(--cdp-ink-soft);
   white-space: nowrap;
+  text-shadow: 0 1px 2px rgb(0 0 0 / 0.5);
 }
 .cdp-hud kbd {
-  padding: 1px 6px;
-  font: inherit;
-  font-size: 11px;
+  display: inline-block;
+  min-width: 20px;
+  padding: 0 5px;
+  font-family: var(--cdp-mono);
+  font-size: 10px;
+  line-height: 16px;
+  text-align: center;
+  text-shadow: none;
+  color: var(--cdp-ink);
+  background: var(--cdp-panel);
   border: 1px solid var(--cdp-line);
-  border-radius: 6px;
+  border-radius: var(--cdp-radius-control);
 }
 .cdp-gate {
   position: absolute;
@@ -626,24 +750,58 @@
   transform: translate(-50%, -50%);
   text-align: center;
 }
+/* A failure: its message on a panel, with its button when it has one. */
+.cdp-gate[role='alert'] {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  width: max-content;
+  max-width: min(340px, calc(100vw - 32px));
+  padding: 14px 16px;
+  background: var(--cdp-panel);
+  border: 1px solid var(--cdp-line);
+  border-radius: var(--cdp-radius);
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.28);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+.cdp-gate p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.45;
+}
 .cdp-enter {
-  height: 52px;
-  padding: 0 28px;
+  height: 44px;
+  padding: 0 22px;
   font: inherit;
-  font-size: 15px;
-  font-weight: 700;
-  color: #2a1f24;
+  font-size: 14px;
+  font-weight: 600;
   white-space: nowrap;
-  background: linear-gradient(180deg, #fff 0%, #f6dfe4 100%);
-  border: 0;
-  border-radius: 999px;
-  box-shadow: 0 18px 50px rgb(0 0 0 / 0.3);
+  color: var(--cdp-ink);
+  background: var(--cdp-panel);
+  border: 1px solid var(--cdp-line-strong);
+  border-radius: var(--cdp-radius-control);
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.28);
   cursor: pointer;
+}
+.cdp-enter:hover {
+  background: color-mix(in srgb, var(--cdp-panel) 88%, var(--cdp-ink));
+  border-color: var(--cdp-ink-faint);
+}
+.cdp-enter:active {
+  background: color-mix(in srgb, var(--cdp-panel) 80%, var(--cdp-ink));
+}
+.cdp-gate[role='alert'] .cdp-enter {
+  box-shadow: none;
 }
 
 .cdp-root :focus-visible {
-  outline: 2px solid var(--cdp-gold);
+  outline: 2px solid var(--cdp-accent);
   outline-offset: 2px;
+}
+/* Inside the tracklist the ring is drawn inside the control: the panel's overflow would cut it. */
+.cdp-tracks :focus-visible {
+  outline-offset: -2px;
 }
 
 /* ── tablets and small laptops: the drawer stays; the bar stacks, since its title would be left with
@@ -666,10 +824,10 @@
     top: 12px;
     left: 12px;
     right: 12px;
-    padding: 12px 14px;
+    padding: 10px 12px;
   }
   /* iOS Safari zooms into a focused field set under 16 px, and this full-screen page would stay
-     zoomed. The field keeps its 42 px height. */
+     zoomed. The field keeps its 40 px height. */
   .cdp-link input {
     font-size: 16px;
   }
@@ -692,9 +850,25 @@
     visibility: hidden;
     transition: visibility 0s linear 300ms;
   }
+  /* The toggle fills the closed sheet (56 px less its border), under the sheet's handle. */
   .cdp-tracks__toggle {
+    position: relative;
+    height: 54px;
+    padding: 6px 16px 0;
     cursor: pointer;
-    padding: 16px 20px;
+  }
+  .cdp-tracks:not(.is-open) .cdp-tracks__toggle {
+    border-bottom-color: transparent;
+  }
+  .cdp-tracks__toggle::before {
+    content: '';
+    position: absolute;
+    top: 7px;
+    left: calc(50% - 16px);
+    width: 32px;
+    height: 4px;
+    background: var(--cdp-line-strong);
+    border-radius: var(--cdp-radius-control);
   }
   .cdp-now {
     left: 12px;
@@ -706,7 +880,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .cdp-backdrop__layer.is-entering,
-  .cdp-eq,
+  .cdp-eq span,
   .cdp-loader__disc {
     animation: none;
   }

@@ -56,23 +56,33 @@ export function NowPlaying({
     <section className="cdp-now" aria-label="Now playing">
       <div className="cdp-now__head">
         <div className="cdp-now__meta">
-          <p className="cdp-eyebrow">{now ? `Track ${now.trackNo} of ${now.total}` : 'Ready'}</p>
+          <p className="cdp-eyebrow">
+            {now ? (
+              <>
+                {/* Two digits for the eye ("TRACK 03 / 50"), words for a screen reader. */}
+                <span aria-hidden="true">{`Track ${String(now.trackNo).padStart(2, '0')} / ${now.total}`}</span>
+                <span className="cdp-sr">{`Track ${now.trackNo} of ${now.total}`}</span>
+              </>
+            ) : (
+              'Ready'
+            )}
+          </p>
           <p className="cdp-now__title">{now?.title ?? 'Press play'}</p>
           {now && <p className="cdp-now__artists">{now.artists}</p>}
         </div>
         <div className="cdp-now__controls">
-          <button type="button" className="cdp-round" onClick={onPrev} aria-label="Previous track">
+          <button type="button" className="cdp-key" onClick={onPrev} aria-label="Previous track">
             <PrevIcon />
           </button>
           <button
             type="button"
-            className="cdp-round cdp-round--main"
+            className="cdp-key cdp-key--main"
             onClick={onToggle}
             aria-label={playing ? 'Pause' : 'Play'}
           >
             {playing ? <PauseIcon /> : <PlayIcon />}
           </button>
-          <button type="button" className="cdp-round" onClick={onNext} aria-label="Next track">
+          <button type="button" className="cdp-key" onClick={onNext} aria-label="Next track">
             <NextIcon />
           </button>
         </div>
@@ -86,17 +96,12 @@ export function NowPlaying({
           disabled={status === 'idle' || status === 'swapping' || durationMs <= 0}
           onSeek={onSeek}
         />
-        <button
-          type="button"
-          className="cdp-round cdp-round--small"
-          onClick={onStop}
-          aria-label="Stop"
-        >
+        <button type="button" className="cdp-key cdp-key--small" onClick={onStop} aria-label="Stop">
           <StopIcon />
         </button>
         <button
           type="button"
-          className="cdp-round cdp-round--small"
+          className="cdp-key cdp-key--small"
           onClick={onRepeat}
           aria-label="Repeat"
           aria-pressed={repeat}
@@ -105,7 +110,7 @@ export function NowPlaying({
         </button>
         <button
           type="button"
-          className="cdp-round cdp-round--small"
+          className="cdp-key cdp-key--small"
           onClick={onShuffle}
           aria-label="Shuffle"
           aria-pressed={shuffle}

@@ -62,7 +62,11 @@ export function Tracklist({
                 >
                   <span className="cdp-track__no">
                     {current && status === 'playing' ? (
-                      <span className="cdp-eq" role="img" aria-label="Playing" />
+                      <span className="cdp-eq" role="img" aria-label="Playing">
+                        <span />
+                        <span />
+                        <span />
+                      </span>
                     ) : (
                       String(index + 1).padStart(2, '0')
                     )}

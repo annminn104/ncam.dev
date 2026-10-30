@@ -68,11 +68,15 @@ describe('NowPlaying controls', () => {
     expect(tagOf(on, 'Stop')).not.toContain('aria-pressed');
   });
 
-  it('draws Stop, Repeat and Shuffle as the small round keys', () => {
+  it('draws the transport as square keys: Play in the accent, Stop, Repeat and Shuffle small', () => {
     const html = render();
+    expect(tagOf(html, 'Previous track')).toMatch(/<button[^>]*class="cdp-key"/);
+    expect(tagOf(html, 'Pause')).toMatch(/<button[^>]*class="cdp-key cdp-key--main"/);
+    expect(tagOf(html, 'Next track')).toMatch(/<button[^>]*class="cdp-key"/);
     for (const label of ['Stop', 'Repeat', 'Shuffle']) {
-      expect(tagOf(html, label)).toMatch(/<button[^>]*class="cdp-round cdp-round--small"/);
+      expect(tagOf(html, label)).toMatch(/<button[^>]*class="cdp-key cdp-key--small"/);
     }
+    expect(html).not.toContain('cdp-round');
   });
 
   it('shows the position on a slider, in whole seconds', () => {
@@ -128,5 +132,12 @@ describe('NowPlaying controls', () => {
     expect(html).toContain('Tate McRae');
     expect(html).toContain('class="cdp-now__embed"');
     expect(html).toContain('Press play to connect Spotify');
+  });
+
+  it('numbers the track in two digits for the eye and in words for a screen reader', () => {
+    expect(render()).toContain(
+      '<p class="cdp-eyebrow"><span aria-hidden="true">Track 01 / 50</span><span class="cdp-sr">Track 1 of 50</span></p>',
+    );
+    expect(render({ now: null })).toContain('<p class="cdp-eyebrow">Ready</p>');
   });
 });

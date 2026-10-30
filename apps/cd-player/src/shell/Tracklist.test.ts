@@ -57,4 +57,23 @@ describe('Tracklist', () => {
     expect(html).toContain('Housewife');
     expect(html).not.toContain('cdp-tracks__empty');
   });
+
+  it('marks the playing row and gives it a three-bar equaliser', () => {
+    const html = render({ tracks: [track], currentIndex: 0, status: 'playing' });
+    expect(html).toContain('class="cdp-track is-current" aria-current="true"');
+    expect(html).toContain(
+      '<span class="cdp-eq" role="img" aria-label="Playing"><span></span><span></span><span></span></span>',
+    );
+  });
+
+  it('shows the number, not the equaliser, while the current track is paused', () => {
+    const html = render({ tracks: [track], currentIndex: 0, status: 'paused' });
+    expect(html).not.toContain('cdp-eq');
+    expect(html).toContain('<span class="cdp-track__no">01</span>');
+  });
+
+  it('badges an explicit track with an E that names itself', () => {
+    const html = render({ tracks: [{ ...track, explicit: true }] });
+    expect(html).toContain('<abbr class="cdp-track__explicit" title="Explicit">E</abbr>');
+  });
 });
