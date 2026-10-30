@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { readLast, restoreTarget, STORAGE_KEY, writeLast } from './persist';
+import {
+  readLast,
+  readSkin,
+  restoreTarget,
+  SKIN_KEY,
+  STORAGE_KEY,
+  writeLast,
+  writeSkin,
+} from './persist';
 import { DEFAULT_COLLECTION, type CollectionRef } from './routes';
 
 function memory(initial: Record<string, string> = {}) {
@@ -39,6 +47,36 @@ describe('persist', () => {
     };
     expect(readLast(broken)).toBeNull();
     expect(() => writeLast(broken, { type: 'album', id: ID })).not.toThrow();
+  });
+});
+
+describe('the saved skin', () => {
+  it('round-trips under ncam.cd-player.skin, beside the saved collection', () => {
+    const storage = memory();
+    writeLast(storage, { type: 'album', id: ID });
+    writeSkin(storage, 'cherry');
+    expect(SKIN_KEY).toBe('ncam.cd-player.skin');
+    expect(storage.data.get(SKIN_KEY)).toBe('cherry');
+    expect(readSkin(storage)).toBe('cherry');
+    expect(readLast(storage)).toEqual({ type: 'album', id: ID });
+  });
+
+  it('is Blush when nothing is saved, the value is no skin, or storage is missing or throws', () => {
+    expect(readSkin(memory())).toBe('blush');
+    for (const junk of ['midnight', '', '{"id":"sage"}', 'SAGE', 'toString']) {
+      expect(readSkin(memory({ [SKIN_KEY]: junk })), junk).toBe('blush');
+    }
+    expect(readSkin(null)).toBe('blush');
+    const broken = {
+      getItem: () => {
+        throw new Error('denied');
+      },
+      setItem: () => {
+        throw new Error('denied');
+      },
+    };
+    expect(readSkin(broken)).toBe('blush');
+    expect(() => writeSkin(broken, 'sage')).not.toThrow();
   });
 });
 

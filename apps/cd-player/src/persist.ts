@@ -1,4 +1,5 @@
 import { DEFAULT_COLLECTION, SPOTIFY_ID, sameCollection, type CollectionRef } from './routes';
+import { DEFAULT_SKIN, skinById, type SkinId } from './skins';
 
 /** The visitor's last playlist or album, so `/projects/cd-player` comes back as theirs. */
 export const STORAGE_KEY = 'ncam.cd-player.last';
@@ -27,6 +28,27 @@ export function readLast(storage: ReadStore | null): CollectionRef | null {
 export function writeLast(storage: WriteStore | null, ref: CollectionRef): void {
   try {
     storage?.setItem(STORAGE_KEY, JSON.stringify({ type: ref.type, id: ref.id }));
+  } catch {
+    // A full or blocked storage just forgets.
+  }
+}
+
+/** The visitor's colourway for the player (src/skins.ts), kept apart from the collection. */
+export const SKIN_KEY = 'ncam.cd-player.skin';
+
+/** The saved skin; nothing saved, an id no skin has, or storage that throws is the default. */
+export function readSkin(storage: ReadStore | null): SkinId {
+  try {
+    return skinById(storage?.getItem(SKIN_KEY)).id;
+  } catch {
+    // Unreadable or blocked storage is no saved skin.
+    return DEFAULT_SKIN;
+  }
+}
+
+export function writeSkin(storage: WriteStore | null, id: SkinId): void {
+  try {
+    storage?.setItem(SKIN_KEY, id);
   } catch {
     // A full or blocked storage just forgets.
   }

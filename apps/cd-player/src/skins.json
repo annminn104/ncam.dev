@@ -1,0 +1,68 @@
+{
+  "skins": [
+    {
+      "id": "blush",
+      "name": "Blush",
+      "model": "assets/cd-player.glb",
+      "accent": "#e8a3b0",
+      "onAccent": "#2a1a1e",
+      "palette": {
+        "leather": "#e296a4",
+        "trim": "#c97a8c",
+        "thread": "#fcfaf6",
+        "lining": "#f8f5f1",
+        "hardware": "#ecc476",
+        "deck": "#f8f6f3",
+        "grille": "#f8f6f3"
+      }
+    },
+    {
+      "id": "sage",
+      "name": "Sage",
+      "model": "assets/cd-player.glb",
+      "accent": "#a9c6a5",
+      "onAccent": "#15241a",
+      "palette": {
+        "leather": "#9db39a",
+        "trim": "#7b9378",
+        "thread": "#f4efe4",
+        "lining": "#f3f1ea",
+        "hardware": "#c8b26e",
+        "deck": "#f4f2ec",
+        "grille": "#f4f2ec"
+      }
+    },
+    {
+      "id": "cream",
+      "name": "Cream",
+      "model": "assets/cd-player.glb",
+      "accent": "#dcbb8f",
+      "onAccent": "#2b1d10",
+      "palette": {
+        "leather": "#eadfca",
+        "trim": "#8a5a3c",
+        "thread": "#8a5a3c",
+        "lining": "#f5efe3",
+        "hardware": "#c8b26e",
+        "deck": "#8a5a3c",
+        "grille": "#8a5a3c"
+      }
+    },
+    {
+      "id": "cherry",
+      "name": "Cherry",
+      "model": "assets/cd-player.glb",
+      "accent": "#e5737b",
+      "onAccent": "#2b0c10",
+      "palette": {
+        "leather": "#9c2f35",
+        "trim": "#74222a",
+        "thread": "#f3e6d8",
+        "lining": "#f4ece4",
+        "hardware": "#ecc476",
+        "deck": "#f6f1ec",
+        "grille": "#f6f1ec"
+      }
+    }
+  ]
+}
