@@ -1,8 +1,8 @@
-import { createElement, type KeyboardEvent, type ReactElement } from 'react';
+import { createElement } from 'react';
 import { renderToString } from 'react-dom/server';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { SKINS, skinById, type SkinId } from '../skins';
-import { SkinMenu, SkinPicker, skinForKey } from './SkinPicker';
+import { SkinMenu, SkinPicker, skinForKey, skinForPress, type KeyPress } from './SkinPicker';
 
 const picker = (skin: SkinId) =>
   renderToString(createElement(SkinPicker, { skin, onChange: () => {} }));
@@ -60,39 +60,36 @@ describe('SkinMenu', () => {
   });
 });
 
-describe('SkinMenu keys', () => {
-  type Held = { altKey?: boolean; ctrlKey?: boolean; metaKey?: boolean };
+describe('skinForPress (the menu keeps a key it picks with from the page, and only that)', () => {
+  const press = (key: string, held: Partial<KeyPress> = {}): KeyPress => ({
+    key,
+    altKey: false,
+    ctrlKey: false,
+    metaKey: false,
+    ...held,
+  });
 
-  /**
-   * Presses `key` on the menu with Blush checked: what it picked, and whether it kept the key from
-   * the browser. SkinMenu holds no hook, so calling it gives back the element, and the real
-   * handler is on its props (no DOM is needed to run it).
-   */
-  function press(key: string, held: Held = {}) {
-    const picked: SkinId[] = [];
-    const menu = SkinMenu({ skin: 'blush', open: true, onPick: (id) => picked.push(id) });
-    const { onKeyDown } = (menu as ReactElement<{ onKeyDown(event: KeyboardEvent): void }>).props;
-    const preventDefault = vi.fn();
-    const event = { key, altKey: false, ctrlKey: false, metaKey: false, ...held, preventDefault };
-    onKeyDown(event as unknown as KeyboardEvent);
-    return { picked, kept: preventDefault.mock.calls.length > 0 };
-  }
-
-  it('picks on an arrow, Home or End, and keeps the key from the page', () => {
-    expect(press('ArrowRight')).toEqual({ picked: ['sage'], kept: true });
-    expect(press('ArrowUp')).toEqual({ picked: ['cherry'], kept: true });
-    expect(press('End')).toEqual({ picked: ['cherry'], kept: true });
+  it('picks on a plain arrow, Home or End', () => {
+    expect(skinForPress(press('ArrowRight'), 'blush')).toBe('sage');
+    expect(skinForPress(press('ArrowUp'), 'blush')).toBe('cherry');
+    expect(skinForPress(press('End'), 'blush')).toBe('cherry');
+    expect(skinForPress(press('Home'), 'cherry')).toBe('blush');
   });
 
   it('leaves Alt, Ctrl and Cmd with a key to the browser: Alt+Arrow is Back and Forward', () => {
     const keys = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'];
     for (const held of [{ altKey: true }, { ctrlKey: true }, { metaKey: true }]) {
       for (const key of keys) {
-        expect(press(key, held), `${Object.keys(held)[0]} + ${key}`).toEqual({
-          picked: [],
-          kept: false,
-        });
+        expect(skinForPress(press(key, held), 'blush'), `${Object.keys(held)[0]} + ${key}`).toBe(
+          null,
+        );
       }
+    }
+  });
+
+  it('passes every other key through', () => {
+    for (const key of ['Enter', ' ', 'Tab', 'Escape', 'a']) {
+      expect(skinForPress(press(key), 'sage'), key).toBeNull();
     }
   });
 });

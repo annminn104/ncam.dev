@@ -477,10 +477,11 @@ iframe: the strip is paced, never measured.
 copy's label (the artist's photo, else the album art, with the title and artists round the rim in
 capitals: 1024 px on the spindle and in slot 0, 512 px in slots 1–4; a new size means a new
 texture), the booklet's two prints (1024 px square, the album art; `textures/useDiscPrints.ts`
-prints the discs and the booklet), the plate (1024 × 182, "NOW SPINNING" and the collection as
-dark engraving on brushed steel, `paintCard`), the luggage tag (512 × 768, the collection's name
-wrapped over up to three ruled lines, `paintTag` with `wrapLines`) and the LCD (256 × 112, the
-track and the time, repainted at most once a second). Before any art they show the page's own
+prints the discs and the booklet through its React-free core, `textures/disc-printer.ts`), the
+plate (1024 × 182, "NOW SPINNING" and the collection as dark engraving on brushed steel,
+`paintCard`), the luggage tag (512 × 768, the collection's name wrapped over up to three ruled
+lines, `paintTag` with `wrapLines`) and the LCD (256 × 112, the track and the time, repainted at
+most once a second). Before any art they show the page's own
 defaults. `canvasTexture` keeps **`flipY = false`**: `export.py` lays each print's UVs over its
 mesh's local bounds in Blender and the glTF exporter flips V, so the canvas's top row is the
 print's top, as GLTFLoader's own maps assume; with three's default `flipY` a print would come out
@@ -626,10 +627,10 @@ in), **Sage**, **Cream** and **Cherry**. **Player**, after Share in the link bar
   the loaded one would load that model instead (the load effect follows it); no skin has one
   yet.
 - **The accent**: `App` sets `--cdp-accent` and `--cdp-on-accent` inline on `.cdp-root` from the
-  skin's `accent` and `onAccent`; the stylesheet's own values are a fallback that never shows.
-  `skins.test.ts` keeps every pair readable: `onAccent` on `accent` at 4.5:1 or more, and
-  `accent` on the panels' colour, `rgb(16 12 14)`, at 3:1 or more (WCAG's ratio, computed in the
-  test).
+  skin's `accent` and `onAccent`; the stylesheet's own values are a fallback that never shows,
+  Blush's pair, which `styles/app-css.test.ts` holds to `src/skins.json`. `skins.test.ts` keeps
+  every pair readable: `onAccent` on `accent` at 4.5:1 or more, and `accent` on the panels'
+  colour, `rgb(16 12 14)`, at 3:1 or more (WCAG's ratio, computed in the test).
 - **The picker** (`src/shell/SkinPicker.tsx`): a button showing the current skin's swatch (its
   leather), named "Player colour: Blush" and so on, that opens a popover holding the four as a
   radio group. The arrow keys move and choose at once (they wrap), Home and End go to the first
@@ -794,13 +795,15 @@ Unit tests (`src/**/*.test.ts`, node environment, run by the root `pnpm test`):
   a failed first load, Player after Share inside the form, `copyText`), `shell/Tracklist.test.ts`
   (the empty shelf, the playing row's equaliser, the explicit badge) and `styles/app-css.test.ts`
   (the loader plain from the first paint, its spin and its fade, `FADE_MS` equal to both
-  transitions, reduced motion; the hi-fi panel's tokens, the accent's uses, no other colour, pill,
-  italic, Fraunces, layered shadow or blur over 8 px, square controls, the breakpoints and the
-  phone rules; the picker cut down to its swatch at 920 px and under);
+  transitions, reduced motion; the hi-fi panel's tokens, the fallback accent pair Blush's from
+  `skins.json`, the accent's uses, no other colour, pill, italic, Fraunces, layered shadow or blur
+  over 8 px, square controls, the breakpoints and the phone rules; the picker cut down to its
+  swatch at 920 px and under);
 - routes and personalisation: `routes.test.ts`, `route-controller.test.ts`, `persist.test.ts`
   (the saved collection and the saved skin), `spotify/link.test.ts`, `skins.test.ts` (a colour
   for every role in every skin, the colours' format, the accents' contrast, `skinById`) and
-  `shell/SkinPicker.test.ts` (the picker's markup and its keys, modified ones left to the browser);
+  `shell/SkinPicker.test.ts` (the picker's markup rendered, and its keys through `skinForPress`,
+  modified ones left to the browser);
 - data: `spotify/embed.test.ts` (fixture pages for a playlist, a track, an artist and the not-found
   page, and layout changes), `spotify/types.test.ts`, `spotify/client.test.ts` (the messages,
   `canRetry`), `server/spotify-handler.test.ts` (statuses, cache headers, CORS, the 502's log) and
@@ -813,10 +816,12 @@ Unit tests (`src/**/*.test.ts`, node environment, run by the root `pnpm test`):
   (`downloadFraction`, and `downloadModel` on a fake fetch: its progress, a request of its own per
   load, the abort), `glb.test.ts`, `material-roles.test.ts` (every `SKIN_ROLES` entry maps a
   material to the role of its own name), `materials.test.ts` (the roles' materials, `leatherSheen`,
-  `applySkin`), `stage.test.ts`, `rig.test.ts`, `director.test.ts`, `swap-controller.test.ts`,
-  `framing.test.ts`, `controls.test.ts`, `vu.test.ts`, `vu-materials.test.ts`,
+  `applySkin`), `stage.test.ts`, `rig.test.ts`, `director.test.ts`, `swap-controller.test.ts`
+  (besides every kind of change: a swap into another collection, a list of one track, two tracks
+  on Repeat), `framing.test.ts`, `controls.test.ts`, `vu.test.ts`, `vu-materials.test.ts`,
   `interaction.test.ts`, `orbit.test.ts`, and `textures/` (`grain`, `images`, `layout`, `paint`,
-  `painter`).
+  `painter`, and `disc-printer` on fake canvases and textures: a blank then the print, a new
+  size's texture, a stale print, a print made again once the fonts are in).
 
 **By hand:** `art:build` (above), Lighthouse, and a pass in a real browser: the default page, a
 pasted playlist and album, the error messages, every control (the DOM card, the 3D keys, the knob,

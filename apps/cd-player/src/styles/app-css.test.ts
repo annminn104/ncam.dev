@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { skinById } from '../skins';
 import css from './app.css?inline';
 
 /** The declarations of the first rule whose whole selector is `selector`, at the start of a line. */
@@ -58,6 +59,12 @@ describe('app.css: the hi-fi panel', () => {
     expect(token('mono')).toBe('ui-monospace, SFMono-Regular, Menlo, Consolas, monospace');
     expect(token('accent')).toBe('#e8a3b0');
     expect(token('on-accent')).toBe('#2a1a1e');
+  });
+
+  it("falls back to Blush's own accent pair from src/skins.json, under the inline skin's", () => {
+    const blush = skinById('blush');
+    expect(token('accent')).toBe(blush.accent);
+    expect(token('on-accent')).toBe(blush.onAccent);
   });
 
   it('names no colour outside the tokens but neutral greys', () => {

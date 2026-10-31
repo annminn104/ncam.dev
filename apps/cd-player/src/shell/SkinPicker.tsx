@@ -37,6 +37,24 @@ export function skinForKey(key: string, current: SkinId): SkinId | null {
   }
 }
 
+/** What the menu reads of a key press: the key, and the modifiers held with it. */
+export interface KeyPress {
+  key: string;
+  altKey: boolean;
+  ctrlKey: boolean;
+  metaKey: boolean;
+}
+
+/**
+ * The colourway a key press in the menu picks (`skinForKey`), or null for a press the menu leaves
+ * to the page: any key held with Alt, Ctrl or Cmd is the browser's (Alt+Arrow is Back and
+ * Forward). The menu keeps from the page exactly the presses this picks with.
+ */
+export function skinForPress(press: KeyPress, current: SkinId): SkinId | null {
+  if (press.altKey || press.ctrlKey || press.metaKey) return null;
+  return skinForKey(press.key, current);
+}
+
 interface MenuProps {
   skin: SkinId;
   open: boolean;
@@ -48,12 +66,12 @@ interface MenuProps {
 /**
  * The popover: the four colourways as a radio group. The checked one is the group's only tab
  * stop, and the arrows choose as they move, so the player recolours while the visitor looks. A key
- * held with Alt, Ctrl or Cmd is the browser's (Alt+Arrow is Back and Forward), never a choice.
+ * held with Alt, Ctrl or Cmd is the browser's (Alt+Arrow is Back and Forward), never a choice
+ * (`skinForPress`).
  */
 export function SkinMenu({ skin, open, onPick, options }: MenuProps) {
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.altKey || event.ctrlKey || event.metaKey) return;
-    const next = skinForKey(event.key, skin);
+    const next = skinForPress(event, skin);
     if (!next) return;
     event.preventDefault();
     onPick(next);

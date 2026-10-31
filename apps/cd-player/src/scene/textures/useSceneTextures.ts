@@ -1,14 +1,19 @@
 import { useFrame } from '@react-three/fiber';
 import { useEffect, useRef, useState } from 'react';
-import type { CanvasTexture, MeshBasicMaterial, MeshPhysicalMaterial } from 'three';
 import type { SceneBridge } from '../../bridge';
 import type { Status } from '../../playback/sequencer';
 import type { Rig } from '../rig';
-import { canvasTexture, loadFaces, newCanvas, paintCard, paintLcd, paintTag } from './paint';
+import {
+  canvasTexture,
+  FACES_WAIT_MS,
+  loadFaces,
+  newCanvas,
+  paintCard,
+  paintLcd,
+  paintTag,
+  setMap,
+} from './paint';
 import { settlesWithin } from './painter';
-
-/** How long a print waits for the page's fonts: past it, it goes out in the fallback faces. */
-const FACES_WAIT_MS = 1000;
 
 function makeSurfaces() {
   const card = newCanvas(1024, 182);
@@ -41,11 +46,6 @@ const nothingShown = (): Shown => ({
   card: NONE,
   lcd: { track: -1, second: -1, status: null },
 });
-
-function setMap(material: MeshPhysicalMaterial | MeshBasicMaterial, texture: CanvasTexture): void {
-  material.map = texture;
-  material.needsUpdate = true;
-}
 
 /**
  * Prints the bridge's view on the player's other prints: the plate with the collection's name,

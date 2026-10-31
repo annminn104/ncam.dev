@@ -365,19 +365,71 @@ describe('createSwapController: a change', () => {
     h.landAll();
     await flush();
     h.frame(500);
-    const second = h.swap(lineup('c', 'd', 'e', 'f', 'g', 'h'), 'c');
+    // Another playlist that starts with the track slot 0 now holds (two charts share tracks).
+    const other = { name: 'Other', subtitle: 'Someone' };
+    const second = h.swap({ ...lineup('c', 'd', 'e', 'f', 'g', 'h'), collection: other }, 'c');
     await flush();
     expect(first.settled).toBe(true);
-    // The first handed its shelf over, so the second reads against it: slot 0 again.
+    // The first handed its shelf over (b on the spindle, c in slot 0), and the second reads
+    // against it as another collection: its track comes in from the side, not from slot 0.
+    expect(h.stage.shelf.spindle).toBe(1);
     expect(h.stage.swapping).toBe(true);
     h.frame(600);
-    expect(h.poses.at(-1)).toEqual(['next', 0]);
+    expect(h.poses.at(-1)).toEqual(['side', 0]);
     h.landAll();
     await flush();
-    h.frame(600 + DURATION.next);
+    h.frame(600 + DURATION.side);
     await flush();
     expect(second.settled).toBe(true);
-    expect(lineupOf(h.stage.shelf).current?.id).toBe('c');
+    expect(lineupOf(h.stage.shelf)).toMatchObject({ collection: other, current: { id: 'c' } });
+    expect(lineupOf(h.stage.shelf).upcoming.map(({ id }) => id)).toEqual(['d', 'e', 'f', 'g', 'h']);
+  });
+
+  it('runs a list of one track with an empty rack: the first play, then Next and Previous on Repeat', async () => {
+    // Waiting: the one track in slot 0, nothing on the spindle.
+    const h = await seated(lineup(null, 'a'));
+    const first = h.swap(lineup('a'), 'a');
+    h.frame(100);
+    expect(h.poses.at(-1)).toEqual(['first', 0]);
+    h.landAll();
+    await flush();
+    h.frame(100 + DURATION.first);
+    await flush();
+    expect(first.settled).toBe(true);
+    expect(h.stage.shelf.rack).toEqual([null, null, null, null, null]);
+    expect(lineupOf(h.stage.shelf)).toMatchObject({ current: { id: 'a' }, upcoming: [] });
+    // On Repeat, Next and Previous both bring the same track round again: a disc from the side.
+    let at = 100 + DURATION.first;
+    for (const press of ['next', 'prev']) {
+      const change = h.swap(lineup('a'), 'a');
+      h.frame(at);
+      expect(h.poses.at(-1), press).toEqual(['side', 0]);
+      h.landAll();
+      await flush();
+      at += DURATION.side;
+      h.frame(at);
+      await flush();
+      expect(change.settled, press).toBe(true);
+      expect(h.stage.shelf.rack, press).toEqual([null, null, null, null, null]);
+      expect(lineupOf(h.stage.shelf).current?.id, press).toBe('a');
+    }
+    expect(h.failed).not.toHaveBeenCalled();
+  });
+
+  it('reads Next on a list of two tracks on Repeat as prev, and ends with the shelf the view shows', async () => {
+    // With Repeat on, a playing the next one (and the previous one too) is b, and b's is a.
+    const h = await seated(lineup('a', 'b'));
+    const change = h.swap(lineup('b', 'a'), 'b');
+    h.frame(100);
+    expect(h.poses.at(-1)).toEqual(['prev', 0]);
+    h.landAll();
+    await flush();
+    h.frame(100 + DURATION.prev);
+    await flush();
+    expect(change.settled).toBe(true);
+    expect(lineupOf(h.stage.shelf).current?.id).toBe('b');
+    expect(lineupOf(h.stage.shelf).upcoming.map(({ id }) => id)).toEqual(['a']);
+    expect(h.stage.shelf.rack.slice(1)).toEqual([null, null, null, null]);
   });
 
   it('ends a change still printing when the next arrives', async () => {

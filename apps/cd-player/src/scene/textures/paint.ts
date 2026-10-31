@@ -1,4 +1,9 @@
-import { CanvasTexture, SRGBColorSpace } from 'three';
+import {
+  CanvasTexture,
+  SRGBColorSpace,
+  type MeshBasicMaterial,
+  type MeshPhysicalMaterial,
+} from 'three';
 import type { TrackView } from '../../bridge';
 import type { Status } from '../../playback/sequencer';
 import {
@@ -29,6 +34,9 @@ const semibold = (px: number) => `600 ${px}px ${UI}`;
 const bold = (px: number) => `700 ${px}px ${UI}`;
 const FACES = [title(16), semibold(16), bold(16)];
 
+/** How long a print waits for the page's fonts: past it, it goes out in the fallback faces. */
+export const FACES_WAIT_MS = 1000;
+
 /**
  * Loads the faces the prints draw with, for the characters of `text` (by default the Latin
  * subset, as the page's fonts come in subsets): one the page has not used yet would otherwise print
@@ -55,6 +63,15 @@ export function canvasTexture(canvas: HTMLCanvasElement): CanvasTexture {
   texture.flipY = false;
   texture.anisotropy = 8;
   return texture;
+}
+
+/** Puts a print on its material: a material that gains a map needs its shader made again. */
+export function setMap(
+  material: MeshPhysicalMaterial | MeshBasicMaterial,
+  texture: CanvasTexture,
+): void {
+  material.map = texture;
+  material.needsUpdate = true;
 }
 
 function context(canvas: HTMLCanvasElement): CanvasRenderingContext2D {
