@@ -2,14 +2,16 @@
 
 ## What this is
 
-**CD Player**: any Spotify playlist or album, played on a 3D pink suitcase CD player. When a track
-is about to play, its disc flies out of the crystal case held in the open lid onto the spindle,
-printed with the first artist's photo; the case's booklet shows the album art, a brushed plate in
-the lid and a luggage tag on the handle name the collection, a five-slot rack in the lid waits
-for the discs to come, and the page behind the player is the album art blurred under the track's
-own colours. A self-contained Module Federation remote (`cd_player`, :9011) that the host mounts
-at `/projects/cd-player`. The default collection is the playlist `37i9dQZEVXbMDoHDwVN2tF`,
-"Top 50 - Global" (`DEFAULT_COLLECTION` in `src/routes.ts`).
+**CD Player**: any Spotify playlist or album, played on a 3D suitcase CD player in four colourways
+(Blush, the pink it opens in, Sage, Cream and Cherry). The next five discs wait in a rack in the
+open lid, each printed with its first artist's photo, and when a track is about to play the next
+disc flies from rack slot 0 onto the spindle; the crystal case beside the rack shows the album art
+on its booklet, a brushed plate in the lid and a luggage tag on the handle name the collection, and
+the page behind the player is the album art blurred under the track's own colours. The server
+renders that page with a loader where the player will stand, never a picture of it, and the scene
+fades in over the loader once it is drawn. A self-contained Module Federation remote (`cd_player`,
+:9011) that the host mounts at `/projects/cd-player`. The default collection is the playlist
+`37i9dQZEVXbMDoHDwVN2tF`, "Top 50 - Global" (`DEFAULT_COLLECTION` in `src/routes.ts`).
 
 The stack: React 19, React Three Fiber 9 and three 0.186 (in the lazy scene chunk only), zod (in
 the server code only), `@ncam/logger`, and Manrope (the page's text) and Fraunces (the canvas
@@ -27,8 +29,8 @@ The owner's decisions (2026-10-28), which the rest of this guide assumes:
   `/album/<id>`), so it can be shared, and `localStorage` brings it back on the visitor's next
   visit.
 - **The suitcase design** was approved from a Cycles render of the Blender scene (the still that
-  `art/blender/scripts/hero.py` makes). There is **no finish picker**; visitors pick one of four
-  colourways (see "Skins").
+  `art/blender/scripts/hero.py` makes). It is **one model in four colourways** (see "Skins"):
+  visitors pick the colour, and nothing else about it.
 - **No volume control**: the iFrame API has none, so the knob printed VOLUME scrubs the track.
 
 ## What it exposes
@@ -70,7 +72,7 @@ be on another origin.
 pnpm --filter @ncam/cd-player dev             # standalone on :9011 (/, /playlist/<id>, /album/<id>)
 pnpm --filter @ncam/cd-player build           # vite build --app (client + SSR graph)
 pnpm --filter @ncam/cd-player typecheck
-pnpm --filter @ncam/cd-player art:build       # Blender, then gltf-transform: rewrites public/assets/cd-player.glb
+pnpm --filter @ncam/cd-player art:build       # Blender, then gltf-transform: rewrites the GLB
 ```
 
 CI runs the unit tests (through the root `pnpm test`), the typecheck, lint and the build.
@@ -79,7 +81,12 @@ servers also answer `/api/spotify` (see "Data").
 
 Smoke runs beside the owner's own stack (1337, 9000, 9006, and :9011 itself while `pnpm dev`
 runs) use **9111**, with `CD_PLAYER_PORT` set as well as `--port`:
-`env CD_PLAYER_PORT=9111 pnpm --filter @ncam/cd-player exec vite --port 9111 --strictPort --host 127.0.0.1`.
+
+```bash
+env CD_PLAYER_PORT=9111 pnpm --filter @ncam/cd-player exec vite \
+  --port 9111 --strictPort --host 127.0.0.1
+```
+
 `defineRemote` takes the dev server's origin from `CD_PLAYER_PORT`, so `--port` alone still names
 :9011 in the asset URLs. A host smoke points `CD_PLAYER_REMOTE_URL` at
 `http://localhost:9111/remoteEntry.js`. Never build while a dev server of this app is watching.
@@ -90,9 +97,9 @@ Playwright (a devDependency) drives a smoke run's headless checks.
 `GET /api/spotify?type=<playlist|album|track|artist>&id=<22-character id>`
 (`src/server/spotify-handler.ts`) answers with this remote's JSON (`src/spotify/types.ts`):
 
-- `playlist` and `album`: `{ type, id, name, subtitle, tracks: [{ id, uri, title, artists, durationMs, playable, explicit }] }`;
-  `subtitle` is the owner or the artist, and only `spotify:track:` entries are kept (a podcast
-  episode in a playlist is dropped);
+- `playlist` and `album`: `{ type, id, name, subtitle, tracks }`, a track being
+  `{ id, uri, title, artists, durationMs, playable, explicit }`; `subtitle` is the owner or the
+  artist, and only `spotify:track:` entries are kept (a podcast episode in a playlist is dropped);
 - `track`: `{ id, art: [{ url, width }], palette, artists: [{ id, name }] }`, the album art
   smallest first and the palette Spotify's own background, tinted and text colours;
 - `artist`: `{ id, name, images: [{ url, width }], palette }`.
@@ -197,9 +204,9 @@ it and never arrives as one.
 status is `idle`, `swapping`, `playing` or `paused`. A track change emits `swap`; the engine runs it
 through the bridge (`src/bridge.ts`, `swap(trackView)`) and sends **`SWAP_DONE`** once the scene
 reports the disc seated, and only then does the sequencer emit **`load`**, so the music starts as
-the tonearm lands. Without a running scene (before it boots, no WebGL) the bridge has no swapper and the
-change is instant. Only the latest change may answer (a swap token), and a change that fails still
-counts as seated.
+the tonearm lands. Without a running scene (before it boots, no WebGL) the bridge has no swapper
+and the change is instant. Only the latest change may answer (a swap token), and a change that
+fails still counts as seated.
 
 The rules: Next and Previous skip unplayable tracks (disabled in the list); Previous more than 3 s
 into a track (`RESTART_MS`) restarts it; Repeat wraps the list at both ends; Shuffle is a seeded
@@ -289,9 +296,9 @@ card while it plays: never hide it, and never play the audio any other way.
 `import.meta.env.SSR`, so the server build drops it, and only once the boot starts. Nothing `App`
 imports reaches three, `@react-three/*` or `src/scene/` statically; `src/ssr-graph.test.ts` walks
 the three entries' graphs and pins it. The files the scene shares with the shell (`src/bridge.ts`,
-`actions.ts`, `scene-props.ts`, `playback/sequencer.ts`, `lib/asset-url.ts`, `fonts.ts`) stay
-three-free for that reason, and so do `boot.ts`, `failure.ts`, `webgl.ts` and `autoplay.ts`, which
-ask about WebGL without three.
+`actions.ts`, `scene-props.ts`, `skins.ts`, `view.ts`, `playback/sequencer.ts`, `lib/asset-url.ts`,
+`fonts.ts`) stay three-free for that reason, and so do `boot.ts`, `failure.ts`, `webgl.ts` and
+`autoplay.ts`, which ask about WebGL without three.
 
 **The phases** (`src/boot.ts`, a pure reducer, garden-home's shape): `waiting` → `booting` →
 `live`, or `error` over the backdrop. Events: `start` ("Open the player", and "Try again" for a
@@ -321,19 +328,20 @@ throw caught by `SceneBoundary`): the same message with **Try again**. Each is l
 
 **The GLB contract** (`src/scene/contract.ts`): `REQUIRED_NODES` are the pivots `lid_hinge`,
 `arm_pivot`, `knob` and `btn_prev`, `btn_next`, `btn_play`, `btn_stop`, `btn_rpt`, `btn_mode`, the
-templates `disc` and `case` (with `case_lid_hinge`), `card` (the plate) and `tag` (the luggage
-tag's printed face), the empties `disc_seat` (on the spindle), `case_seat` and `rack_slot_0` …
-`rack_slot_4` (under `lid_hinge`, each the pose of a disc in the rack: slot 0 is the lowest,
-nearest the deck, and leans out most), and the VU strip's `vu_seg_0` … `vu_seg_9`;
-`DYNAMIC_MATERIALS` are the five materials the page paints (`art_disc`, `art_booklet`,
-`card_print`, `tag_print`, `lcd_screen`). `loadPlayerModel` (`src/scene/model.ts`, GLTFLoader with
-the meshopt decoder) throws `ModelContractError` naming what is missing.
-`src/scene/model-contract.test.ts` reads the committed GLB: every required node, every printed
-material and a role for every material, a material for every skin role, UVs on every printed and
-tiled primitive, the rack slots as empties under the lid, the tag's and the VU segments'
-materials, the deck's printed marks off the keys and the knob, the tonearm's moving parts under
-`arm_pivot` and its rest on the deck, nothing left of the polaroids or the gold, the budget, and
-meshes on leaf nodes only.
+`disc` the rig copies, the crystal case `case` (with its hinge `case_lid_hinge`) that the rig poses
+where it stands and never copies, `card` (the plate) and `tag` (the luggage tag's printed face),
+the empties `disc_seat` (on the spindle), `case_seat` and `rack_slot_0` … `rack_slot_4` (under
+`lid_hinge`, each the pose of a disc in the rack: slot 0 is the lowest, nearest the deck, and leans
+out most), and the VU strip's `vu_seg_0` … `vu_seg_9`; `DYNAMIC_MATERIALS` are the five materials
+the page paints (`art_disc`, `art_booklet`, `card_print`, `tag_print`, `lcd_screen`).
+`loadPlayerModel` (`src/scene/model.ts`, GLTFLoader with the meshopt decoder) throws
+`ModelContractError` naming what is missing. `src/scene/model-contract.test.ts` reads the committed
+GLB: every required node, every printed material and a role for every material, a material for
+every skin role, UVs on every printed and tiled primitive, the rack slots as empties under the lid,
+the tag's and the VU segments' materials, the deck's printed marks off the keys and the knob, the
+tonearm's moving parts under `arm_pivot` and its rest on the deck, none of the retired names its
+`GONE` list holds (the polaroids, the paper and pins, the gold), the budget, and meshes on leaf
+nodes only.
 
 **Material roles** (`src/scene/material-roles.ts`, three-free so the contract test can read it;
 `materials.ts` builds them). The GLB carries the base colour, roughness and metalness tuned in
@@ -342,9 +350,9 @@ normal map made at runtime; `trim`, the piping, handle, tag and rack frame, is l
 fabric (a plain-weave normal map, for the speaker cloth and the lid's `strap`), lining (a
 diamond-quilt normal map, 25 mm diamonds over the 5 cm box UVs), plastic, matte, crystal
 (transmission 1, IOR 1.53, a faint specular so the booklet reads through it), metal (`hardware`,
-every fitting that used to be gold, chrome, the plate's `alu_side`), brushed (anisotropy),
-disc-data and foil (iridescence), gloss-black, emissive (`led`, `lcd`, and `vu`, which the page
-clones per segment), print and screen. The three maps are `leatherNormal`, `weaveNormal` and
+which is every metal fitting; `chrome`; the plate's `alu_side`), brushed (anisotropy), disc-data
+and foil (iridescence), gloss-black, emissive (`led`, `lcd`, and `vu`, which the page clones per
+segment), print and screen. The three maps are `leatherNormal`, `weaveNormal` and
 `quiltNormal` in `textures/grain.ts`, tileable height fields turned into normals; `SKIN_ROLES`
 maps the seven recolourable materials (`leather`, `trim`, `thread`, `lining`, `hardware`, `deck`,
 `grille`) to the skins' roles. A name without a role falls back to plastic, but the contract test
@@ -356,27 +364,28 @@ a narrow screen), a transparent canvas and a shadow-only floor, so the page's ba
 the player.
 
 **The rig** (`src/scene/rig.ts`, `rigFor`, one per model): **seven disc copies** (one on the
-spindle, five in the rack, one leaving) and **one crystal case**, each copy with its own `art_disc`
-material so each prints its own track. The copies live at the root and move in world space between
-the spindle (`disc_seat`) and the rack's slots (`rack_slot_0` … `rack_slot_4`, empties under
-`lid_hinge`, each the pose of a disc in it; slot `i` holds `view.upcoming[i]`). Slot 0 is the
-lowest and the frontmost, nearest the deck; each slot above it is 20 mm higher, 1.6 mm nearer the
-lining and leans out 1.5° less, so each disc stands behind the one below it, and the queue
-advancing moves each disc a slot down the lid. The ways follow from that: a disc flying to or from
-the spindle leaves one place and reaches the other along each one's normal (a cubic Bézier whose
-handles reach 8 cm, out past the lid's rim), and it takes off from a slot only when nothing stands
-in front of it; between slots a disc moves in a straight line (with neighbours moving 60 ms apart
-the gaps only widen, as between discs further apart, where a pop-out would cross them); a rack
-disc leaves and arrives by shrinking or growing where it stands (any way out of the lid would pass
-through the discs in front); a disc leaving the spindle rises and flies aside to the left,
-shrinking away, and one from the side comes in the same way. The case stays at `case_seat` and
-only turns over for a new booklet: it rises out of its seat by the reach of its half-width and a
-centimetre (measured from its meshes at load, so it never cuts into the lid), turns over about its
-own vertical axis and back, and settles, and it turns only while no disc flies to or from the
-spindle. The booklet has two prints, the one that shows and the next turn's (`bookletFront`),
-swapped as the case passes edge-on. What the stage holds is plain data the rig carries
-(`src/scene/stage.ts`, three-free): the `Shelf` (the copy on the spindle and in each slot, the
-track each carries, the booklet's track, the collection) and where the last pose left the arm.
+spindle, five in the rack, one leaving), each with its own `art_disc` material so each prints its
+own track, and **one crystal case**, the model's own with an `art_booklet` material of its own.
+The disc copies live at the root and move in world space between the spindle (`disc_seat`) and the
+rack's slots (`rack_slot_0` … `rack_slot_4`, empties under `lid_hinge`, each the pose of a disc in
+it; slot `i` holds `view.upcoming[i]`). Slot 0 is the lowest and the frontmost, nearest the deck;
+each slot above it is 20 mm higher, 1.6 mm nearer the lining and leans out 1.5° less, so each disc
+stands behind the one below it, and the queue advancing moves each disc a slot down the lid. The
+ways follow from that: a disc flying to or from the spindle leaves one place and reaches the other
+along each one's normal (a cubic Bézier whose handles reach 8 cm, out past the lid's rim), and it
+takes off from a slot only when nothing stands in front of it; between slots a disc moves in a
+straight line (with neighbours moving 60 ms apart the gaps only widen, as between discs further
+apart, where a pop-out would cross them); a rack disc leaves and arrives by shrinking or growing
+where it stands (any way out of the lid would pass through the discs in front); a disc leaving the
+spindle rises and flies aside to the left, shrinking away, and one from the side comes in the same
+way. The case stays at `case_seat` and only turns over for a new booklet: it rises out of its seat
+by the reach of its meshes across the turn (half its width and its depth) and a centimetre (measured
+at load, so it never cuts into the lid), turns over about its own vertical axis and back, and
+settles, and it turns only while no disc flies to or from the spindle. The booklet has two prints,
+the one that shows and the next turn's (`bookletFront`), swapped as the case passes edge-on. What
+the stage holds is plain data the rig carries (`src/scene/stage.ts`, three-free): the `Shelf` (the
+copy on the spindle and in each slot, the track each carries, the booklet's track, the collection)
+and where the last pose left the arm.
 
 **How a change reads** (`classifyChange` in `stage.ts`). The bridge hands the scene only
 `swap(to)`, and the engine publishes the view the change leads to before it asks, so the scene
@@ -391,9 +400,8 @@ with no swap (a new collection, Shuffle, Repeat) is followed each frame between 
 the view says: a slot whose incoming disc does not hold its track gets a new disc.
 
 **The director's timelines** (`src/scene/director.ts`: a plan of moves per change, and pure
-functions of the time, tested). The arm moves as it always has: it lifts and swings to its rest over
-the first 400 ms and swings back in and lowers over 2400–2800 ms of a 2.8 s change, the spin
-following it.
+functions of the time, tested). The arm lifts and swings to its rest over the first 400 ms and
+swings back in and lowers over 2400–2800 ms of a 2.8 s change, the spin following it.
 
 - _first_ (1.6 s): slot 0's disc flies down onto the spindle (100–800 ms), the discs behind it each
   move a slot nearer (from 450 ms, slot 1's first, 60 ms apart), a new disc grows into slot 4
@@ -491,8 +499,8 @@ every slot prints its track's art once it arrives.
   a mouse release that was lost (`releaseLost`) disarms both drags.
 - The deck's printed marks (each key's dark ring `player_btn_gap_*` and label `player_btn_lbl_*`,
   the dial's ticks `player_tick_*` and its `player_vol`) are the deck's children in the model, so
-  only the key or the knob itself moves; `model-contract.test.ts` holds that, and nothing is
-  re-parented at runtime any more.
+  only the key or the knob itself moves and the page has no mark to re-parent;
+  `model-contract.test.ts` holds that.
 - `.cdp-canvas` sets `touch-action: none` and `user-select: none`.
 
 **The one framing rule** (`src/scene/framing.ts`): `frameForViewport(width, height, yaw, pitch)`
@@ -552,9 +560,13 @@ so the first paint never asks for it.
 **The accent** marks only Load and Play (filled), the seek slider's progress, the playing row (a
 2 px bar and a three-bar equaliser), Repeat and Shuffle while on (an accent tint, border and icon,
 and a dot, so the state is not colour alone) and the focus ring (2 px; drawn inside the tracklist,
-whose overflow would cut it). Everything else is white and greys. Nothing in the stylesheet names a
-colour but the tokens: `src/styles/app-css.test.ts` fails on any other hex colour or non-grey
-`rgb()`, a pill radius, an italic, Fraunces, a layered shadow or a blur over 8 px.
+whose overflow would cut it). Everything else is white and greys. The `.cdp-root` block, the
+stylesheet's first rule, holds the tokens and the page's fallback tint (`rgb(42 31 36)`, not a
+grey), and is exempt; after it `src/styles/app-css.test.ts` fails on any hex colour and on any
+`rgb()` whose three channels differ, and anywhere in the file on a `--cdp-blush`, `--cdp-gold`,
+`--cdp-glass` or `--cdp-display` token, a pill radius (`999px`, or a `border-radius` of `50%`), an
+italic, Fraunces, a layered shadow or a blur over 8 px. It looks for no other way of naming a
+colour (`rgba()`, `hsl()`, a keyword), so a review does.
 
 **The controls**: transport keys are 32 px squares (`cdp-key`, Play `cdp-key--main`) and the small
 keys 28 px (`cdp-key--small`); the link field and the bar's buttons are 40 px high and Retry 28 px,
@@ -681,7 +693,7 @@ same code.
 recolour (`SKIN_ROLES` in `parts.py`: `leather`, `trim`, `thread`, `lining`, `hardware`, `deck`,
 `grille`) take their colours from a palette of sRGB hex values, Blush (`BLUSH`) by default, so a
 render of another skin passes its palette and nothing else changes. `hardware` is every metal
-fitting that used to be `gold`; the polaroids' `paper` and pins are gone.
+fitting (the list is under "Skins").
 
 `hero.py` renders the Cycles stills headless (Metal through `enable_gpu` in `cdkit.py`; the first
 run compiles the kernels for about two minutes; `render()` renders by scene name under
@@ -694,8 +706,9 @@ run compiles the kernels for about two minutes; `render()` renders by scene name
 `hero` is the three-quarter product still the design was approved from, `lid` looks straight into
 the open lid; `preview` is 800 × 600 at 24 samples, `final` 1600 × 1200 at 160. The art it prints
 is the gallery's thumbnails (`apps/portfolio/public/thumbnails`), so anyone can rerun it; the PNG
-lands in `art/.out/v2-<view>-<quality>.png`. They are for the owner's gates and the docs; the build
-never runs them, and no render is in the repository.
+lands in `art/.out/v2-<view>-<quality>.png`, or in `art/.out/skins/<id>/` when `CDP_SKIN=<id>` (an
+id of `src/skins.json`: see "Skins") renders that colourway instead of Blush. They are for the
+owner's gates and the docs; the build never runs them, and no render is in the repository.
 
 **The socket tool.** `art/blender/tools/bl.py` drives a running Blender through the Blender Lab MCP
 add-on's socket at `127.0.0.1:9876`: it sends `{"type": "execute", "code": …, "strict_json": false}`
@@ -711,10 +724,10 @@ Nothing on the first screen is a picture of the scene, so a change to the model,
 framing or the prints never needs a new one. The server renders the page's own backdrop (the first
 track's art, blurred under its colours) and, in the scene's place, the **loader**
 (`src/shell/Loader.tsx`, `cdp-loader`): a 44 px disc glyph (inline SVG) spun by CSS from the first
-paint, and one line in the UI face, "Loading the player". It is plain from
-the first paint, with no entrance (text that enters at opacity 0 counts for LCP only at its next
-repaint), and stands where "Open the player" will (`.cdp-gate`'s place, 50 % across and 58 %
-down). Under `prefers-reduced-motion: reduce` its disc stands still.
+paint, and one line in the UI face, "Loading the player". It is plain from the first paint, with no
+entrance (text that enters at opacity 0 counts for LCP only at its next repaint), and stands where
+"Open the player" will (`.cdp-gate`'s place, 50 % across and 58 % down). Under
+`prefers-reduced-motion: reduce` its disc stands still.
 
 **The count.** While the scene boots the line gives the GLB's download, "Loading the player 63%"
 (`loaderLine` in `src/view.ts`, rounded and held between 0 and 100). GLTFLoader's progress events
@@ -765,22 +778,27 @@ Unit tests (`src/**/*.test.ts`, node environment, run by the root `pnpm test`):
   `server/initial.test.ts` (the shared budget, the cache and its cap, the log);
 - playback: `playback/sequencer.test.ts`, `embed-controller.test.ts` (ended detection, the script
   loader, late events, the rewind and the seeks, the first load, the error log), `engine.test.ts`
-  (the end watchdog on injected timers, Retry's second ask), `bridge.test.ts`, `view.test.ts` (with `loaderLine`);
+  (the end watchdog on injected timers, Retry's second ask), `bridge.test.ts` and `view.test.ts`
+  (the view model, `loaderLine`, the next five tracks in play order);
 - the scene: `scene/model-contract.test.ts` (the committed GLB), `model.test.ts`
-  (`downloadFraction`), `glb.test.ts`, `materials.test.ts`, `stage.test.ts`, `rig.test.ts`,
-  `director.test.ts`, `swap-controller.test.ts`, `framing.test.ts`, `controls.test.ts`,
-  `vu.test.ts`, `vu-materials.test.ts`, `interaction.test.ts`, `orbit.test.ts`, and `textures/`
-  (`grain`, `images`, `layout`, `paint`, `painter`).
+  (`downloadFraction`), `glb.test.ts`, `material-roles.test.ts` (every `SKIN_ROLES` entry maps a
+  material to the role of its own name), `materials.test.ts` (the roles' materials, `leatherSheen`,
+  `applySkin`), `stage.test.ts`, `rig.test.ts`, `director.test.ts`, `swap-controller.test.ts`,
+  `framing.test.ts`, `controls.test.ts`, `vu.test.ts`, `vu-materials.test.ts`,
+  `interaction.test.ts`, `orbit.test.ts`, and `textures/` (`grain`, `images`, `layout`, `paint`,
+  `painter`).
 
 **By hand:** `art:build` (above), Lighthouse, and a pass in a real browser: the default page, a
 pasted playlist and album, the error messages, every control (the DOM card, the 3D keys, the knob,
-the keyboard), the orbit, the loader's hand-overs (its count over a slow network, the fade),
-reduced motion, WebGL off and the embed blocked. Logged-in full tracks, Safari, Firefox (the Seek slider's `::-moz-range-*`
-rules), real phones and a real GPU need the owner's browsers. In headless Chromium on SwiftShader a
-Playwright click waits for its element to hold still over two frames (seconds while the scene
-draws), and two touch taps reach the page 500 ms or more apart, so a timed press (Previous within
-3 s) or a double tap needs input sent straight to the page. A preview lasts under 30 s: a check
-that seeks, with the scene drawing slowly, pauses the track while it looks around.
+the keyboard), the orbit, the four skins (a reload keeps the last), the rack through every kind of
+change (Next, Previous, a row in the rack, a row outside it, a pasted playlist), the loader's
+hand-overs (its count over a slow network, the fade), reduced motion, WebGL off and the embed
+blocked. Logged-in full tracks, Safari, Firefox (the Seek slider's `::-moz-range-*` rules), real
+phones and a real GPU need the owner's browsers. In headless Chromium on SwiftShader a Playwright
+click waits for its element to hold still over two frames (seconds while the scene draws), and two
+touch taps reach the page 500 ms or more apart, so a timed press (Previous within 3 s) or a double
+tap needs input sent straight to the page. A preview lasts under 30 s: a check that seeks, with the
+scene drawing slowly, pauses the track while it looks around.
 
 **Lighthouse.** The page is one of the audited paths (`/projects/cd-player`, the 13th of
 `AUDITED_PATHS` in `scripts/lighthouse/config.cjs`), so `LH_SHARD=13/13` audits it alone (the index
@@ -795,7 +813,9 @@ not even "Open the player", which appears only once the page has settled. On a m
 Chrome opens the scene by itself during the run, and the scene's boot costs desktop a few points of
 Performance (blocking time). To measure what the runner measures there, add `--disable-gpu` to the
 `chromeFlags` of a copy of `lighthouserc.cjs`. A Spotify failure during a run (the proxy's 502 for
-a prefetch) logs a console error, which costs that run Best Practices points.
+a prefetch, or an album-art image its CDN fails to serve with its CORS header, which the scene
+loads with `crossOrigin = 'anonymous'`) logs a console error, which costs that run Best Practices
+points.
 
 ## Deploying
 

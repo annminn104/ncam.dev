@@ -172,7 +172,7 @@ export const projects: ProjectEntry[] = [
     name: 'CD Player',
     tagline: 'Any Spotify playlist on a suitcase CD player',
     description:
-      "Paste a Spotify playlist or album and it plays on a 3D suitcase CD player: each track's disc flies out of the crystal case in the lid onto the spindle, printed with the artist, over the album art. Spotify's embed and iFrame API, React Three Fiber, a model generated in Blender.",
+      "Paste a Spotify playlist or album and it plays on a 3D suitcase CD player: the next five discs wait in a rack in the lid, each printed with its artist, and fly onto the spindle as the tracks change, over the album art. Four colourways. Spotify's embed and iFrame API, React Three Fiber, a model generated in Blender.",
     accent: '#E296A4',
     thumbnail: '/thumbnails/cd-player.jpg',
     // MF remote name must be a valid identifier → underscore (route id stays kebab).
