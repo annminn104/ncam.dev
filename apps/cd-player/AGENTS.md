@@ -338,8 +338,8 @@ asked before any canvas mounts): "This browser can't draw the 3D player. The mus
 with no button; a chunk that would not load (`SceneChunkError`): "The 3D player couldn't start. The
 music still plays." with **Reload the page** (a browser remembers a failed dynamic import, and the
 reload stops the music, hence the label); anything else (the GLB, the model contract, a render-time
-throw caught by `SceneBoundary`): the same message with **Try again**. Each is logged as
-`cd-player.scene-failed`.
+throw caught by `SceneBoundary`, a download that stalls: `BootStallError`, see "Hand-overs"): the
+same message with **Try again**. Each is logged as `cd-player.scene-failed`.
 
 **The GLB contract** (`src/scene/contract.ts`): `REQUIRED_NODES` are the pivots `lid_hinge`,
 `arm_pivot`, `knob` and `btn_prev`, `btn_next`, `btn_play`, `btn_stop`, `btn_rpt`, `btn_mode`, the
@@ -756,8 +756,16 @@ boot clears the count, so "Try again" starts from none.
 
 **Hand-overs.** The loader gives way to "Open the player" once the page has settled without
 starting the scene (a software rasteriser, reduced motion: `manual` in `App`, since the boot's
-events stay as they were), and to the failure when a boot fails, so no spinner runs forever; "Open
-the player" brings it back for the boot. On `ready` the canvas fades in over 600 ms and the loader
+events stay as they were), and to the failure when a boot fails; "Open the player" brings it back
+for the boot. A download that stalls fails the boot too, so no spinner runs forever: **the stall
+watch** (`watchStall` in `src/boot.ts`, which `App` runs while the phase is `booting`) is armed as
+the boot starts, armed again by every progress event of the GLB (with a fraction or without one),
+and over once the download is complete (a fraction of 1) or the phase leaves `booting`; 20 s with no
+event (`BOOT_STALL_MS`) fails the boot with `BootStallError` (see "Failures"). It times silence,
+not the boot: the shaders compile after the download without an event (seconds on SwiftShader),
+and a total timeout would fail a slow machine. A GLB served with no length never reports a fraction
+of 1, so its watch runs on until the scene is live: the parse and the first frames must then come
+within 20 s of the last chunk. On `ready` the canvas fades in over 600 ms and the loader
 fades out with it (`.cdp-scene.is-live ~ .cdp-loader`: the loader comes after the scene layer in
 the DOM, so it also draws over the invisible canvas, with `pointer-events: none`), then unmounts.
 
@@ -772,8 +780,8 @@ Unit tests (`src/**/*.test.ts`, node environment, run by the root `pnpm test`):
   `App.test.ts` also reads `App.tsx` to hold the loader after the scene layer, as the fade-out's `~`
   selector needs, since the server draws no scene layer, and renders the default skin's accent
   inline on the root with the picker closed), `ssr-graph.test.ts` (the import graphs),
-  `ssr-state.test.ts`, `boot.test.ts` (the phases from `waiting`), `autoplay.test.ts`,
-  `failure.test.ts`, `webgl.test.ts`, `shell/EnterButton.test.ts`,
+  `ssr-state.test.ts`, `boot.test.ts` (the phases from `waiting`, and the stall watch on a fake
+  clock), `autoplay.test.ts`, `failure.test.ts`, `webgl.test.ts`, `shell/EnterButton.test.ts`,
   `shell/Loader.test.ts` (the disc and the line), `shell/NowPlaying.test.ts` (the card's controls
   in Tab order as `cdp-key` squares, the track label for the eye and for a screen reader, the
   switches' `aria-pressed`, the slider's numbers and when it is disabled; its `change` handling
@@ -808,7 +816,8 @@ Unit tests (`src/**/*.test.ts`, node environment, run by the root `pnpm test`):
 pasted playlist and album, the error messages, every control (the DOM card, the 3D keys, the knob,
 the keyboard), the orbit, the four skins (a reload keeps the last), the rack through every kind of
 change (Next, Previous, a row in the rack, a row outside it, a pasted playlist), the loader's
-hand-overs (its count over a slow network, the fade), reduced motion, WebGL off and the embed
+hand-overs (its count over a slow network, a GLB that never answers, the fade), reduced motion,
+WebGL off and the embed
 blocked. Logged-in full tracks, Safari, Firefox (the Seek slider's `::-moz-range-*` rules), real
 phones and a real GPU need the owner's browsers. In headless Chromium on SwiftShader a Playwright
 click waits for its element to hold still over two frames (seconds while the scene draws), and two

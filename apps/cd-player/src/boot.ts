@@ -1,7 +1,7 @@
 // The page's phases: waiting until the scene starts (by itself on a hardware GPU, see
 // src/autoplay.ts, else when the visitor presses "Open the player" or a music control), the scene
 // booting behind the loader, the live scene, or a failure over the backdrop. Pure, so node tests can
-// walk every path.
+// walk every path; the boot's stall watch below runs on an injected clock for the same reason.
 import type { Failure } from './failure';
 
 export type Phase = 'waiting' | 'booting' | 'live' | 'error';
@@ -42,4 +42,55 @@ export function bootReducer(state: BootState, event: BootEvent): BootState {
         ? { phase: 'error', failure: event.failure }
         : state;
   }
+}
+
+/** How long a boot may hear nothing from the model's download before it fails as stalled. */
+export const BOOT_STALL_MS = 20_000;
+
+/** The stall watch's timer: `after` calls `done` once after `ms`, and returns its canceller. */
+export interface StallClock {
+  after(ms: number, done: () => void): () => void;
+}
+
+export interface StallWatch {
+  /** A progress event of the model's download: a fraction of it, or null while its size is unknown. */
+  progress(fraction: number | null): void;
+  /** The boot has left `booting` (live, failed or let go): the watch ends. */
+  stop(): void;
+}
+
+/**
+ * The boot's stall watch, so the loader never spins for ever: `onStall` runs once when the
+ * download goes `ms` without a word. Armed as the boot starts, armed again by every progress event
+ * (a fraction or null alike), and over once the download is complete (a fraction of 1) or with
+ * `stop`. It times silence, never the boot as a whole: the shaders compile after the download
+ * without a word (seconds on a software rasteriser), and a slow machine is not a stalled one.
+ */
+export function watchStall(
+  onStall: () => void,
+  clock: StallClock,
+  ms: number = BOOT_STALL_MS,
+): StallWatch {
+  let cancel: (() => void) | null = null;
+  const arm = () => {
+    cancel?.();
+    cancel = clock.after(ms, () => {
+      cancel = null;
+      onStall();
+    });
+  };
+  const stop = () => {
+    cancel?.();
+    cancel = null;
+  };
+  arm();
+  return {
+    progress(fraction) {
+      // Stopped, complete or stalled already: nothing arms it again.
+      if (!cancel) return;
+      if (fraction !== null && fraction >= 1) stop();
+      else arm();
+    },
+    stop,
+  };
 }

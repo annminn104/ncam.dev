@@ -9,9 +9,16 @@ import {
 } from 'react';
 import { createLogger } from '@ncam/logger';
 import { readAutoplaySignals, shouldAutoplay, whenSettled } from './autoplay';
-import { bootReducer, INITIAL_BOOT } from './boot';
+import {
+  BOOT_STALL_MS,
+  bootReducer,
+  INITIAL_BOOT,
+  watchStall,
+  type StallClock,
+  type StallWatch,
+} from './boot';
 import { createBridge } from './bridge';
-import { describeFailure } from './failure';
+import { BootStallError, describeFailure } from './failure';
 import { remoteBase } from './lib/asset-url';
 import { readLast, readSkin, restoreTarget, safeStorage, writeLast, writeSkin } from './persist';
 import { createEmbedPlayer, type EmbedCallbacks } from './playback/embed-controller';
@@ -40,6 +47,14 @@ const log = createLogger({ scope: 'cd-player' });
  * transitions in styles/app.css (styles/app-css.test.ts holds the three equal).
  */
 const FADE_MS = 600;
+
+/** The boot's stall watch runs on the page's own timers. */
+const timeouts: StallClock = {
+  after: (ms, done) => {
+    const id = setTimeout(done, ms);
+    return () => clearTimeout(id);
+  },
+};
 
 export interface AppProps {
   controller: RouteController;
@@ -108,6 +123,28 @@ export default function App({ controller, initial = null, assetBase = '' }: AppP
     // "Try again" boots from nothing: its loader never shows the failed boot's count.
     setProgress(null);
     dispatchBoot({ type: 'fail', failure: describeFailure(error) });
+  }, []);
+
+  // A boot whose model download goes quiet fails like any other, so the loader never spins for
+  // ever (boot.ts watchStall): the watch runs while the phase is `booting` and hears every
+  // progress event the scene reports.
+  const stall = useRef<StallWatch | null>(null);
+  const booting = boot.phase === 'booting';
+  useEffect(() => {
+    if (!booting) return;
+    const watch = watchStall(
+      () => onFail(new BootStallError(`the model's download sent nothing for ${BOOT_STALL_MS} ms`)),
+      timeouts,
+    );
+    stall.current = watch;
+    return () => {
+      watch.stop();
+      if (stall.current === watch) stall.current = null;
+    };
+  }, [booting, onFail]);
+  const onProgress = useCallback((fraction: number | null) => {
+    stall.current?.progress(fraction);
+    setProgress(fraction);
   }, []);
 
   // On a hardware GPU the player opens by itself once the page has settled; elsewhere the page
@@ -239,7 +276,7 @@ export default function App({ controller, initial = null, assetBase = '' }: AppP
           live={live}
           onReady={onReady}
           onFail={onFail}
-          onProgress={setProgress}
+          onProgress={onProgress}
         />
       )}
       {/* After the scene layer, so it draws over the invisible canvas and fades out with it. */}

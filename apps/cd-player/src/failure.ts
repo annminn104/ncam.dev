@@ -15,6 +15,11 @@ export class NoWebGLError extends Error {
   name = 'NoWebGLError';
 }
 
+/** The model's download went quiet for BOOT_STALL_MS (`watchStall` in src/boot.ts). */
+export class BootStallError extends Error {
+  name = 'BootStallError';
+}
+
 const COULDNT_START = "The 3D player couldn't start. The music still plays.";
 
 export function describeFailure(error: unknown): Failure {
