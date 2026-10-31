@@ -14,7 +14,9 @@ RACK_LAYOUT picks how the lid is laid out: "cascade" keeps the crystal case on t
 cascades the five discs up the right half; "grid" has no case and fills the lid with the discs,
 two below and three above.
 """
+import json
 import math
+import os
 import bmesh
 from mathutils import Vector
 
@@ -62,8 +64,7 @@ def l_path(ox, oy, sx, sy, length, r, z, seg=8):
 # ------------------------------------------------------------------ materials
 # The skins' palettes, sRGB hex per skin role, live in src/skins.json, the file the page reads.
 # Blush is the default; a render of another skin passes its palette to build_materials.
-import json
-import os
+SKIN_ROLES = ("leather", "trim", "thread", "lining", "hardware", "deck", "grille")
 
 
 def _scripts_dir():
@@ -71,22 +72,40 @@ def _scripts_dir():
     g = globals()
     if g.get("__file__"):
         return os.path.dirname(os.path.abspath(g["__file__"]))
-    return g.get("BASE") or g.get("HERE") or os.getcwd()
+    folder = g.get("BASE") or g.get("HERE")
+    if not folder:
+        raise SystemExit("parts.py: cannot find src/skins.json: the script that runs parts.py "
+                         "defines none of __file__, BASE and HERE")
+    return folder
 
 
 def skin_palette(skin_id):
-    """A skin's palette (role -> sRGB hex) from src/skins.json."""
+    """A skin's palette (role -> sRGB hex) from src/skins.json. It stops the run, naming the skin
+    and the file, unless the file reads and the palette has exactly the SKIN_ROLES: a role it lacked
+    would take Blush's colour in build_materials, and one it misspelt would be ignored."""
     path = os.path.normpath(os.path.join(_scripts_dir(), "..", "..", "..", "src", "skins.json"))
-    with open(path, encoding="utf-8") as f:
-        skins = json.load(f)["skins"]
+    try:
+        with open(path, encoding="utf-8") as f:
+            skins = [s for s in json.load(f)["skins"] if isinstance(s, dict)]
+    except (OSError, ValueError, KeyError, TypeError) as err:
+        raise SystemExit("parts.py: cannot read the skins from %s (%s: %s)"
+                         % (path, type(err).__name__, err))
     for skin in skins:
-        if skin["id"] == skin_id:
-            return dict(skin["palette"])
-    raise SystemExit("parts.py: no skin %r in %s (%s)" % (skin_id, path, ", ".join(s["id"] for s in skins)))
+        if skin.get("id") == skin_id:
+            palette = skin.get("palette")
+            if not isinstance(palette, dict):
+                palette = {}
+            if set(palette) != set(SKIN_ROLES):
+                missing = ", ".join(r for r in SKIN_ROLES if r not in palette) or "none"
+                unexpected = ", ".join(sorted(set(palette) - set(SKIN_ROLES))) or "none"
+                raise SystemExit("parts.py: skin %r in %s must have exactly the roles %s (missing: %s; "
+                                 "unexpected: %s)" % (skin_id, path, ", ".join(SKIN_ROLES), missing, unexpected))
+            return dict(palette)
+    raise SystemExit("parts.py: no skin %r in %s (%s)"
+                     % (skin_id, path, ", ".join(str(s.get("id")) for s in skins)))
 
 
 BLUSH = skin_palette("blush")
-SKIN_ROLES = ("leather", "trim", "thread", "lining", "hardware", "deck", "grille")
 
 
 def build_materials(palette=None):

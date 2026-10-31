@@ -26,11 +26,11 @@ THUMBS = os.path.join(ROOT, "apps", "portfolio", "public", "thumbnails") + "/"
 OUT = os.path.abspath(os.path.join(BASE, "..", "..", ".out")) + "/"
 VIEW = os.environ.get("CDP_HERO_VIEW", "hero")
 QUALITY = os.environ.get("CDP_HERO_QUALITY", "preview")
-SKIN = os.environ.get("CDP_SKIN")  # an id of src/skins.json; unset renders Blush
+SKIN = os.environ.get("CDP_SKIN")  # an id of src/skins.json; unset renders Blush, empty is an error
 os.makedirs(OUT, exist_ok=True)
 
 new_scene("cd_player_suitcase", res=(1600, 1200), samples=128)
-build_materials(skin_palette(SKIN) if SKIN else None)
+build_materials(skin_palette(SKIN) if SKIN is not None else None)
 
 artist = image_mat("art_disc", THUMBS + "viktor.jpg", 117, 117, coat=0.6, rough=0.3)
 album = image_mat("art_booklet", THUMBS + "mindloop.jpg", 120, 120, coat=0.3)
@@ -58,7 +58,7 @@ if VIEW == "lid":
 else:
     camera("cam", L(-420, -800, 470), L(60, -10, 132), lens=50, fstop=7.1, focus=L(-10, -40, 90))
 
-PNG = OUT + ("skins/%s/" % SKIN if SKIN else "") + "v2-%s%s-%s.png" % (
+PNG = OUT + ("skins/%s/" % SKIN if SKIN is not None else "") + "v2-%s%s-%s.png" % (
     VIEW, "-grid" if RACK_LAYOUT == "grid" else "", QUALITY)
 os.makedirs(os.path.dirname(PNG), exist_ok=True)
 if QUALITY == "final":
