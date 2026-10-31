@@ -200,18 +200,32 @@ describe('app.css: the layout', () => {
     );
     expect(inner(phone, '.cdp-side')).toMatch(/display:\s*contents;/);
     expect(inner(phone, '.cdp-now')).toMatch(/grid-area:\s*now;/);
-    expect(inner(phone, '.cdp-tracks')).toMatch(/position:\s*absolute;[\s\S]*bottom:\s*12px;/);
+    // Fixed: on a small phone whose page scrolls, the closed sheet stays at the screen's foot.
+    expect(inner(phone, '.cdp-tracks')).toMatch(/position:\s*fixed;[\s\S]*bottom:\s*12px;/);
   });
 
   it('holds the stage still beside the scrolling column on a phone held sideways', () => {
+    // The root scrolls, not the page, so the sticky stage holds under a host whose wrapper is a
+    // scroll container of its own (the portfolio's `.stage`, `overflow-x: hidden`).
     expect(inner(short, '.cdp-root')).toMatch(
-      /grid-template-areas:\s*'stage bar'\s*'stage side';[\s\S]*height:\s*auto;\s*min-height:\s*100dvh;/,
+      /grid-template-areas:\s*'stage bar'\s*'stage side';[\s\S]*overflow:\s*hidden auto;/,
     );
+    expect(inner(short, '.cdp-root')).not.toMatch(/height:/);
+    expect(inner(short, '.cdp-root')).toMatch(
+      /padding:\s*12px max\(12px, env\(safe-area-inset-right\)\) 12px max\(12px, env\(safe-area-inset-left\)\);/,
+    );
+    // Sticky to the root's padding edge, 12 px down: `top: 0` (the padding counts).
     expect(inner(short, '.cdp-stage')).toMatch(
-      /position:\s*sticky;[\s\S]*height:\s*calc\(100dvh - 24px\);/,
+      /position:\s*sticky;\s*top:\s*0;[\s\S]*height:\s*calc\(100dvh - 24px\);/,
     );
+    expect(inner(short, '.cdp-backdrop')).toMatch(/position:\s*fixed;/);
     expect(inner(short, '.cdp-tracks')).toMatch(/max-height:\s*calc\(100dvh - 24px\);/);
-    // A sideways phone is no portrait one: the two blocks never meet.
+    // The rail's form, at the 16 px iOS Safari zooms under.
+    expect(inner(short, '.cdp-link')).toMatch(/flex-wrap:\s*wrap;/);
+    expect(inner(short, '.cdp-link input')).toMatch(/flex:\s*1 1 100%;\s*font-size:\s*16px;/);
+  });
+
+  it('keeps the sideways block and the phone one apart by aspect: 13:10 and under, or over', () => {
     expect(css).toContain('(max-width: 820px) and (max-aspect-ratio: 13/10)');
     expect(css).toContain('(min-aspect-ratio: 1301/1000)');
   });

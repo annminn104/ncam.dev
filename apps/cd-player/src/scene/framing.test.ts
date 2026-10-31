@@ -28,8 +28,9 @@ function corners(width: number, height: number, yaw = 0, pitch = 0): Vector3[] {
 }
 
 /**
- * Canvas shapes, as wide for their height: from 0.43 to 2.63 in steps, where the layouts' stages
- * fall (a phone's, an upright tablet's, a wide screen's), and past them both ways.
+ * Canvas shapes, as wide for their height: from 0.2 to 7, past every stage the layouts make (a
+ * phone's 220 px floor reaches about 3.6, a tall window's rail about 0.26), in steps from 0.43 to
+ * 2.63, where most of them fall.
  */
 const ASPECTS = [0.2, 0.3, ...Array.from({ length: 23 }, (_, i) => 0.43 + i * 0.1), 3.5, 5, 7];
 const SHAPES = ASPECTS.map((aspect) => [Math.round(aspect * 800), 800]);
