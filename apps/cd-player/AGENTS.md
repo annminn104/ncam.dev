@@ -7,7 +7,8 @@ Blush (the pink it opens in), Sage, Cream and Cherry. The next five discs wait i
 open lid, each printed with its first artist's photo, and when a track is about to play the next
 disc flies from rack slot 0 onto the spindle; the crystal case beside the rack shows the album art
 on its booklet, a brushed plate in the lid and a luggage tag on the handle name the collection, and
-the page behind the player is the album art blurred under the track's own colours. The server
+the page behind the player is a pastel of the skin's own colour with the album art blurred into
+it. The server
 renders that page with a loader where the player will stand, never a picture of it, and the scene
 fades in over the loader once it is drawn. Beside it, "Popular on Spotify" offers twelve of
 Spotify's own playlists a press away. A self-contained Module Federation remote (`cd_player`,
@@ -631,33 +632,43 @@ is below), over a pastel page. Its tokens are on `.cdp-root` in `src/styles/app.
 rows and the sheet's handle); `--cdp-line` (the dark hairline round fields, buttons and keys) with
 `--cdp-line-strong` and `--cdp-hairline` (between rows); the control fills (`--cdp-control`,
 `--cdp-control-hover`, `--cdp-control-press`, whiter at each); `--cdp-shadow`; `--cdp-error` (a dark
-red that reads on white); `--cdp-mono` (the system's monospace: no web font); and the accent,
+red, 4.5:1 on the glass over the darkest art); `--cdp-mono` (the system's monospace: no web font);
+and the accent,
 `--cdp-accent` (`#e8a3b0`), with `--cdp-on-accent` (`#2a1a1e`) for text and icons on it, and two
 tokens made from it: `--cdp-accent-ink` (half the accent, half black) and `--cdp-wash` (38 % of it
 in white, the page's pastel), so every skin gets its own of both from its accent alone. A panel
 has one soft shadow and blurs what is behind it by 24 px, a little more saturated, the white
-keeping the dark type legible over any art. Titles and track names are Manrope 500/600, upright;
+keeping the dark type legible over any art. That glass is the panel's `::before`, under its
+content, not the panel itself: in Chrome an element with a backdrop filter bounds what its
+descendants' filters see, and the picker's popover, inside the bar, showed the presets under it
+unblurred. The popover is frosted too, and whiter (92 %); where the visitor asks for less
+transparency (`prefers-reduced-transparency`) the panels are 94 % white. Titles and track names
+are Manrope 500/600, upright;
 the small labels (`NOW SPINNING`, `TRACK 03 / 50`, `TRACKS · 50`) are uppercase mono at 10 to
 11 px with letter spacing; times and numbers are mono. Fraunces is for the canvas prints alone, so
 the first paint never asks for it.
 
 **The page** (the backdrop): two soft radial glows of the accent, one warmed by `--cdp-warm`, over
 the wash, with the album art blurred 56 px and multiplied in at 36 %, so the track's colours tint
-the pastel and a grey album still leaves a fresh page; a faint white wash at the top and a light
-grain. The root's own background is the wash, under everything until the backdrop paints.
+the pastel and a grey album still leaves the page its skin's colour; a faint white wash at the top
+and a light grain. The art also darkens the page, by 36 % at most (a black cover), so what stands
+on the page itself rather than on a panel, the help line and the loader's line, is in the full
+ink, and so is the focus ring of "Open the player". A new track's art fades in over the last
+(800 ms); a track whose art has not come yet keeps the last on show (`src/shell/Backdrop.tsx`).
+The root's own background is the wash, under everything until the backdrop paints.
 
 **The accent** fills Load and Play, with `--cdp-on-accent` on them. Its ink marks the rest, where a
 mark stands on the white glass: the seek slider's progress, the playing row (a 2 px bar and a
 three-bar equaliser), Repeat and Shuffle while on (an accent tint, an ink border and icon, and a
 dot, so the state is not colour alone), the current preset (the same tint and an ink border; its
-state is `aria-current` too), the field's focus border and the focus ring (2 px; drawn inside the
-tracklist and the presets' list, whose overflow would cut it). Everything else is dark type, white
-glass and greys. The `.cdp-root` block, the stylesheet's first rule, holds the tokens and the
+state is `aria-current` too), the picker's tick, the field's focus border and the focus ring
+(2 px; drawn inside the tracklist and the presets' list, whose overflow would cut it; the full ink
+on "Open the player"). Everything else is dark type, white glass and greys. The `.cdp-root` block, the stylesheet's first rule, holds the tokens and the
 page's colours, and is exempt; after it `src/styles/app-css.test.ts` fails on any hex colour and on
 any lower-case `rgb(` of three channels one space apart (each a whole number, a decimal or a
 percentage) not all written alike, and anywhere in the file on a `--cdp-blush`, `--cdp-gold`,
 `--cdp-glass` or `--cdp-display` token, a pill radius (`999px`, or a `border-radius` of `50%`), an
-italic, Fraunces, a layered shadow or a blur over 24 px. It reads no other way of naming a colour
+italic, Fraunces, a layered shadow or a backdrop blur over 24 px. It reads no other way of naming a colour
 (a channel in scientific notation, with a sign or `none`, an upper-case `RGB(`, a comma-separated
 `rgb()`, `rgba()`, `hsl()`, `oklch()`, a keyword), so a review does.
 
@@ -751,9 +762,13 @@ in), **Sage**, **Cream** and **Cherry**. **Player**, after Share in the link bar
   skin's `accent` and `onAccent`; the stylesheet's own values are a fallback that never shows,
   Blush's pair, which `styles/app-css.test.ts` holds to `src/skins.json`. The accent's ink and the
   page's pastel are made from it in the stylesheet (see "The look"), so they follow the skin.
-  `skins.test.ts` keeps every skin readable: `onAccent` on `accent` at 4.5:1 or more, and the
-  accent's ink (each sRGB channel halved, as the `color-mix` with black makes it) on the white
-  glass at 3:1 or more (WCAG's ratio, computed in the test).
+  `skins.test.ts` keeps every skin readable (WCAG's ratio, computed in the test from the
+  stylesheet's own tokens and mixes): `onAccent` on `accent` at 4.5:1 or more, hovered and
+  pressed too; and over the page at its darkest (the wash under a black cover multiplied in at the
+  art's opacity, the glows left out), the ink on the page and the faint ink and the error on the
+  glass at 4.5:1, the accent's ink (each sRGB channel halved, as the `color-mix` with black makes
+  it) on the glass at 3:1. The live page measured the help line at 4.66:1 at its worst, over the
+  twelve presets' covers and a black one.
 - **The picker** (`src/shell/SkinPicker.tsx`): a button showing the current skin's swatch (its
   leather), named "Player colour: Blush" and so on, that opens a popover holding the four as a
   radio group. The arrow keys move and choose at once (they wrap), Home and End go to the first
@@ -766,11 +781,18 @@ in), **Sage**, **Cream** and **Cherry**. **Player**, after Share in the link bar
   picker.
 - **Persistence**: `localStorage` key **`ncam.cd-player.skin`** (`SKIN_KEY`, `readSkin` and
   `writeSkin` in `src/persist.ts`, through `safeStorage`); an unknown value, nothing saved or
-  blocked storage is Blush. The server and the first client render use Blush, so the markup
-  matches; the saved skin applies right after hydration (the accent is Blush from the first paint
-  until then; the scene, which mounts later, boots in the saved skin). A skin is never in the
-  URL, so a shared link never imposes the sharer's colours, and the scene never reads storage:
-  `App` hands it `skin` (`PlayerSceneProps.skin`).
+  blocked storage is Blush. The server and the first render of a hydration use Blush, so the
+  markup matches, and the saved skin's accent is on the root before the first paint all the same:
+  the page's pastel is made from it, and Blush's would show for as long as the remote takes to
+  hydrate. The root's first child is an inline script (`SKIN_SCRIPT` in `src/persist.ts`) that sets
+  the saved pair on the root as the browser parses the server's markup; React leaves that
+  attribute as it is when it hydrates (it never patches a server attribute), then applies the same
+  skin. A script React renders on the client never runs (and React warns of one), so `mount()`
+  starts `App` in the saved skin (`initialSkin`), which renders no script. A host that inserts the
+  server's markup with `innerHTML` runs no script:
+  there the page turns to the saved skin as it hydrates. The scene, which mounts later, boots in
+  the saved skin. A skin is never in the URL, so a shared link never imposes the sharer's colours,
+  and the scene never reads storage: `App` hands it `skin` (`PlayerSceneProps.skin`).
 - **The live check's probe**: in dev builds only, `window.__cdpSkinColours()` returns the live
   model's recoloured materials as sRGB hex (`skinColours` in `materials.ts`).
 - **The Cycles renders read the same file.** `parts.py` takes Blush from `src/skins.json` as
@@ -864,8 +886,8 @@ render on Metal spends about two minutes compiling its kernels.
 ## First load
 
 Nothing on the first screen is a picture of the scene, so a change to the model, the lights, the
-framing or the prints never needs a new one. The server renders the page's own backdrop (the first
-track's art, blurred under its colours) and, in the scene's place, the **loader**
+framing or the prints never needs a new one. The server renders the page's own backdrop (the
+skin's pastel with the first track's art blurred into it) and, in the scene's place, the **loader**
 (`src/shell/Loader.tsx`, `cdp-loader`): a 44 px disc glyph (inline SVG) spun by CSS from the first
 paint, and one line in the UI face, "Loading the player". It is plain from the first paint, with no
 entrance (text that enters at opacity 0 counts for LCP only at its next repaint), and stands where
@@ -926,7 +948,8 @@ Unit tests (`src/**/*.test.ts`, node environment, run by the root `pnpm test`):
   after the scene layer, both inside the stage, as the fade-out's `~` selector needs, since the
   server draws no scene layer, and the link loader stopped on unmount and opening through the
   engine (no effect runs in a server render), and renders the default skin's accent inline on the
-  root with the picker closed), `link-loader.test.ts` (on fakes: fetched, then saved, navigated and
+  root with the picker closed, the root opening with `SKIN_SCRIPT` and the skin it is given as
+  `initialSkin`), `link-loader.test.ts` (on fakes: fetched, then saved, navigated and
   opened; one load at a time; a load landing or failing after the route moved on, or once stopped,
   dropped; the failures, Retry's collection and whose they are), `ssr-graph.test.ts` (the import
   graphs),
@@ -943,19 +966,23 @@ Unit tests (`src/**/*.test.ts`, node environment, run by the root `pnpm test`):
   `aria-busy`), `shell/Tracklist.test.ts` (the empty shelf, the
   playing row's equaliser, the explicit badge) and `styles/app-css.test.ts` (the loader plain from
   the first paint, its spin and its fade, `FADE_MS` equal to both transitions, reduced motion; the
-  glass panel's tokens and its frost, the pastel page from the accent with the art multiplied in,
-  the fallback accent pair Blush's from `skins.json`, the accent's fills and its ink's marks, no
-  other colour, pill, italic, Fraunces, layered shadow or blur over 24 px, square controls, the
+  glass panel's tokens and its frost on `::before`, the popover's frost, the glass under reduced
+  transparency, the full ink of the page's own text and of the gate's ring, the pastel page from
+  the accent with the art multiplied in, the fallback accent pair Blush's from `skins.json`, the
+  accent's fills and its ink's marks, no other colour, pill, italic, Fraunces, layered shadow or
+  backdrop blur over 24 px, square controls, the
   breakpoints and the phone rules; the layout's grid at each breakpoint, the header's one-row form,
   the phone's 220 px stage and fixed sheet, the sideways phone's sticky stage in its scrolling
   root, fixed backdrop, notch-clear sides and 16 px rail form, the root clipped, the stage and the
   side column; the presets as rows, cards and chips, their positioned chips, the busy cover, their
   focus ring; the picker cut down to its swatch at 920 px and under);
 - routes and personalisation: `routes.test.ts`, `route-controller.test.ts`, `persist.test.ts`
-  (the saved collection and the saved skin), `spotify/link.test.ts`, `presets.test.ts` (twelve
+  (the saved collection, the saved skin, and `SKIN_SCRIPT` run in a VM: every skin's pair, nothing
+  for what `readSkin` refuses or for storage that throws), `spotify/link.test.ts`, `presets.test.ts` (twelve
   playlists with ids of their own, the default first, a name and a tag each, covers on Spotify's
   image hosts only), `skins.test.ts` (a colour for every role in every skin, the colours' format,
-  the accents' contrast and their inks' on the white glass, `skinById`) and
+  the accents' contrast, hovered and pressed, and the shell's on the darkest glass and page,
+  `skinById`) and
   `shell/SkinPicker.test.ts` (the picker's markup rendered, and its keys through `skinForPress`,
   modified ones left to the browser);
 - data: `spotify/embed.test.ts` (fixture pages for a playlist, a track, an artist and the not-found
@@ -1074,6 +1101,10 @@ site"), in this order:
   embed's page again. Once a track has ended, the embed has dropped its list, and a command sent to
   it throws "Cannot perform operation; no list was loaded." inside its iframe; only a `loadUri`
   brings it back (hence the end watchdog and the first load's `play()`, in "Playback").
+- **In Chrome a backdrop filter bounds its descendants' backdrop filters**: an element inside a
+  panel that had one blurred nothing behind it of the panel's own content (the presets ghosted
+  through the picker's popover). Hence the panels' glass on their `::before`; keep any new frosted
+  child's ancestors free of `backdrop-filter`, `filter`, `opacity` below 1 and the like.
 - **iOS Safari zooms into a focused field set under 16 px**, and this full-screen page would stay
   zoomed: the link input is 16 px in the phone layout and the sideways one (14 px elsewhere).
 - The deck's Stop, Repeat, MODE (Shuffle) and knob are small targets: on a 390 px phone a key is
