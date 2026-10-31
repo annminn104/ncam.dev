@@ -765,7 +765,8 @@ boot, StrictMode's first run, a remount), so "Try again" after a stall asks for 
 model fetches it itself because three's FileLoader joins a load to a request for the same URL
 still in flight, a stalled one included. The scene chunk's own download is not measured: until the
 GLB's first chunk, and while its size is unknown, the line has no number (a GLB served with no
-length shows 100 % at its end alone). A failed boot clears the count: "Try again" starts from none.
+length shows 100 % at its end alone). "Try again" clears the count, so a boot starts from none,
+even when a chunk of the failed boot's download came after the failure, before its scene let go.
 
 **Hand-overs.** The loader gives way to "Open the player" once the page has settled without
 starting the scene (a software rasteriser, reduced motion: `manual` in `App`, since the boot's

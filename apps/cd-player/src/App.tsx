@@ -116,19 +116,20 @@ export default function App({ controller, initial = null, assetBase = '' }: AppP
   // load) cannot be retried in place, so its button, "Reload the page", reloads the page.
   const reload = boot.failure?.reload === true;
   const start = useCallback(() => {
-    if (reload) window.location.reload();
-    else dispatchBoot({ type: 'start' });
-  }, [reload]);
+    if (reload) {
+      window.location.reload();
+      return;
+    }
+    // "Try again" boots from nothing: its loader never shows the failed boot's count, nor a chunk
+    // of its download that came after the failure, before its scene let go of the load.
+    showPercent(null);
+    dispatchBoot({ type: 'start' });
+  }, [reload, showPercent]);
   const onReady = useCallback(() => dispatchBoot({ type: 'ready' }), []);
-  const onFail = useCallback(
-    (error: unknown) => {
-      log.error('cd-player.scene-failed', { error: String(error) });
-      // "Try again" boots from nothing: its loader never shows the failed boot's count.
-      showPercent(null);
-      dispatchBoot({ type: 'fail', failure: describeFailure(error) });
-    },
-    [showPercent],
-  );
+  const onFail = useCallback((error: unknown) => {
+    log.error('cd-player.scene-failed', { error: String(error) });
+    dispatchBoot({ type: 'fail', failure: describeFailure(error) });
+  }, []);
 
   // A boot that goes quiet, on the scene's code or on the model's download, fails like any other,
   // so the loader never spins for ever (boot.ts watchStall): the watch runs while the phase is
