@@ -9,7 +9,8 @@ disc flies from rack slot 0 onto the spindle; the crystal case beside the rack s
 on its booklet, a brushed plate in the lid and a luggage tag on the handle name the collection, and
 the page behind the player is the album art blurred under the track's own colours. The server
 renders that page with a loader where the player will stand, never a picture of it, and the scene
-fades in over the loader once it is drawn. A self-contained Module Federation remote (`cd_player`,
+fades in over the loader once it is drawn. Beside it, "Popular on Spotify" offers twelve of
+Spotify's own playlists a press away. A self-contained Module Federation remote (`cd_player`,
 :9011) that the host mounts at `/projects/cd-player`. The default collection is the playlist
 `37i9dQZEVXbMDoHDwVN2tF`, "Top 50 - Global" (`DEFAULT_COLLECTION` in `src/routes.ts`).
 
@@ -48,6 +49,15 @@ guide assumes too:
   sheen is lifted toward white by the base's own luminance, 40 % at most (`leatherSheen`), and a
   dark leather is not greyed by it.
 
+The owner's v3 decisions (2026-10-31), taken on captures of two layouts prototyped on the page,
+which the guide assumes too:
+
+- **The library layout** (see "The look"): the link bar as a rail on the left, the player alone in
+  the middle, the now-playing card over the tracklist on the right, rather than a shelf of
+  playlists in a bar across the top.
+- **Twelve playlists** in "Popular on Spotify" (see that section), Spotify's own and opened through
+  the proxy, rather than with albums added or charts alone.
+
 ## What it exposes
 
 `vite.config.ts` (`defineRemote`, which sets `shared: {}` and `dts: false`) exposes three entries:
@@ -56,8 +66,8 @@ guide assumes too:
   `src/styles/app.css` as `<style id="cd-player-styles">` (removed on unmount) and imports the
   fonts (`src/fonts.ts`).
 - `./ssr` (`src/ssr.tsx`): `renderHeroSSR({ config?, assetBase? })` returns `{ html, css, head? }`.
-  `html` is the whole shell (link bar, tracklist, now-playing card, backdrop, the loader in the
-  scene's place, help line) for the collection the server fetched, followed by
+  `html` is the whole shell (link bar and its presets, tracklist, now-playing card, backdrop, the
+  loader in the scene's place, help line) for the collection the server fetched, followed by
   `<script type="application/json" id="cdp-state">` holding that data (`src/ssr-state.ts`, escaped
   so it can never end the script). `css` is `src/styles/fonts.css`, its `url()`s rebased onto
   this remote's origin, plus `src/styles/app.css`. `head` (`src/head.ts`: the collection's name
@@ -264,13 +274,12 @@ thumb out the fill ends under its centre (the end moves a few px as the thumb co
 `::-webkit-slider-*` rules have been looked at in Chromium; the `::-moz-range-*` ones in no browser
 yet.
 
-**The row's height is budgeted.** The row is 8 + 28 + 6 px (its margins and the 28 px slider and
-keys), and the card must not grow past the height it gives it: a narrow screen's framing lifts the
-player clear of the card by a fixed aim (`src/scene/framing.ts`), not by measuring the card, so a
-taller card would cover the player. A note that stands where the embed would be
-(`cdp-now__note--lead`) therefore has no top margin of its own: it would collapse with the row's 6
-px into 10 and cost 4 px more. A change to the card is measured at 1280 × 720 and 390 × 844, with
-the note and with the embed in, before and after.
+**The card's height comes out of the stage on a phone.** The card has a grid row of its own there
+and the stage, which the canvas fills, takes what is left (see "The look"), so a taller card never
+covers the player: it leaves it a smaller canvas, as the embed's 80 px do once, at the first play.
+The row is 8 + 28 + 6 px (its margins and the 28 px slider and keys); a note that stands where the
+embed would be (`cdp-now__note--lead`) follows it with no top margin of its own, the row's 6 px
+being its gap.
 
 **When a track has ended** (`hasEnded`): an update paused within 500 ms of the end, or snapped back
 to 0 just after being within 1.5 s of it (the same uri), never while buffering. ENDED then moves
@@ -522,13 +531,16 @@ every slot prints its track's art once it arrives.
 - `.cdp-canvas` sets `touch-action: none` and `user-select: none`.
 
 **The one framing rule** (`src/scene/framing.ts`): `frameForViewport(width, height, yaw, pitch)`
-and `isWide(width)` (wide above 820 px, where the tracklist becomes a drawer beside the player).
-`CameraRig` holds that frame every frame (resizes included), and `PlayerScene` sizes the shadow map
-and the pixel ratio by `isWide`. A wide screen aims right of the player so it sits clear of the
-drawer; between 821 and 1260 px the link bar stacks and the framing keeps its height free; a narrow
-screen stands further back and aims lower, clear of the now-playing card. `framing.test.ts`
-projects the model's box through it at every screen shape the layout has. Known misses: on a
-single-row screen shorter than about 760 px the bar can cover the lid's top rim.
+and `isWide(width)` (above 820 px the scene draws as on a desktop; the layout's own breakpoints
+are the stylesheet's).
+The canvas fills the stage alone (`.cdp-stage`, see "The look"), which no panel covers, so the
+frame aims at the player's centre line and stands as far back as its bounding sphere asks for that
+canvas's shape: the player sits in the middle of whatever the layout leaves it. `CameraRig` holds
+that frame every frame (resizes included, a phone's stage shrinking for the embed among them), and
+`PlayerScene` sizes the shadow map and the pixel ratio by `isWide` of the window's width.
+`framing.test.ts` projects the model's box through it for every canvas shape from 0.43 to 2.63
+wide for its height, at the orbit's middle and its corners: the box stays 2 % clear of every edge,
+stands in the middle (within 5 %), and spans 70 % or more of the tighter side.
 
 **Reduced motion** (`prefers-reduced-motion: reduce`): no autostart; a disc change and a cascade
 in the rack are instant (the rig jumps to its end and the music still waits a 300 ms beat,
@@ -542,28 +554,54 @@ The URL names the collection: `/playlist/<id>` or `/album/<id>` (`src/routes.ts`
 `/projects/cd-player/playlist/<id>` in the host, so a page can be shared; **Share** in the link bar
 copies `location.href` and says "Copied" on its button for two seconds, or "Couldn't copy" when the
 clipboard refuses (a denied permission) or there is none (a page on plain http): `copyText` in
-`src/shell/LinkBar.tsx` never rejects. Loading a pasted link (`loadLink` in `src/App.tsx`):
+`src/shell/LinkBar.tsx` never rejects. Loading a pasted link (`loadLink` in `src/App.tsx`), or a
+preset (see "Popular on Spotify"), which skips the first step:
 
 1. `parseSpotifyLink` (`src/spotify/link.ts`) takes an `open.spotify.com` or `play.spotify.com` link
    with or without `https://`, `intl-xx/`, `embed/` or a query string, a `spotify:` URI, or a bare
    22-character id (taken as a playlist). A track, artist, episode, show or user link is refused as
    not a playlist or an album; `spotify.link` short links are not followed.
-2. The collection is fetched; only once that succeeds is `{ type, id }` saved in `localStorage`
-   under **`ncam.cd-player.last`** (`src/persist.ts`) and the page navigated there. The engine
-   then loads the new collection into the same mount. A failure shows under the input, with Retry
-   when trying again may help (see "Data").
+2. `loadRef` fetches the collection; only once that succeeds is `{ type, id }` saved in
+   `localStorage` under **`ncam.cd-player.last`** (`src/persist.ts`) and the page navigated there.
+   The engine then loads the new collection into the same mount. A failure shows under the input,
+   with Retry when trying again may help (see "Data"), which loads the same collection again. One
+   load runs at a time: a link or a preset chosen meanwhile is dropped, and Load says "Loading…".
 
 **Restore on `/`**: an App that mounts on `/` navigates to the saved collection (`restoreTarget`),
 never to the default playlist, and it looks only when it mounts, so Back to `/` (a route update,
 not a remount) stays there. A fresh mount (the host opening the project again) restores again.
 Opening someone else's shared link does not replace the visitor's saved one, since only a pasted
-link is saved. Storage that is blocked or full just forgets (`safeStorage`).
+link or a pressed preset is saved. Storage that is blocked or full just forgets (`safeStorage`).
+
+## Popular on Spotify
+
+Under the link form, `src/shell/Presets.tsx` lists the twelve playlists of `src/presets.ts`
+(`PRESETS`, three-free): Spotify's own, each opened through the proxy when the list was made
+(2026-10-31), the page's default first. Each is a `Preset`: its `ref`, Spotify's `name`, a `tag`
+(a genre or a mood; a track count would drift) and its `cover`, the embed page's `coverArt` (300 px
+JPEGs of 21 to 40 KB on `i.scdn.co`, and the chart's on `charts-images.scdn.co`), hotlinked as the
+page already does for track art and never stored here. Spotify renews some editorial covers; an
+old URL keeps answering, and a new one is an edit of `presets.ts`. A playlist Spotify retires
+answers 404, with the message a pasted link gets: replace it there.
+
+A press loads the playlist as a pasted link loads (`loadRef`, see "Personalisation"), so it is
+saved as the visitor's last and the URL follows. The preset of the collection in view is the
+current one (`aria-current="true"`, the accent's tint and border, as a switch that is on), and
+pressing it does nothing; the one being loaded says "Loading…" in place of its tag. Each button is
+named by its playlist and its tag ("Top 50 - Global Global chart"), the cover `alt=""`.
+
+Its looks follow the layout (see "The look"): rows 44 px high in the rail, scrolling in what it
+leaves them; a row of cards 184 px wide with 48 px covers in the tablet header, scrolling sideways
+and fading out at its right edge; chips 44 px high with 36 px covers on a phone, the tag clipped
+out of sight but kept in each name. The covers are `loading="lazy"` and `decoding="async"`, sized
+by their attributes (48 × 48) and the CSS, with no `fetchpriority`: a cover out of sight (past the
+rail's end, along a sideways row) is not asked for until it scrolls near.
 
 ## The look
 
-The shell is a hi-fi panel: the link bar (top left), the now-playing card (bottom left) and the
-tracklist (a drawer on the right above 820 px, a bottom sheet with a handle on a phone) are
-near-solid panels over the backdrop. Its tokens are on `.cdp-root` in `src/styles/app.css`:
+The shell is a hi-fi panel: the link bar with its presets, the now-playing card and the tracklist
+are near-solid panels over the backdrop, round the stage where the player stands alone (the
+layout is below). Its tokens are on `.cdp-root` in `src/styles/app.css`:
 `--cdp-panel` (`rgb(16 12 14 / 0.88)`), `--cdp-radius` (6 px, the panels) and
 `--cdp-radius-control` (4 px: fields, buttons, keys, rows and the sheet's handle), `--cdp-line` (the
 1 px hairline) with `--cdp-line-strong` and `--cdp-hairline` (between rows), the control fills
@@ -577,8 +615,9 @@ so the first paint never asks for it.
 
 **The accent** marks only Load and Play (filled), the seek slider's progress, the playing row (a
 2 px bar and a three-bar equaliser), Repeat and Shuffle while on (an accent tint, border and icon,
-and a dot, so the state is not colour alone) and the focus ring (2 px; drawn inside the tracklist,
-whose overflow would cut it). Everything else is white and greys. The `.cdp-root` block, the
+and a dot, so the state is not colour alone), the current preset (the same tint and border; its
+state is `aria-current` too) and the focus ring (2 px; drawn inside the tracklist and the presets'
+list, whose overflow would cut it). Everything else is white and greys. The `.cdp-root` block, the
 stylesheet's first rule, holds the tokens and the page's fallback tint (`rgb(42 31 36)`, not a
 grey), and is exempt; after it `src/styles/app-css.test.ts` fails on any hex colour and on any
 lower-case `rgb(` of three channels one space apart (each a whole number, a decimal or a
@@ -589,16 +628,35 @@ italic, Fraunces, a layered shadow or a blur over 8 px. It reads no other way of
 `rgb()`, `rgba()`, `hsl()`, `oklch()`, a keyword), so a review does.
 
 **The controls**: transport keys are 32 px squares (`cdp-key`, Play `cdp-key--main`) and the small
-keys 28 px (`cdp-key--small`); the link field and the bar's buttons are 40 px high and Retry 28 px,
-so every target is 24 px or more. The card's track label reads "Track 03 / 50" to the eye and
-"Track 3 of 50" to a screen reader (an `aria-hidden` span and a `cdp-sr` twin), and the tracks
-toggle's middle dot is generated content with empty alternative text.
+keys 28 px (`cdp-key--small`); the link field and the bar's buttons are 40 px high, Retry 28 px
+and the presets 44 px, so every target is 24 px or more. The card's track label reads
+"Track 03 / 50" to the eye and "Track 3 of 50" to a screen reader (an `aria-hidden` span and a
+`cdp-sr` twin), and the tracks toggle's middle dot is generated content with empty alternative
+text.
 
-**The layout is budgeted**: the link bar must end within what `src/scene/framing.test.ts` assumes
-(121 px in one row, 160 to 169 stacked, 148 on a phone) and the now-playing card must not grow past
-the row's budget (see "Playback"), or the player tucks under them. A restyle measures both, with a
-collection loaded, at 1440 × 900, 1260 × 900, 1024 × 768, 834 × 1194 and 390 × 844, before and
-after.
+**The layout** is a grid on `.cdp-root`, `100dvh` high with its padding inside it (`box-sizing:
+border-box`, or the columns would run under the bottom edge). `App` renders the link bar, then
+**`.cdp-stage`** (the scene layer, the loader, the help line and the way in, in that order) and
+**`.cdp-side`** (the card, then the tracklist), which is also the reading and the Tab order:
+
+- **Above 1260 px**: three columns, `340px minmax(0, 1fr) 360px`, 16 px apart inside 20 px of
+  padding at the top and 24 px elsewhere. The bar is the rail on the left (the title, the field on
+  a row of its own, Load and Share sharing the row under it with Player, then the presets, which
+  scroll in what the rail leaves them), the stage the middle, the side column the right (the card
+  at its own height, the tracklist taking the rest).
+- **821 to 1260 px**: the bar is a header over the stage, beside the side column; its field grows
+  from 220 px on one row with the buttons (they wrap under a field narrower than that), and the
+  help line goes.
+- **Phones, and tablets held upright** (820 px and under, or up to 1260 px at an aspect of 4:5 or
+  taller): one column of the bar, the stage and the card (`.cdp-side` is `display: contents`, so
+  the card takes its own row); the tracklist is the bottom sheet over everything, and the root's
+  80 px of bottom padding keep the closed sheet clear of the card. Upright, a tablet's side column
+  would leave the stage a tall, narrow strip.
+
+The stage takes what the panels leave, and the canvas fills it alone, so no panel ever stands over
+the player and a panel growing only leaves it a smaller canvas (see "The scene"). The loader and
+the way in stand in the stage's middle and the help line at its foot. The host's fixed
+"← Projects" pill stands at the top centre: over the stage on a wide screen, clear of every panel.
 
 ## Skins
 
@@ -640,9 +698,9 @@ in), **Sage**, **Cream** and **Cherry**. **Player**, after Share in the link bar
   and the last, but a key held with Alt, Ctrl or Cmd is the browser's (Alt+Arrow is Back and
   Forward); the choice is `aria-checked` and a tick, not colour alone. Escape closes it and gives
   focus back to the button, as the button itself does; a click or tap outside, or Tab out of it,
-  closes it. At 920 px and under (every phone, and the bar stacked from 821 px) the button is the
-  swatch alone, so the link field keeps its width: the labelled button left it about 106 px at
-  821 px. "Player" stays in its accessible name. The server markup is always the closed picker.
+  closes it. At 920 px and under (every phone, and the tablet header from 821 px) the button is the
+  swatch alone, so the link field keeps its width on the buttons' row. "Player" stays in its
+  accessible name. The server markup is always the closed picker.
 - **Persistence**: `localStorage` key **`ncam.cd-player.skin`** (`SKIN_KEY`, `readSkin` and
   `writeSkin` in `src/persist.ts`, through `safeStorage`); an unknown value, nothing saved or
   blocked storage is Blush. The server and the first client render use Blush, so the markup
@@ -748,8 +806,9 @@ track's art, blurred under its colours) and, in the scene's place, the **loader*
 (`src/shell/Loader.tsx`, `cdp-loader`): a 44 px disc glyph (inline SVG) spun by CSS from the first
 paint, and one line in the UI face, "Loading the player". It is plain from the first paint, with no
 entrance (text that enters at opacity 0 counts for LCP only at its next repaint), and stands where
-"Open the player" will (`.cdp-gate`'s place, 50 % across and 58 % down). Under
-`prefers-reduced-motion: reduce` its disc stands still.
+"Open the player" will (`.cdp-gate`'s place, the middle of the stage). Under
+`prefers-reduced-motion: reduce` its disc stands still. The presets' covers are the only pictures
+the server renders, outside the stage (see "Popular on Spotify").
 
 **The count.** While the scene boots the line gives the GLB's download, "Loading the player 63%"
 (`loaderPercent` and `loaderLine` in `src/view.ts`: a whole percent, held between 0 and 100).
@@ -795,26 +854,34 @@ Unit tests (`src/**/*.test.ts`, node environment, run by the root `pnpm test`):
 
 - the shell: `App.test.ts` and `ssr.test.ts` (the server render: the collection and its tracks, the
   state script, the fonts and the app's CSS, the head on a collection route only, the loader in the
-  scene's place with no `<picture>`, no `<img>`, no `fetchpriority` and no canvas, "Open the player"
-  left for after the page settles, a render that still completes when Spotify fails or hangs;
-  `App.test.ts` also reads `App.tsx` to hold the loader after the scene layer, as the fade-out's `~`
-  selector needs, since the server draws no scene layer, and renders the default skin's accent
-  inline on the root with the picker closed), `ssr-graph.test.ts` (the import graphs),
+  stage, which holds no `<img>`, the presets' lazy covers the page's only pictures, no
+  `<picture>`, no `fetchpriority` and no canvas, "Open the player" left for after the page settles,
+  a render that still completes when Spotify fails or hangs; `App.test.ts` also holds the layout's
+  order, the bar, the stage, then the side column with the card over the tracklist, reads `App.tsx`
+  to hold the loader after the scene layer, as the fade-out's `~` selector needs, since the server
+  draws no scene layer, and renders the default skin's accent inline on the root with the picker
+  closed), `ssr-graph.test.ts` (the import graphs),
   `ssr-state.test.ts`, `boot.test.ts` (the phases from `waiting`, and the stall watch on a fake
   clock, with the part it names), `autoplay.test.ts`, `failure.test.ts`, `webgl.test.ts`,
   `shell/EnterButton.test.ts`, `shell/Loader.test.ts` (the disc and the line),
   `shell/NowPlaying.test.ts` (the card's controls in Tab order as `cdp-key` squares, the track label
   for the eye and for a screen reader, the switches' `aria-pressed`, the slider's numbers and when
   it is disabled; its `change` handling needs a DOM, so that is by hand), `shell/LinkBar.test.ts`
-  (Retry beside an error, the title after a failed first load, Player after Share inside the form,
-  `copyText`), `shell/Tracklist.test.ts` (the empty shelf, the playing row's equaliser, the explicit
-  badge) and `styles/app-css.test.ts` (the loader plain from the first paint, its spin and its fade,
-  `FADE_MS` equal to both transitions, reduced motion; the hi-fi panel's tokens, the fallback accent
-  pair Blush's from `skins.json`, the accent's uses, no other colour, pill, italic, Fraunces,
-  layered shadow or blur over 8 px, square controls, the breakpoints and the phone rules; the picker
-  cut down to its swatch at 920 px and under);
+  (Retry beside an error, the title after a failed first load, the presets after the form and the
+  error, Player after Share inside the form, `copyText`), `shell/Presets.test.ts` (the labelled
+  list, each button's name, the covers' attributes, the current one marked and none for a
+  collection that is not a preset, the busy tag), `shell/Tracklist.test.ts` (the empty shelf, the
+  playing row's equaliser, the explicit badge) and `styles/app-css.test.ts` (the loader plain from
+  the first paint, its spin and its fade, `FADE_MS` equal to both transitions, reduced motion; the
+  hi-fi panel's tokens, the fallback accent pair Blush's from `skins.json`, the accent's uses, no
+  other colour, pill, italic, Fraunces, layered shadow or blur over 8 px, square controls, the
+  breakpoints and the phone rules; the layout's grid at each breakpoint, the stage and the side
+  column; the presets as rows, cards and chips, their focus ring; the picker cut down to its swatch
+  at 920 px and under);
 - routes and personalisation: `routes.test.ts`, `route-controller.test.ts`, `persist.test.ts`
-  (the saved collection and the saved skin), `spotify/link.test.ts`, `skins.test.ts` (a colour
+  (the saved collection and the saved skin), `spotify/link.test.ts`, `presets.test.ts` (twelve
+  playlists with ids of their own, the default first, a name and a tag each, covers on Spotify's
+  image hosts only), `skins.test.ts` (a colour
   for every role in every skin, the colours' format, the accents' contrast, `skinById`) and
   `shell/SkinPicker.test.ts` (the picker's markup rendered, and its keys through `skinForPress`,
   modified ones left to the browser);
@@ -832,13 +899,16 @@ Unit tests (`src/**/*.test.ts`, node environment, run by the root `pnpm test`):
   `SKIN_ROLES` entry maps a material to the role of its own name), `materials.test.ts` (the roles'
   materials, `leatherSheen`, `applySkin`), `stage.test.ts`, `rig.test.ts`, `director.test.ts`,
   `swap-controller.test.ts` (besides every kind of change: a swap into another collection, a list of
-  one track, two tracks on Repeat), `framing.test.ts`, `controls.test.ts`, `vu.test.ts`,
+  one track, two tracks on Repeat), `framing.test.ts` (every canvas shape across the orbit, see
+  "The scene"), `controls.test.ts`, `vu.test.ts`,
   `vu-materials.test.ts`, `interaction.test.ts`, `orbit.test.ts`, and `textures/` (`grain`,
   `images`, `layout`, `paint`, `painter`, and `disc-printer` on fake canvases and textures: a blank
   then the print, a new size's texture, a stale print, a print made again once the fonts are in).
 
 **By hand:** `art:build` (above), Lighthouse, and a pass in a real browser: the default page, a
-pasted playlist and album, the error messages, every control (the DOM card, the 3D keys, the knob,
+pasted playlist and album, the presets (a press, the current one, a slow one and a failed one with
+Retry), the error messages, the layout at 1440 × 900, 1280 × 720, 1024 × 768, 834 × 1194 and
+390 × 844, every control (the DOM card, the 3D keys, the knob,
 the keyboard), the orbit, the four skins (a reload keeps the last), the rack through every kind of
 change (Next, Previous, a row in the rack, a row outside it, a pasted playlist), the loader's
 hand-overs (its count over a slow network, a GLB and a scene chunk that never answer, each logged as
@@ -862,9 +932,11 @@ needs its own ANGLE backend), with `THUMBNAIL_SETTLE_MS=20000`.
 moves when a path is added). When Chrome renders in software, as on the GitHub runner, nothing
 boots during the run: the loader gives way to "Open the player" once the page settles, and the
 embed loads nothing before a press, so no third-party cookie is set. There is no image to wait for:
-the backdrop's art covers the whole viewport, which Chrome does not count for LCP, so the LCP is
-text, the now-playing card's note (`.cdp-now__note`), the largest block on the first screen and
-plain from the first paint, as the monorepo's rule asks; keep it so. The loader's line and "Open
+the backdrop's art covers the whole viewport, which Chrome does not count for LCP, and the presets'
+covers are 48 px at most, so the LCP is text, the now-playing card's note (`.cdp-now__note`), the
+largest block on the first screen and plain from the first paint, as the monorepo's rule asks;
+keep it so. The monorepo's image rule (AVIF or WebP with `srcset`) cannot apply to the covers:
+Spotify's CDN serves JPEG, and its art may not be stored here. The loader's line and "Open
 the player" are single short lines, far smaller than the note: neither can take the LCP from it,
 not even "Open the player", which appears only once the page has settled. On a machine with a GPU
 Chrome opens the scene by itself during the run, and the scene's boot costs desktop a few points of

@@ -18,10 +18,10 @@ const DIRECTION = (() => {
 /** The player with its lid open fits in a sphere about this big (metres). */
 const RADIUS = 0.285;
 /**
- * The tracklist is a drawer beside the player above this width (CSS px, src/styles/app.css), a
- * bottom sheet at or below it.
+ * At or below this width (CSS px) the scene draws as on a phone, with a smaller shadow map and pixel
+ * ratio (src/scene/PlayerScene.tsx). The layout's own breakpoints are in src/styles/app.css.
  */
-const SHEET_MAX = 820;
+const NARROW_MAX = 820;
 
 export interface Frame {
   position: [number, number, number];
@@ -36,9 +36,9 @@ export function frameDistance(aspect: number, fovDeg = FOV, radius = RADIUS): nu
   return Math.max(vertical, horizontal);
 }
 
-/** Whether a screen this wide (CSS px) lays out as a desktop: the one rule the scene shares. */
+/** Whether a screen this wide (CSS px) is drawn as a desktop's. */
 export function isWide(width: number): boolean {
-  return width > SHEET_MAX;
+  return width > NARROW_MAX;
 }
 
 /** The hero frame for a canvas of this size (CSS px): what the camera rig holds, every frame. */

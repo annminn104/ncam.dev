@@ -811,8 +811,8 @@
   line-height: 1.45;
   color: var(--cdp-ink-soft);
 }
-/* A note that stands where the embed would be follows the row directly. Its own 10 px top margin
-   would collapse with the row's 6 px into 10, and grow the card 4 px past the row's budget. */
+/* A note that stands where the embed would be follows the row directly, the row's own 6 px being
+   its gap: its 10 px top margin would collapse with them into a wider gap than the embed gets. */
 .cdp-now__note--lead {
   margin-top: 0;
 }
@@ -1145,8 +1145,8 @@
   color: var(--cdp-accent);
 }
 /* At 920 px and under the button is its swatch alone, square, so the link field keeps its width:
-   the bar stacks from 821 px, and with its label the button left the field 106 px wide there.
-   "Player" stays in its accessible name. */
+   the tablet header starts at 821 px, where the labelled button left the field little room on the
+   buttons' row. "Player" stays in its accessible name. */
 @media (max-width: 920px) {
   .cdp-skin__button {
     justify-content: center;

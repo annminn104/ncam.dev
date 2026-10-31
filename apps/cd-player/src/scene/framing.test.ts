@@ -64,7 +64,7 @@ describe('framing', () => {
     expect(turned.position[1]).toBeGreaterThan(base.position[1]);
   });
 
-  it('is wide once the tracklist is a drawer beside the player, above 820 px', () => {
+  it('draws as a desktop above 820 px', () => {
     expect(isWide(820)).toBe(false);
     expect(isWide(821)).toBe(true);
   });

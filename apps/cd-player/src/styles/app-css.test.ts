@@ -231,9 +231,9 @@ describe('app.css: the skin picker', () => {
   /** The block that cuts the picker's button down to its swatch. */
   const swatchOnly = /@media \(max-width: 920px\)\s*\{([\s\S]*?)\n\}/.exec(css)?.[1] ?? '';
 
-  // The bar stacks from 821 px, and with its label the button left the paste field 106 px wide
-  // there, and under 200 px until about 915: the swatch stands alone up to 920 px, not only 820.
-  it('shows only its swatch at 920 px and under, where the stacked bar is tight', () => {
+  // The tablet header starts at 821 px, where the labelled button left the paste field little room
+  // on the buttons' row: the swatch stands alone up to 920 px, not only 820.
+  it('shows only its swatch at 920 px and under, where the header is tight', () => {
     expect(swatchOnly).toMatch(/\.cdp-skin__button\s*\{[^}]*aspect-ratio:\s*1;/);
     expect(swatchOnly).toMatch(/\.cdp-skin__label\s*\{[^}]*clip-path:\s*inset\(50%\);/);
   });
