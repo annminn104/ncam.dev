@@ -79,6 +79,26 @@ describe('App (server render)', () => {
   });
 });
 
+describe('App (the layout)', () => {
+  it('renders the bar, the stage with the loader and the help line, then the card over the tracks', () => {
+    const html = renderToString(
+      createElement(App, { controller: createRouteController({ route: '/' }), initial }),
+    );
+    // The DOM order is the reading order, and Tab's: choose, the player, what plays, the list.
+    const bar = html.indexOf('<header class="cdp-bar"');
+    const stage = html.indexOf('<div class="cdp-stage">');
+    const side = html.indexOf('<div class="cdp-side">');
+    expect(bar).toBeGreaterThan(-1);
+    expect(stage).toBeGreaterThan(bar);
+    expect(side).toBeGreaterThan(stage);
+    expect(html).toContain('<div class="cdp-stage"><div class="cdp-loader">');
+    expect(html.indexOf('<p class="cdp-hud">')).toBeGreaterThan(stage);
+    expect(html.indexOf('<p class="cdp-hud">')).toBeLessThan(side);
+    expect(html).toContain('<div class="cdp-side"><section class="cdp-now"');
+    expect(html.indexOf('<aside class="cdp-tracks"')).toBeGreaterThan(side);
+  });
+});
+
 describe('App (the loader and the scene layer)', () => {
   it('draws the loader after the scene layer, so it fades out with the canvas', () => {
     // `.cdp-scene.is-live ~ .cdp-loader` (styles/app.css) matches only a loader that comes later in

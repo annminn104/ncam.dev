@@ -11,8 +11,11 @@ function rule(selector: string): string {
 
 /** From the reduced-motion block to the end of the file; the skin picker's rules come after it. */
 const reduced = css.slice(css.indexOf('@media (prefers-reduced-motion: reduce)'));
-/** The phone layout's block. */
-const phone = /@media \(max-width: 820px\)\s*\{([\s\S]*?)\n\}/.exec(css)?.[1] ?? '';
+/** The phone layout's block, which upright tablets share. */
+const phone =
+  /@media \(max-width: 820px\), \(max-width: 1260px\) and \(max-aspect-ratio: 4\/5\)\s*\{([\s\S]*?)\n\}/.exec(
+    css,
+  )?.[1] ?? '';
 /** The custom properties on .cdp-root, the file's first rule. */
 const root = rule('.cdp-root');
 const token = (name: string) => new RegExp(`--cdp-${name}:\\s*([^;]+);`).exec(root)?.[1].trim();
@@ -135,6 +138,60 @@ describe('app.css: the hi-fi panel', () => {
     expect(phone).toMatch(
       /\.cdp-tracks__toggle::before\s*\{[^}]*border-radius:\s*var\(--cdp-radius-control\)/,
     );
+  });
+});
+
+describe('app.css: the layout', () => {
+  /** The tablets' and small laptops' block. */
+  const medium = /@media \(max-width: 1260px\)\s*\{([\s\S]*?)\n\}/.exec(css)?.[1] ?? '';
+  /** A rule's declarations inside a media block's text. */
+  const inner = (block: string, selector: string) => {
+    const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return new RegExp(`(?:^|\\n)\\s*${escaped}\\s*\\{([^}]*)\\}`).exec(block)?.[1] ?? '';
+  };
+
+  it('lays a wide screen out as the rail, the stage and the side column, in the viewport', () => {
+    expect(root).toMatch(/display:\s*grid;/);
+    expect(root).toMatch(/grid-template-columns:\s*340px minmax\(0, 1fr\) 360px;/);
+    expect(root).toMatch(/grid-template-areas:\s*'bar stage side';/);
+    // The padding is inside the 100dvh, or the columns would run under the bottom edge.
+    expect(root).toMatch(/box-sizing:\s*border-box;/);
+    expect(root).toMatch(/height:\s*100dvh;/);
+    expect(rule('.cdp-bar')).toMatch(/grid-area:\s*bar;/);
+    expect(rule('.cdp-stage')).toMatch(/grid-area:\s*stage;/);
+    expect(rule('.cdp-side')).toMatch(/grid-area:\s*side;/);
+  });
+
+  it('puts the header over the stage beside the side column from 1260 px down', () => {
+    expect(inner(medium, '.cdp-root')).toMatch(
+      /grid-template-columns:\s*minmax\(0, 1fr\) 360px;[\s\S]*grid-template-areas:\s*'bar side'\s*'stage side';/,
+    );
+    expect(inner(medium, '.cdp-hud')).toMatch(/display:\s*none;/);
+  });
+
+  it('stacks a phone: the bar, the stage and the card, with the sheet over them', () => {
+    expect(inner(phone, '.cdp-root')).toMatch(/grid-template-areas:\s*'bar'\s*'stage'\s*'now';/);
+    // The closed sheet's 56 px, and 12 px either side of it, stay clear of the card.
+    expect(inner(phone, '.cdp-root')).toMatch(/padding:\s*12px 12px 80px;/);
+    expect(inner(phone, '.cdp-side')).toMatch(/display:\s*contents;/);
+    expect(inner(phone, '.cdp-now')).toMatch(/grid-area:\s*now;/);
+    expect(inner(phone, '.cdp-tracks')).toMatch(/position:\s*absolute;[\s\S]*bottom:\s*12px;/);
+  });
+
+  it('centres the loader and the way in on the stage, the help line at its foot', () => {
+    expect(rule('.cdp-stage')).toMatch(/position:\s*relative;/);
+    expect(rule('.cdp-scene')).toMatch(/position:\s*absolute;\s*inset:\s*0;/);
+    for (const selector of ['.cdp-loader', '.cdp-gate']) {
+      expect(rule(selector), selector).toMatch(/left:\s*50%;\s*top:\s*50%;/);
+    }
+    expect(rule('.cdp-hud')).toMatch(/bottom:\s*0;/);
+  });
+
+  it('gives the tracklist what the card leaves of the side column', () => {
+    expect(rule('.cdp-side')).toMatch(/flex-direction:\s*column;/);
+    // `rule` would find the panels' shared rule, whose selector list ends with `.cdp-now {`.
+    expect(css).toMatch(/\n\.cdp-now \{\s*flex:\s*none;/);
+    expect(rule('.cdp-tracks')).toMatch(/flex:\s*1;\s*min-height:\s*0;/);
   });
 });
 

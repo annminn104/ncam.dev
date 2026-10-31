@@ -274,19 +274,6 @@ export default function App({ controller, initial = null, assetBase = '' }: AppP
       style={{ '--cdp-accent': look.accent, '--cdp-on-accent': look.onAccent } as CSSProperties}
     >
       <Backdrop artUrl={backdrop.artUrl} palette={backdrop.palette} />
-      {(boot.phase === 'booting' || live) && (
-        <SceneHost
-          assetBase={remoteBase(assetBase)}
-          bridge={deps.bridge}
-          skin={skin}
-          live={live}
-          onReady={onReady}
-          onFail={onFail}
-          onProgress={onProgress}
-        />
-      )}
-      {/* After the scene layer, so it draws over the invisible canvas and fades out with it. */}
-      {showLoader && <Loader percent={percent} />}
       <LinkBar
         collection={snapshot.collection}
         loading={snapshot.loading || linkBusy}
@@ -297,45 +284,64 @@ export default function App({ controller, initial = null, assetBase = '' }: AppP
         skin={skin}
         onSkin={changeSkin}
       />
-      <Tracklist
-        tracks={snapshot.seq.tracks}
-        currentIndex={currentIndex(snapshot.seq)}
-        status={snapshot.seq.status}
-        // The visitor's to open and close; an empty shelf opens it once per failure (above).
-        open={tracksOpen}
-        failure={
-          shelfError && {
-            message: shelfError.message,
-            onRetry: shelfError.retry ? () => engine.open(ref) : undefined,
+      {/* The player's own place: the canvas fills it, and no panel stands over it. */}
+      <div className="cdp-stage">
+        {(boot.phase === 'booting' || live) && (
+          <SceneHost
+            assetBase={remoteBase(assetBase)}
+            bridge={deps.bridge}
+            skin={skin}
+            live={live}
+            onReady={onReady}
+            onFail={onFail}
+            onProgress={onProgress}
+          />
+        )}
+        {/* After the scene layer, so it draws over the invisible canvas and fades out with it. */}
+        {showLoader && <Loader percent={percent} />}
+        <Hud />
+        {!showLoader && <EnterButton phase={boot.phase} failure={boot.failure} onStart={start} />}
+      </div>
+      {/* What plays over the tracklist: a column beside the stage, the phone's foot. */}
+      <div className="cdp-side">
+        <NowPlaying
+          now={nowPlayingFor(snapshot)}
+          status={snapshot.seq.status}
+          positionMs={snapshot.seq.positionMs}
+          durationMs={snapshot.seq.durationMs}
+          repeat={snapshot.seq.repeat}
+          shuffle={snapshot.seq.shuffle}
+          embed={snapshot.embed}
+          hint={snapshot.hint}
+          embedRef={embedHost}
+          onPrev={() => act({ type: 'PREV' })}
+          onToggle={() => act({ type: 'TOGGLE' })}
+          onNext={() => act({ type: 'NEXT' })}
+          onStop={() => act({ type: 'STOP' })}
+          onRepeat={() => act({ type: 'TOGGLE_REPEAT' })}
+          // The seed the deck's MODE key sends (PlayerEngine.onAction).
+          onShuffle={() => act({ type: 'TOGGLE_SHUFFLE', seed: Date.now() })}
+          onSeek={(ms) => act({ type: 'SEEK', ms })}
+        />
+        <Tracklist
+          tracks={snapshot.seq.tracks}
+          currentIndex={currentIndex(snapshot.seq)}
+          status={snapshot.seq.status}
+          // The visitor's to open and close; an empty shelf opens it once per failure (above).
+          open={tracksOpen}
+          failure={
+            shelfError && {
+              message: shelfError.message,
+              onRetry: shelfError.retry ? () => engine.open(ref) : undefined,
+            }
           }
-        }
-        onToggle={() => setTracksOpen((open) => !open)}
-        onSelect={(index) => {
-          setTracksOpen(false);
-          act({ type: 'SELECT', index });
-        }}
-      />
-      <NowPlaying
-        now={nowPlayingFor(snapshot)}
-        status={snapshot.seq.status}
-        positionMs={snapshot.seq.positionMs}
-        durationMs={snapshot.seq.durationMs}
-        repeat={snapshot.seq.repeat}
-        shuffle={snapshot.seq.shuffle}
-        embed={snapshot.embed}
-        hint={snapshot.hint}
-        embedRef={embedHost}
-        onPrev={() => act({ type: 'PREV' })}
-        onToggle={() => act({ type: 'TOGGLE' })}
-        onNext={() => act({ type: 'NEXT' })}
-        onStop={() => act({ type: 'STOP' })}
-        onRepeat={() => act({ type: 'TOGGLE_REPEAT' })}
-        // The seed the deck's MODE key sends (PlayerEngine.onAction).
-        onShuffle={() => act({ type: 'TOGGLE_SHUFFLE', seed: Date.now() })}
-        onSeek={(ms) => act({ type: 'SEEK', ms })}
-      />
-      <Hud />
-      {!showLoader && <EnterButton phase={boot.phase} failure={boot.failure} onStart={start} />}
+          onToggle={() => setTracksOpen((open) => !open)}
+          onSelect={(index) => {
+            setTracksOpen(false);
+            act({ type: 'SELECT', index });
+          }}
+        />
+      </div>
     </div>
   );
 }
