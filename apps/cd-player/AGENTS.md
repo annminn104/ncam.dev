@@ -639,14 +639,17 @@ border-box`, or the columns would run under the bottom edge). `App` renders the 
 **`.cdp-stage`** (the scene layer, the loader, the help line and the way in, in that order) and
 **`.cdp-side`** (the card, then the tracklist), which is also the reading and the Tab order:
 
-- **Above 1260 px**: three columns, `340px minmax(0, 1fr) 360px`, 16 px apart inside 20 px of
-  padding at the top and 24 px elsewhere. The bar is the rail on the left (the title, the field on
-  a row of its own, Load and Share sharing the row under it with Player, then the presets, which
-  scroll in what the rail leaves them), the stage the middle, the side column the right (the card
-  at its own height, the tracklist taking the rest).
-- **821 to 1260 px**: the bar is a header over the stage, beside the side column; its field grows
-  from 220 px on one row with the buttons (they wrap under a field narrower than that), and the
-  help line goes.
+- **Above 1260 px** (and from 1101 px when wider than 16:10): three columns,
+  `340px minmax(0, 1fr) 360px`, 16 px apart inside 20 px of padding at the top and 24 px
+  elsewhere. The bar is the rail on the left (the title, the field on a row of its own, Load and
+  Share sharing the row under it with Player, then the presets, which scroll in what the rail
+  leaves them), the stage the middle, the side column the right (the card at its own height, the
+  tracklist taking the rest).
+- **821 to 1100 px, and to 1260 px at 16:10 or narrower** (a tablet held sideways): the bar is a
+  header over the stage, beside the side column; its field grows from 220 px on one row with the
+  buttons (they wrap under a field narrower than that), and the help line goes. From 1101 px a
+  screen wider than 16:10 keeps the three columns, since the header would leave it a short stage
+  (at 1200 × 630, the gallery thumbnail's size, the player was about 330 px high under it).
 - **Phones, and tablets held upright** (820 px and under, or up to 1260 px at an aspect of 4:5 or
   taller): one column of the bar, the stage and the card (`.cdp-side` is `display: contents`, so
   the card takes its own row); the tracklist is the bottom sheet over everything, and the root's

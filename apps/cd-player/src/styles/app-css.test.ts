@@ -17,7 +17,10 @@ const phone =
     css,
   )?.[1] ?? '';
 /** The tablets' and small laptops' block. */
-const medium = /@media \(max-width: 1260px\)\s*\{([\s\S]*?)\n\}/.exec(css)?.[1] ?? '';
+const medium =
+  /@media \(max-width: 1100px\), \(max-width: 1260px\) and \(max-aspect-ratio: 8\/5\)\s*\{([\s\S]*?)\n\}/.exec(
+    css,
+  )?.[1] ?? '';
 /** A rule's declarations inside a media block's text. */
 function inner(block: string, selector: string): string {
   const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -140,7 +143,8 @@ describe('app.css: the hi-fi panel', () => {
   });
 
   it('keeps the breakpoints and the phone rules: the sheet, its list, a 16 px link field', () => {
-    expect(css).toContain('@media (max-width: 1260px)');
+    expect(medium).not.toBe('');
+    expect(phone).not.toBe('');
     expect(css).toContain('@media (hover: none)');
     expect(phone).toMatch(/\.cdp-link input\s*\{\s*font-size:\s*16px;/);
     expect(phone).toMatch(/\.cdp-tracks\s*\{[^}]*max-height:\s*56px/);
@@ -166,7 +170,7 @@ describe('app.css: the layout', () => {
     expect(rule('.cdp-side')).toMatch(/grid-area:\s*side;/);
   });
 
-  it('puts the header over the stage beside the side column from 1260 px down', () => {
+  it('puts the header over the stage beside the side column, but where it would be too short', () => {
     expect(inner(medium, '.cdp-root')).toMatch(
       /grid-template-columns:\s*minmax\(0, 1fr\) 360px;[\s\S]*grid-template-areas:\s*'bar side'\s*'stage side';/,
     );

@@ -910,8 +910,9 @@
 
 /* ── tablets and small laptops: the side column stays; the rail becomes a header over the stage,
    its field on one row with the buttons (they wrap under a field narrower than 220 px), and the
-   help line goes ──────────────────────────────────────────────────────────────────────────── */
-@media (max-width: 1260px) {
+   help line goes. A screen from 1101 to 1260 px wider than 16:10 keeps the rail: the header would
+   leave its stage too short (1200 × 630, the gallery's thumbnail, among them) ──────────────── */
+@media (max-width: 1100px), (max-width: 1260px) and (max-aspect-ratio: 8/5) {
   .cdp-root {
     grid-template-columns: minmax(0, 1fr) 360px;
     grid-template-rows: auto minmax(0, 1fr);
