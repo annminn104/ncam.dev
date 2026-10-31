@@ -9,14 +9,7 @@ import {
 } from 'react';
 import { createLogger } from '@ncam/logger';
 import { readAutoplaySignals, shouldAutoplay, whenSettled } from './autoplay';
-import {
-  BOOT_STALL_MS,
-  bootReducer,
-  INITIAL_BOOT,
-  watchStall,
-  type StallClock,
-  type StallWatch,
-} from './boot';
+import { bootReducer, INITIAL_BOOT, watchStall, type StallClock, type StallWatch } from './boot';
 import { createBridge } from './bridge';
 import { BootStallError, describeFailure } from './failure';
 import { remoteBase } from './lib/asset-url';
@@ -137,17 +130,14 @@ export default function App({ controller, initial = null, assetBase = '' }: AppP
     [showPercent],
   );
 
-  // A boot whose model download goes quiet fails like any other, so the loader never spins for
-  // ever (boot.ts watchStall): the watch runs while the phase is `booting` and hears every
-  // progress event the scene reports.
+  // A boot that goes quiet, on the scene's code or on the model's download, fails like any other,
+  // so the loader never spins for ever (boot.ts watchStall): the watch runs while the phase is
+  // `booting` and hears every progress event the scene reports.
   const stall = useRef<StallWatch | null>(null);
   const booting = boot.phase === 'booting';
   useEffect(() => {
     if (!booting) return;
-    const watch = watchStall(
-      () => onFail(new BootStallError(`the model's download sent nothing for ${BOOT_STALL_MS} ms`)),
-      timeouts,
-    );
+    const watch = watchStall((part) => onFail(new BootStallError(part)), timeouts);
     stall.current = watch;
     return () => {
       watch.stop();

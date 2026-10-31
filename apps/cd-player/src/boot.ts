@@ -44,7 +44,10 @@ export function bootReducer(state: BootState, event: BootEvent): BootState {
   }
 }
 
-/** How long a boot may hear nothing from the model's download before it fails as stalled. */
+/**
+ * How long a boot may go without a word, waiting on the scene's code and then on the model's
+ * download, before it fails as stalled.
+ */
 export const BOOT_STALL_MS = 20_000;
 
 /** The stall watch's timer: `after` calls `done` once after `ms`, and returns its canceller. */
@@ -52,31 +55,44 @@ export interface StallClock {
   after(ms: number, done: () => void): () => void;
 }
 
+/**
+ * What a boot that went quiet was waiting on: the scene's code until the model's download first
+ * reports (the download begins once the code has come), the download from then on.
+ */
+export type StallPart = 'scene' | 'model';
+
 export interface StallWatch {
-  /** A progress event of the model's download: a fraction of it, or null while its size is unknown. */
+  /**
+   * A progress event of the model's download (src/scene/model.ts downloadModel): null as its
+   * request goes out and while its size is unknown, a fraction as it comes, 1 at its end.
+   */
   progress(fraction: number | null): void;
   /** The boot has left `booting` (live, failed or let go): the watch ends. */
   stop(): void;
 }
 
 /**
- * The boot's stall watch, so the loader never spins for ever: `onStall` runs once when the
- * download goes `ms` without a word. Armed as the boot starts, armed again by every progress event
- * (a fraction or null alike), and over once the download is complete (a fraction of 1) or with
- * `stop`. It times silence, never the boot as a whole: the shaders compile after the download
- * without a word (seconds on a software rasteriser), and a slow machine is not a stalled one.
+ * The boot's stall watch, so the loader never spins for ever: `onStall` runs once when the boot
+ * goes `ms` without a word, with the part it was waiting on. Armed as the boot starts, armed again
+ * by every progress event (a fraction or null alike), and over once the download is complete (the
+ * 1 that only the end of its stream reports) or with `stop`. It times silence, never the boot as a
+ * whole: the shaders compile after the download without a word (seconds on a software
+ * rasteriser), and a slow machine is not a stalled one. The scene's code says nothing as it comes,
+ * so it alone must come whole within `ms`.
  */
 export function watchStall(
-  onStall: () => void,
+  onStall: (part: StallPart) => void,
   clock: StallClock,
   ms: number = BOOT_STALL_MS,
 ): StallWatch {
   let cancel: (() => void) | null = null;
+  // Nothing has reported yet: the boot waits on the scene's code.
+  let part: StallPart = 'scene';
   const arm = () => {
     cancel?.();
     cancel = clock.after(ms, () => {
       cancel = null;
-      onStall();
+      onStall(part);
     });
   };
   const stop = () => {
@@ -88,6 +104,7 @@ export function watchStall(
     progress(fraction) {
       // Stopped, complete or stalled already: nothing arms it again.
       if (!cancel) return;
+      part = 'model';
       if (fraction !== null && fraction >= 1) stop();
       else arm();
     },

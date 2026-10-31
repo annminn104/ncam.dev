@@ -10,6 +10,9 @@ export interface PlayerSceneProps {
   /** The first frames of the player are on screen. */
   onReady(): void;
   onFail(error: Error): void;
-  /** The GLB's download, 0–1, or null while its size is unknown (no Content-Length). */
+  /**
+   * The GLB's download (src/scene/model.ts downloadModel): null as its request goes out, then for
+   * each chunk 0–0.99, or null while its size is unknown (no Content-Length), and 1 at its end.
+   */
   onProgress(fraction: number | null): void;
 }

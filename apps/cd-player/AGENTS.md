@@ -339,8 +339,9 @@ asked before any canvas mounts): "This browser can't draw the 3D player. The mus
 with no button; a chunk that would not load (`SceneChunkError`): "The 3D player couldn't start. The
 music still plays." with **Reload the page** (a browser remembers a failed dynamic import, and the
 reload stops the music, hence the label); anything else (the GLB, the model contract, a render-time
-throw caught by `SceneBoundary`, a download that stalls: `BootStallError`, see "Hand-overs"): the
-same message with **Try again**. Each is logged as `cd-player.scene-failed`.
+throw caught by `SceneBoundary`, a boot that stalls on the scene's code or on the GLB's download:
+`BootStallError`, see "Hand-overs"): the same message with **Try again**. Each is logged as
+`cd-player.scene-failed`.
 
 **The GLB contract** (`src/scene/contract.ts`): `REQUIRED_NODES` are the pivots `lid_hinge`,
 `arm_pivot`, `knob` and `btn_prev`, `btn_next`, `btn_play`, `btn_stop`, `btn_rpt`, `btn_mode`, the
@@ -753,31 +754,39 @@ entrance (text that enters at opacity 0 counts for LCP only at its next repaint)
 **The count.** While the scene boots the line gives the GLB's download, "Loading the player 63%"
 (`loaderPercent` and `loaderLine` in `src/view.ts`: a whole percent, held between 0 and 100).
 `loadPlayerModel(url, onProgress, signal)` in `src/scene/model.ts` fetches the GLB itself
-(`downloadModel`, then GLTFLoader's `parseAsync`) and reports each chunk, where `downloadFraction`
-makes a fraction only when the response names its length (`Content-Length`; a compressed transfer
-whose decoded bytes outrun it is held at 1), then `PlayerSceneProps.onProgress` (`PlayerScene`
-drops a cancelled load's), then `App`, which keeps the percent and sets it only when it changes,
-so the download's chunks re-render the page once per percent at most. `PlayerScene` aborts the
-download of a load it lets go of (a failed boot, StrictMode's first run, a remount), so "Try
-again" after a stall asks for the GLB anew. The model fetches it itself because three's FileLoader
-joins a load to a request for the same URL still in flight, a stalled one included. The scene
-chunk's own download is not measured: until the GLB's request starts, and whenever its size is
-unknown, the line has no number. A failed boot clears the count, so "Try again" starts from none.
+(`downloadModel`, then GLTFLoader's `parseAsync`) and reports its request going out (with no
+fraction), each chunk, where `downloadFraction` makes a fraction only when the response names its
+length (`Content-Length`) and holds it at 0.99 at most (a compressed transfer's decoded bytes can
+outrun the length long before the end), and the end of the stream, the only report of 1. The
+reports go to `PlayerSceneProps.onProgress` (`PlayerScene` drops a cancelled load's), then `App`,
+which keeps the percent and sets it only when it changes, so the download's chunks re-render the
+page once per percent at most. `PlayerScene` aborts the download of a load it lets go of (a failed
+boot, StrictMode's first run, a remount), so "Try again" after a stall asks for the GLB anew. The
+model fetches it itself because three's FileLoader joins a load to a request for the same URL
+still in flight, a stalled one included. The scene chunk's own download is not measured: until the
+GLB's first chunk, and while its size is unknown, the line has no number (a GLB served with no
+length shows 100 % at its end alone). A failed boot clears the count: "Try again" starts from none.
 
 **Hand-overs.** The loader gives way to "Open the player" once the page has settled without
 starting the scene (a software rasteriser, reduced motion: `manual` in `App`, since the boot's
 events stay as they were), and to the failure when a boot fails; "Open the player" brings it back
-for the boot. A download that stalls fails the boot too, so no spinner runs forever: **the stall
-watch** (`watchStall` in `src/boot.ts`, which `App` runs while the phase is `booting`) is armed as
-the boot starts, armed again by every progress event of the GLB (with a fraction or without one),
-and over once the download is complete (a fraction of 1) or the phase leaves `booting`; 20 s with no
-event (`BOOT_STALL_MS`) fails the boot with `BootStallError` (see "Failures"). It times silence,
+for the boot. A boot that stalls fails too, so no spinner runs forever: **the stall watch**
+(`watchStall` in `src/boot.ts`, which `App` runs while the phase is `booting`) is armed as the boot
+starts, armed again by every progress event of the GLB (with a fraction or without one), and over
+once the download is complete or the phase leaves `booting`. Complete is the 1 of the stream's
+end, never a chunk's count, so a compressed GLB counted past its length, or one served with no
+length, is watched to its last byte. 20 s with no event (`BOOT_STALL_MS`) fails the boot with
+`BootStallError` (see "Failures"), whose message names the part it waited on: the scene's code
+until the GLB's request goes out (its first event), the GLB's download after. It times silence,
 not the boot: the shaders compile after the download without an event (seconds on SwiftShader),
-and a total timeout would fail a slow machine. A GLB served with no length never reports a fraction
-of 1, so its watch runs on until the scene is live: the parse and the first frames must then come
-within 20 s of the last chunk. On `ready` the canvas fades in over 600 ms and the loader
-fades out with it (`.cdp-scene.is-live ~ .cdp-loader`: the loader comes after the scene layer in
-the DOM, so it also draws over the invisible canvas, with `pointer-events: none`), then unmounts.
+and a total timeout would fail a slow machine. The scene's code sends no event as it comes, so it
+alone must come whole within those 20 s: on a link of about 100 kbit/s or less it cannot, and the
+boot fails as a stall while its bytes still come. "Try again" then waits on the same request (a
+browser keeps one fetch per module URL while it is on its way), so the code still comes; a request
+that hangs for good stalls again, and only a reload asks anew. On `ready` the canvas fades in over
+600 ms and the loader fades out with it (`.cdp-scene.is-live ~ .cdp-loader`: the loader comes
+after the scene layer in the DOM, so it also draws over the invisible canvas, with
+`pointer-events: none`), then unmounts.
 
 ## Tests
 
@@ -791,18 +800,18 @@ Unit tests (`src/**/*.test.ts`, node environment, run by the root `pnpm test`):
   selector needs, since the server draws no scene layer, and renders the default skin's accent
   inline on the root with the picker closed), `ssr-graph.test.ts` (the import graphs),
   `ssr-state.test.ts`, `boot.test.ts` (the phases from `waiting`, and the stall watch on a fake
-  clock), `autoplay.test.ts`, `failure.test.ts`, `webgl.test.ts`, `shell/EnterButton.test.ts`,
-  `shell/Loader.test.ts` (the disc and the line), `shell/NowPlaying.test.ts` (the card's controls
-  in Tab order as `cdp-key` squares, the track label for the eye and for a screen reader, the
-  switches' `aria-pressed`, the slider's numbers and when it is disabled; its `change` handling
-  needs a DOM, so that is by hand), `shell/LinkBar.test.ts` (Retry beside an error, the title after
-  a failed first load, Player after Share inside the form, `copyText`), `shell/Tracklist.test.ts`
-  (the empty shelf, the playing row's equaliser, the explicit badge) and `styles/app-css.test.ts`
-  (the loader plain from the first paint, its spin and its fade, `FADE_MS` equal to both
-  transitions, reduced motion; the hi-fi panel's tokens, the fallback accent pair Blush's from
-  `skins.json`, the accent's uses, no other colour, pill, italic, Fraunces, layered shadow or blur
-  over 8 px, square controls, the breakpoints and the phone rules; the picker cut down to its
-  swatch at 920 px and under);
+  clock, with the part it names), `autoplay.test.ts`, `failure.test.ts`, `webgl.test.ts`,
+  `shell/EnterButton.test.ts`, `shell/Loader.test.ts` (the disc and the line),
+  `shell/NowPlaying.test.ts` (the card's controls in Tab order as `cdp-key` squares, the track label
+  for the eye and for a screen reader, the switches' `aria-pressed`, the slider's numbers and when
+  it is disabled; its `change` handling needs a DOM, so that is by hand), `shell/LinkBar.test.ts`
+  (Retry beside an error, the title after a failed first load, Player after Share inside the form,
+  `copyText`), `shell/Tracklist.test.ts` (the empty shelf, the playing row's equaliser, the explicit
+  badge) and `styles/app-css.test.ts` (the loader plain from the first paint, its spin and its fade,
+  `FADE_MS` equal to both transitions, reduced motion; the hi-fi panel's tokens, the fallback accent
+  pair Blush's from `skins.json`, the accent's uses, no other colour, pill, italic, Fraunces,
+  layered shadow or blur over 8 px, square controls, the breakpoints and the phone rules; the picker
+  cut down to its swatch at 920 px and under);
 - routes and personalisation: `routes.test.ts`, `route-controller.test.ts`, `persist.test.ts`
   (the saved collection and the saved skin), `spotify/link.test.ts`, `skins.test.ts` (a colour
   for every role in every skin, the colours' format, the accents' contrast, `skinById`) and
@@ -817,28 +826,28 @@ Unit tests (`src/**/*.test.ts`, node environment, run by the root `pnpm test`):
   (the end watchdog on injected timers, Retry's second ask), `bridge.test.ts` and `view.test.ts`
   (the view model, `loaderPercent` and `loaderLine`, the next five tracks in play order);
 - the scene: `scene/model-contract.test.ts` (the committed GLB), `model.test.ts`
-  (`downloadFraction`, and `downloadModel` on a fake fetch: its progress, a request of its own per
-  load, the abort), `glb.test.ts`, `material-roles.test.ts` (every `SKIN_ROLES` entry maps a
-  material to the role of its own name), `materials.test.ts` (the roles' materials, `leatherSheen`,
-  `applySkin`), `stage.test.ts`, `rig.test.ts`, `director.test.ts`, `swap-controller.test.ts`
-  (besides every kind of change: a swap into another collection, a list of one track, two tracks
-  on Repeat), `framing.test.ts`, `controls.test.ts`, `vu.test.ts`, `vu-materials.test.ts`,
-  `interaction.test.ts`, `orbit.test.ts`, and `textures/` (`grain`, `images`, `layout`, `paint`,
-  `painter`, and `disc-printer` on fake canvases and textures: a blank then the print, a new
-  size's texture, a stale print, a print made again once the fonts are in).
+  (`downloadFraction`, and `downloadModel` on a fake fetch: its progress from the request to the
+  end, a request of its own per load, the abort), `glb.test.ts`, `material-roles.test.ts` (every
+  `SKIN_ROLES` entry maps a material to the role of its own name), `materials.test.ts` (the roles'
+  materials, `leatherSheen`, `applySkin`), `stage.test.ts`, `rig.test.ts`, `director.test.ts`,
+  `swap-controller.test.ts` (besides every kind of change: a swap into another collection, a list of
+  one track, two tracks on Repeat), `framing.test.ts`, `controls.test.ts`, `vu.test.ts`,
+  `vu-materials.test.ts`, `interaction.test.ts`, `orbit.test.ts`, and `textures/` (`grain`,
+  `images`, `layout`, `paint`, `painter`, and `disc-printer` on fake canvases and textures: a blank
+  then the print, a new size's texture, a stale print, a print made again once the fonts are in).
 
 **By hand:** `art:build` (above), Lighthouse, and a pass in a real browser: the default page, a
 pasted playlist and album, the error messages, every control (the DOM card, the 3D keys, the knob,
 the keyboard), the orbit, the four skins (a reload keeps the last), the rack through every kind of
 change (Next, Previous, a row in the rack, a row outside it, a pasted playlist), the loader's
-hand-overs (its count over a slow network, a GLB that never answers, the fade), reduced motion,
-WebGL off and the embed
-blocked. Logged-in full tracks, Safari, Firefox (the Seek slider's `::-moz-range-*` rules), real
-phones and a real GPU need the owner's browsers. In headless Chromium on SwiftShader a Playwright
-click waits for its element to hold still over two frames (seconds while the scene draws), and two
-touch taps reach the page 500 ms or more apart, so a timed press (Previous within 3 s) or a double
-tap needs input sent straight to the page. A preview lasts under 30 s: a check that seeks, with the
-scene drawing slowly, pauses the track while it looks around.
+hand-overs (its count over a slow network, a GLB and a scene chunk that never answer, each logged as
+its own part, "Try again" after a stall starting with no count, the fade), reduced motion, WebGL off
+and the embed blocked. Logged-in full tracks, Safari, Firefox (the Seek slider's `::-moz-range-*`
+rules), real phones and a real GPU need the owner's browsers. In headless Chromium on SwiftShader a
+Playwright click waits for its element to hold still over two frames (seconds while the scene
+draws), and two touch taps reach the page 500 ms or more apart, so a timed press (Previous within
+3 s) or a double tap needs input sent straight to the page. A preview lasts under 30 s: a check
+that seeks, with the scene drawing slowly, pauses the track while it looks around.
 
 **The gallery thumbnail** (`apps/portfolio/public/thumbnails/cd-player.jpg`) comes from
 `pnpm thumbnails cd-player` with the host and this remote running, but under a software renderer

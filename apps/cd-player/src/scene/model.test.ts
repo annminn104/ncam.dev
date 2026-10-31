@@ -21,7 +21,7 @@ const answer = (length: string | null = '12') =>
   );
 
 describe('downloadModel', () => {
-  it('fetches the GLB, a fraction per chunk when the response names its length', async () => {
+  it('fetches the GLB: the request, each chunk of known length, 1 at the end', async () => {
     const seen: (number | null)[] = [];
     const bytes = await downloadModel(
       URL_,
@@ -30,10 +30,11 @@ describe('downloadModel', () => {
       () => Promise.resolve(answer()),
     );
     expect([...new Uint8Array(bytes)]).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
-    expect(seen).toEqual([4 / 12, 8 / 12, 1]);
+    // The last chunk brings every byte the length named, and still only the end is the whole.
+    expect(seen).toEqual([null, 4 / 12, 8 / 12, 0.99, 1]);
   });
 
-  it('reports each chunk with no fraction when the response names no length', async () => {
+  it('reports no fraction without a length, then its end', async () => {
     const seen: (number | null)[] = [];
     await downloadModel(
       URL_,
@@ -41,7 +42,20 @@ describe('downloadModel', () => {
       undefined,
       () => Promise.resolve(answer(null)),
     );
-    expect(seen).toEqual([null, null, null]);
+    expect(seen).toEqual([null, null, null, null, 1]);
+  });
+
+  it('reports its request as it goes out, before any answer comes', async () => {
+    const seen: (number | null)[] = [];
+    // An answer that never comes: the boot must still know the download has begun.
+    void downloadModel(
+      URL_,
+      (fraction) => seen.push(fraction),
+      undefined,
+      () => new Promise<Response>(() => {}),
+    );
+    await Promise.resolve();
+    expect(seen).toEqual([null]);
   });
 
   it('asks for every load anew with its own signal: a load never waits on another one', async () => {
@@ -62,7 +76,7 @@ describe('downloadModel', () => {
     ]);
   });
 
-  it('stops where its signal aborts it, and fails on an answer that is not the model', async () => {
+  it('stops where its signal aborts it, with no end; fails on a 404', async () => {
     const download = new AbortController();
     const seen: (number | null)[] = [];
     // As a browser's fetch does: the body errors once the request's signal aborts.
@@ -82,13 +96,15 @@ describe('downloadModel', () => {
       URL_,
       (fraction) => {
         seen.push(fraction);
-        download.abort();
+        // The first chunk is in: the boot lets go of the load.
+        if (fraction !== null) download.abort();
       },
       download.signal,
       stalls,
     );
     await expect(pending).rejects.toMatchObject({ name: 'AbortError' });
-    expect(seen).toEqual([4 / 12]);
+    // Its request and its one chunk, never an end.
+    expect(seen).toEqual([null, 4 / 12]);
     await expect(
       downloadModel(URL_, undefined, undefined, () =>
         Promise.resolve(new Response('Not Found', { status: 404 })),
@@ -103,7 +119,10 @@ describe('downloadFraction', () => {
     expect(downloadFraction({ lengthComputable: true, loaded: 147_456, total: 589_824 })).toBe(
       0.25,
     );
-    expect(downloadFraction({ lengthComputable: true, loaded: 589_824, total: 589_824 })).toBe(1);
+    // Every byte the length named is no proof of the end: that is the stream's to say.
+    expect(downloadFraction({ lengthComputable: true, loaded: 589_824, total: 589_824 })).toBe(
+      0.99,
+    );
   });
 
   it('has no fraction when the response names no length', () => {
@@ -111,7 +130,9 @@ describe('downloadFraction', () => {
     expect(downloadFraction({ lengthComputable: true, loaded: 65_536, total: 0 })).toBeNull();
   });
 
-  it('holds a compressed transfer, whose decoded bytes outrun the length it named, at 1', () => {
-    expect(downloadFraction({ lengthComputable: true, loaded: 900_000, total: 589_824 })).toBe(1);
+  it('holds a compressed transfer, whose decoded bytes outrun the length it named, at 99 %', () => {
+    expect(downloadFraction({ lengthComputable: true, loaded: 900_000, total: 589_824 })).toBe(
+      0.99,
+    );
   });
 });

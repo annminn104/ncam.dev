@@ -1,3 +1,5 @@
+import { BOOT_STALL_MS, type StallPart } from './boot';
+
 /** What failed, for the visitor; the music keeps playing either way. */
 export interface Failure {
   message: string;
@@ -15,9 +17,19 @@ export class NoWebGLError extends Error {
   name = 'NoWebGLError';
 }
 
-/** The model's download went quiet for BOOT_STALL_MS (`watchStall` in src/boot.ts). */
+/**
+ * A boot went BOOT_STALL_MS without a word, waiting on the scene's code or on the model's download
+ * (`watchStall` in src/boot.ts); its message names which.
+ */
 export class BootStallError extends Error {
   name = 'BootStallError';
+  constructor(readonly part: StallPart) {
+    super(
+      part === 'scene'
+        ? `the scene's code did not come within ${BOOT_STALL_MS} ms`
+        : `the model's download sent nothing for ${BOOT_STALL_MS} ms`,
+    );
+  }
 }
 
 const COULDNT_START = "The 3D player couldn't start. The music still plays.";

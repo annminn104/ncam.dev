@@ -62,7 +62,7 @@ describe('bootReducer', () => {
 });
 
 describe('watchStall', () => {
-  it('fails a boot that hears nothing from the download for BOOT_STALL_MS', () => {
+  it("fails a boot that hears nothing for BOOT_STALL_MS, waiting on the scene's code", () => {
     expect(BOOT_STALL_MS).toBe(20_000);
     const t = fakeClock();
     const stalled = vi.fn();
@@ -71,9 +71,24 @@ describe('watchStall', () => {
     expect(stalled).not.toHaveBeenCalled();
     t.advance(1);
     expect(stalled).toHaveBeenCalledTimes(1);
+    expect(stalled).toHaveBeenCalledWith('scene');
   });
 
-  it('waits again from every progress event, a fraction or none (no Content-Length)', () => {
+  it("names the model's download once it has reported, from its request going out", () => {
+    const t = fakeClock();
+    const stalled = vi.fn();
+    const watch = watchStall(stalled, t.clock);
+    t.advance(15_000);
+    // The scene's code has come: the GLB's request goes out, and nothing answers it.
+    watch.progress(null);
+    t.advance(BOOT_STALL_MS - 1);
+    expect(stalled).not.toHaveBeenCalled();
+    t.advance(1);
+    expect(stalled).toHaveBeenCalledTimes(1);
+    expect(stalled).toHaveBeenCalledWith('model');
+  });
+
+  it('waits again from every progress event: a fraction, 0.99 included, or none', () => {
     const t = fakeClock();
     const stalled = vi.fn();
     const watch = watchStall(stalled, t.clock);
@@ -81,10 +96,14 @@ describe('watchStall', () => {
     watch.progress(0.2);
     t.advance(15_000);
     watch.progress(null);
+    t.advance(15_000);
+    // A chunk's count is never the end, the last chunk's or one past a compressed length alike.
+    watch.progress(0.99);
     t.advance(BOOT_STALL_MS - 1);
     expect(stalled).not.toHaveBeenCalled();
     t.advance(1);
     expect(stalled).toHaveBeenCalledTimes(1);
+    expect(stalled).toHaveBeenCalledWith('model');
   });
 
   it('ends once the download is complete: the shaders compile after it without a word', () => {
@@ -94,8 +113,8 @@ describe('watchStall', () => {
     watch.progress(0.5);
     watch.progress(1);
     expect(t.pending()).toBe(0);
-    // A compressed transfer counted past its length reports 1 again: that arms nothing.
-    watch.progress(1);
+    // Nothing after the end arms it again.
+    watch.progress(0.99);
     t.advance(10 * BOOT_STALL_MS);
     expect(stalled).not.toHaveBeenCalled();
     expect(t.pending()).toBe(0);
