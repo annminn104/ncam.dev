@@ -38,8 +38,9 @@ guide assumes too:
 - **One model in four colourways** (see "Skins"): visitors pick the colour, and nothing else about
   the player.
 - **The cascade lid**: the crystal case and its booklet stand beside the five-slot rack, rather than
-  a rack without the case (the grid), chosen from Cycles renders of both and approved with a
-  brighter VU strip, a darker trim and the strap kept clear of the rack and its discs.
+  a rack without the case (the grid), chosen from Cycles renders of both and approved with a VU
+  strip that glows brighter in the renders (the page's own strip did not change), a darker trim and
+  the strap kept clear of the rack and its discs.
 - **The palettes** of the four colourways were approved from Cycles renders of each skin and
   captures of the page, and live in `src/skins.json` alone: a colour changes there, and only with
   the owner's OK.
@@ -579,10 +580,11 @@ and a dot, so the state is not colour alone) and the focus ring (2 px; drawn ins
 whose overflow would cut it). Everything else is white and greys. The `.cdp-root` block, the
 stylesheet's first rule, holds the tokens and the page's fallback tint (`rgb(42 31 36)`, not a
 grey), and is exempt; after it `src/styles/app-css.test.ts` fails on any hex colour and on any
-space-separated `rgb(r g b …)` whose channels differ, and anywhere in the file on a `--cdp-blush`,
-`--cdp-gold`, `--cdp-glass` or `--cdp-display` token, a pill radius (`999px`, or a `border-radius`
-of `50%`), an italic, Fraunces, a layered shadow or a blur over 8 px. It looks for no other way of
-naming a colour (a comma-separated `rgb()`, `rgba()`, `hsl()`, `oklch()`, a keyword), so a review
+lower-case `rgb(` of three whole numbers one space apart whose channels differ, and anywhere in the
+file on a `--cdp-blush`, `--cdp-gold`, `--cdp-glass` or `--cdp-display` token, a pill radius
+(`999px`, or a `border-radius` of `50%`), an italic, Fraunces, a layered shadow or a blur over
+8 px. It reads no other way of naming a colour (an `rgb()` with decimal or percentage channels, an
+upper-case `RGB(`, a comma-separated `rgb()`, `rgba()`, `hsl()`, `oklch()`, a keyword), so a review
 does.
 
 **The controls**: transport keys are 32 px squares (`cdp-key`, Play `cdp-key--main`) and the small
@@ -842,7 +844,8 @@ scene drawing slowly, pauses the track while it looks around.
 `pnpm thumbnails cd-player` with the host and this remote running, but under a software renderer
 that captures the "Open the player" gate, so it needs a GPU-backed Chromium: run the unmodified
 `apps/portfolio/scripts/capture-thumbnails.mjs` under a preload (`node --import <file>`) that wraps
-`chromium.launch` to add `--use-angle=metal --enable-gpu`, with `THUMBNAIL_SETTLE_MS=20000`.
+`chromium.launch` to add `--use-angle=metal --enable-gpu` (Metal, so on macOS only: another system
+needs its own ANGLE backend), with `THUMBNAIL_SETTLE_MS=20000`.
 
 **Lighthouse.** The page is one of the audited paths (`/projects/cd-player`, the 13th of
 `AUDITED_PATHS` in `scripts/lighthouse/config.cjs`), so `LH_SHARD=13/13` audits it alone (the index

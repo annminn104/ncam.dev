@@ -576,9 +576,9 @@
   border-color: color-mix(in srgb, var(--cdp-accent) 86%, rgb(0 0 0));
 }
 /* The deck's Stop, Repeat and MODE keys and its knob, which are a few pixels wide in the 3D view on
-   a phone: the knob's seek slider, then the three small keys. This row took the place of the old
-   progress bar (14 + 4 + 12 px) and may grow the card by 12 px at most, since a narrow screen's
-   framing lifts the player clear of the card by a fixed aim (src/scene/framing.ts). */
+   a phone: the knob's seek slider, then the three small keys. The row is 8 + 28 + 6 px (its margins
+   and the 28 px slider and keys), and the card must not grow past it: a narrow screen's framing
+   lifts the player clear of the card by a fixed aim (src/scene/framing.ts), not by measuring it. */
 .cdp-now__row {
   display: flex;
   align-items: center;

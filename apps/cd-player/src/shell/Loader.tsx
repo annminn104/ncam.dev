@@ -1,10 +1,10 @@
 import { loaderLine } from '../view';
 
 /**
- * Holds the scene's place until it is live: a disc spun by CSS from the first paint (still under
- * reduced motion) and one line, with the GLB's download once its size is known. Server-rendered and
- * plain from the first paint: it never enters at opacity 0, and fades out only with the canvas's
- * fade-in (styles/app.css).
+ * Holds the scene's place until it is live: a disc spun by CSS from the first paint (it stands
+ * still under reduced motion) and one line, with the GLB's download once its size is known.
+ * Server-rendered and plain from the first paint: it never enters at opacity 0, and fades out only
+ * with the canvas's fade-in (styles/app.css).
  */
 export function Loader({ percent }: { percent: number | null }) {
   return (
