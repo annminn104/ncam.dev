@@ -181,16 +181,17 @@ details and artist of the current track and the next five (`PREFETCH` in
 `src/playback/engine.ts`).
 
 **Retry** (`canRetry` in `client.ts`: a 502, a stall the proxy turned into one, the network, a
-body that would not read; never a 404 or a refused request). A pasted link that failed that way
-shows its message under the input with a small **Retry** beside it, which loads the same link
-again (`loadLink` in `App.tsx`). A first load that failed (no collection, nothing loading, an
-error: Spotify down on `/` or on a shared link) shows an **empty shelf** in the tracklist's place,
-the message and, for those failures, Retry, which calls `engine.open(ref)` again: `open` asks
-again for a ref whose collection never came. The bar's title then says "No tracks" rather than
-"Loading…", the message is not repeated under the input, and on a phone the sheet opens by itself,
-once per failure, to show the shelf (`App` sets `tracksOpen` when a new error appears, so the Tracks
-toggle can close the sheet and open it again; a Retry that fails again opens it again). The
-engine's snapshot keeps the failure as `error: { message, retry }`. A failed change of collection
+body that would not read; never a 404 or a refused request). A pasted link or a preset that failed
+that way shows its message under the input with a small **Retry** beside it, which loads the same
+collection again (`src/link-loader.ts`, see "Personalisation"). A first load that failed (no
+collection, nothing loading, an error: Spotify down on `/` or on a shared link) shows an **empty
+shelf** in the tracklist's place, the message and, for those failures, Retry, which calls
+`engine.open(ref)` again: `open` asks again for a ref whose collection never came. The bar's
+title then says "No tracks" rather than "Loading…", the message is not repeated under the input,
+and on a phone the sheet opens by itself, once per failure, to show the shelf (`App` sets
+`tracksOpen` when a new error appears, so the Tracks toggle can close the sheet and open it again;
+a Retry that fails again opens it again). The engine's snapshot keeps the failure as
+`error: { message, retry }`. A failed change of collection
 keeps the one shown, with its message in the bar and no Retry (`open` does not ask again while a
 collection is shown); a pasted link is fetched before the page goes to it, so that case is rare.
 
@@ -538,9 +539,10 @@ frame aims at the player's centre line and stands as far back as its bounding sp
 canvas's shape: the player sits in the middle of whatever the layout leaves it. `CameraRig` holds
 that frame every frame (resizes included, a phone's stage shrinking for the embed among them), and
 `PlayerScene` sizes the shadow map and the pixel ratio by `isWide` of the window's width.
-`framing.test.ts` projects the model's box through it for every canvas shape from 0.43 to 2.63
-wide for its height, at the orbit's middle and its corners: the box stays 2 % clear of every edge,
-stands in the middle (within 5 %), and spans 70 % or more of the tighter side.
+`framing.test.ts` projects the model's box through it for canvas shapes from 0.2 to 7 wide for
+their height (the layouts' stages fall between 0.43 and 2.63, swept in steps): at the orbit's
+middle and its corners the box stays 1 % of the canvas clear of every edge, and at the orbit's
+middle it stands within 3 % of the canvas's middle and spans 70 % or more of a side.
 
 **Reduced motion** (`prefers-reduced-motion: reduce`): no autostart; a disc change and a cascade
 in the rack are instant (the rig jumps to its end and the music still waits a 300 ms beat,
@@ -561,11 +563,16 @@ preset (see "Popular on Spotify"), which skips the first step:
    with or without `https://`, `intl-xx/`, `embed/` or a query string, a `spotify:` URI, or a bare
    22-character id (taken as a playlist). A track, artist, episode, show or user link is refused as
    not a playlist or an album; `spotify.link` short links are not followed.
-2. `loadRef` fetches the collection; only once that succeeds is `{ type, id }` saved in
-   `localStorage` under **`ncam.cd-player.last`** (`src/persist.ts`) and the page navigated there.
-   The engine then loads the new collection into the same mount. A failure shows under the input,
-   with Retry when trying again may help (see "Data"), which loads the same collection again. One
-   load runs at a time: a link or a preset chosen meanwhile is dropped, and Load says "Loading…".
+2. The link loader (`createLinkLoader` in `src/link-loader.ts`, three-free, tested on fakes)
+   fetches the collection; only once that succeeds is `{ type, id }` saved in `localStorage` under
+   **`ncam.cd-player.last`** (`src/persist.ts`) and the page navigated there. The engine then
+   loads the new collection into the same mount. A failure shows under the input, with Retry when
+   trying again may help (see "Data"), which loads the same collection again; only a pasted link's
+   own failure marks the field invalid (`aria-invalid`, its red border), never a preset's or the
+   engine's. One load runs at a time: a link or a preset chosen meanwhile is dropped, and Load says
+   "Loading…". A load that lands once the route has moved on (Back meanwhile, the host leaving the
+   project) or once the App has gone saves and navigates nothing, so it never undoes the visitor's
+   move; `App` stops the loader as it unmounts and starts it again (StrictMode mounts twice).
 
 **Restore on `/`**: an App that mounts on `/` navigates to the saved collection (`restoreTarget`),
 never to the default playlist, and it looks only when it mounts, so Back to `/` (a route update,
@@ -584,18 +591,24 @@ page already does for track art and never stored here. Spotify renews some edito
 old URL keeps answering, and a new one is an edit of `presets.ts`. A playlist Spotify retires
 answers 404, with the message a pasted link gets: replace it there.
 
-A press loads the playlist as a pasted link loads (`loadRef`, see "Personalisation"), so it is
-saved as the visitor's last and the URL follows. The preset of the collection in view is the
+A press loads the playlist as a pasted link loads (the link loader, see "Personalisation"), so it
+is saved as the visitor's last and the URL follows. The preset of the collection **on show** is the
 current one (`aria-current="true"`, the accent's tint and border, as a switch that is on), and
-pressing it does nothing; the one being loaded says "Loading…" in place of its tag. Each button is
-named by its playlist and its tag ("Top 50 - Global Global chart"), the cover `alt=""`.
+pressing it does nothing. On show, not in the URL: after a failed first load nothing is current,
+so the default can be pressed, and after a failed change of collection the one still shown stays
+current. The one being loaded says "Loading…" in place of its tag and is `aria-busy`, its cover
+dimmed (a phone's chip hides its tag). Each button is named by its playlist and its tag
+("Top 50 - Global Global chart"), the cover `alt=""`.
 
-Its looks follow the layout (see "The look"): rows 44 px high in the rail, scrolling in what it
-leaves them; a row of cards 184 px wide with 48 px covers in the tablet header, scrolling sideways
-and fading out at its right edge; chips 44 px high with 36 px covers on a phone, the tag clipped
-out of sight but kept in each name. The covers are `loading="lazy"` and `decoding="async"`, sized
-by their attributes (48 × 48) and the CSS, with no `fetchpriority`: a cover out of sight (past the
-rail's end, along a sideways row) is not asked for until it scrolls near.
+Its looks follow the layout (see "The look"): rows 54 px high in the rail (a 44 px cover), scrolling
+in what it leaves them; a row of cards 184 px wide with 48 px covers in the tablet header,
+scrolling sideways with a thin scrollbar and fading out at its right edge, its end padding the
+fade's 48 px; chips 44 px high with 36 px covers on a phone, the tag clipped out of sight but kept
+in each name, inside its chip (`.cdp-preset` is positioned, so no tag reaches past the page's edge).
+The covers are `loading="lazy"` and `decoding="async"`, sized by their attributes (48 × 48) and the
+CSS, with no `fetchpriority`. Chrome fetches a lazy image within a long distance of the viewport,
+so on a phone and in the rail all twelve come with the page (about 340 KB); only the tablet
+header's sideways row leaves those past its end until it scrolls near.
 
 ## The look
 
@@ -650,15 +663,26 @@ border-box`, or the columns would run under the bottom edge). `App` renders the 
   buttons (they wrap under a field narrower than that), and the help line goes. From 1101 px a
   screen wider than 16:10 keeps the three columns, since the header would leave it a short stage
   (at 1200 × 630, the gallery thumbnail's size, the player was about 330 px high under it).
-- **Phones, and tablets held upright** (820 px and under, or up to 1260 px at an aspect of 4:5 or
-  taller): one column of the bar, the stage and the card (`.cdp-side` is `display: contents`, so
-  the card takes its own row); the tracklist is the bottom sheet over everything, and the root's
-  80 px of bottom padding keep the closed sheet clear of the card. Upright, a tablet's side column
-  would leave the stage a tall, narrow strip.
+- **Phones, and tablets held upright** (820 px and under at 13:10 or narrower, or up to 1260 px at
+  4:5 or taller): one column of the bar, the stage and the card (`.cdp-side` is
+  `display: contents`, so the card takes its own row); the tracklist is the bottom sheet over
+  everything, and the root's 80 px of bottom padding keep the closed sheet clear of the card.
+  Upright, a tablet's side column would leave the stage a tall, narrow strip. The stage keeps
+  220 px (`minmax(220px, 1fr)`, the root `min-height: 100dvh` rather than its height): on a small
+  phone (360 × 640, 320 × 568) the page grows past the screen and scrolls.
+- **Phones held sideways, and short screens** (up to 1100 px, 600 px high or less, wider than
+  13:10): the stage on the left at the screen's height (`position: sticky`) holds still while the
+  bar and the side column beside it (`min(360px, 48%)`) scroll with the page, the tracklist at most
+  a screen high; a header over the stage would leave it a strip or nothing (844 × 390 left it
+  23 px, 667 × 375 none). In the host the column starts under the "← Projects" button.
 
 The stage takes what the panels leave, and the canvas fills it alone, so no panel ever stands over
-the player and a panel growing only leaves it a smaller canvas (see "The scene"). The loader and
-the way in stand in the stage's middle and the help line at its foot. The host's fixed
+the player and a panel growing only leaves it a smaller canvas (see "The scene"). It never has no
+size: R3F draws nothing into a container of none, and the boot, its download over, would wait for
+a first frame for ever. `.cdp-root` is `overflow: clip` (`hidden` where `clip` is unknown), so it
+is never scrolled, not by find-in-page nor by a text fragment, and a sticky stage holds to the
+page's own scroll. The loader and the way in stand in the stage's middle and the help line at its
+foot. The host's fixed
 "← Projects" button stands at the top centre: over the stage on a wide screen, clear of every
 panel; on a phone and an upright tablet it would stand on the bar's title row, so there the root's
 top padding is the host's `--stage-top-inset` (its contract for a remote's top edge; 12 px
@@ -836,7 +860,8 @@ even when a chunk of the failed boot's download came after the failure, before i
 **Hand-overs.** The loader gives way to "Open the player" once the page has settled without
 starting the scene (a software rasteriser, reduced motion: `manual` in `App`, since the boot's
 events stay as they were), and to the failure when a boot fails; "Open the player" brings it back
-for the boot. A boot that stalls fails too, so no spinner runs forever: **the stall watch**
+for the boot. A boot that stalls fails too, so no spinner runs forever (as long as the stage has a
+size, which the layout keeps: see "The look"): **the stall watch**
 (`watchStall` in `src/boot.ts`, which `App` runs while the phase is `booting`) is armed as the boot
 starts, armed again by every progress event of the GLB (with a fraction or without one), and over
 once the download is complete or the phase leaves `booting`. Complete is the 1 of the stream's
@@ -863,27 +888,32 @@ Unit tests (`src/**/*.test.ts`, node environment, run by the root `pnpm test`):
   stage, which holds no `<img>`, the presets' lazy covers the page's only pictures, no
   `<picture>`, no `fetchpriority` and no canvas, "Open the player" left for after the page settles,
   a render that still completes when Spotify fails or hangs; `App.test.ts` also holds the layout's
-  order, the bar, the stage, then the side column with the card over the tracklist, reads `App.tsx`
-  to hold the loader after the scene layer, as the fade-out's `~` selector needs, since the server
-  draws no scene layer, and renders the default skin's accent inline on the root with the picker
-  closed), `ssr-graph.test.ts` (the import graphs),
+  order, the bar, the stage, then the side column with the card over the tracklist, the collection
+  on show marked as the current preset (none while nothing is), reads `App.tsx` to hold the loader
+  after the scene layer, both inside the stage, as the fade-out's `~` selector needs, since the
+  server draws no scene layer, and renders the default skin's accent inline on the root with the
+  picker closed), `link-loader.test.ts` (on fakes: fetched, then saved and navigated; one load at a
+  time; a load landing after the route moved on, or once stopped, dropped; the failures, Retry's
+  collection and whose field it is), `ssr-graph.test.ts` (the import graphs),
   `ssr-state.test.ts`, `boot.test.ts` (the phases from `waiting`, and the stall watch on a fake
   clock, with the part it names), `autoplay.test.ts`, `failure.test.ts`, `webgl.test.ts`,
   `shell/EnterButton.test.ts`, `shell/Loader.test.ts` (the disc and the line),
   `shell/NowPlaying.test.ts` (the card's controls in Tab order as `cdp-key` squares, the track label
   for the eye and for a screen reader, the switches' `aria-pressed`, the slider's numbers and when
   it is disabled; its `change` handling needs a DOM, so that is by hand), `shell/LinkBar.test.ts`
-  (Retry beside an error, the title after a failed first load, the presets after the form and the
-  error, Player after Share inside the form, `copyText`), `shell/Presets.test.ts` (the labelled
-  list, each button's name, the covers' attributes, the current one marked and none for a
-  collection that is not a preset, the busy tag), `shell/Tracklist.test.ts` (the empty shelf, the
+  (Retry beside an error, the field invalid for its own error alone, the title after a failed first
+  load, the presets after the form and the error, Player after Share inside the form, `copyText`),
+  `shell/Presets.test.ts` (the labelled list, each button's name, the covers' attributes, the
+  current one marked and none for a collection that is not a preset, the busy one's tag and
+  `aria-busy`), `shell/Tracklist.test.ts` (the empty shelf, the
   playing row's equaliser, the explicit badge) and `styles/app-css.test.ts` (the loader plain from
   the first paint, its spin and its fade, `FADE_MS` equal to both transitions, reduced motion; the
   hi-fi panel's tokens, the fallback accent pair Blush's from `skins.json`, the accent's uses, no
   other colour, pill, italic, Fraunces, layered shadow or blur over 8 px, square controls, the
-  breakpoints and the phone rules; the layout's grid at each breakpoint, the stage and the side
-  column; the presets as rows, cards and chips, their focus ring; the picker cut down to its swatch
-  at 920 px and under);
+  breakpoints and the phone rules; the layout's grid at each breakpoint, the header's one-row form,
+  the phone's 220 px stage, the sideways phone's sticky stage, the root clipped, the stage and the
+  side column; the presets as rows, cards and chips, their positioned chips, the busy cover, their
+  focus ring; the picker cut down to its swatch at 920 px and under);
 - routes and personalisation: `routes.test.ts`, `route-controller.test.ts`, `persist.test.ts`
   (the saved collection and the saved skin), `spotify/link.test.ts`, `presets.test.ts` (twelve
   playlists with ids of their own, the default first, a name and a tag each, covers on Spotify's
@@ -913,8 +943,8 @@ Unit tests (`src/**/*.test.ts`, node environment, run by the root `pnpm test`):
 
 **By hand:** `art:build` (above), Lighthouse, and a pass in a real browser: the default page, a
 pasted playlist and album, the presets (a press, the current one, a slow one and a failed one with
-Retry), the error messages, the layout at 1440 × 900, 1280 × 720, 1024 × 768, 834 × 1194 and
-390 × 844, every control (the DOM card, the 3D keys, the knob,
+Retry, Back while one loads), the error messages, the layout at 1440 × 900, 1280 × 720, 1024 × 768,
+834 × 1194, 844 × 390, 360 × 640 and 390 × 844, every control (the DOM card, the 3D keys, the knob,
 the keyboard), the orbit, the four skins (a reload keeps the last), the rack through every kind of
 change (Next, Previous, a row in the rack, a row outside it, a pasted playlist), the loader's
 hand-overs (its count over a slow network, a GLB and a scene chunk that never answer, each logged as
