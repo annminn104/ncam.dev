@@ -6,7 +6,7 @@ import { loaderLine } from '../view';
  * plain from the first paint: it never enters at opacity 0, and fades out only with the canvas's
  * fade-in (styles/app.css).
  */
-export function Loader({ progress }: { progress: number | null }) {
+export function Loader({ percent }: { percent: number | null }) {
   return (
     <div className="cdp-loader">
       <svg
@@ -31,7 +31,7 @@ export function Loader({ progress }: { progress: number | null }) {
         {/* The clamping ring round the hole. */}
         <circle className="cdp-loader__hub" cx="22" cy="22" r="8" />
       </svg>
-      <p className="cdp-loader__line">{loaderLine(progress)}</p>
+      <p className="cdp-loader__line">{loaderLine(percent)}</p>
     </div>
   );
 }

@@ -746,17 +746,18 @@ entrance (text that enters at opacity 0 counts for LCP only at its next repaint)
 `prefers-reduced-motion: reduce` its disc stands still.
 
 **The count.** While the scene boots the line gives the GLB's download, "Loading the player 63%"
-(`loaderLine` in `src/view.ts`, rounded and held between 0 and 100). `loadPlayerModel(url,
-onProgress, signal)` in `src/scene/model.ts` fetches the GLB itself (`downloadModel`, then
-GLTFLoader's `parseAsync`) and reports each chunk, where `downloadFraction` makes a fraction only
-when the response names its length (`Content-Length`; a compressed transfer whose decoded bytes
-outrun it is held at 1), then `PlayerSceneProps.onProgress` (`PlayerScene` drops a cancelled
-load's), then `App`'s state. `PlayerScene` aborts the download of a load it lets go of (a failed
-boot, StrictMode's first run, a remount), so "Try again" after a stall asks for the GLB anew. The
-model fetches it itself because three's FileLoader joins a load to a request for the same URL
-still in flight, a stalled one included. The scene chunk's own download is not measured: until the
-GLB's request starts, and whenever its size is unknown, the line has no number. A failed boot
-clears the count, so "Try again" starts from none.
+(`loaderPercent` and `loaderLine` in `src/view.ts`: a whole percent, held between 0 and 100).
+`loadPlayerModel(url, onProgress, signal)` in `src/scene/model.ts` fetches the GLB itself
+(`downloadModel`, then GLTFLoader's `parseAsync`) and reports each chunk, where `downloadFraction`
+makes a fraction only when the response names its length (`Content-Length`; a compressed transfer
+whose decoded bytes outrun it is held at 1), then `PlayerSceneProps.onProgress` (`PlayerScene`
+drops a cancelled load's), then `App`, which keeps the percent and sets it only when it changes,
+so the download's chunks re-render the page once per percent at most. `PlayerScene` aborts the
+download of a load it lets go of (a failed boot, StrictMode's first run, a remount), so "Try
+again" after a stall asks for the GLB anew. The model fetches it itself because three's FileLoader
+joins a load to a request for the same URL still in flight, a stalled one included. The scene
+chunk's own download is not measured: until the GLB's request starts, and whenever its size is
+unknown, the line has no number. A failed boot clears the count, so "Try again" starts from none.
 
 **Hand-overs.** The loader gives way to "Open the player" once the page has settled without
 starting the scene (a software rasteriser, reduced motion: `manual` in `App`, since the boot's
@@ -807,7 +808,7 @@ Unit tests (`src/**/*.test.ts`, node environment, run by the root `pnpm test`):
 - playback: `playback/sequencer.test.ts`, `embed-controller.test.ts` (ended detection, the script
   loader, late events, the rewind and the seeks, the first load, the error log), `engine.test.ts`
   (the end watchdog on injected timers, Retry's second ask), `bridge.test.ts` and `view.test.ts`
-  (the view model, `loaderLine`, the next five tracks in play order);
+  (the view model, `loaderPercent` and `loaderLine`, the next five tracks in play order);
 - the scene: `scene/model-contract.test.ts` (the committed GLB), `model.test.ts`
   (`downloadFraction`, and `downloadModel` on a fake fetch: its progress, a request of its own per
   load, the abort), `glb.test.ts`, `material-roles.test.ts` (every `SKIN_ROLES` entry maps a

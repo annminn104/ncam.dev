@@ -38,7 +38,7 @@ import { Tracklist } from './shell/Tracklist';
 import { DEFAULT_SKIN, skinById, type SkinId } from './skins';
 import { canRetry, createSpotifyClient, requestErrorMessage } from './spotify/client';
 import { linkErrorMessage, parseSpotifyLink } from './spotify/link';
-import { backdropFor, nowPlayingFor } from './view';
+import { backdropFor, loaderPercent, nowPlayingFor } from './view';
 
 const log = createLogger({ scope: 'cd-player' });
 
@@ -106,8 +106,17 @@ export default function App({ controller, initial = null, assetBase = '' }: AppP
   // The page settled and the scene did not start by itself (a software rasteriser, reduced
   // motion): "Open the player" stands where the loader was until the visitor starts it.
   const [manual, setManual] = useState(false);
-  // The GLB's download while the scene boots, 0–1, or null while its size is unknown.
-  const [progress, setProgress] = useState<number | null>(null);
+  // What the loader's count shows while the scene boots (view.ts loaderPercent): the GLB's
+  // download as a whole percent, or null while its size is unknown. It is set only when it
+  // changes, so the download's chunks re-render the page (the tracklist among it) once per percent
+  // at most.
+  const [percent, setPercent] = useState<number | null>(null);
+  const shownPercent = useRef<number | null>(null);
+  const showPercent = useCallback((next: number | null) => {
+    if (next === shownPercent.current) return;
+    shownPercent.current = next;
+    setPercent(next);
+  }, []);
   const [loaderGone, setLoaderGone] = useState(false);
   const live = boot.phase === 'live';
   // "Open the player" and "Try again". A failure that says `reload` (a scene chunk that would not
@@ -118,12 +127,15 @@ export default function App({ controller, initial = null, assetBase = '' }: AppP
     else dispatchBoot({ type: 'start' });
   }, [reload]);
   const onReady = useCallback(() => dispatchBoot({ type: 'ready' }), []);
-  const onFail = useCallback((error: unknown) => {
-    log.error('cd-player.scene-failed', { error: String(error) });
-    // "Try again" boots from nothing: its loader never shows the failed boot's count.
-    setProgress(null);
-    dispatchBoot({ type: 'fail', failure: describeFailure(error) });
-  }, []);
+  const onFail = useCallback(
+    (error: unknown) => {
+      log.error('cd-player.scene-failed', { error: String(error) });
+      // "Try again" boots from nothing: its loader never shows the failed boot's count.
+      showPercent(null);
+      dispatchBoot({ type: 'fail', failure: describeFailure(error) });
+    },
+    [showPercent],
+  );
 
   // A boot whose model download goes quiet fails like any other, so the loader never spins for
   // ever (boot.ts watchStall): the watch runs while the phase is `booting` and hears every
@@ -142,10 +154,13 @@ export default function App({ controller, initial = null, assetBase = '' }: AppP
       if (stall.current === watch) stall.current = null;
     };
   }, [booting, onFail]);
-  const onProgress = useCallback((fraction: number | null) => {
-    stall.current?.progress(fraction);
-    setProgress(fraction);
-  }, []);
+  const onProgress = useCallback(
+    (fraction: number | null) => {
+      stall.current?.progress(fraction);
+      showPercent(loaderPercent(fraction));
+    },
+    [showPercent],
+  );
 
   // On a hardware GPU the player opens by itself once the page has settled; elsewhere the page
   // waits for the visitor (src/autoplay.ts). `autostart` only ever leaves `waiting`.
@@ -280,7 +295,7 @@ export default function App({ controller, initial = null, assetBase = '' }: AppP
         />
       )}
       {/* After the scene layer, so it draws over the invisible canvas and fades out with it. */}
-      {showLoader && <Loader progress={progress} />}
+      {showLoader && <Loader percent={percent} />}
       <LinkBar
         collection={snapshot.collection}
         loading={snapshot.loading || linkBusy}

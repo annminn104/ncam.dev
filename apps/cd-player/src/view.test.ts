@@ -5,6 +5,7 @@ import {
   backdropFor,
   formatDuration,
   loaderLine,
+  loaderPercent,
   nowPlayingFor,
   sceneView,
   seekRange,
@@ -117,19 +118,48 @@ describe('view model', () => {
   });
 });
 
-describe('loaderLine', () => {
-  it("words the loader's line, with the download once its size is known", () => {
-    expect(loaderLine(null)).toBe('Loading the player');
-    expect(loaderLine(0)).toBe('Loading the player 0%');
-    expect(loaderLine(0.63)).toBe('Loading the player 63%');
-    expect(loaderLine(0.996)).toBe('Loading the player 100%');
-    expect(loaderLine(1)).toBe('Loading the player 100%');
+describe('loaderPercent', () => {
+  it("rounds the GLB's download to the whole percent the loader shows", () => {
+    expect(loaderPercent(null)).toBeNull();
+    expect(loaderPercent(0)).toBe(0);
+    expect(loaderPercent(0.63)).toBe(63);
+    expect(loaderPercent(0.996)).toBe(100);
+    expect(loaderPercent(1)).toBe(100);
   });
 
   it('holds the count between 0 and 100, and drops one that is no number', () => {
-    expect(loaderLine(1.4)).toBe('Loading the player 100%');
-    expect(loaderLine(-0.2)).toBe('Loading the player 0%');
-    expect(loaderLine(Number.NaN)).toBe('Loading the player');
+    expect(loaderPercent(1.4)).toBe(100);
+    expect(loaderPercent(-0.2)).toBe(0);
+    expect(loaderPercent(Number.NaN)).toBeNull();
+  });
+
+  it('gives every chunk inside one percent the same count, so the page renders once per percent', () => {
+    expect(new Set([0.625, 0.6262, 0.63, 0.6349].map(loaderPercent))).toEqual(new Set([63]));
+  });
+});
+
+describe('loaderLine', () => {
+  it("words the loader's line, with the count once the GLB's size is known", () => {
+    expect(loaderLine(null)).toBe('Loading the player');
+    expect(loaderLine(0)).toBe('Loading the player 0%');
+    expect(loaderLine(63)).toBe('Loading the player 63%');
+    expect(loaderLine(100)).toBe('Loading the player 100%');
+  });
+
+  it('reads, through loaderPercent, as it did from the fraction itself', () => {
+    const lines: [number | null, string][] = [
+      [null, 'Loading the player'],
+      [0, 'Loading the player 0%'],
+      [0.63, 'Loading the player 63%'],
+      [0.996, 'Loading the player 100%'],
+      [1, 'Loading the player 100%'],
+      [1.4, 'Loading the player 100%'],
+      [-0.2, 'Loading the player 0%'],
+      [Number.NaN, 'Loading the player'],
+    ];
+    for (const [fraction, line] of lines) {
+      expect(loaderLine(loaderPercent(fraction)), String(fraction)).toBe(line);
+    }
   });
 });
 

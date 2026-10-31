@@ -3,7 +3,7 @@ import { renderToString } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { Loader } from './Loader';
 
-const render = (progress: number | null) => renderToString(createElement(Loader, { progress }));
+const render = (percent: number | null) => renderToString(createElement(Loader, { percent }));
 
 describe('Loader', () => {
   it('draws a disc that a screen reader skips, beside one plain line', () => {
@@ -14,7 +14,7 @@ describe('Loader', () => {
   });
 
   it("counts the model's download once its size is known", () => {
-    expect(render(0.63)).toContain('cdp-loader__line">Loading the player 63%</p>');
+    expect(render(63)).toContain('cdp-loader__line">Loading the player 63%</p>');
   });
 
   it('is plain from the first paint: no inline style, nothing hidden', () => {

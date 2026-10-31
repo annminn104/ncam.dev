@@ -99,10 +99,16 @@ export function seekRange(positionMs: number, durationMs: number): { max: number
 }
 
 /**
- * The loader's one line: the GLB's download once its size is known, rounded and held between 0 and
- * 100 (a compressed transfer can report more than it named).
+ * The loader's count: the GLB's download (0–1, null while its size is unknown) as a whole percent,
+ * held between 0 and 100 (a compressed transfer can report more than it named). What `App` keeps,
+ * so the download's chunks re-render the page once per percent at most.
  */
-export function loaderLine(progress: number | null): string {
-  if (progress === null || !Number.isFinite(progress)) return 'Loading the player';
-  return `Loading the player ${Math.min(100, Math.max(0, Math.round(progress * 100)))}%`;
+export function loaderPercent(progress: number | null): number | null {
+  if (progress === null || !Number.isFinite(progress)) return null;
+  return Math.min(100, Math.max(0, Math.round(progress * 100)));
+}
+
+/** The loader's one line, with the count (`loaderPercent`) once the GLB's size is known. */
+export function loaderLine(percent: number | null): string {
+  return percent === null ? 'Loading the player' : `Loading the player ${percent}%`;
 }
