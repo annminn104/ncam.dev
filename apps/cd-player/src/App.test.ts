@@ -107,16 +107,44 @@ describe('App (the layout)', () => {
   });
 });
 
+describe('App and the presets', () => {
+  it('marks the collection on show as the current preset, on the server as on hydration', () => {
+    const html = renderToString(
+      createElement(App, { controller: createRouteController({ route: '/' }), initial }),
+    );
+    expect(html.match(/aria-current="true"/g)).toHaveLength(1);
+    expect(html).toMatch(
+      /class="cdp-preset is-current" aria-current="true">[\s\S]*?Top 50 - Global/,
+    );
+  });
+
+  it('marks none while nothing is on show, so the default can be pressed after a failure', () => {
+    const html = renderToString(
+      createElement(App, {
+        controller: createRouteController({ route: '/' }),
+        initial: { ...initial, collection: null, firstTrack: null },
+      }),
+    );
+    expect(html).not.toContain('aria-current');
+  });
+});
+
 describe('App (the loader and the scene layer)', () => {
   it('draws the loader after the scene layer, so it fades out with the canvas', () => {
     // `.cdp-scene.is-live ~ .cdp-loader` (styles/app.css) matches only a loader that comes later in
     // the DOM than the scene layer. The server renders the waiting phase, which mounts no scene
     // layer, so its markup cannot show the order: it is read from the JSX instead.
     const source = readFileSync(new URL('./App.tsx', import.meta.url), 'utf8');
+    const stage = source.indexOf('<div className="cdp-stage">');
+    const side = source.indexOf('<div className="cdp-side">');
     const scene = source.search(/<SceneHost\b/);
     const loader = source.search(/<Loader\b/);
     expect(scene, 'App.tsx renders <SceneHost>').toBeGreaterThan(-1);
     expect(loader, 'App.tsx renders <Loader> after <SceneHost>').toBeGreaterThan(scene);
+    // Siblings in the stage, which the `~` selector needs, and the canvas fills (styles/app.css).
+    expect(scene, '<SceneHost> inside the stage').toBeGreaterThan(stage);
+    expect(stage, 'the stage before the side column').toBeLessThan(side);
+    expect(loader, '<Loader> inside the stage').toBeLessThan(side);
   });
 });
 

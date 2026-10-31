@@ -39,6 +39,16 @@ describe('LinkBar', () => {
     expect(html).not.toContain('Retry');
   });
 
+  it('marks the field invalid for its own error alone, not for a preset’s or the engine’s', () => {
+    const error = "Spotify didn't answer. Try again in a moment.";
+    const own = render({ error, invalid: true });
+    expect(own).toMatch(/<input[^>]*aria-invalid="true" aria-describedby="cdp-link-error"/);
+    const other = render({ error });
+    expect(other).toMatch(/<p id="cdp-link-error" role="alert">Spotify didn.*t answer\./);
+    expect(other).not.toContain('aria-invalid');
+    expect(other).not.toContain('aria-describedby');
+  });
+
   it('stops saying "Loading…" once a first load has failed', () => {
     expect(render()).toContain('<h1>Loading…</h1>');
     expect(render({ failed: true })).toContain('<h1>No tracks</h1>');

@@ -11,6 +11,8 @@ interface Props {
   /** Nothing is loaded or loading: a first load failed (the tracklist says why). */
   failed?: boolean;
   error: string | null;
+  /** The error is the field's own: a pasted link that was refused or would not load. */
+  invalid?: boolean;
   /** Loads the link again, beside an error that trying again may fix (a 502, a stall). */
   onRetry?: () => void;
   onSubmit(input: string): void;
@@ -47,6 +49,7 @@ export function LinkBar({
   loading,
   failed = false,
   error,
+  invalid = false,
   onRetry,
   onSubmit,
   skin,
@@ -88,8 +91,8 @@ export function LinkBar({
           placeholder="Paste a Spotify playlist or album link"
           value={value}
           onChange={(event) => setValue(event.target.value)}
-          aria-invalid={error ? true : undefined}
-          aria-describedby={error ? 'cdp-link-error' : undefined}
+          aria-invalid={error && invalid ? true : undefined}
+          aria-describedby={error && invalid ? 'cdp-link-error' : undefined}
         />
         <button type="submit" className="cdp-button cdp-button--primary" disabled={loading}>
           {loading ? 'Loading…' : 'Load'}

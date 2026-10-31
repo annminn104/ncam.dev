@@ -23,12 +23,15 @@ export function Presets({ current, busy, onPick }: Props) {
       <ul className="cdp-presets__list">
         {PRESETS.map((preset) => {
           const isCurrent = sameCollection(preset.ref, current);
+          const isBusy = sameCollection(preset.ref, busy);
           return (
             <li key={preset.ref.id}>
               <button
                 type="button"
                 className={isCurrent ? 'cdp-preset is-current' : 'cdp-preset'}
                 aria-current={isCurrent ? 'true' : undefined}
+                // Its tag says so too, but a phone's chip hides the tag: the cover dims.
+                aria-busy={isBusy ? 'true' : undefined}
                 onClick={() => onPick(preset.ref)}
               >
                 <img
@@ -42,9 +45,7 @@ export function Presets({ current, busy, onPick }: Props) {
                 />
                 <span className="cdp-preset__text">
                   <span className="cdp-preset__name">{preset.name}</span>{' '}
-                  <span className="cdp-preset__tag">
-                    {sameCollection(preset.ref, busy) ? 'Loading…' : preset.tag}
-                  </span>
+                  <span className="cdp-preset__tag">{isBusy ? 'Loading…' : preset.tag}</span>
                 </span>
               </button>
             </li>

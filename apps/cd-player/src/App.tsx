@@ -13,6 +13,7 @@ import { bootReducer, INITIAL_BOOT, watchStall, type StallClock, type StallWatch
 import { createBridge } from './bridge';
 import { BootStallError, describeFailure } from './failure';
 import { remoteBase } from './lib/asset-url';
+import { createLinkLoader, IDLE_LINK, type LinkState } from './link-loader';
 import { readLast, readSkin, restoreTarget, safeStorage, writeLast, writeSkin } from './persist';
 import { createEmbedPlayer, type EmbedCallbacks } from './playback/embed-controller';
 import type { EngineDeps, InitialData } from './playback/engine';
@@ -35,7 +36,7 @@ import { NowPlaying } from './shell/NowPlaying';
 import { SceneHost } from './shell/SceneHost';
 import { Tracklist } from './shell/Tracklist';
 import { DEFAULT_SKIN, skinById, type SkinId } from './skins';
-import { canRetry, createSpotifyClient, requestErrorMessage } from './spotify/client';
+import { createSpotifyClient } from './spotify/client';
 import { linkErrorMessage, parseSpotifyLink } from './spotify/link';
 import { backdropFor, loaderPercent, nowPlayingFor } from './view';
 
@@ -193,16 +194,20 @@ export default function App({ controller, initial = null, assetBase = '' }: AppP
     [engine],
   );
 
-  // The bar's own error, a link that did not parse or a collection that did not load, with the
-  // collection to load again when trying again may help (Spotify or the proxy did not answer).
-  const [linkError, setLinkError] = useState<{
-    message: string;
-    retry: CollectionRef | null;
-  } | null>(null);
-  // The collection a pasted link or a preset is loading: one at a time (`loading` holds it
-  // between a press and the render that shows it).
-  const [pending, setPending] = useState<CollectionRef | null>(null);
-  const loading = useRef(false);
+  // The collections the visitor chooses, a pasted link or a preset (src/link-loader.ts): the one
+  // loading, and the bar's own error with what Retry loads again. A load that lands once this App
+  // has gone, or once the page has moved on, is dropped.
+  const [link, setLink] = useState<LinkState>(IDLE_LINK);
+  const [loader] = useState(() =>
+    createLinkLoader(
+      { client: deps.client, controller, save: (next) => writeLast(safeStorage(), next) },
+      setLink,
+    ),
+  );
+  useEffect(() => {
+    loader.start();
+    return loader.stop;
+  }, [loader]);
   const [tracksOpen, setTracksOpen] = useState(false);
   const restored = useRef(false);
 
@@ -216,44 +221,13 @@ export default function App({ controller, initial = null, assetBase = '' }: AppP
     if (target) controller.navigate(collectionPath(target));
   }, [controller, parsed.view]);
 
-  /**
-   * Loads a collection the visitor chose, from a pasted link or a preset: fetched first, then saved
-   * as their last and navigated to, so a failure leaves the page where it was, its message under
-   * the input. A choice made while one loads is dropped.
-   */
-  const loadRef = useCallback(
-    async (next: CollectionRef) => {
-      if (loading.current) return;
-      loading.current = true;
-      setLinkError(null);
-      setPending(next);
-      try {
-        await deps.client.collection(next);
-        writeLast(safeStorage(), next);
-        controller.navigate(collectionPath(next));
-      } catch (error) {
-        setLinkError({
-          message: requestErrorMessage(error, next.type),
-          retry: canRetry(error) ? next : null,
-        });
-      } finally {
-        loading.current = false;
-        setPending(null);
-      }
-    },
-    [controller, deps.client],
-  );
-
   const loadLink = useCallback(
     (input: string) => {
-      const link = parseSpotifyLink(input);
-      if (!link.ok) {
-        setLinkError({ message: linkErrorMessage(link.reason), retry: null });
-        return;
-      }
-      void loadRef(link.ref);
+      const pasted = parseSpotifyLink(input);
+      if (pasted.ok) void loader.load(pasted.ref, 'link');
+      else loader.refuse(linkErrorMessage(pasted.reason));
     },
-    [loadRef],
+    [loader],
   );
 
   // Space plays or pauses, N and P change tracks; never while typing, and a held key is one press.
@@ -287,7 +261,15 @@ export default function App({ controller, initial = null, assetBase = '' }: AppP
     setShelfSeen(shelfError);
     if (shelfError) setTracksOpen(true);
   }
-  const retryRef = linkError?.retry ?? null;
+  const linkError = link.error;
+  const retry = linkError?.retry ?? null;
+  const retryFrom = linkError?.field ? 'link' : 'preset';
+  // The collection on show, as the presets mark it: what the page shows, not the route, which may
+  // name one that failed or is still loading. The server and the first client render agree on it.
+  const shown: CollectionRef | null = snapshot.collection && {
+    type: snapshot.collection.type,
+    id: snapshot.collection.id,
+  };
   // The loader holds the scene's place while the page settles, while the scene boots and while the
   // canvas fades in; "Open the player" or the failure takes it otherwise.
   const showLoader =
@@ -301,18 +283,20 @@ export default function App({ controller, initial = null, assetBase = '' }: AppP
       <Backdrop artUrl={backdrop.artUrl} palette={backdrop.palette} />
       <LinkBar
         collection={snapshot.collection}
-        loading={snapshot.loading || pending !== null}
+        loading={snapshot.loading || link.pending !== null}
         failed={shelfError !== null}
         error={linkError?.message ?? (shelfError ? null : (snapshot.error?.message ?? null))}
-        onRetry={retryRef === null ? undefined : () => void loadRef(retryRef)}
+        // Only a pasted link's own failure is the field's; a preset's or the engine's is not.
+        invalid={linkError?.field === true}
+        onRetry={retry ? () => void loader.load(retry, retryFrom) : undefined}
         onSubmit={loadLink}
         skin={skin}
         onSkin={changeSkin}
-        current={ref}
-        busy={pending}
-        // The collection in view is already there: pressing its preset does nothing.
+        current={shown}
+        busy={link.pending}
+        // The collection on show is already there: pressing its preset does nothing.
         onPick={(next) => {
-          if (!sameCollection(next, ref)) void loadRef(next);
+          if (!sameCollection(next, shown)) void loader.load(next, 'preset');
         }}
       />
       {/* The player's own place: the canvas fills it, and no panel stands over it. */}

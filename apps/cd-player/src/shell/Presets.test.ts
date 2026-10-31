@@ -55,9 +55,14 @@ describe('Presets', () => {
     expect(render({ current: { ...PRESETS[2].ref, type: 'album' } })).not.toContain('aria-current');
   });
 
-  it('says "Loading…" in place of the tag of the one being loaded', () => {
-    const texts = buttonTexts(render({ busy: PRESETS[1].ref }));
+  it('says "Loading…" in place of the tag of the one being loaded, and marks it busy', () => {
+    const html = render({ busy: PRESETS[1].ref });
+    const texts = buttonTexts(html);
     expect(texts[1]).toBe(`${PRESETS[1].name} Loading…`);
     expect(texts[0]).toBe('Top 50 - Global Global chart');
+    expect(html.match(/aria-busy="true"/g)).toHaveLength(1);
+    expect(html).toMatch(
+      /<button type="button" class="cdp-preset" aria-busy="true">(?:(?!<\/button>)[\s\S])*Today/,
+    );
   });
 });
