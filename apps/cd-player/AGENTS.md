@@ -540,9 +540,10 @@ canvas's shape: the player sits in the middle of whatever the layout leaves it. 
 that frame every frame (resizes included, a phone's stage shrinking for the embed among them), and
 `PlayerScene` sizes the shadow map and the pixel ratio by `isWide` of the window's width.
 `framing.test.ts` projects the model's box through it for canvas shapes from 0.2 to 7 wide for
-their height (the layouts' stages fall between 0.43 and 2.63, swept in steps): at the orbit's
-middle and its corners the box stays 1 % of the canvas clear of every edge, and at the orbit's
-middle it stands within 3 % of the canvas's middle and spans 70 % or more of a side.
+their height, past every stage the layouts make (a phone's 220 px floor reaches about 3.6, a
+tall window's rail about 0.26), swept in steps from 0.43 to 2.63: at the orbit's middle and its
+corners the box stays 1 % of the canvas clear of every edge, and at the orbit's middle it stands
+within 3 % of the canvas's middle and spans 70 % or more of a side.
 
 **Reduced motion** (`prefers-reduced-motion: reduce`): no autostart; a disc change and a cascade
 in the rack are instant (the rig jumps to its end and the music still waits a 300 ms beat,
@@ -565,14 +566,17 @@ preset (see "Popular on Spotify"), which skips the first step:
    not a playlist or an album; `spotify.link` short links are not followed.
 2. The link loader (`createLinkLoader` in `src/link-loader.ts`, three-free, tested on fakes)
    fetches the collection; only once that succeeds is `{ type, id }` saved in `localStorage` under
-   **`ncam.cd-player.last`** (`src/persist.ts`) and the page navigated there. The engine then
-   loads the new collection into the same mount. A failure shows under the input, with Retry when
-   trying again may help (see "Data"), which loads the same collection again; only a pasted link's
-   own failure marks the field invalid (`aria-invalid`, its red border), never a preset's or the
-   engine's. One load runs at a time: a link or a preset chosen meanwhile is dropped, and Load says
-   "Loading…". A load that lands once the route has moved on (Back meanwhile, the host leaving the
-   project) or once the App has gone saves and navigates nothing, so it never undoes the visitor's
-   move; `App` stops the loader as it unmounts and starts it again (StrictMode mounts twice).
+   **`ncam.cd-player.last`** (`src/persist.ts`), the page navigated there and the collection
+   opened (`engine.open`: where the route already named it, after a load of it that failed, the
+   navigation alone would not). The engine then loads the new collection into the same mount. A
+   failure shows under the input, with Retry when trying again may help (see "Data"), which loads
+   the same collection again from the same source; its error says whose it is (`from`), and only a
+   pasted link's own failure marks the field invalid (`aria-invalid`, its red border), never a
+   preset's or the engine's. One load runs at a time: a link or a preset chosen meanwhile is
+   dropped, and Load says "Loading…". A load that lands, or fails, once the route has moved on
+   (Back meanwhile, the host leaving the project) or once the App has gone saves, navigates and
+   says nothing, so it never undoes the visitor's move; `App` stops the loader as it unmounts and
+   starts it again (StrictMode mounts twice).
 
 **Restore on `/`**: an App that mounts on `/` navigates to the saved collection (`restoreTarget`),
 never to the default playlist, and it looks only when it mounts, so Back to `/` (a route update,
@@ -595,10 +599,11 @@ A press loads the playlist as a pasted link loads (the link loader, see "Persona
 is saved as the visitor's last and the URL follows. The preset of the collection **on show** is the
 current one (`aria-current="true"`, the accent's tint and border, as a switch that is on), and
 pressing it does nothing. On show, not in the URL: after a failed first load nothing is current,
-so the default can be pressed, and after a failed change of collection the one still shown stays
-current. The one being loaded says "Loading…" in place of its tag and is `aria-busy`, its cover
-dimmed (a phone's chip hides its tag). Each button is named by its playlist and its tag
-("Top 50 - Global Global chart"), the cover `alt=""`.
+so pressing the default loads and opens it, and after a failed change of collection the one still
+shown stays current, while pressing the failed one asks for it again (`engine.open` asks again
+for a ref whose own collection is not the one on show). The one being loaded says "Loading…" in
+place of its tag and is `aria-busy`, its cover dimmed (a phone's chip hides its tag). Each button
+is named by its playlist and its tag ("Top 50 - Global Global chart"), the cover `alt=""`.
 
 Its looks follow the layout (see "The look"): rows 54 px high in the rail (a 44 px cover), scrolling
 in what it leaves them; a row of cards 184 px wide with 48 px covers in the tablet header,
@@ -658,35 +663,44 @@ border-box`, or the columns would run under the bottom edge). `App` renders the 
   Share sharing the row under it with Player, then the presets, which scroll in what the rail
   leaves them), the stage the middle, the side column the right (the card at its own height, the
   tracklist taking the rest).
-- **821 to 1100 px, and to 1260 px at 16:10 or narrower** (a tablet held sideways): the bar is a
-  header over the stage, beside the side column; its field grows from 220 px on one row with the
-  buttons (they wrap under a field narrower than that), and the help line goes. From 1101 px a
-  screen wider than 16:10 keeps the three columns, since the header would leave it a short stage
-  (at 1200 × 630, the gallery thumbnail's size, the player was about 330 px high under it).
+- **821 to 1100 px, and to 1260 px at 16:10 or narrower** (a tablet held sideways, and any screen
+  up to 1100 px the two layouts below leave out): the bar is a header over the stage, beside the
+  side column; its field and its buttons keep one row, the field taking what the buttons leave
+  (a wrapped row hung the picker's popover off the screen's left edge), and the help line goes.
+  From 1101 px a screen wider than 16:10 keeps the three columns, since the header would leave it
+  a short stage (at 1200 × 630, the gallery thumbnail's size, the player was about 330 px high).
 - **Phones, and tablets held upright** (820 px and under at 13:10 or narrower, or up to 1260 px at
   4:5 or taller): one column of the bar, the stage and the card (`.cdp-side` is
   `display: contents`, so the card takes its own row); the tracklist is the bottom sheet over
-  everything, and the root's 80 px of bottom padding keep the closed sheet clear of the card.
-  Upright, a tablet's side column would leave the stage a tall, narrow strip. The stage keeps
-  220 px (`minmax(220px, 1fr)`, the root `min-height: 100dvh` rather than its height): on a small
-  phone (360 × 640, 320 × 568) the page grows past the screen and scrolls.
+  everything, `position: fixed` at the screen's foot, and the root's 80 px of bottom padding keep
+  the closed sheet clear of the card. Upright, a tablet's side column would leave the stage a tall,
+  narrow strip. The stage keeps 220 px (`minmax(220px, 1fr)`, the root `min-height: 100dvh` rather
+  than its height): on a small phone (360 × 640, 320 × 568) the page grows past the screen and
+  scrolls, the closed sheet still at its foot.
 - **Phones held sideways, and short screens** (up to 1100 px, 600 px high or less, wider than
-  13:10): the stage on the left at the screen's height (`position: sticky`) holds still while the
-  bar and the side column beside it (`min(360px, 48%)`) scroll with the page, the tracklist at most
-  a screen high; a header over the stage would leave it a strip or nothing (844 × 390 left it
-  23 px, 667 × 375 none). In the host the column starts under the "← Projects" button.
+  13:10): the stage on the left at the screen's height (`position: sticky`, `top: 0` within the
+  root's padding) holds still while the bar and the side column beside it (`min(360px, 48%)`)
+  scroll, the tracklist at most a screen high and the bar with the rail's form (the field alone on
+  its row, at 16 px). The root is the scroller there, not the page (`overflow: hidden auto`, the
+  backdrop `position: fixed`): the host's `.stage` clips one axis, which makes it a scroll container
+  a sticky stage would hold to instead, so this way it holds under any host. Its sides keep clear
+  of a notch (`env(safe-area-inset-left)` and `-right`, as `viewport-fit=cover` asks). A header
+  over the stage would leave it a strip or nothing (844 × 390 left it 23 px, 667 × 375 none). In
+  the host the column starts under the "← Projects" button.
+
+A sliver of shapes between 13:10 and 1301:1000 takes neither of the last two and gets the header;
+no device has one, and only a window dragged to it (761 × 585) does.
 
 The stage takes what the panels leave, and the canvas fills it alone, so no panel ever stands over
 the player and a panel growing only leaves it a smaller canvas (see "The scene"). It never has no
 size: R3F draws nothing into a container of none, and the boot, its download over, would wait for
-a first frame for ever. `.cdp-root` is `overflow: clip` (`hidden` where `clip` is unknown), so it
-is never scrolled, not by find-in-page nor by a text fragment, and a sticky stage holds to the
-page's own scroll. The loader and the way in stand in the stage's middle and the help line at its
-foot. The host's fixed
-"← Projects" button stands at the top centre: over the stage on a wide screen, clear of every
-panel; on a phone and an upright tablet it would stand on the bar's title row, so there the root's
-top padding is the host's `--stage-top-inset` (its contract for a remote's top edge; 12 px
-standalone) and the bar starts under the button.
+a first frame for ever. `.cdp-root` is `overflow: clip` elsewhere (`hidden` where `clip` is
+unknown), so it is never scrolled, not by find-in-page nor by a text fragment. The loader and the
+way in stand in the stage's middle and the help line at its foot. The host's fixed "← Projects"
+button stands at the top centre: over the stage on a wide screen, clear of every panel; on a phone
+and an upright tablet it would stand on the bar's title row, so there the root's top padding is
+the host's `--stage-top-inset` (its contract for a remote's top edge; 12 px standalone) and the bar
+starts under the button.
 
 ## Skins
 
@@ -728,9 +742,10 @@ in), **Sage**, **Cream** and **Cherry**. **Player**, after Share in the link bar
   and the last, but a key held with Alt, Ctrl or Cmd is the browser's (Alt+Arrow is Back and
   Forward); the choice is `aria-checked` and a tick, not colour alone. Escape closes it and gives
   focus back to the button, as the button itself does; a click or tap outside, or Tab out of it,
-  closes it. At 920 px and under (every phone, and the tablet header from 821 px) the button is the
-  swatch alone, so the link field keeps its width on the buttons' row. "Player" stays in its
-  accessible name. The server markup is always the closed picker.
+  closes it. At 920 px and under (a phone upright or sideways up to that width, and the tablet
+  header from 821 px) the button is the swatch alone, so the link field keeps its width on the
+  buttons' row. "Player" stays in its accessible name. The server markup is always the closed
+  picker.
 - **Persistence**: `localStorage` key **`ncam.cd-player.skin`** (`SKIN_KEY`, `readSkin` and
   `writeSkin` in `src/persist.ts`, through `safeStorage`); an unknown value, nothing saved or
   blocked storage is Blush. The server and the first client render use Blush, so the markup
@@ -891,10 +906,12 @@ Unit tests (`src/**/*.test.ts`, node environment, run by the root `pnpm test`):
   order, the bar, the stage, then the side column with the card over the tracklist, the collection
   on show marked as the current preset (none while nothing is), reads `App.tsx` to hold the loader
   after the scene layer, both inside the stage, as the fade-out's `~` selector needs, since the
-  server draws no scene layer, and renders the default skin's accent inline on the root with the
-  picker closed), `link-loader.test.ts` (on fakes: fetched, then saved and navigated; one load at a
-  time; a load landing after the route moved on, or once stopped, dropped; the failures, Retry's
-  collection and whose field it is), `ssr-graph.test.ts` (the import graphs),
+  server draws no scene layer, and the link loader stopped on unmount and opening through the
+  engine (no effect runs in a server render), and renders the default skin's accent inline on the
+  root with the picker closed), `link-loader.test.ts` (on fakes: fetched, then saved, navigated and
+  opened; one load at a time; a load landing or failing after the route moved on, or once stopped,
+  dropped; the failures, Retry's collection and whose they are), `ssr-graph.test.ts` (the import
+  graphs),
   `ssr-state.test.ts`, `boot.test.ts` (the phases from `waiting`, and the stall watch on a fake
   clock, with the part it names), `autoplay.test.ts`, `failure.test.ts`, `webgl.test.ts`,
   `shell/EnterButton.test.ts`, `shell/Loader.test.ts` (the disc and the line),
@@ -911,7 +928,8 @@ Unit tests (`src/**/*.test.ts`, node environment, run by the root `pnpm test`):
   hi-fi panel's tokens, the fallback accent pair Blush's from `skins.json`, the accent's uses, no
   other colour, pill, italic, Fraunces, layered shadow or blur over 8 px, square controls, the
   breakpoints and the phone rules; the layout's grid at each breakpoint, the header's one-row form,
-  the phone's 220 px stage, the sideways phone's sticky stage, the root clipped, the stage and the
+  the phone's 220 px stage and fixed sheet, the sideways phone's sticky stage in its scrolling
+  root, fixed backdrop, notch-clear sides and 16 px rail form, the root clipped, the stage and the
   side column; the presets as rows, cards and chips, their positioned chips, the busy cover, their
   focus ring; the picker cut down to its swatch at 920 px and under);
 - routes and personalisation: `routes.test.ts`, `route-controller.test.ts`, `persist.test.ts`
@@ -927,7 +945,8 @@ Unit tests (`src/**/*.test.ts`, node environment, run by the root `pnpm test`):
   `server/initial.test.ts` (the shared budget, the cache and its cap, the log);
 - playback: `playback/sequencer.test.ts`, `embed-controller.test.ts` (ended detection, the script
   loader, late events, the rewind and the seeks, the first load, the error log), `engine.test.ts`
-  (the end watchdog on injected timers, Retry's second ask), `bridge.test.ts` and `view.test.ts`
+  (the end watchdog on injected timers, Retry's second ask, a failed change of collection asked
+  for again while the one before is shown), `bridge.test.ts` and `view.test.ts`
   (the view model, `loaderPercent` and `loaderLine`, the next five tracks in play order);
 - the scene: `scene/model-contract.test.ts` (the committed GLB), `model.test.ts`
   (`downloadFraction`, and `downloadModel` on a fake fetch: its progress from the request to the
@@ -1037,7 +1056,7 @@ site"), in this order:
   it throws "Cannot perform operation; no list was loaded." inside its iframe; only a `loadUri`
   brings it back (hence the end watchdog and the first load's `play()`, in "Playback").
 - **iOS Safari zooms into a focused field set under 16 px**, and this full-screen page would stay
-  zoomed: the link input is 16 px in the phone layout (14 px elsewhere).
+  zoomed: the link input is 16 px in the phone layout and the sideways one (14 px elsewhere).
 - The deck's Stop, Repeat, MODE (Shuffle) and knob are small targets: on a 390 px phone a key is
   about 9 px across and the knob 18, and from the hero view the knob hides much of the MODE key.
   The now-playing card therefore has a DOM control for each (Stop, Repeat, Shuffle and the Seek
