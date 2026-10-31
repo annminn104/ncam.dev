@@ -82,19 +82,60 @@ describe('app.css: the glass panel', () => {
     // Derived from the skin's accent, so every skin gets its own (src/skins.test.ts checks the ink).
     expect(token('accent-ink')).toBe('color-mix(in srgb, var(--cdp-accent) 50%, rgb(0 0 0))');
     expect(token('wash')).toBe('color-mix(in srgb, var(--cdp-accent) 38%, rgb(255 255 255))');
+    // src/skins.test.ts holds it, with the type, at 4.5:1 on the glass over the darkest art.
+    expect(token('error')).toBe('#a1211a');
   });
 
+  // The unprefixed property: Chrome and Firefox read no other.
+  const frost = /(?<!-webkit-)backdrop-filter:\s*blur\(24px\) saturate\(1\.8\);/;
+
   it('frosts every panel: the glass, its bright edge, one shadow, a 24 px blur', () => {
-    // `rule('.cdp-now')` is the panels' shared rule, whose selector list ends with `.cdp-now {`.
-    expect(rule('.cdp-now')).toMatch(
-      /background:\s*var\(--cdp-panel\);\s*border:\s*1px solid var\(--cdp-edge\);[\s\S]*backdrop-filter:\s*blur\(24px\) saturate\(1\.8\);/,
+    // `rule('.cdp-now')` is the panels' shared rule, whose selector list ends with `.cdp-now {`,
+    // and `.cdp-now::before` their glass's.
+    expect(rule('.cdp-now')).toMatch(/border:\s*1px solid var\(--cdp-edge\);/);
+    expect(rule('.cdp-now')).not.toMatch(/backdrop-filter|background:/);
+    const glass = rule('.cdp-now::before');
+    expect(glass).toMatch(/z-index:\s*-1;\s*inset:\s*0;\s*border-radius:\s*inherit;/);
+    expect(glass).toMatch(/background:\s*var\(--cdp-panel\);/);
+    expect(glass).toMatch(frost);
+    expect(rule(".cdp-gate[role='alert']")).toMatch(frost);
+  });
+
+  it('frosts the picker’s popover too, whiter, so the presets under it never show through', () => {
+    // Its frost sees the presets only because no ancestor of it has a backdrop filter (above).
+    const menu = rule('.cdp-skin .cdp-skin__menu');
+    expect(menu).toMatch(/background:\s*rgb\(255 255 255 \/ 0\.92\);/);
+    expect(menu).toMatch(frost);
+    // A white hover would not show on it.
+    expect(rule('.cdp-skin .cdp-skin__option:hover')).toMatch(
+      /background:\s*color-mix\(in srgb, var\(--cdp-ink\) 7%, transparent\);/,
+    );
+  });
+
+  it('makes the glass all but opaque where the visitor asks for less transparency', () => {
+    const opaque = block('(prefers-reduced-transparency: reduce)');
+    expect(opaque).toMatch(
+      /\.cdp-bar::before,\s*\.cdp-tracks::before,\s*\.cdp-now::before,\s*\.cdp-gate\[role='alert'\]\s*\{\s*background:\s*rgb\(255 255 255 \/ 0\.94\);/,
+    );
+  });
+
+  it('sets what stands on the page itself, not on a panel, in the full ink', () => {
+    // The art can darken the page by 36 %: the soft ink fell under 4.5:1 there, the accent's ink
+    // under 3:1 for the ring of "Open the player".
+    expect(rule('.cdp-hud')).toMatch(/color:\s*var\(--cdp-ink\);/);
+    expect(rule('.cdp-loader__line')).toMatch(/color:\s*var\(--cdp-ink\);/);
+    expect(rule('.cdp-root .cdp-enter:focus-visible')).toMatch(
+      /outline-color:\s*var\(--cdp-ink\);/,
     );
   });
 
   it('lays the page in the skin’s pastel, the album art multiplied into it', () => {
     expect(root).toMatch(/background:\s*var\(--cdp-wash\);/);
     expect(rule('.cdp-backdrop__layer')).toMatch(/var\(--cdp-accent\)[\s\S]*var\(--cdp-wash\);/);
-    expect(rule('.cdp-backdrop__layer::before')).toMatch(/mix-blend-mode:\s*multiply;/);
+    // At 36 %, the darkest the art can take the page, as src/skins.test.ts reckons it.
+    expect(rule('.cdp-backdrop__layer::before')).toMatch(
+      /opacity:\s*0\.36;\s*mix-blend-mode:\s*multiply;/,
+    );
   });
 
   it("falls back to Blush's own accent pair from src/skins.json, under the inline skin's", () => {

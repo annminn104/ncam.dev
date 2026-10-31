@@ -13,7 +13,8 @@
   --cdp-control-hover: rgb(255 255 255 / 0.8);
   --cdp-control-press: rgb(255 255 255 / 0.95);
   --cdp-shadow: rgb(90 40 60 / 0.16);
-  --cdp-error: #b3261e;
+  /* Dark enough for 4.5:1 on the glass over the darkest art, not only on white. */
+  --cdp-error: #a1211a;
   --cdp-accent: #e8a3b0;
   --cdp-on-accent: #2a1a1e;
   /* The accent's marks where they stand on the white glass (the ring, the playing row, the
@@ -63,8 +64,9 @@
 }
 
 /* ── backdrop: a pastel page from the skin's accent, the album art blurred into it ─────────────
-   The pastel is the skin's own, so a grey album (Top 50's first track often is) still gives a
-   fresh page; the art, multiplied, tints it toward the track's colours. */
+   The pastel is the skin's own, so a grey album (Top 50's first track often is) still leaves the
+   page its colour; the art, multiplied, tints it toward the track's and darkens it, by 36 % at
+   most (a black cover), which the text standing on the page allows for. */
 .cdp-backdrop {
   position: absolute;
   inset: 0;
@@ -194,7 +196,8 @@
   font-weight: 500;
   line-height: 18px;
   font-variant-numeric: tabular-nums;
-  color: var(--cdp-ink-soft);
+  /* The full ink: it stands on the page, not on a panel, and the art can darken the page. */
+  color: var(--cdp-ink);
   white-space: nowrap;
 }
 @keyframes cdp-spin {
@@ -209,13 +212,26 @@
 .cdp-now {
   position: relative;
   z-index: 3;
-  background: var(--cdp-panel);
   border: 1px solid var(--cdp-edge);
   border-radius: var(--cdp-radius);
   box-shadow: 0 12px 36px var(--cdp-shadow);
-  /* The page shows through, blurred and a little richer; the white keeps the dark type legible. */
+}
+/* The glass itself, under the panel's content. Not on the panel: an element with a backdrop filter
+   bounds what its children's filters see, and the picker's popover, inside the bar, would show the
+   presets under it unblurred. The page shows through, blurred and a little richer; the white keeps
+   the dark type legible. */
+.cdp-bar::before,
+.cdp-tracks::before,
+.cdp-now::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--cdp-panel);
   -webkit-backdrop-filter: blur(24px) saturate(1.8);
   backdrop-filter: blur(24px) saturate(1.8);
+  pointer-events: none;
 }
 /* The small labels: uppercase mono with letter spacing. */
 .cdp-eyebrow {
@@ -853,7 +869,8 @@
   transform: translateX(-50%);
   font-size: 12px;
   line-height: 18px;
-  color: var(--cdp-ink-soft);
+  /* The full ink, as the loader's line: it stands on the page. */
+  color: var(--cdp-ink);
   white-space: nowrap;
 }
 .cdp-hud kbd {
@@ -864,7 +881,6 @@
   font-size: 10px;
   line-height: 16px;
   text-align: center;
-  text-shadow: none;
   color: var(--cdp-ink);
   background: var(--cdp-panel);
   border: 1px solid var(--cdp-line);
@@ -926,6 +942,10 @@
 .cdp-root :focus-visible {
   outline: 2px solid var(--cdp-accent-ink);
   outline-offset: 2px;
+}
+/* "Open the player" stands on the page, where the art can take the accent's ink under 3:1. */
+.cdp-root .cdp-enter:focus-visible {
+  outline-color: var(--cdp-ink);
 }
 /* Inside the tracklist the ring is drawn inside the control: the panel's overflow would cut it. */
 .cdp-tracks :focus-visible,
@@ -1149,6 +1169,16 @@
   }
 }
 
+/* Where the visitor asks for less transparency, the glass is all but opaque. */
+@media (prefers-reduced-transparency: reduce) {
+  .cdp-bar::before,
+  .cdp-tracks::before,
+  .cdp-now::before,
+  .cdp-gate[role='alert'] {
+    background: rgb(255 255 255 / 0.94);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .cdp-backdrop__layer.is-entering,
   .cdp-eq span,
@@ -1195,10 +1225,13 @@
   gap: 2px;
   width: 176px;
   padding: 6px;
-  background: var(--cdp-panel);
+  /* Whiter than a panel and frosted itself: the presets under it would show through. */
+  background: rgb(255 255 255 / 0.92);
   border: 1px solid var(--cdp-edge);
   border-radius: var(--cdp-radius);
   box-shadow: 0 12px 36px var(--cdp-shadow);
+  -webkit-backdrop-filter: blur(24px) saturate(1.8);
+  backdrop-filter: blur(24px) saturate(1.8);
 }
 /* Its own display would otherwise show it while hidden. */
 .cdp-skin .cdp-skin__menu[hidden] {
@@ -1219,8 +1252,9 @@
   border-radius: var(--cdp-radius-control);
   cursor: pointer;
 }
+/* A white fill would not show on the near-white popover: the hover is a touch of the ink. */
 .cdp-skin .cdp-skin__option:hover {
-  background: var(--cdp-control-hover);
+  background: color-mix(in srgb, var(--cdp-ink) 7%, transparent);
 }
 .cdp-skin .cdp-skin__option[aria-checked='true'] {
   font-weight: 600;
