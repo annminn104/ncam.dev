@@ -129,7 +129,7 @@ def radial_aniso(m, rotation=0.0):
     return m
 
 
-def add_quilt(m, cell_mm=25.0, strength=0.6, distance=0.0012):
+def add_quilt(m, cell_mm=25.0, strength=1.0, distance=0.004):
     """Diamond quilting (Cycles only; the web paints it as a normal map): two bands of sine waves
     at +45 and -45 degrees, multiplied into pillows whose diagonals are cell_mm long."""
     nt = m.node_tree

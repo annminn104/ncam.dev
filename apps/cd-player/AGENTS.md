@@ -700,11 +700,11 @@ key's or the knob's; the tonearm's moving parts (yoke, pin, tube, counterweight,
 cartridge, lift, stylus) hang from `arm_pivot` while its base, collar, ring, rest, cueing lever and
 anti-skate dial stay on the deck; the five rack slots are empties under `lid_hinge`, posed by
 `rack_pose(i)` in `parts.py` (slot 0 lowest and leaning out most, each slot up 20 mm higher, 1.6 mm
-closer to the lining and 1.5° straighter; `RACK_X`, `RACK_PITCH`); the VU segments share one
-material `vu`; the handle sits on the tub's front between the clasps and the tag hangs from its left
-D-ring over the grille. `model-contract.test.ts` holds the parenting. The lid's layout is the
-cascade (`RACK_LAYOUT` in `parts.py`); the grid without the crystal case is the other branch of the
-same code.
+closer to the lining and 1.5° straighter; `RACK_X`, `RACK_PITCH`; the cascade's frame has its
+cheeks `RACK_CHEEK` either side of `RACK_X`); the VU segments share one material `vu`; the handle
+sits on the tub's front between the clasps and the tag hangs from its left D-ring over the grille.
+`model-contract.test.ts` holds the parenting. The lid's layout is the cascade (`RACK_LAYOUT` in
+`parts.py`); the grid without the crystal case is the other branch of the same code.
 
 **Materials and skins.** `build_materials(palette)` makes every material; the seven the skins
 recolour (`SKIN_ROLES` in `parts.py`: `leather`, `trim`, `thread`, `lining`, `hardware`, `deck`,
@@ -721,11 +721,13 @@ run compiles the kernels for about two minutes; `render()` renders by scene name
       --python-exit-code 1 --python apps/cd-player/art/blender/scripts/hero.py
 
 `hero` is the three-quarter product still the design was approved from, `lid` looks straight into
-the open lid; `preview` is 800 × 600 at 24 samples, `final` 1600 × 1200 at 160. The art it prints
-is the gallery's thumbnails (`apps/portfolio/public/thumbnails`), so anyone can rerun it; the PNG
-lands in `art/.out/v2-<view>-<quality>.png`, or in `art/.out/skins/<id>/` when `CDP_SKIN=<id>` (an
-id of `src/skins.json`: see "Skins") renders that colourway instead of Blush. They are for the
-owner's gates and the docs; the build never runs them, and no render is in the repository.
+the open lid; `preview` is 800 × 600 at 24 samples, `final` 1600 × 1200 at 160. Any other value of
+either (an empty one too) stops the run with exit 1 before anything is built, naming the valid
+ones; an unknown `CDP_SKIN` stops it too. The art it prints is the gallery's thumbnails
+(`apps/portfolio/public/thumbnails`), so anyone can rerun it; the PNG lands in
+`art/.out/v2-<view>-<quality>.png`, or in `art/.out/skins/<id>/` when `CDP_SKIN=<id>` (an id of
+`src/skins.json`: see "Skins") renders that colourway instead of Blush. They are for the owner's
+gates and the docs; the build never runs them, and no render is in the repository.
 
 **The socket tool.** `art/blender/tools/bl.py` drives a running Blender through the Blender Lab MCP
 add-on's socket at `127.0.0.1:9876`: it sends `{"type": "execute", "code": …, "strict_json": false}`

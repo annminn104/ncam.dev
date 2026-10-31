@@ -155,7 +155,7 @@ def build_materials(palette=None):
     M["floor"] = mat("floor", lin(238, 236, 233), rough=0.55)
     if not WEB:
         # Cycles only: the web makes these as normal maps at runtime (src/scene/textures/grain.ts).
-        add_quilt(M["lining"], cell_mm=25.0, strength=1.0, distance=0.004)
+        add_quilt(M["lining"])
         add_weave(M["fabric"], pitch_mm=1.0)
         add_weave(M["strap"], pitch_mm=1.4)
     return M
@@ -244,6 +244,7 @@ FLOOR = 72.0                # well floor
 DISC_Z = 76.5               # disc centre height: on the spindle's shoulder, nearly flush with the deck
 RACK_X = 75.0               # the rack's discs, lid-local x (the case takes the left half)
 RACK_PITCH = 20.0           # lid-local mm from one slot's bottom edge up to the next
+RACK_CHEEK = 61.6           # lid-local mm from RACK_X out to each cheek of the cascade's frame
 HANDLE_Z = 74.0             # the carry handle's axis on the tub's front, under the seam
 # "cascade" (the case on the left, the discs up the right half) or "grid" (no case, two discs
 # below and three above): the owner's choice.
@@ -382,11 +383,14 @@ def rack(name, lid, labels):
     zin = HL - 13.5
     grid = RACK_LAYOUT == "grid"
     if not grid:
-        for k, x in enumerate((13.4, 136.6)):
+        cheeks = (RACK_X - RACK_CHEEK, RACK_X + RACK_CHEEK)
+        rails = (-14.5, -221.5)
+        for k, x in enumerate(cheeks):
             rbox(f"{name}_cheek_{k}", (1.6, 206.0, 11.0), M["trim"], bevel_mm=0.4, parent=lid, loc=L(x, -118.0, zin - 5.5))
-        for k, yy in enumerate((-14.5, -221.5)):
+        for k, yy in enumerate(rails):
             rbox(f"{name}_rail_{k}", (125.0, 3.0, 11.0), M["trim"], bevel_mm=0.5, parent=lid, loc=L(RACK_X, yy, zin - 5.5))
-        for k, (x, yy) in enumerate(((13.4, -14.5), (136.6, -14.5), (13.4, -221.5), (136.6, -221.5))):
+        # A rivet where each cheek meets each rail: both cheeks on the upper rail, then the lower.
+        for k, (x, yy) in enumerate([(x, yy) for yy in rails for x in cheeks]):
             rivet(f"{name}_rivet_{k}", L(x, yy, zin - 11.0), (math.pi, 0, 0), parent=lid, r=1.2)
     for i in range(5):
         yb, zb, tilt, centre = rack_pose(i)

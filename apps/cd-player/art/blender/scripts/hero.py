@@ -7,7 +7,8 @@
 `hero` is the three-quarter product still the design was approved from (the lid open, a disc
 spinning, five more in the rack, a stack of cases beside it); `lid` looks straight into the open
 lid (the case, the rack and its discs, the strap and the plate). `preview` is 800 x 600 at 24
-samples, `final` 1600 x 1200 at 160. The art it prints is the gallery's thumbnails
+samples, `final` 1600 x 1200 at 160; any other value of either stops the run with exit 1, naming
+the valid ones. The art it prints is the gallery's thumbnails
 (apps/portfolio/public/thumbnails), so anyone can rerun it. The PNG lands in
 art/.out/v2-<view>-<quality>.png, or art/.out/v2-<view>-grid-<quality>.png when parts.py builds
 the grid layout. CDP_SKIN=<id> (an id of src/skins.json) renders that skin instead of Blush, into
@@ -24,8 +25,19 @@ for f in ("cdkit.py", "parts.py"):
 ROOT = os.path.abspath(os.path.join(BASE, "..", "..", "..", "..", ".."))
 THUMBS = os.path.join(ROOT, "apps", "portfolio", "public", "thumbnails") + "/"
 OUT = os.path.abspath(os.path.join(BASE, "..", "..", ".out")) + "/"
-VIEW = os.environ.get("CDP_HERO_VIEW", "hero")
-QUALITY = os.environ.get("CDP_HERO_QUALITY", "preview")
+
+
+def setting(name, default, valid):
+    """The environment's `name`, `default` when unset. It stops the run, naming the valid values,
+    on anything else (an empty value too), which would otherwise render the default unannounced."""
+    value = os.environ.get(name, default)
+    if value not in valid:
+        raise SystemExit("hero.py: %s must be %s, not %r" % (name, " or ".join(valid), value))
+    return value
+
+
+VIEW = setting("CDP_HERO_VIEW", "hero", ("hero", "lid"))
+QUALITY = setting("CDP_HERO_QUALITY", "preview", ("preview", "final"))
 SKIN = os.environ.get("CDP_SKIN")  # an id of src/skins.json; unset renders Blush, empty is an error
 os.makedirs(OUT, exist_ok=True)
 
