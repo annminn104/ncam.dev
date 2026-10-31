@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { createBridge, EMPTY_VIEW } from './bridge';
 
 const view = { ...EMPTY_VIEW, trackNo: 3 };
-const track = { id: 't', title: 'T', artists: 'A', artUrl: null, artistUrl: null, palette: null };
+const track = { id: 't', title: 'T', artists: 'A', artUrl: null, artistUrl: null };
 
 describe('createBridge', () => {
   it('holds the view and notifies subscribers', () => {

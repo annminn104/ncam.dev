@@ -17,7 +17,6 @@ const track = (id: string): TrackView => ({
   artists: 'A',
   artUrl: null,
   artistUrl: null,
-  palette: null,
 });
 const MIX = { name: 'Mix', subtitle: 'Owner' };
 /** A view: `current` in the player (playing; null: nothing), the rest coming next. */

@@ -66,7 +66,6 @@ describe('view model', () => {
       artists: 'X',
       artUrl: 'art-a-640',
       artistUrl: 'artist-x-640',
-      palette: detailA.palette,
     });
     expect(trackView(collection.tracks[0], details, new Map()).artistUrl).toBe('art-a-640');
     expect(trackView(collection.tracks[1], details, new Map()).artUrl).toBeNull();
@@ -82,7 +81,7 @@ describe('view model', () => {
       status: 'idle',
       collection: { name: 'Top 50 - Global' },
     });
-    expect(backdropFor(source())).toEqual({ artUrl: 'art-a-640', palette: detailA.palette });
+    expect(backdropFor(source())).toEqual({ artUrl: 'art-a-640' });
     expect(nowPlayingFor(source())).toBeNull();
   });
 

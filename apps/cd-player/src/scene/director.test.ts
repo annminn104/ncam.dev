@@ -31,7 +31,6 @@ const track = (id: string): TrackView => ({
   artists: 'A',
   artUrl: null,
   artistUrl: null,
-  palette: null,
 });
 const MIX = { name: 'Mix', subtitle: 'Owner' };
 const lineup = (current: string | null, ...upcoming: string[]): Lineup => ({

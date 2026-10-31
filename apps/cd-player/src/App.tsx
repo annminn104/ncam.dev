@@ -284,7 +284,7 @@ export default function App({ controller, initial = null, assetBase = '' }: AppP
       // The skin's accent, read by every accent use in styles/app.css.
       style={{ '--cdp-accent': look.accent, '--cdp-on-accent': look.onAccent } as CSSProperties}
     >
-      <Backdrop artUrl={backdrop.artUrl} palette={backdrop.palette} />
+      <Backdrop artUrl={backdrop.artUrl} />
       <LinkBar
         collection={snapshot.collection}
         loading={snapshot.loading || link.pending !== null}

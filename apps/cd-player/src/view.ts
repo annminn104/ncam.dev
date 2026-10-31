@@ -4,7 +4,6 @@ import {
   pickPicture,
   type ArtistDetail,
   type Collection,
-  type Palette,
   type Track,
   type TrackDetail,
 } from './spotify/types';
@@ -37,7 +36,6 @@ export function trackView(
     artists: track.artists,
     artUrl: art,
     artistUrl: photo ?? art,
-    palette: detail?.palette ?? null,
   };
 }
 
@@ -60,13 +58,10 @@ export function sceneView(source: ViewSource): SceneView {
 }
 
 /** The art behind the page: the current track's, else the first one waiting in the lid. */
-export function backdropFor(source: ViewSource): {
-  artUrl: string | null;
-  palette: Palette | null;
-} {
+export function backdropFor(source: ViewSource): { artUrl: string | null } {
   const view = sceneView(source);
   const track = view.current ?? view.upcoming[0] ?? null;
-  return { artUrl: track?.artUrl ?? null, palette: track?.palette ?? null };
+  return { artUrl: track?.artUrl ?? null };
 }
 
 export function nowPlayingFor(

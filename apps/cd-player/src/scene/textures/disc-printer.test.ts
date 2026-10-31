@@ -9,7 +9,6 @@ const track = (id: string): TrackView => ({
   artists: 'A',
   artUrl: `art of ${id}`,
   artistUrl: null,
-  palette: null,
 });
 
 /** Lets every pending promise callback run. */

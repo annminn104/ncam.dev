@@ -1,6 +1,5 @@
 import type { PlayerAction } from './actions';
 import type { Status } from './playback/sequencer';
-import type { Palette } from './spotify/types';
 
 /**
  * The only line between the app (DOM, playback) and the lazily loaded scene: the app publishes a
@@ -15,7 +14,6 @@ export interface TrackView {
   artUrl: string | null;
   /** The first artist's photo, printed on the disc; the album art when there is none. */
   artistUrl: string | null;
-  palette: Palette | null;
 }
 
 export interface SceneView {

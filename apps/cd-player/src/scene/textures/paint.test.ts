@@ -12,7 +12,6 @@ const view: TrackView = {
   artists: 'Some Artist, Another Artist',
   artUrl: null,
   artistUrl: null,
-  palette: null,
 };
 
 /**

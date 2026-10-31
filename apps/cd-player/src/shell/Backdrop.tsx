@@ -1,36 +1,31 @@
 import { useEffect, useState, type CSSProperties } from 'react';
-import type { Palette } from '../spotify/types';
 
 interface Layer {
   key: string;
   artUrl: string | null;
-  palette: Palette | null;
 }
-
-const FALLBACK = { background: 'rgb(42, 31, 36)', tinted: 'rgb(18, 12, 16)' };
 
 function layerStyle(layer: Layer): CSSProperties {
   return {
-    '--cdp-bg': layer.palette?.background ?? FALLBACK.background,
-    '--cdp-tint': layer.palette?.tinted ?? FALLBACK.tinted,
     '--cdp-art': layer.artUrl ? `url(${JSON.stringify(layer.artUrl)})` : 'none',
   } as CSSProperties;
 }
 
 /**
- * The page behind the player: the album art, blurred, under the track's own colours. A new track's
- * layer fades in over the last one; the first paint's layer never animates (Lighthouse).
+ * The page behind the player: the album art, blurred and multiplied into the skin's pastel
+ * (styles/app.css). A new track's layer fades in over the last one; the first paint's layer never
+ * animates (Lighthouse).
  */
-export function Backdrop({ artUrl, palette }: { artUrl: string | null; palette: Palette | null }) {
+export function Backdrop({ artUrl }: { artUrl: string | null }) {
   const key = artUrl ?? 'none';
-  const [layers, setLayers] = useState<Layer[]>(() => [{ key, artUrl, palette }]);
+  const [layers, setLayers] = useState<Layer[]>(() => [{ key, artUrl }]);
   useEffect(() => {
     setLayers((previous) =>
       previous[previous.length - 1]?.key === key
         ? previous
-        : [...previous.slice(-1), { key, artUrl, palette }],
+        : [...previous.slice(-1), { key, artUrl }],
     );
-  }, [key, artUrl, palette]);
+  }, [key, artUrl]);
   return (
     <div className="cdp-backdrop" aria-hidden="true">
       {layers.map((layer, index) => (

@@ -12,7 +12,6 @@ const track = (id: string, art: string | null = null, photo: string | null = nul
   artists: 'A',
   artUrl: art,
   artistUrl: photo,
-  palette: null,
 });
 
 /** Lets every pending promise callback run. */
