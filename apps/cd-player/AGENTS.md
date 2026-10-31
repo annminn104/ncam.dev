@@ -58,6 +58,11 @@ which the guide assumes too:
 - **Twelve playlists** in "Popular on Spotify" (see that section), Spotify's own and opened through
   the proxy, rather than with albums added or charts alone.
 
+The owner's later decision (2026-11-01), on captures of three looks prototyped on the page: **light
+pastel glass** (see "The look"), a pastel page from the skin's own accent and frosted white glass
+with dark type, rather than a clear dark glass over a brighter backdrop, or the v2 near-solid dark
+panels it replaces (they read grey whenever the album art is, as Top 50's first track often is).
+
 ## What it exposes
 
 `vite.config.ts` (`defineRemote`, which sets `shared: {}` and `dts: false`) exposes three entries:
@@ -617,31 +622,42 @@ header's sideways row leaves those past its end until it scrolls near.
 
 ## The look
 
-The shell is a hi-fi panel: the link bar with its presets, the now-playing card and the tracklist
-are near-solid panels over the backdrop, round the stage where the player stands alone (the
-layout is below). Its tokens are on `.cdp-root` in `src/styles/app.css`:
-`--cdp-panel` (`rgb(16 12 14 / 0.88)`), `--cdp-radius` (6 px, the panels) and
-`--cdp-radius-control` (4 px: fields, buttons, keys, rows and the sheet's handle), `--cdp-line` (the
-1 px hairline) with `--cdp-line-strong` and `--cdp-hairline` (between rows), the control fills
-(`--cdp-control`, `--cdp-control-hover`, `--cdp-control-press`), `--cdp-error`, `--cdp-mono` (the
-system's monospace: no web font) and the accent, `--cdp-accent` (`#e8a3b0`), with `--cdp-on-accent`
-(`#2a1a1e`) for text and icons on it. A panel has one soft shadow and blurs what is behind it by
-8 px at most, only so its text reads over bright art. Titles and track names are Manrope 500/600,
-upright; the small labels (`NOW SPINNING`, `TRACK 03 / 50`, `TRACKS · 50`) are uppercase mono at 10
-to 11 px with letter spacing; times and numbers are mono. Fraunces is for the canvas prints alone,
-so the first paint never asks for it.
+The shell is light glass: the link bar with its presets, the now-playing card and the tracklist
+are frosted white panels with dark type, round the stage where the player stands alone (the layout
+is below), over a pastel page. Its tokens are on `.cdp-root` in `src/styles/app.css`: the type,
+`--cdp-ink` (`rgb(36 22 28)`) with `--cdp-ink-soft` and `--cdp-ink-faint` (78 and 68 %);
+`--cdp-panel` (`rgb(255 255 255 / 0.6)`) and `--cdp-edge` (the glass's bright 1 px edge, white at
+75 %); `--cdp-radius` (6 px, the panels) and `--cdp-radius-control` (4 px: fields, buttons, keys,
+rows and the sheet's handle); `--cdp-line` (the dark hairline round fields, buttons and keys) with
+`--cdp-line-strong` and `--cdp-hairline` (between rows); the control fills (`--cdp-control`,
+`--cdp-control-hover`, `--cdp-control-press`, whiter at each); `--cdp-shadow`; `--cdp-error` (a dark
+red that reads on white); `--cdp-mono` (the system's monospace: no web font); and the accent,
+`--cdp-accent` (`#e8a3b0`), with `--cdp-on-accent` (`#2a1a1e`) for text and icons on it, and two
+tokens made from it: `--cdp-accent-ink` (half the accent, half black) and `--cdp-wash` (38 % of it
+in white, the page's pastel), so every skin gets its own of both from its accent alone. A panel
+has one soft shadow and blurs what is behind it by 24 px, a little more saturated, the white
+keeping the dark type legible over any art. Titles and track names are Manrope 500/600, upright;
+the small labels (`NOW SPINNING`, `TRACK 03 / 50`, `TRACKS · 50`) are uppercase mono at 10 to
+11 px with letter spacing; times and numbers are mono. Fraunces is for the canvas prints alone, so
+the first paint never asks for it.
 
-**The accent** marks only Load and Play (filled), the seek slider's progress, the playing row (a
-2 px bar and a three-bar equaliser), Repeat and Shuffle while on (an accent tint, border and icon,
-and a dot, so the state is not colour alone), the current preset (the same tint and border; its
-state is `aria-current` too) and the focus ring (2 px; drawn inside the tracklist and the presets'
-list, whose overflow would cut it). Everything else is white and greys. The `.cdp-root` block, the
-stylesheet's first rule, holds the tokens and the page's fallback tint (`rgb(42 31 36)`, not a
-grey), and is exempt; after it `src/styles/app-css.test.ts` fails on any hex colour and on any
-lower-case `rgb(` of three channels one space apart (each a whole number, a decimal or a
+**The page** (the backdrop): two soft radial glows of the accent, one warmed by `--cdp-warm`, over
+the wash, with the album art blurred 56 px and multiplied in at 36 %, so the track's colours tint
+the pastel and a grey album still leaves a fresh page; a faint white wash at the top and a light
+grain. The root's own background is the wash, under everything until the backdrop paints.
+
+**The accent** fills Load and Play, with `--cdp-on-accent` on them. Its ink marks the rest, where a
+mark stands on the white glass: the seek slider's progress, the playing row (a 2 px bar and a
+three-bar equaliser), Repeat and Shuffle while on (an accent tint, an ink border and icon, and a
+dot, so the state is not colour alone), the current preset (the same tint and an ink border; its
+state is `aria-current` too), the field's focus border and the focus ring (2 px; drawn inside the
+tracklist and the presets' list, whose overflow would cut it). Everything else is dark type, white
+glass and greys. The `.cdp-root` block, the stylesheet's first rule, holds the tokens and the
+page's colours, and is exempt; after it `src/styles/app-css.test.ts` fails on any hex colour and on
+any lower-case `rgb(` of three channels one space apart (each a whole number, a decimal or a
 percentage) not all written alike, and anywhere in the file on a `--cdp-blush`, `--cdp-gold`,
 `--cdp-glass` or `--cdp-display` token, a pill radius (`999px`, or a `border-radius` of `50%`), an
-italic, Fraunces, a layered shadow or a blur over 8 px. It reads no other way of naming a colour
+italic, Fraunces, a layered shadow or a blur over 24 px. It reads no other way of naming a colour
 (a channel in scientific notation, with a sign or `none`, an upper-case `RGB(`, a comma-separated
 `rgb()`, `rgba()`, `hsl()`, `oklch()`, a keyword), so a review does.
 
@@ -733,9 +749,11 @@ in), **Sage**, **Cream** and **Cherry**. **Player**, after Share in the link bar
   yet.
 - **The accent**: `App` sets `--cdp-accent` and `--cdp-on-accent` inline on `.cdp-root` from the
   skin's `accent` and `onAccent`; the stylesheet's own values are a fallback that never shows,
-  Blush's pair, which `styles/app-css.test.ts` holds to `src/skins.json`. `skins.test.ts` keeps
-  every pair readable: `onAccent` on `accent` at 4.5:1 or more, and `accent` on the panels'
-  colour, `rgb(16 12 14)`, at 3:1 or more (WCAG's ratio, computed in the test).
+  Blush's pair, which `styles/app-css.test.ts` holds to `src/skins.json`. The accent's ink and the
+  page's pastel are made from it in the stylesheet (see "The look"), so they follow the skin.
+  `skins.test.ts` keeps every skin readable: `onAccent` on `accent` at 4.5:1 or more, and the
+  accent's ink (each sRGB channel halved, as the `color-mix` with black makes it) on the white
+  glass at 3:1 or more (WCAG's ratio, computed in the test).
 - **The picker** (`src/shell/SkinPicker.tsx`): a button showing the current skin's swatch (its
   leather), named "Player colour: Blush" and so on, that opens a popover holding the four as a
   radio group. The arrow keys move and choose at once (they wrap), Home and End go to the first
@@ -925,8 +943,9 @@ Unit tests (`src/**/*.test.ts`, node environment, run by the root `pnpm test`):
   `aria-busy`), `shell/Tracklist.test.ts` (the empty shelf, the
   playing row's equaliser, the explicit badge) and `styles/app-css.test.ts` (the loader plain from
   the first paint, its spin and its fade, `FADE_MS` equal to both transitions, reduced motion; the
-  hi-fi panel's tokens, the fallback accent pair Blush's from `skins.json`, the accent's uses, no
-  other colour, pill, italic, Fraunces, layered shadow or blur over 8 px, square controls, the
+  glass panel's tokens and its frost, the pastel page from the accent with the art multiplied in,
+  the fallback accent pair Blush's from `skins.json`, the accent's fills and its ink's marks, no
+  other colour, pill, italic, Fraunces, layered shadow or blur over 24 px, square controls, the
   breakpoints and the phone rules; the layout's grid at each breakpoint, the header's one-row form,
   the phone's 220 px stage and fixed sheet, the sideways phone's sticky stage in its scrolling
   root, fixed backdrop, notch-clear sides and 16 px rail form, the root clipped, the stage and the
@@ -935,8 +954,8 @@ Unit tests (`src/**/*.test.ts`, node environment, run by the root `pnpm test`):
 - routes and personalisation: `routes.test.ts`, `route-controller.test.ts`, `persist.test.ts`
   (the saved collection and the saved skin), `spotify/link.test.ts`, `presets.test.ts` (twelve
   playlists with ids of their own, the default first, a name and a tag each, covers on Spotify's
-  image hosts only), `skins.test.ts` (a colour
-  for every role in every skin, the colours' format, the accents' contrast, `skinById`) and
+  image hosts only), `skins.test.ts` (a colour for every role in every skin, the colours' format,
+  the accents' contrast and their inks' on the white glass, `skinById`) and
   `shell/SkinPicker.test.ts` (the picker's markup rendered, and its keys through `skinForPress`,
   modified ones left to the browser);
 - data: `spotify/embed.test.ts` (fixture pages for a playlist, a track, an artist and the not-found
