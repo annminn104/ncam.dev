@@ -68,15 +68,33 @@ describe('app.css: the loader', () => {
   });
 });
 
-describe('app.css: the hi-fi panel', () => {
-  it('declares the tokens', () => {
+describe('app.css: the glass panel', () => {
+  it('declares the tokens: white glass, dark type, the pastel page and the accent’s ink', () => {
     expect(token('radius')).toBe('6px');
     expect(token('radius-control')).toBe('4px');
-    expect(token('panel')).toBe('rgb(16 12 14 / 0.88)');
-    expect(token('line')).toBe('rgb(255 255 255 / 0.16)');
+    expect(token('ink')).toBe('rgb(36 22 28)');
+    expect(token('panel')).toBe('rgb(255 255 255 / 0.6)');
+    expect(token('edge')).toBe('rgb(255 255 255 / 0.75)');
+    expect(token('line')).toBe('rgb(36 22 28 / 0.14)');
     expect(token('mono')).toBe('ui-monospace, SFMono-Regular, Menlo, Consolas, monospace');
     expect(token('accent')).toBe('#e8a3b0');
     expect(token('on-accent')).toBe('#2a1a1e');
+    // Derived from the skin's accent, so every skin gets its own (src/skins.test.ts checks the ink).
+    expect(token('accent-ink')).toBe('color-mix(in srgb, var(--cdp-accent) 50%, rgb(0 0 0))');
+    expect(token('wash')).toBe('color-mix(in srgb, var(--cdp-accent) 38%, rgb(255 255 255))');
+  });
+
+  it('frosts every panel: the glass, its bright edge, one shadow, a 24 px blur', () => {
+    // `rule('.cdp-now')` is the panels' shared rule, whose selector list ends with `.cdp-now {`.
+    expect(rule('.cdp-now')).toMatch(
+      /background:\s*var\(--cdp-panel\);\s*border:\s*1px solid var\(--cdp-edge\);[\s\S]*backdrop-filter:\s*blur\(24px\) saturate\(1\.8\);/,
+    );
+  });
+
+  it('lays the page in the skin’s pastel, the album art multiplied into it', () => {
+    expect(root).toMatch(/background:\s*var\(--cdp-wash\);/);
+    expect(rule('.cdp-backdrop__layer')).toMatch(/var\(--cdp-accent\)[\s\S]*var\(--cdp-wash\);/);
+    expect(rule('.cdp-backdrop__layer::before')).toMatch(/mix-blend-mode:\s*multiply;/);
   });
 
   it("falls back to Blush's own accent pair from src/skins.json, under the inline skin's", () => {
@@ -96,7 +114,7 @@ describe('app.css: the hi-fi panel', () => {
     expect(css).not.toMatch(/--cdp-(blush|gold|glass|display)/);
   });
 
-  it('has no pills, no italic, no Fraunces, no layered shadows and no blur over 8 px', () => {
+  it('has no pills, no italic, no Fraunces, no layered shadows and no blur over 24 px', () => {
     expect(css).not.toContain('999px');
     expect(css).not.toMatch(/border-radius:\s*50%/);
     expect(css).not.toMatch(/font-style:\s*italic/);
@@ -105,29 +123,33 @@ describe('app.css: the hi-fi panel', () => {
       expect(value, value).not.toMatch(/\)\s*,/);
     }
     for (const [, px] of css.matchAll(/backdrop-filter:\s*blur\((\d+)px\)/g)) {
-      expect(Number(px)).toBeLessThanOrEqual(8);
+      expect(Number(px)).toBeLessThanOrEqual(24);
     }
   });
 
-  it('marks with the accent: Load, Play, the progress, the playing row, the switches, the ring', () => {
+  it('fills Load and Play with the accent, and marks the rest with its ink, on white glass', () => {
     expect(rule('.cdp-button--primary')).toMatch(/background:\s*var\(--cdp-accent\)/);
     expect(rule('.cdp-key--main')).toMatch(/background:\s*var\(--cdp-accent\)/);
     expect(rule('.cdp-now__seek::-webkit-slider-runnable-track')).toContain(
-      'linear-gradient(var(--cdp-accent), var(--cdp-accent))',
+      'linear-gradient(var(--cdp-accent-ink), var(--cdp-accent-ink))',
     );
     expect(rule('.cdp-now__seek::-moz-range-progress')).toMatch(
-      /background:\s*var\(--cdp-accent\)/,
+      /background:\s*var\(--cdp-accent-ink\)/,
     );
-    expect(rule('.cdp-track.is-current::before')).toMatch(/background:\s*var\(--cdp-accent\)/);
-    expect(rule('.cdp-eq span')).toMatch(/background:\s*var\(--cdp-accent\)/);
-    expect(rule(".cdp-key--small[aria-pressed='true']")).toMatch(/color:\s*var\(--cdp-accent\)/);
+    expect(rule('.cdp-track.is-current::before')).toMatch(/background:\s*var\(--cdp-accent-ink\)/);
+    expect(rule('.cdp-eq span')).toMatch(/background:\s*var\(--cdp-accent-ink\)/);
+    expect(rule(".cdp-key--small[aria-pressed='true']")).toMatch(
+      /color:\s*var\(--cdp-accent-ink\)/,
+    );
     expect(rule(".cdp-key--small[aria-pressed='true']::after")).toMatch(
       /background:\s*currentcolor/,
     );
-    expect(rule('.cdp-root :focus-visible')).toMatch(/outline:\s*2px solid var\(--cdp-accent\)/);
+    expect(rule('.cdp-root :focus-visible')).toMatch(
+      /outline:\s*2px solid var\(--cdp-accent-ink\)/,
+    );
     // The preset of the collection in view, tinted and bordered as a switch that is on.
     expect(rule('.cdp-preset.is-current')).toMatch(
-      /background:\s*color-mix\(in srgb, var\(--cdp-accent\) 14%, transparent\);\s*border-color:\s*var\(--cdp-accent\);/,
+      /background:\s*color-mix\(in srgb, var\(--cdp-accent\) 14%, transparent\);\s*border-color:\s*var\(--cdp-accent-ink\);/,
     );
   });
 

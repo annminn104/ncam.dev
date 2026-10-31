@@ -15,8 +15,20 @@ const ROLE_SET: Record<SkinRole, true> = {
 };
 const ROLES = Object.keys(ROLE_SET).sort();
 const HEX = /^#[0-9a-f]{6}$/;
-/** The shell's panels, --cdp-panel in src/styles/app.css, taken opaque. */
-const PANEL = '#100c0e';
+/** The shell's panels, --cdp-panel in src/styles/app.css: white glass, taken opaque. */
+const PANEL = '#ffffff';
+
+/**
+ * The accent's ink, --cdp-accent-ink in src/styles/app.css: `color-mix(in srgb, accent 50%, black)`,
+ * which halves each sRGB channel.
+ */
+function inkOf(hex: string): string {
+  const half = (at: number) =>
+    Math.round(parseInt(hex.slice(at, at + 2), 16) / 2)
+      .toString(16)
+      .padStart(2, '0');
+  return `#${half(1)}${half(3)}${half(5)}`;
+}
 
 /** WCAG 2's relative luminance of an sRGB hex colour. */
 function luminance(hex: string): number {
@@ -58,12 +70,13 @@ describe('skins', () => {
     expect(contrast('#777777', '#ffffff')).toBeCloseTo(4.48, 2);
   });
 
-  it('keeps every accent readable: text on it at 4.5:1, it on a panel at 3:1', () => {
+  it('keeps every accent readable: text on it at 4.5:1, its ink on a panel at 3:1', () => {
+    expect(inkOf('#e8a3b0')).toBe('#745258');
     for (const skin of SKINS) {
       const text = contrast(skin.onAccent, skin.accent);
-      const mark = contrast(skin.accent, PANEL);
+      const mark = contrast(inkOf(skin.accent), PANEL);
       expect(text, `${skin.id}: onAccent on accent`).toBeGreaterThanOrEqual(4.5);
-      expect(mark, `${skin.id}: accent on a panel`).toBeGreaterThanOrEqual(3);
+      expect(mark, `${skin.id}: the accent's ink on a panel`).toBeGreaterThanOrEqual(3);
     }
   });
 
