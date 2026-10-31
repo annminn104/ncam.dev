@@ -581,12 +581,12 @@ and a dot, so the state is not colour alone) and the focus ring (2 px; drawn ins
 whose overflow would cut it). Everything else is white and greys. The `.cdp-root` block, the
 stylesheet's first rule, holds the tokens and the page's fallback tint (`rgb(42 31 36)`, not a
 grey), and is exempt; after it `src/styles/app-css.test.ts` fails on any hex colour and on any
-lower-case `rgb(` of three whole numbers one space apart whose channels differ, and anywhere in the
-file on a `--cdp-blush`, `--cdp-gold`, `--cdp-glass` or `--cdp-display` token, a pill radius
-(`999px`, or a `border-radius` of `50%`), an italic, Fraunces, a layered shadow or a blur over
-8 px. It reads no other way of naming a colour (an `rgb()` with decimal or percentage channels, an
-upper-case `RGB(`, a comma-separated `rgb()`, `rgba()`, `hsl()`, `oklch()`, a keyword), so a review
-does.
+lower-case `rgb(` of three channels one space apart (each a whole number, a decimal or a
+percentage) not all written alike, and anywhere in the file on a `--cdp-blush`, `--cdp-gold`,
+`--cdp-glass` or `--cdp-display` token, a pill radius (`999px`, or a `border-radius` of `50%`), an
+italic, Fraunces, a layered shadow or a blur over 8 px. It reads no other way of naming a colour
+(a channel in scientific notation, with a sign or `none`, an upper-case `RGB(`, a comma-separated
+`rgb()`, `rgba()`, `hsl()`, `oklch()`, a keyword), so a review does.
 
 **The controls**: transport keys are 32 px squares (`cdp-key`, Play `cdp-key--main`) and the small
 keys 28 px (`cdp-key--small`); the link field and the bar's buttons are 40 px high and Retry 28 px,

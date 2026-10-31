@@ -69,7 +69,10 @@ describe('app.css: the hi-fi panel', () => {
 
   it('names no colour outside the tokens but neutral greys', () => {
     expect(rest.match(/#[0-9a-f]{3,8}\b/gi) ?? []).toEqual([]);
-    for (const [, r, g, b] of rest.matchAll(/rgb\((\d+) (\d+) (\d+)/g)) {
+    // Each channel whole (a whole number, a decimal or a percentage) and compared as written; the
+    // third ends at the alpha's `/` or at the `)`, so a form the guard does not read stays unread.
+    const channels = /rgb\((\d*\.?\d+%?) (\d*\.?\d+%?) (\d*\.?\d+%?)(?=\s*[/)])/g;
+    for (const [, r, g, b] of rest.matchAll(channels)) {
       expect(r === g && g === b, `rgb(${r} ${g} ${b})`).toBe(true);
     }
     expect(css).not.toMatch(/--cdp-(blush|gold|glass|display)/);
