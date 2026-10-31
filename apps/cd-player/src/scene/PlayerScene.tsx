@@ -74,10 +74,17 @@ export function PlayerScene(props: PlayerSceneProps) {
   useEffect(() => {
     let cancelled = false;
     let loaded: PlayerModel | null = null;
-    loadPlayerModel(assetUrl(modelPath, assetBase), (fraction) => {
-      // A load this effect has let go of (StrictMode's first run, a remount) says nothing.
-      if (!cancelled) report(fraction);
-    }).then(
+    // A load this effect lets go of (a failed boot, StrictMode's first run, a remount) stops
+    // downloading, so the next boot asks for the GLB anew instead of waiting on a stalled request.
+    const download = new AbortController();
+    loadPlayerModel(
+      assetUrl(modelPath, assetBase),
+      (fraction) => {
+        // A load this effect has let go of says nothing.
+        if (!cancelled) report(fraction);
+      },
+      download.signal,
+    ).then(
       (next) => {
         loaded = next;
         if (cancelled) next.dispose();
@@ -89,6 +96,7 @@ export function PlayerScene(props: PlayerSceneProps) {
     );
     return () => {
       cancelled = true;
+      download.abort();
       // The model goes with its path: a disposed one is never drawn.
       setModel(null);
       loaded?.dispose();

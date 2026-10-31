@@ -1,4 +1,4 @@
-import type { Group, Mesh, Object3D } from 'three';
+import { LoaderUtils, type Group, type Mesh, type Object3D } from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 import type { Skin } from '../skins';
@@ -21,7 +21,7 @@ export interface PlayerModel {
   dispose(): void;
 }
 
-/** What GLTFLoader's progress events carry (`ProgressEvent`'s fields), so node tests can make one. */
+/** What a progress event of the download carries (`ProgressEvent`'s fields). */
 export type DownloadProgress = Pick<ProgressEvent, 'lengthComputable' | 'loaded' | 'total'>;
 
 /**
@@ -37,17 +37,54 @@ export function downloadFraction({
   return Math.min(1, Math.max(0, loaded / total));
 }
 
-/** Loads the player; `onProgress` hears the GLB's download as it comes (see `downloadFraction`). */
+/**
+ * Fetches the GLB, telling `onProgress` how much has come as each chunk arrives (see
+ * `downloadFraction`); `signal` aborts the request. Every call asks anew: three's FileLoader joins
+ * a load to a request for the same URL still in flight, so a boot that tried again after a stall
+ * waited on the request that had stalled.
+ */
+export async function downloadModel(
+  url: string,
+  onProgress?: (fraction: number | null) => void,
+  signal?: AbortSignal,
+  fetchModel: typeof fetch = fetch,
+): Promise<ArrayBuffer> {
+  const response = await fetchModel(url, { signal });
+  if (!response.ok) throw new Error(`cd-player.glb answered ${response.status}`);
+  if (!onProgress || !response.body) return response.arrayBuffer();
+  const total = Number(response.headers.get('Content-Length')) || 0;
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let loaded = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+    loaded += value.byteLength;
+    onProgress(downloadFraction({ lengthComputable: total > 0, loaded, total }));
+  }
+  const bytes = new Uint8Array(loaded);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return bytes.buffer;
+}
+
+/**
+ * Loads the player; `onProgress` hears the GLB's download as it comes (see `downloadFraction`),
+ * and `signal` aborts the download (a scene that lets go of the load).
+ */
 export async function loadPlayerModel(
   url: string,
   onProgress?: (fraction: number | null) => void,
+  signal?: AbortSignal,
 ): Promise<PlayerModel> {
+  const data = await downloadModel(url, onProgress, signal);
   const loader = new GLTFLoader();
   loader.setMeshoptDecoder(MeshoptDecoder);
-  const gltf = await loader.loadAsync(
-    url,
-    onProgress ? (event: ProgressEvent) => onProgress(downloadFraction(event)) : undefined,
-  );
+  const gltf = await loader.parseAsync(data, LoaderUtils.extractUrlBase(url));
   const root = gltf.scene;
   const nodes = {} as Record<RequiredNode, Object3D>;
   const missing: string[] = [];

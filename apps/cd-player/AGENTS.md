@@ -746,13 +746,17 @@ entrance (text that enters at opacity 0 counts for LCP only at its next repaint)
 `prefers-reduced-motion: reduce` its disc stands still.
 
 **The count.** While the scene boots the line gives the GLB's download, "Loading the player 63%"
-(`loaderLine` in `src/view.ts`, rounded and held between 0 and 100). GLTFLoader's progress events
-reach `loadPlayerModel(url, onProgress)` in `src/scene/model.ts`, where `downloadFraction` makes a
-fraction of them only when the response names its length (`Content-Length`; a compressed transfer
-whose decoded bytes outrun it is held at 1), then `PlayerSceneProps.onProgress` (`PlayerScene`
-drops a cancelled load's), then `App`'s state. The scene chunk's own download is not measured:
-until the GLB's request starts, and whenever its size is unknown, the line has no number. A failed
-boot clears the count, so "Try again" starts from none.
+(`loaderLine` in `src/view.ts`, rounded and held between 0 and 100). `loadPlayerModel(url,
+onProgress, signal)` in `src/scene/model.ts` fetches the GLB itself (`downloadModel`, then
+GLTFLoader's `parseAsync`) and reports each chunk, where `downloadFraction` makes a fraction only
+when the response names its length (`Content-Length`; a compressed transfer whose decoded bytes
+outrun it is held at 1), then `PlayerSceneProps.onProgress` (`PlayerScene` drops a cancelled
+load's), then `App`'s state. `PlayerScene` aborts the download of a load it lets go of (a failed
+boot, StrictMode's first run, a remount), so "Try again" after a stall asks for the GLB anew. The
+model fetches it itself because three's FileLoader joins a load to a request for the same URL
+still in flight, a stalled one included. The scene chunk's own download is not measured: until the
+GLB's request starts, and whenever its size is unknown, the line has no number. A failed boot
+clears the count, so "Try again" starts from none.
 
 **Hand-overs.** The loader gives way to "Open the player" once the page has settled without
 starting the scene (a software rasteriser, reduced motion: `manual` in `App`, since the boot's
@@ -805,7 +809,8 @@ Unit tests (`src/**/*.test.ts`, node environment, run by the root `pnpm test`):
   (the end watchdog on injected timers, Retry's second ask), `bridge.test.ts` and `view.test.ts`
   (the view model, `loaderLine`, the next five tracks in play order);
 - the scene: `scene/model-contract.test.ts` (the committed GLB), `model.test.ts`
-  (`downloadFraction`), `glb.test.ts`, `material-roles.test.ts` (every `SKIN_ROLES` entry maps a
+  (`downloadFraction`, and `downloadModel` on a fake fetch: its progress, a request of its own per
+  load, the abort), `glb.test.ts`, `material-roles.test.ts` (every `SKIN_ROLES` entry maps a
   material to the role of its own name), `materials.test.ts` (the roles' materials, `leatherSheen`,
   `applySkin`), `stage.test.ts`, `rig.test.ts`, `director.test.ts`, `swap-controller.test.ts`,
   `framing.test.ts`, `controls.test.ts`, `vu.test.ts`, `vu-materials.test.ts`,
