@@ -2,8 +2,8 @@
 
 ## What this is
 
-**CD Player**: any Spotify playlist or album, played on a 3D suitcase CD player in four colourways
-(Blush, the pink it opens in, Sage, Cream and Cherry). The next five discs wait in a rack in the
+**CD Player**: any Spotify playlist or album, played on a 3D suitcase CD player in four colourways:
+Blush (the pink it opens in), Sage, Cream and Cherry. The next five discs wait in a rack in the
 open lid, each printed with its first artist's photo, and when a track is about to play the next
 disc flies from rack slot 0 onto the spindle; the crystal case beside the rack shows the album art
 on its booklet, a brushed plate in the lid and a luggage tag on the handle name the collection, and
@@ -29,9 +29,23 @@ The owner's decisions (2026-10-28), which the rest of this guide assumes:
   `/album/<id>`), so it can be shared, and `localStorage` brings it back on the visitor's next
   visit.
 - **The suitcase design** was approved from a Cycles render of the Blender scene (the still that
-  `art/blender/scripts/hero.py` makes). It is **one model in four colourways** (see "Skins"):
-  visitors pick the colour, and nothing else about it.
+  `art/blender/scripts/hero.py` makes).
 - **No volume control**: the iFrame API has none, so the knob printed VOLUME scrubs the track.
+
+The owner's v2 decisions (2026-10-30), taken on Cycles renders and captures of the page, which the
+guide assumes too:
+
+- **One model in four colourways** (see "Skins"): visitors pick the colour, and nothing else about
+  the player.
+- **The cascade lid**: the crystal case and its booklet stand beside the five-slot rack, rather than
+  a rack without the case (the grid), chosen from Cycles renders of both and approved with a
+  brighter VU strip, a darker trim and the strap kept clear of the rack and its discs.
+- **The palettes** of the four colourways were approved from Cycles renders of each skin and
+  captures of the page, and live in `src/skins.json` alone: a colour changes there, and only with
+  the owner's OK.
+- **Dark leathers keep their depth**: the owner asked for a gentler sheen on them, so a leather's
+  sheen is lifted toward white by the base's own luminance, 40 % at most (`leatherSheen`), and a
+  dark leather is not greyed by it.
 
 ## What it exposes
 
@@ -220,16 +234,16 @@ Keyboard (`App.tsx`): Space plays or pauses, N and P change tracks, never with a
 focus is in a field or on a button (so Space on a button, or on the slider, is the browser's own),
 and a held key is one press. Every music action from the DOM also starts the scene while it waits.
 
-**The card's controls** (`src/shell/NowPlaying.tsx`) give every 3D control a DOM equivalent, for
-the keyboard, a screen reader and a phone. The head has Previous, Play or Pause and Next (32 px
-square keys, `cdp-key`; Play `cdp-key--main`); the row under it, which replaced the old progress
-bar, has the **Seek** slider (`src/shell/SeekSlider.tsx`, the knob's counterpart) and the small
-**Stop**, **Repeat** and **Shuffle** keys (28 px, `cdp-key--small`). DOM order is the Tab order:
-Previous, Play, Next, Seek, Stop, Repeat, Shuffle (Tab skips the slider while it is disabled).
-Repeat and Shuffle are switches: `aria-pressed`, and when on an accent tint, border and icon and a
-dot under it, so the state is not colour alone. Shuffle sends `TOGGLE_SHUFFLE` with `Date.now()` as
-the seed, as the deck's MODE key does (`onAction` in `engine.ts`). All of them go through `act`, so
-a press while the scene waits also starts it.
+**The card's controls** (`src/shell/NowPlaying.tsx`) give every 3D control a DOM equivalent, for the
+keyboard, a screen reader and a phone. The head has Previous, Play or Pause and Next (32 px square
+keys, `cdp-key`; Play `cdp-key--main`); the row under it has the **Seek** slider
+(`src/shell/SeekSlider.tsx`, the knob's counterpart) and the small **Stop**, **Repeat** and
+**Shuffle** keys (28 px, `cdp-key--small`). DOM order is the Tab order: Previous, Play, Next, Seek,
+Stop, Repeat, Shuffle (Tab skips the slider while it is disabled). Repeat and Shuffle are switches:
+`aria-pressed`, and when on an accent tint, border and icon and a dot under it, so the state is not
+colour alone. Shuffle sends `TOGGLE_SHUFFLE` with `Date.now()` as the seed, as the deck's MODE key
+does (`onAction` in `engine.ts`). All of them go through `act`, so a press while the scene waits
+also starts it.
 
 The slider is a native `<input type="range">` counted in whole seconds (`seekRange` in `src/view.ts`
 floors, as `formatDuration` does), disabled while the status is `idle` or `swapping` (a seek does
@@ -249,12 +263,13 @@ thumb out the fill ends under its centre (the end moves a few px as the thumb co
 `::-webkit-slider-*` rules have been looked at in Chromium; the `::-moz-range-*` ones in no browser
 yet.
 
-**The row's height is budgeted.** It replaced a 14 + 4 + 12 px block and may grow the card by 12 px
-at most (8 + 28 + 6 px): a narrow screen's framing lifts the player clear of the card by a fixed
-aim (`src/scene/framing.ts`), not by the card's height. A note that stands where the embed would be
+**The row's height is budgeted.** The row is 8 + 28 + 6 px (its margins and the 28 px slider and
+keys), and the card must not grow past the height it gives it: a narrow screen's framing lifts the
+player clear of the card by a fixed aim (`src/scene/framing.ts`), not by measuring the card, so a
+taller card would cover the player. A note that stands where the embed would be
 (`cdp-now__note--lead`) therefore has no top margin of its own: it would collapse with the row's 6
-px into 10 and cost 4 px more. Measured at 1280 × 720 and 390 × 844, with the note and with the
-embed in: +12.00 px each.
+px into 10 and cost 4 px more. A change to the card is measured at 1280 × 720 and 390 × 844, with
+the note and with the embed in, before and after.
 
 **When a track has ended** (`hasEnded`): an update paused within 500 ms of the end, or snapped back
 to 0 just after being within 1.5 s of it (the same uri), never while buffering. ENDED then moves
@@ -563,10 +578,11 @@ and a dot, so the state is not colour alone) and the focus ring (2 px; drawn ins
 whose overflow would cut it). Everything else is white and greys. The `.cdp-root` block, the
 stylesheet's first rule, holds the tokens and the page's fallback tint (`rgb(42 31 36)`, not a
 grey), and is exempt; after it `src/styles/app-css.test.ts` fails on any hex colour and on any
-`rgb()` whose three channels differ, and anywhere in the file on a `--cdp-blush`, `--cdp-gold`,
-`--cdp-glass` or `--cdp-display` token, a pill radius (`999px`, or a `border-radius` of `50%`), an
-italic, Fraunces, a layered shadow or a blur over 8 px. It looks for no other way of naming a
-colour (`rgba()`, `hsl()`, a keyword), so a review does.
+space-separated `rgb(r g b …)` whose channels differ, and anywhere in the file on a `--cdp-blush`,
+`--cdp-gold`, `--cdp-glass` or `--cdp-display` token, a pill radius (`999px`, or a `border-radius`
+of `50%`), an italic, Fraunces, a layered shadow or a blur over 8 px. It looks for no other way of
+naming a colour (a comma-separated `rgb()`, `rgba()`, `hsl()`, `oklch()`, a keyword), so a review
+does.
 
 **The controls**: transport keys are 32 px squares (`cdp-key`, Play `cdp-key--main`) and the small
 keys 28 px (`cdp-key--small`); the link field and the bar's buttons are 40 px high and Retry 28 px,
@@ -799,6 +815,12 @@ click waits for its element to hold still over two frames (seconds while the sce
 touch taps reach the page 500 ms or more apart, so a timed press (Previous within 3 s) or a double
 tap needs input sent straight to the page. A preview lasts under 30 s: a check that seeks, with the
 scene drawing slowly, pauses the track while it looks around.
+
+**The gallery thumbnail** (`apps/portfolio/public/thumbnails/cd-player.jpg`) comes from
+`pnpm thumbnails cd-player` with the host and this remote running, but under a software renderer
+that captures the "Open the player" gate, so it needs a GPU-backed Chromium: run the unmodified
+`apps/portfolio/scripts/capture-thumbnails.mjs` under a preload (`node --import <file>`) that wraps
+`chromium.launch` to add `--use-angle=metal --enable-gpu`, with `THUMBNAIL_SETTLE_MS=20000`.
 
 **Lighthouse.** The page is one of the audited paths (`/projects/cd-player`, the 13th of
 `AUDITED_PATHS` in `scripts/lighthouse/config.cjs`), so `LH_SHARD=13/13` audits it alone (the index
