@@ -19,6 +19,10 @@ import { SKIN_ROLES } from './material-roles';
 const meshOf = (name: string, color = '#ffffff') =>
   new Mesh(new BoxGeometry(), new MeshStandardMaterial({ name, color }));
 
+/** The largest difference between two colours in any linear channel. */
+const gap = (a: Color, b: Color) =>
+  Math.max(Math.abs(a.r - b.r), Math.abs(a.g - b.g), Math.abs(a.b - b.b));
+
 describe('makeMaterial', () => {
   const source = new MeshStandardMaterial({ name: 'from_the_glb' });
   const maps = { grain: new Texture(), quilt: new Texture(), weave: new Texture() };
@@ -120,9 +124,30 @@ describe('upgradeMaterials', () => {
 });
 
 describe('leatherSheen', () => {
-  it('lifts a colour 40 % of the way to white, in the linear working colour', () => {
-    expect(leatherSheen(new Color(0, 0, 0)).toArray()).toEqual([0.4, 0.4, 0.4]);
+  it('lifts a base toward white by its own luminance, 40 % at most, in the linear working colour', () => {
+    expect(leatherSheen(new Color(0, 0, 0)).toArray()).toEqual([0, 0, 0]);
     expect(leatherSheen(new Color(1, 1, 1)).toArray()).toEqual([1, 1, 1]);
+    // A grey of luminance 0.2 is lifted 20 % of the way, one of 0.6 only 40 %.
+    expect(leatherSheen(new Color(0.2, 0.2, 0.2)).r).toBeCloseTo(0.36, 6);
+    expect(leatherSheen(new Color(0.6, 0.6, 0.6)).r).toBeCloseTo(0.76, 6);
+  });
+
+  // The sheen lights the whole of the leather, not only its edges: lifted toward white it laid a
+  // haze over Cherry and greyed it to a dusty rose on the page. Cherry's leather and trim, and the
+  // trims of Blush and Sage, are the darkest bases of the skins.
+  it('keeps a dark leather deep: its sheen stays close to its base', () => {
+    for (const hex of ['#7a1d2a', '#4a0f18', '#7d3352', '#3f5a3d']) {
+      const base = new Color(hex);
+      expect(gap(leatherSheen(base), base), hex).toBeLessThan(0.1);
+    }
+  });
+
+  it('gives a light leather the full lift it always had', () => {
+    // Blush, Sage and Cream: the base lifted 40 % of the way to white.
+    for (const hex of ['#e296a4', '#9db39a', '#eadfca']) {
+      const was = new Color(hex).lerp(new Color('#ffffff'), 0.4);
+      expect(gap(leatherSheen(new Color(hex)), was), hex).toBeLessThan(0.01);
+    }
   });
 
   it('is the sheen the leather gets from its GLB colour', () => {
@@ -185,6 +210,22 @@ describe('applySkin', () => {
       );
     }
     expect(materialOf(root, 'lining').sheenColor.getHexString()).toBe('ffffff');
+    upgraded.dispose();
+  });
+
+  it('brings the sheen with the new base: deep under a dark leather, lifted again under a light one', () => {
+    const { root, upgraded } = scene();
+    const sheenGap = (name: string) => {
+      const { sheenColor, color } = materialOf(root, name);
+      return gap(sheenColor, color);
+    };
+    upgraded.applySkin(skinById('cherry'));
+    expect(sheenGap('leather')).toBeLessThan(0.1);
+    expect(sheenGap('trim')).toBeLessThan(0.1);
+    // Blush's leather is a light one, its trim a dark one.
+    upgraded.applySkin(skinById('blush'));
+    expect(sheenGap('leather')).toBeGreaterThan(0.2);
+    expect(sheenGap('trim')).toBeLessThan(0.1);
     upgraded.dispose();
   });
 

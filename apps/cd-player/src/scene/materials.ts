@@ -47,11 +47,15 @@ export interface UpgradedMaterials {
 const WHITE = new Color('#ffffff');
 
 /**
- * The leather's sheen: its base lifted 40 % toward white, in three's linear working colour. A skin
- * that changes the base brings the sheen with it, so every colourway keeps the same soft highlight.
+ * The leather's sheen colour: its base lifted toward white by the base's own luminance (Rec. 709
+ * weights, in three's linear working colour), 40 % at most. A pastel leather (luminance 0.4 or more:
+ * Blush, Sage, Cream) gets the full 40 % and its soft highlight; a dark one keeps its depth, since a
+ * sheen lifted as far lays a white haze over the whole leather and greys a dark red to a dusty rose.
+ * A skin that changes the base brings the sheen with it.
  */
 export function leatherSheen(base: Color, target: Color = new Color()): Color {
-  return target.copy(base).lerp(WHITE, 0.4);
+  const luminance = 0.2126 * base.r + 0.7152 * base.g + 0.0722 * base.b;
+  return target.copy(base).lerp(WHITE, Math.min(luminance, 0.4));
 }
 
 function physical(

@@ -590,7 +590,8 @@ in), **Sage**, **Cream** and **Cherry**. **Player**, after Share in the link bar
   `PlayerModel.applySkin`): each of those materials takes its role's hex through `Color.set`,
   which reads a hex string as sRGB and stores three's linear working colour, the conversion
   `lin()` makes in `cdkit.py`, so Blush's values give back the GLB's own colours; a leather
-  material's sheen follows its new base (`leatherSheen`: the base lifted 40 % toward white). Only
+  material's sheen follows its new base (`leatherSheen`: the base lifted toward white by its own
+  luminance, 40 % at most, so a pastel leather keeps the full lift and a dark one its depth). Only
   uniforms change: no reload, no texture, no shader. `PlayerScene` applies the skin in a layout
   effect, before the model's first frame and on every change. A material the rig copies is not
   recoloured, so keep skin roles off the discs and the cases. A skin whose `model` differs from
