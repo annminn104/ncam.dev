@@ -6,7 +6,7 @@ interface Props {
   tracks: readonly Track[];
   currentIndex: number | null;
   status: Status;
-  /** Phones only: the sheet is open. Wide screens always show the drawer. */
+  /** The sheet is open (phones and upright tablets); where the tracklist is a column it shows. */
   open: boolean;
   /**
    * A first load that failed: the shelf is empty, so it says why, with Retry when trying again

@@ -11,16 +11,21 @@ function rule(selector: string): string {
 
 /** From the reduced-motion block to the end of the file; the skin picker's rules come after it. */
 const reduced = css.slice(css.indexOf('@media (prefers-reduced-motion: reduce)'));
+/** A media block's text, its query given with single spaces (Prettier may break it over lines). */
+function block(query: string): string {
+  const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/ /g, '\\s+');
+  return new RegExp(`@media ${escaped}\\s*\\{([\\s\\S]*?)\\n\\}`).exec(css)?.[1] ?? '';
+}
 /** The phone layout's block, which upright tablets share. */
-const phone =
-  /@media \(max-width: 820px\), \(max-width: 1260px\) and \(max-aspect-ratio: 4\/5\)\s*\{([\s\S]*?)\n\}/.exec(
-    css,
-  )?.[1] ?? '';
+const phone = block(
+  '(max-width: 820px) and (max-aspect-ratio: 13/10), (max-width: 1260px) and (max-aspect-ratio: 4/5)',
+);
+/** The block of phones held sideways and other short screens. */
+const short = block(
+  '(max-width: 1100px) and (max-height: 600px) and (min-aspect-ratio: 1301/1000)',
+);
 /** The tablets' and small laptops' block. */
-const medium =
-  /@media \(max-width: 1100px\), \(max-width: 1260px\) and \(max-aspect-ratio: 8\/5\)\s*\{([\s\S]*?)\n\}/.exec(
-    css,
-  )?.[1] ?? '';
+const medium = block('(max-width: 1100px), (max-width: 1260px) and (max-aspect-ratio: 8/5)');
 /** A rule's declarations inside a media block's text. */
 function inner(block: string, selector: string): string {
   const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -175,10 +180,19 @@ describe('app.css: the layout', () => {
       /grid-template-columns:\s*minmax\(0, 1fr\) 360px;[\s\S]*grid-template-areas:\s*'bar side'\s*'stage side';/,
     );
     expect(inner(medium, '.cdp-hud')).toMatch(/display:\s*none;/);
+    // One row for the field and its buttons: a wrapped one hung the picker's popover off-screen.
+    expect(inner(medium, '.cdp-link')).toMatch(/flex-wrap:\s*nowrap;/);
+    expect(inner(medium, '.cdp-link input')).toMatch(/flex:\s*1 1 0;/);
+    // The header is never squeezed below its content.
+    expect(inner(medium, '.cdp-bar')).toMatch(/min-height:\s*auto;/);
   });
 
   it('stacks a phone: the bar, the stage and the card, with the sheet over them', () => {
     expect(inner(phone, '.cdp-root')).toMatch(/grid-template-areas:\s*'bar'\s*'stage'\s*'now';/);
+    // The stage keeps 220 px: on a small phone the page grows and scrolls rather than lose it.
+    expect(inner(phone, '.cdp-root')).toMatch(
+      /grid-template-rows:\s*auto minmax\(220px, 1fr\) auto;[\s\S]*height:\s*auto;\s*min-height:\s*100dvh;/,
+    );
     // The closed sheet's 56 px, and 12 px either side of it, stay clear of the card; at the top,
     // in the host, the bar clears the host's back button (its --stage-top-inset).
     expect(inner(phone, '.cdp-root')).toMatch(
@@ -187,6 +201,23 @@ describe('app.css: the layout', () => {
     expect(inner(phone, '.cdp-side')).toMatch(/display:\s*contents;/);
     expect(inner(phone, '.cdp-now')).toMatch(/grid-area:\s*now;/);
     expect(inner(phone, '.cdp-tracks')).toMatch(/position:\s*absolute;[\s\S]*bottom:\s*12px;/);
+  });
+
+  it('holds the stage still beside the scrolling column on a phone held sideways', () => {
+    expect(inner(short, '.cdp-root')).toMatch(
+      /grid-template-areas:\s*'stage bar'\s*'stage side';[\s\S]*height:\s*auto;\s*min-height:\s*100dvh;/,
+    );
+    expect(inner(short, '.cdp-stage')).toMatch(
+      /position:\s*sticky;[\s\S]*height:\s*calc\(100dvh - 24px\);/,
+    );
+    expect(inner(short, '.cdp-tracks')).toMatch(/max-height:\s*calc\(100dvh - 24px\);/);
+    // A sideways phone is no portrait one: the two blocks never meet.
+    expect(css).toContain('(max-width: 820px) and (max-aspect-ratio: 13/10)');
+    expect(css).toContain('(min-aspect-ratio: 1301/1000)');
+  });
+
+  it('clips the page and never scrolls it, `hidden` where `clip` is unknown', () => {
+    expect(root).toMatch(/overflow:\s*hidden;\s*overflow:\s*clip;/);
   });
 
   it('centres the loader and the way in on the stage, the help line at its foot', () => {
@@ -222,7 +253,13 @@ describe('app.css: Popular on Spotify', () => {
     expect(inner(medium, '.cdp-preset__cover')).toMatch(/width:\s*48px;\s*height:\s*48px;/);
   });
 
+  it('marks the one being loaded, its cover dimmed where its tag is out of sight', () => {
+    expect(rule(".cdp-preset[aria-busy='true'] .cdp-preset__cover")).toMatch(/opacity:\s*0\.45;/);
+  });
+
   it('makes them chips on a phone, the tag kept for a screen reader', () => {
+    // Positioned, so a clipped tag sits in its chip, inside the row's scroll, not past the page.
+    expect(rule('.cdp-preset')).toMatch(/position:\s*relative;/);
     expect(inner(phone, '.cdp-preset')).toMatch(/display:\s*flex;[\s\S]*height:\s*44px;/);
     expect(inner(phone, '.cdp-preset__cover')).toMatch(/width:\s*36px;\s*height:\s*36px;/);
     expect(inner(phone, '.cdp-preset__tag')).toMatch(/clip-path:\s*inset\(50%\);/);

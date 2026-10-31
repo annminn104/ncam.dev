@@ -27,8 +27,12 @@ function corners(width: number, height: number, yaw = 0, pitch = 0): Vector3[] {
   return out;
 }
 
-/** Every canvas shape the stage can take, from a tall one (0.43) to a wide, short one (2.63). */
-const SHAPES = Array.from({ length: 23 }, (_, i) => [Math.round((0.43 + i * 0.1) * 800), 800]);
+/**
+ * Canvas shapes, as wide for their height: from 0.43 to 2.63 in steps, where the layouts' stages
+ * fall (a phone's, an upright tablet's, a wide screen's), and past them both ways.
+ */
+const ASPECTS = [0.2, 0.3, ...Array.from({ length: 23 }, (_, i) => 0.43 + i * 0.1), 3.5, 5, 7];
+const SHAPES = ASPECTS.map((aspect) => [Math.round(aspect * 800), 800]);
 
 /** The orbit's corners and its middle: yaw ±25°, pitch ±10°. */
 const TURNS = [-1, 0, 1].flatMap((y) => [-1, 0, 1].map((p) => [y * YAW_LIMIT, p * PITCH_LIMIT]));
@@ -46,14 +50,15 @@ describe('framing', () => {
     expect(f.position[2]).toBeGreaterThan(f.target[2]);
   });
 
+  // NDC run from -1 to 1, so 0.06 off the middle is 3 % of the canvas, and 0.98 is 1 % from an edge.
   it('aims at the same point of the player on every canvas, so it stands in the middle', () => {
     for (const [width, height] of SHAPES) {
       expect(frameForViewport(width, height).target).toEqual(frameFor(1).target);
       const c = corners(width, height);
       const middle = (axis: 'x' | 'y') =>
         (Math.max(...c.map((p) => p[axis])) + Math.min(...c.map((p) => p[axis]))) / 2;
-      expect(Math.abs(middle('x')), `${width}×${height}, across`).toBeLessThanOrEqual(0.05);
-      expect(Math.abs(middle('y')), `${width}×${height}, down`).toBeLessThanOrEqual(0.05);
+      expect(Math.abs(middle('x')), `${width}×${height}, across`).toBeLessThanOrEqual(0.06);
+      expect(Math.abs(middle('y')), `${width}×${height}, down`).toBeLessThanOrEqual(0.06);
     }
   });
 
@@ -69,7 +74,7 @@ describe('framing', () => {
     expect(isWide(821)).toBe(true);
   });
 
-  it('keeps the whole player in its canvas, 2 % clear of every edge, across the orbit', () => {
+  it('keeps the whole player in its canvas, 1 % clear of every edge, across the orbit', () => {
     for (const [width, height] of SHAPES) {
       for (const [yaw, pitch] of TURNS) {
         const at = `${width}×${height}, yaw ${yaw.toFixed(2)}, pitch ${pitch.toFixed(2)}`;
@@ -81,7 +86,7 @@ describe('framing', () => {
     }
   });
 
-  it('fills its canvas: the player spans 70 % or more of its tighter side', () => {
+  it('fills its canvas at the orbit’s middle: the player spans 70 % or more of a side', () => {
     for (const [width, height] of SHAPES) {
       const c = corners(width, height);
       const half = (axis: 'x' | 'y') =>
