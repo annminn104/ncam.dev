@@ -656,7 +656,10 @@ border-box`, or the columns would run under the bottom edge). `App` renders the 
 The stage takes what the panels leave, and the canvas fills it alone, so no panel ever stands over
 the player and a panel growing only leaves it a smaller canvas (see "The scene"). The loader and
 the way in stand in the stage's middle and the help line at its foot. The host's fixed
-"← Projects" pill stands at the top centre: over the stage on a wide screen, clear of every panel.
+"← Projects" button stands at the top centre: over the stage on a wide screen, clear of every
+panel; on a phone and an upright tablet it would stand on the bar's title row, so there the root's
+top padding is the host's `--stage-top-inset` (its contract for a remote's top edge; 12 px
+standalone) and the bar starts under the button.
 
 ## Skins
 

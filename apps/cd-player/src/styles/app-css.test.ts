@@ -175,8 +175,11 @@ describe('app.css: the layout', () => {
 
   it('stacks a phone: the bar, the stage and the card, with the sheet over them', () => {
     expect(inner(phone, '.cdp-root')).toMatch(/grid-template-areas:\s*'bar'\s*'stage'\s*'now';/);
-    // The closed sheet's 56 px, and 12 px either side of it, stay clear of the card.
-    expect(inner(phone, '.cdp-root')).toMatch(/padding:\s*12px 12px 80px;/);
+    // The closed sheet's 56 px, and 12 px either side of it, stay clear of the card; at the top,
+    // in the host, the bar clears the host's back button (its --stage-top-inset).
+    expect(inner(phone, '.cdp-root')).toMatch(
+      /padding:\s*var\(--stage-top-inset, 12px\) 12px 80px;/,
+    );
     expect(inner(phone, '.cdp-side')).toMatch(/display:\s*contents;/);
     expect(inner(phone, '.cdp-now')).toMatch(/grid-area:\s*now;/);
     expect(inner(phone, '.cdp-tracks')).toMatch(/position:\s*absolute;[\s\S]*bottom:\s*12px;/);

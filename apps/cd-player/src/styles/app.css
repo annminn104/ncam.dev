@@ -968,7 +968,9 @@
       'stage'
       'now';
     gap: 8px;
-    padding: 12px 12px 80px;
+    /* In the host the bar starts under its fixed "← Projects" button, which stands at the top
+       centre, over the bar's title row (the host's --stage-top-inset); standalone, 12 px. */
+    padding: var(--stage-top-inset, 12px) 12px 80px;
   }
   .cdp-side {
     display: contents;
