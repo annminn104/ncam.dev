@@ -16,6 +16,13 @@ const phone =
   /@media \(max-width: 820px\), \(max-width: 1260px\) and \(max-aspect-ratio: 4\/5\)\s*\{([\s\S]*?)\n\}/.exec(
     css,
   )?.[1] ?? '';
+/** The tablets' and small laptops' block. */
+const medium = /@media \(max-width: 1260px\)\s*\{([\s\S]*?)\n\}/.exec(css)?.[1] ?? '';
+/** A rule's declarations inside a media block's text. */
+function inner(block: string, selector: string): string {
+  const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`(?:^|\\n)\\s*${escaped}\\s*\\{([^}]*)\\}`).exec(block)?.[1] ?? '';
+}
 /** The custom properties on .cdp-root, the file's first rule. */
 const root = rule('.cdp-root');
 const token = (name: string) => new RegExp(`--cdp-${name}:\\s*([^;]+);`).exec(root)?.[1].trim();
@@ -110,6 +117,10 @@ describe('app.css: the hi-fi panel', () => {
       /background:\s*currentcolor/,
     );
     expect(rule('.cdp-root :focus-visible')).toMatch(/outline:\s*2px solid var\(--cdp-accent\)/);
+    // The preset of the collection in view, tinted and bordered as a switch that is on.
+    expect(rule('.cdp-preset.is-current')).toMatch(
+      /background:\s*color-mix\(in srgb, var\(--cdp-accent\) 14%, transparent\);\s*border-color:\s*var\(--cdp-accent\);/,
+    );
   });
 
   it('keeps square controls: 4 px keys, rows, fields and buttons, 32 and 28 px keys', () => {
@@ -119,6 +130,7 @@ describe('app.css: the hi-fi panel', () => {
       '.cdp-link input',
       '.cdp-track',
       '.cdp-enter',
+      '.cdp-preset',
     ]) {
       expect(rule(selector), selector).toMatch(/border-radius:\s*var\(--cdp-radius-control\)/);
     }
@@ -142,14 +154,6 @@ describe('app.css: the hi-fi panel', () => {
 });
 
 describe('app.css: the layout', () => {
-  /** The tablets' and small laptops' block. */
-  const medium = /@media \(max-width: 1260px\)\s*\{([\s\S]*?)\n\}/.exec(css)?.[1] ?? '';
-  /** A rule's declarations inside a media block's text. */
-  const inner = (block: string, selector: string) => {
-    const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    return new RegExp(`(?:^|\\n)\\s*${escaped}\\s*\\{([^}]*)\\}`).exec(block)?.[1] ?? '';
-  };
-
   it('lays a wide screen out as the rail, the stage and the side column, in the viewport', () => {
     expect(root).toMatch(/display:\s*grid;/);
     expect(root).toMatch(/grid-template-columns:\s*340px minmax\(0, 1fr\) 360px;/);
@@ -192,6 +196,34 @@ describe('app.css: the layout', () => {
     // `rule` would find the panels' shared rule, whose selector list ends with `.cdp-now {`.
     expect(css).toMatch(/\n\.cdp-now \{\s*flex:\s*none;/);
     expect(rule('.cdp-tracks')).toMatch(/flex:\s*1;\s*min-height:\s*0;/);
+  });
+});
+
+describe('app.css: Popular on Spotify', () => {
+  it('lists the presets as rows that scroll in what the rail leaves them', () => {
+    expect(rule('.cdp-presets')).toMatch(/flex:\s*1;[\s\S]*min-height:\s*0;/);
+    expect(rule('.cdp-presets__list')).toMatch(/display:\s*grid;[\s\S]*overflow-y:\s*auto;/);
+    expect(rule('.cdp-preset')).toMatch(/grid-template-columns:\s*44px minmax\(0, 1fr\);/);
+    expect(rule('.cdp-preset__cover')).toMatch(/width:\s*44px;\s*height:\s*44px;/);
+  });
+
+  it('makes them a row of cards that scrolls sideways in the header, fading at its end', () => {
+    expect(inner(medium, '.cdp-presets__list')).toMatch(
+      /display:\s*flex;[\s\S]*overflow-x:\s*auto;[\s\S]*mask-image:\s*linear-gradient/,
+    );
+    expect(inner(medium, '.cdp-presets__list li')).toMatch(/flex:\s*0 0 184px;/);
+    expect(inner(medium, '.cdp-preset__cover')).toMatch(/width:\s*48px;\s*height:\s*48px;/);
+  });
+
+  it('makes them chips on a phone, the tag kept for a screen reader', () => {
+    expect(inner(phone, '.cdp-preset')).toMatch(/display:\s*flex;[\s\S]*height:\s*44px;/);
+    expect(inner(phone, '.cdp-preset__cover')).toMatch(/width:\s*36px;\s*height:\s*36px;/);
+    expect(inner(phone, '.cdp-preset__tag')).toMatch(/clip-path:\s*inset\(50%\);/);
+    expect(inner(phone, '.cdp-preset__tag')).not.toMatch(/display:\s*none/);
+  });
+
+  it('draws the focus ring inside the scrolling list, which would cut it', () => {
+    expect(rule('.cdp-presets :focus-visible')).toMatch(/outline-offset:\s*-2px;/);
   });
 });
 

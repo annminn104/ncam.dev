@@ -14,6 +14,9 @@ const render = (over: Partial<Props> = {}) =>
       onSubmit: () => {},
       skin: 'blush',
       onSkin: () => {},
+      current: null,
+      busy: null,
+      onPick: () => {},
       ...over,
     }),
   );
@@ -39,6 +42,23 @@ describe('LinkBar', () => {
   it('stops saying "Loading…" once a first load has failed', () => {
     expect(render()).toContain('<h1>Loading…</h1>');
     expect(render({ failed: true })).toContain('<h1>No tracks</h1>');
+  });
+});
+
+describe('LinkBar and Popular on Spotify', () => {
+  it('lists the presets last, after the form and the error, the one in view marked', () => {
+    const html = render({
+      error: "Spotify didn't answer. Try again in a moment.",
+      onRetry: () => {},
+      current: { type: 'playlist', id: '37i9dQZEVXbMDoHDwVN2tF' },
+    });
+    const presets = html.indexOf('<section class="cdp-presets"');
+    expect(presets).toBeGreaterThan(html.indexOf('</form>'));
+    expect(presets).toBeGreaterThan(html.indexOf('id="cdp-link-error"'));
+    expect(presets).toBeLessThan(html.indexOf('</header>'));
+    expect(html).toMatch(
+      /class="cdp-preset is-current" aria-current="true">[\s\S]*?Top 50 - Global/,
+    );
   });
 });
 

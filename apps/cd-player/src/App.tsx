@@ -19,7 +19,13 @@ import type { EngineDeps, InitialData } from './playback/engine';
 import { currentIndex } from './playback/sequencer';
 import { usePlayerEngine } from './playback/usePlayerEngine';
 import type { RouteController } from './route-controller';
-import { collectionPath, parseRoute, routeCollection } from './routes';
+import {
+  collectionPath,
+  parseRoute,
+  routeCollection,
+  sameCollection,
+  type CollectionRef,
+} from './routes';
 import { Backdrop } from './shell/Backdrop';
 import { EnterButton } from './shell/EnterButton';
 import { Hud } from './shell/Hud';
@@ -187,12 +193,16 @@ export default function App({ controller, initial = null, assetBase = '' }: AppP
     [engine],
   );
 
-  // The bar's own error, a link that did not parse or load, with the input to load again when
-  // trying again may help (Spotify or the proxy did not answer).
-  const [linkError, setLinkError] = useState<{ message: string; retry: string | null } | null>(
-    null,
-  );
-  const [linkBusy, setLinkBusy] = useState(false);
+  // The bar's own error, a link that did not parse or a collection that did not load, with the
+  // collection to load again when trying again may help (Spotify or the proxy did not answer).
+  const [linkError, setLinkError] = useState<{
+    message: string;
+    retry: CollectionRef | null;
+  } | null>(null);
+  // The collection a pasted link or a preset is loading: one at a time (`loading` holds it
+  // between a press and the render that shows it).
+  const [pending, setPending] = useState<CollectionRef | null>(null);
+  const loading = useRef(false);
   const [tracksOpen, setTracksOpen] = useState(false);
   const restored = useRef(false);
 
@@ -206,29 +216,44 @@ export default function App({ controller, initial = null, assetBase = '' }: AppP
     if (target) controller.navigate(collectionPath(target));
   }, [controller, parsed.view]);
 
+  /**
+   * Loads a collection the visitor chose, from a pasted link or a preset: fetched first, then saved
+   * as their last and navigated to, so a failure leaves the page where it was, its message under
+   * the input. A choice made while one loads is dropped.
+   */
+  const loadRef = useCallback(
+    async (next: CollectionRef) => {
+      if (loading.current) return;
+      loading.current = true;
+      setLinkError(null);
+      setPending(next);
+      try {
+        await deps.client.collection(next);
+        writeLast(safeStorage(), next);
+        controller.navigate(collectionPath(next));
+      } catch (error) {
+        setLinkError({
+          message: requestErrorMessage(error, next.type),
+          retry: canRetry(error) ? next : null,
+        });
+      } finally {
+        loading.current = false;
+        setPending(null);
+      }
+    },
+    [controller, deps.client],
+  );
+
   const loadLink = useCallback(
-    async (input: string) => {
+    (input: string) => {
       const link = parseSpotifyLink(input);
       if (!link.ok) {
         setLinkError({ message: linkErrorMessage(link.reason), retry: null });
         return;
       }
-      setLinkError(null);
-      setLinkBusy(true);
-      try {
-        await deps.client.collection(link.ref);
-        writeLast(safeStorage(), link.ref);
-        controller.navigate(collectionPath(link.ref));
-      } catch (error) {
-        setLinkError({
-          message: requestErrorMessage(error, link.ref.type),
-          retry: canRetry(error) ? input : null,
-        });
-      } finally {
-        setLinkBusy(false);
-      }
+      void loadRef(link.ref);
     },
-    [controller, deps.client],
+    [loadRef],
   );
 
   // Space plays or pauses, N and P change tracks; never while typing, and a held key is one press.
@@ -262,7 +287,7 @@ export default function App({ controller, initial = null, assetBase = '' }: AppP
     setShelfSeen(shelfError);
     if (shelfError) setTracksOpen(true);
   }
-  const retryInput = linkError?.retry ?? null;
+  const retryRef = linkError?.retry ?? null;
   // The loader holds the scene's place while the page settles, while the scene boots and while the
   // canvas fades in; "Open the player" or the failure takes it otherwise.
   const showLoader =
@@ -276,13 +301,19 @@ export default function App({ controller, initial = null, assetBase = '' }: AppP
       <Backdrop artUrl={backdrop.artUrl} palette={backdrop.palette} />
       <LinkBar
         collection={snapshot.collection}
-        loading={snapshot.loading || linkBusy}
+        loading={snapshot.loading || pending !== null}
         failed={shelfError !== null}
         error={linkError?.message ?? (shelfError ? null : (snapshot.error?.message ?? null))}
-        onRetry={retryInput === null ? undefined : () => void loadLink(retryInput)}
-        onSubmit={(input) => void loadLink(input)}
+        onRetry={retryRef === null ? undefined : () => void loadRef(retryRef)}
+        onSubmit={loadLink}
         skin={skin}
         onSkin={changeSkin}
+        current={ref}
+        busy={pending}
+        // The collection in view is already there: pressing its preset does nothing.
+        onPick={(next) => {
+          if (!sameCollection(next, ref)) void loadRef(next);
+        }}
       />
       {/* The player's own place: the canvas fills it, and no panel stands over it. */}
       <div className="cdp-stage">

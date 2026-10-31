@@ -1,6 +1,8 @@
 import { useState, type FormEvent } from 'react';
+import type { CollectionRef } from '../routes';
 import type { SkinId } from '../skins';
 import type { Collection } from '../spotify/types';
+import { Presets } from './Presets';
 import { SkinPicker } from './SkinPicker';
 
 interface Props {
@@ -15,6 +17,10 @@ interface Props {
   /** The player's colourway, picked after Share. */
   skin: SkinId;
   onSkin(id: SkinId): void;
+  /** The collection in view, and the one being loaded, for "Popular on Spotify" (Presets). */
+  current: CollectionRef | null;
+  busy: CollectionRef | null;
+  onPick(ref: CollectionRef): void;
 }
 
 /**
@@ -32,7 +38,10 @@ export function copyText(
   );
 }
 
-/** The collection's name, the link input (the page's personalisation), Share and Player. */
+/**
+ * The collection's name, the link input (the page's personalisation), Share and Player, then the
+ * playlists of "Popular on Spotify".
+ */
 export function LinkBar({
   collection,
   loading,
@@ -42,6 +51,9 @@ export function LinkBar({
   onSubmit,
   skin,
   onSkin,
+  current,
+  busy,
+  onPick,
 }: Props) {
   const [value, setValue] = useState('');
   // What Share last did, said on its button for two seconds.
@@ -99,6 +111,7 @@ export function LinkBar({
           )}
         </div>
       )}
+      <Presets current={current} busy={busy} onPick={onPick} />
     </header>
   );
 }

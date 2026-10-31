@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest';
+import { PRESETS } from './presets';
 import { clearInitialCache } from './server/initial';
 import { ARTIST, page, PLAYLIST, TRACK } from './spotify/fixtures';
 import { renderHeroSSR } from './ssr';
@@ -68,9 +69,20 @@ describe('renderHeroSSR', () => {
     const loader = /<div class="cdp-loader">[\s\S]*?<\/div>/.exec(html)?.[0] ?? '';
     expect(loader).toMatch(/<svg class="cdp-loader__disc"[^>]*aria-hidden="true"/);
     expect(loader).toContain('<p class="cdp-loader__line">Loading the player</p>');
-    // Nothing on the first screen is a picture: no <picture>, no <img>, no high-priority fetch.
+    // Nothing on the first screen is a picture of the scene, and nothing fetches with a high
+    // priority: the only pictures are the presets' small covers, lazy, none of them in the stage.
     expect(html).not.toContain('<picture');
-    expect(html).not.toContain('<img');
+    const images = html.match(/<img [^>]*>/g) ?? [];
+    expect(images).toHaveLength(PRESETS.length);
+    for (const img of images) {
+      expect(img).toMatch(/^<img class="cdp-preset__cover" [^>]*loading="lazy"/);
+    }
+    const stage = html.slice(
+      html.indexOf('<div class="cdp-stage">'),
+      html.indexOf('<div class="cdp-side">'),
+    );
+    expect(stage).toContain('<div class="cdp-loader">');
+    expect(stage).not.toContain('<img');
     expect(html).not.toContain('cdp-poster');
     expect(html).not.toMatch(/fetchpriority/i);
     // "Open the player" waits for the page to settle: the server shows the loader alone.

@@ -75,7 +75,15 @@ describe('App (server render)', () => {
     expect(html).toContain('<div class="cdp-loader">');
     expect(html).toContain('<p class="cdp-loader__line">Loading the player</p>');
     expect(html).not.toContain('Open the player');
-    expect(html).not.toContain('<img');
+    // The presets' covers are the page's only pictures: the stage holds none.
+    const stage = html.slice(
+      html.indexOf('<div class="cdp-stage">'),
+      html.indexOf('<div class="cdp-side">'),
+    );
+    expect(stage).not.toContain('<img');
+    for (const img of html.match(/<img [^>]*>/g) ?? []) {
+      expect(img).toMatch(/^<img class="cdp-preset__cover" [^>]*loading="lazy"/);
+    }
   });
 });
 

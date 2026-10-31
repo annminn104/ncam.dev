@@ -332,6 +332,86 @@
   font-size: 12px;
 }
 
+/* ── Popular on Spotify: rows in the rail (they scroll in what it leaves), a row of cards in the
+   header and chips on a phone (both scroll sideways; see the breakpoints) ────────────────────── */
+.cdp-presets {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--cdp-hairline);
+}
+.cdp-presets__list {
+  flex: 1;
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  min-height: 0;
+  margin: 8px 0 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+  scrollbar-width: thin;
+  scrollbar-color: var(--cdp-line-strong) transparent;
+}
+.cdp-preset {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+  padding: 4px 10px 4px 4px;
+  font: inherit;
+  color: var(--cdp-ink);
+  text-align: left;
+  background: var(--cdp-control);
+  border: 1px solid var(--cdp-hairline);
+  border-radius: var(--cdp-radius-control);
+  cursor: pointer;
+}
+.cdp-preset:hover {
+  background: var(--cdp-control-hover);
+  border-color: var(--cdp-line);
+}
+.cdp-preset:active {
+  background: var(--cdp-control-press);
+}
+/* The collection in view: an accent tint and border, as a switch that is on. */
+.cdp-preset.is-current {
+  background: color-mix(in srgb, var(--cdp-accent) 14%, transparent);
+  border-color: var(--cdp-accent);
+}
+.cdp-preset__cover {
+  display: block;
+  width: 44px;
+  height: 44px;
+  object-fit: cover;
+  border-radius: 2px;
+  /* What shows while it comes, or where it cannot. */
+  background: var(--cdp-control-hover);
+}
+.cdp-preset__text {
+  display: grid;
+  min-width: 0;
+}
+.cdp-preset__name {
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.3;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.cdp-preset__tag {
+  font-family: var(--cdp-mono);
+  font-size: 10px;
+  line-height: 14px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--cdp-ink-faint);
+}
+
 /* ── the side column: the now-playing card at its own height, the tracklist under it ─────────── */
 .cdp-side {
   grid-area: side;
@@ -823,7 +903,8 @@
   outline-offset: 2px;
 }
 /* Inside the tracklist the ring is drawn inside the control: the panel's overflow would cut it. */
-.cdp-tracks :focus-visible {
+.cdp-tracks :focus-visible,
+.cdp-presets :focus-visible {
   outline-offset: -2px;
 }
 
@@ -846,6 +927,32 @@
   }
   .cdp-hud {
     display: none;
+  }
+  /* The presets as one row of cards that scrolls sideways, fading out at its right edge; the end
+     padding lets the last card scroll clear of the fade. */
+  .cdp-presets {
+    flex: none;
+  }
+  .cdp-presets__list {
+    display: flex;
+    gap: 8px;
+    padding-inline-end: 40px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    -webkit-mask-image: linear-gradient(to right, rgb(0 0 0) calc(100% - 48px), rgb(0 0 0 / 0));
+    mask-image: linear-gradient(to right, rgb(0 0 0) calc(100% - 48px), rgb(0 0 0 / 0));
+  }
+  .cdp-presets__list li {
+    flex: 0 0 184px;
+  }
+  .cdp-preset {
+    grid-template-columns: 48px minmax(0, 1fr);
+    gap: 10px;
+  }
+  .cdp-preset__cover {
+    width: 48px;
+    height: 48px;
   }
 }
 
@@ -915,6 +1022,39 @@
   }
   .cdp-now {
     grid-area: now;
+  }
+  /* The presets as chips, the cover and the name, the row running from edge to edge of the bar.
+     The tag stays in each chip's name for a screen reader. */
+  .cdp-presets {
+    padding-top: 10px;
+  }
+  .cdp-presets__list {
+    margin: 6px -12px 0;
+    padding: 0 12px;
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+  .cdp-presets__list li {
+    flex: none;
+  }
+  .cdp-preset {
+    display: flex;
+    gap: 8px;
+    height: 44px;
+    padding: 3px 12px 3px 3px;
+    white-space: nowrap;
+  }
+  .cdp-preset__cover {
+    width: 36px;
+    height: 36px;
+  }
+  .cdp-preset__tag {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 }
 
