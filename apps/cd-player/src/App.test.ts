@@ -3,6 +3,7 @@ import { createElement } from 'react';
 import { renderToString } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import App from './App';
+import { SKIN_SCRIPT } from './persist';
 import type { InitialData } from './playback/engine';
 import { createRouteController } from './route-controller';
 import { DEFAULT_SKIN, skinById } from './skins';
@@ -170,5 +171,29 @@ describe('App and the skins', () => {
       ),
     );
     expect(html).toContain('class="cdp-button cdp-skin__button" aria-expanded="false"');
+  });
+
+  it('opens the root with SKIN_SCRIPT, so the saved accent is painted before the rest parses', () => {
+    const html = renderToString(
+      createElement(App, { controller: createRouteController({ route: '/' }), initial }),
+    );
+    const open = /<div class="cdp-root"[^>]*>/.exec(html);
+    expect(open).not.toBeNull();
+    const after = html.slice((open?.index ?? 0) + (open?.[0].length ?? 0));
+    expect(after.startsWith(`<script>${SKIN_SCRIPT}</script>`)).toBe(true);
+  });
+
+  it('starts in the skin it is given, as mount() gives the saved one', () => {
+    const html = renderToString(
+      createElement(App, {
+        controller: createRouteController({ route: '/' }),
+        initial,
+        initialSkin: 'cherry',
+      }),
+    );
+    const { accent, onAccent } = skinById('cherry');
+    expect(html).toContain(`style="--cdp-accent:${accent};--cdp-on-accent:${onAccent}"`);
+    // Its markup is already in the saved skin; a script it rendered would never run on the client.
+    expect(html).not.toContain(SKIN_SCRIPT);
   });
 });

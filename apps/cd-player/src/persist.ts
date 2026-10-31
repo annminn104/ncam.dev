@@ -1,5 +1,5 @@
 import { DEFAULT_COLLECTION, SPOTIFY_ID, sameCollection, type CollectionRef } from './routes';
-import { DEFAULT_SKIN, skinById, type SkinId } from './skins';
+import { DEFAULT_SKIN, SKINS, skinById, type SkinId } from './skins';
 
 /** The visitor's last playlist or album, so `/projects/cd-player` comes back as theirs. */
 export const STORAGE_KEY = 'ncam.cd-player.last';
@@ -53,6 +53,19 @@ export function writeSkin(storage: WriteStore | null, id: SkinId): void {
     // A full or blocked storage just forgets.
   }
 }
+
+/**
+ * The saved skin's accent pair on `.cdp-root` before the first paint: the text of the inline
+ * script App renders as the root's first child, which the browser runs as it parses the server's
+ * markup. The server and the first client render are in Blush, so the trees match, and the page's
+ * pastel is made from the accent: without it a saved Sage would paint Blush's whole page until the
+ * remote hydrates. React leaves the attribute as it is when it hydrates (it never patches a
+ * server attribute) and then applies the same saved skin. A copy React renders on the client never
+ * runs, so `mount()` starts App in the saved skin instead. What `readSkin` refuses changes nothing.
+ */
+export const SKIN_SCRIPT = `(function(){try{var m=${JSON.stringify(
+  Object.fromEntries(SKINS.map((skin) => [skin.id, [skin.accent, skin.onAccent]])),
+)},k=localStorage.getItem(${JSON.stringify(SKIN_KEY)}),a=k&&Object.prototype.hasOwnProperty.call(m,k)?m[k]:0,s=document.currentScript.parentNode.style;if(a){s.setProperty('--cdp-accent',a[0]);s.setProperty('--cdp-on-accent',a[1]);}}catch(e){}})();`;
 
 /**
  * Where `/` should send the visitor: the collection they last loaded. Only the first time the caller

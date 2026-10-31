@@ -14,7 +14,15 @@ import { createBridge } from './bridge';
 import { BootStallError, describeFailure } from './failure';
 import { remoteBase } from './lib/asset-url';
 import { createLinkLoader, IDLE_LINK, type LinkState } from './link-loader';
-import { readLast, readSkin, restoreTarget, safeStorage, writeLast, writeSkin } from './persist';
+import {
+  readLast,
+  readSkin,
+  restoreTarget,
+  safeStorage,
+  SKIN_SCRIPT,
+  writeLast,
+  writeSkin,
+} from './persist';
 import { createEmbedPlayer, type EmbedCallbacks } from './playback/embed-controller';
 import type { EngineDeps, InitialData } from './playback/engine';
 import { currentIndex } from './playback/sequencer';
@@ -65,9 +73,17 @@ export interface AppProps {
    * requests made once mounted, never anything in the markup, so the server render leaves it out.
    */
   assetBase?: string;
+  /**
+   * The skin of the first render, where it is known: `mount()` reads the saved one, since a client
+   * render has no server markup to match. Without it the first render is Blush, as the server's
+   * markup and its hydration must agree, and the root opens with SKIN_SCRIPT, which paints the
+   * saved skin's accent on that markup as the browser parses it (a copy React renders on the
+   * client would never run, and React warns of one).
+   */
+  initialSkin?: SkinId;
 }
 
-export default function App({ controller, initial = null, assetBase = '' }: AppProps) {
+export default function App({ controller, initial = null, assetBase = '', initialSkin }: AppProps) {
   const route = useSyncExternalStore(
     controller.subscribe,
     controller.getRoute,
@@ -89,11 +105,11 @@ export default function App({ controller, initial = null, assetBase = '' }: AppP
     },
   }));
   const { engine, snapshot } = usePlayerEngine(deps, initial, ref);
-  // The player's colourway (src/skins.ts). Blush on the server and on the first client render, so
-  // the markup matches; the visitor's saved one right after hydration (the accent is Blush from
-  // the first paint until then; the scene mounts later and boots in the saved one); saved on each
-  // change. A skin is never in the URL.
-  const [skin, setSkin] = useState<SkinId>(DEFAULT_SKIN);
+  // The player's colourway (src/skins.ts). Blush on the server and on the first render of a
+  // hydration, so the markup matches; the visitor's saved one right after it (SKIN_SCRIPT has
+  // already painted its accent on the server's markup; the scene mounts later and boots in it);
+  // saved on each change. A skin is never in the URL.
+  const [skin, setSkin] = useState<SkinId>(initialSkin ?? DEFAULT_SKIN);
   useEffect(() => {
     setSkin(readSkin(safeStorage()));
   }, []);
@@ -284,6 +300,9 @@ export default function App({ controller, initial = null, assetBase = '' }: AppP
       // The skin's accent, read by every accent use in styles/app.css.
       style={{ '--cdp-accent': look.accent, '--cdp-on-accent': look.onAccent } as CSSProperties}
     >
+      {/* The saved skin's accent, painted as the browser parses the server's markup: first, so it
+          runs before anything of the root is drawn. */}
+      {initialSkin === undefined && <script dangerouslySetInnerHTML={{ __html: SKIN_SCRIPT }} />}
       <Backdrop artUrl={backdrop.artUrl} />
       <LinkBar
         collection={snapshot.collection}

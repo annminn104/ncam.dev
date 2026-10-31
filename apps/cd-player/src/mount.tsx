@@ -4,6 +4,7 @@ import type { MountConfig, MountHandle } from '@ncam/mf-remote';
 import App from './App';
 import './fonts';
 import { remoteBase } from './lib/asset-url';
+import { readSkin, safeStorage } from './persist';
 import { createRouteController, type RouteController } from './route-controller';
 import css from './styles/app.css?inline';
 
@@ -30,7 +31,11 @@ export function mount(target: HTMLElement, config: MountConfig = {}): MountHandl
   const root = createRoot(target);
   root.render(
     <StrictMode>
-      <App controller={controller} assetBase={remoteBase(config.assetBase)} />
+      <App
+        controller={controller}
+        assetBase={remoteBase(config.assetBase)}
+        initialSkin={readSkin(safeStorage())}
+      />
     </StrictMode>,
   );
   roots.set(target, { root, controller });
