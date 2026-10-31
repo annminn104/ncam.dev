@@ -31,16 +31,19 @@ function setup(route = '/') {
     }),
   };
   const save = vi.fn();
+  const open = vi.fn();
   const states: LinkState[] = [];
-  const loader = createLinkLoader({ client, controller, save }, (state) => states.push(state));
+  const loader = createLinkLoader({ client, controller, save, open }, (state) =>
+    states.push(state),
+  );
   /** Lets the loader's own continuation run after an answer. */
   const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
-  return { loader, client, controller, save, states, asked, settle };
+  return { loader, client, controller, save, open, states, asked, settle };
 }
 
 describe('the link loader', () => {
-  it('fetches first, then saves the collection as the last and navigates there', async () => {
-    const { loader, controller, save, states, asked, settle } = setup();
+  it('fetches first, then saves the collection as the last, navigates there and opens it', async () => {
+    const { loader, controller, save, open, states, asked, settle } = setup();
     void loader.load(RAP, 'preset');
     expect(states.at(-1)).toEqual({ pending: RAP, error: null });
     expect(save).not.toHaveBeenCalled();
@@ -49,6 +52,8 @@ describe('the link loader', () => {
     await settle();
     expect(save).toHaveBeenCalledWith(RAP);
     expect(controller.navigate).toHaveBeenCalledWith(`/playlist/${RAP.id}`);
+    // Opened too: a route that already named it (a failed load of it) would not open it again.
+    expect(open).toHaveBeenCalledWith(RAP);
     expect(states.at(-1)).toEqual(IDLE_LINK);
   });
 
@@ -68,7 +73,7 @@ describe('the link loader', () => {
   });
 
   it('drops a load that lands after the page moved on, saving nothing', async () => {
-    const { loader, controller, save, states, asked, settle } = setup(`/playlist/${ROCK.id}`);
+    const { loader, controller, save, open, states, asked, settle } = setup(`/playlist/${ROCK.id}`);
     void loader.load(RAP, 'preset');
     // The visitor presses Back while it loads: the route moves without it.
     controller.route = '/';
@@ -76,12 +81,22 @@ describe('the link loader', () => {
     await settle();
     expect(save).not.toHaveBeenCalled();
     expect(controller.navigate).not.toHaveBeenCalled();
+    expect(open).not.toHaveBeenCalled();
     expect(controller.route).toBe('/');
     expect(states.at(-1)).toEqual(IDLE_LINK);
   });
 
+  it('says nothing of a load that fails after the page moved on', async () => {
+    const { loader, controller, states, asked, settle } = setup(`/playlist/${ROCK.id}`);
+    void loader.load(RAP, 'preset');
+    controller.route = '/';
+    asked[0].fail(new SpotifyRequestError('upstream', 502));
+    await settle();
+    expect(states.at(-1)).toEqual(IDLE_LINK);
+  });
+
   it('drops a load that lands once the App has gone, and tells it nothing more', async () => {
-    const { loader, controller, save, states, asked, settle } = setup();
+    const { loader, controller, save, open, states, asked, settle } = setup();
     void loader.load(RAP, 'preset');
     const told = states.length;
     loader.stop();
@@ -89,6 +104,7 @@ describe('the link loader', () => {
     await settle();
     expect(save).not.toHaveBeenCalled();
     expect(controller.navigate).not.toHaveBeenCalled();
+    expect(open).not.toHaveBeenCalled();
     expect(states).toHaveLength(told);
   });
 
@@ -109,7 +125,11 @@ describe('the link loader', () => {
     await settle();
     expect(states.at(-1)).toEqual({
       pending: null,
-      error: { message: "Spotify didn't answer. Try again in a moment.", retry: RAP, field: false },
+      error: {
+        message: "Spotify didn't answer. Try again in a moment.",
+        retry: RAP,
+        from: 'preset',
+      },
     });
     void loader.load(ROCK, 'preset');
     asked[1].fail(new SpotifyRequestError('not_found', 404));
@@ -117,13 +137,13 @@ describe('the link loader', () => {
     expect(states.at(-1)?.error).toEqual({
       message: "We couldn't open that playlist. It may be private or deleted.",
       retry: null,
-      field: false,
+      from: 'preset',
     });
     expect(save).not.toHaveBeenCalled();
     expect(controller.navigate).not.toHaveBeenCalled();
   });
 
-  it('lays a failure at the field only when a pasted link failed', async () => {
+  it('says whose the failure is: a pasted link’s, refused or failed, or a preset’s', async () => {
     const { loader, states, asked, settle } = setup();
     void loader.load(RAP, 'link');
     asked[0].fail(new TypeError('Failed to fetch'));
@@ -131,12 +151,12 @@ describe('the link loader', () => {
     expect(states.at(-1)?.error).toEqual({
       message: "Spotify didn't answer. Try again in a moment.",
       retry: RAP,
-      field: true,
+      from: 'link',
     });
     loader.refuse('That link is not a playlist or an album.');
     expect(states.at(-1)).toEqual({
       pending: null,
-      error: { message: 'That link is not a playlist or an album.', retry: null, field: true },
+      error: { message: 'That link is not a playlist or an album.', retry: null, from: 'link' },
     });
   });
 

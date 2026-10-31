@@ -147,12 +147,14 @@ export class PlayerEngine {
   }
 
   /**
-   * Shows `ref`: the collection already here, or fetched. A first load that failed leaves no
-   * collection, so opening the same `ref` again asks again (the empty shelf's Retry).
+   * Shows `ref`: the collection already here, or fetched. A load that failed leaves another
+   * collection on show, or none, so opening the same `ref` again asks again (the empty shelf's
+   * Retry, a preset pressed for it).
    */
   open(ref: CollectionRef): void {
     const { snapshot } = this;
-    if (sameCollection(snapshot.ref, ref) && (snapshot.collection || snapshot.loading)) return;
+    const here = sameCollection(snapshot.collection, ref) || snapshot.loading;
+    if (sameCollection(snapshot.ref, ref) && here) return;
     this.set({ ref, loading: true, error: null });
     this.deps.client.collection(ref).then(
       (collection) => {

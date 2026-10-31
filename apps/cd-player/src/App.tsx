@@ -200,7 +200,12 @@ export default function App({ controller, initial = null, assetBase = '' }: AppP
   const [link, setLink] = useState<LinkState>(IDLE_LINK);
   const [loader] = useState(() =>
     createLinkLoader(
-      { client: deps.client, controller, save: (next) => writeLast(safeStorage(), next) },
+      {
+        client: deps.client,
+        controller,
+        save: (next) => writeLast(safeStorage(), next),
+        open: (next) => engine.open(next),
+      },
       setLink,
     ),
   );
@@ -263,7 +268,6 @@ export default function App({ controller, initial = null, assetBase = '' }: AppP
   }
   const linkError = link.error;
   const retry = linkError?.retry ?? null;
-  const retryFrom = linkError?.field ? 'link' : 'preset';
   // The collection on show, as the presets mark it: what the page shows, not the route, which may
   // name one that failed or is still loading. The server and the first client render agree on it.
   const shown: CollectionRef | null = snapshot.collection && {
@@ -287,8 +291,8 @@ export default function App({ controller, initial = null, assetBase = '' }: AppP
         failed={shelfError !== null}
         error={linkError?.message ?? (shelfError ? null : (snapshot.error?.message ?? null))}
         // Only a pasted link's own failure is the field's; a preset's or the engine's is not.
-        invalid={linkError?.field === true}
-        onRetry={retry ? () => void loader.load(retry, retryFrom) : undefined}
+        invalid={linkError?.from === 'link'}
+        onRetry={retry && linkError ? () => void loader.load(retry, linkError.from) : undefined}
         onSubmit={loadLink}
         skin={skin}
         onSkin={changeSkin}

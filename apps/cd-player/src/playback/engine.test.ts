@@ -360,6 +360,29 @@ describe('PlayerEngine', () => {
     expect(client.collection).toHaveBeenCalledTimes(2);
   });
 
+  it('asks again for a collection whose change failed while the one before is still shown', async () => {
+    const { engine, client, flush } = setup();
+    engine.open(ref);
+    await flush();
+    // Its own collection on show: opening it again asks nothing.
+    engine.open(ref);
+    expect(client.collection).toHaveBeenCalledTimes(1);
+    const other = { type: 'playlist', id: '37i9dQZF1DX0XUsuxWHRQd' } as const;
+    vi.mocked(client.collection).mockRejectedValueOnce(new SpotifyRequestError('upstream', 502));
+    engine.open(other);
+    await flush();
+    expect(engine.getSnapshot()).toMatchObject({
+      ref: other,
+      loading: false,
+      collection: { name: 'Top 50 - Global' },
+      error: { retry: true },
+    });
+    // A preset pressed for it, the route already naming it: it is asked for again.
+    engine.open(other);
+    expect(engine.getSnapshot()).toMatchObject({ loading: true, error: null });
+    expect(client.collection).toHaveBeenCalledTimes(3);
+  });
+
   // With no player there is no music, so the sequencer must not stay `playing` (the next press of
   // play would pause) or `swapping` (the disc seating would then "play"): it goes idle, keeping the
   // track, and the next press of play builds a new player and loads that track into it.

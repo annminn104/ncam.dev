@@ -108,7 +108,7 @@ describe('App (the layout)', () => {
 });
 
 describe('App and the presets', () => {
-  it('marks the collection on show as the current preset, on the server as on hydration', () => {
+  it('marks the collection on show as the current preset in the server markup', () => {
     const html = renderToString(
       createElement(App, { controller: createRouteController({ route: '/' }), initial }),
     );
@@ -116,6 +116,16 @@ describe('App and the presets', () => {
     expect(html).toMatch(
       /class="cdp-preset is-current" aria-current="true">[\s\S]*?Top 50 - Global/,
     );
+  });
+
+  it('stops the link loader as it unmounts, so a late load neither saves nor navigates', () => {
+    // No effect runs in a server render: the wiring is read from the source, as the loader's
+    // place is below (src/link-loader.test.ts holds what a stopped loader does).
+    const source = readFileSync(new URL('./App.tsx', import.meta.url), 'utf8');
+    expect(source).toMatch(
+      /useEffect\(\(\) => \{\s*loader\.start\(\);\s*return loader\.stop;\s*\}, \[loader\]\);/,
+    );
+    expect(source).toMatch(/open: \(next\) => engine\.open\(next\)/);
   });
 
   it('marks none while nothing is on show, so the default can be pressed after a failure', () => {
