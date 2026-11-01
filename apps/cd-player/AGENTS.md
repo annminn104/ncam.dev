@@ -549,7 +549,12 @@ that frame every frame (resizes included, a phone's stage shrinking for the embe
 their height, past every stage the layouts make (a phone's 220 px floor reaches about 3.6, a
 tall window's rail about 0.26), swept in steps from 0.43 to 2.63: at the orbit's middle and its
 corners the box stays 1 % of the canvas clear of every edge, and at the orbit's middle it stands
-within 3 % of the canvas's middle and spans 70 % or more of a side.
+within 3 % of the canvas's middle and spans 70 % or more of a side. The near plane stands at
+0.5 m, as far out as the frame allows (the camera is never nearer than about 0.8 m to the
+player's nearest corner), and the far one at 10 m (`NEAR`, `FAR`): the disc's printed layers are
+microns apart, and a near plane at 0.02 m left the depth buffer too coarse to tell them apart (see
+"Known facts"). The test holds the player between the two planes with 0.2 m to spare, and the
+foil six depth steps or more over the label on every canvas half as wide as tall or wider.
 
 **Reduced motion** (`prefers-reduced-motion: reduce`): no autostart; a disc change and a cascade
 in the rack are instant (the rig jumps to its end and the music still waits a 300 ms beat,
@@ -1000,7 +1005,8 @@ Unit tests (`src/**/*.test.ts`, node environment, run by the root `pnpm test`):
   `SKIN_ROLES` entry maps a material to the role of its own name), `materials.test.ts` (the roles'
   materials, `leatherSheen`, `applySkin`), `stage.test.ts`, `rig.test.ts`, `director.test.ts`,
   `swap-controller.test.ts` (besides every kind of change: a swap into another collection, a list of
-  one track, two tracks on Repeat), `framing.test.ts` (every canvas shape across the orbit, see
+  one track, two tracks on Repeat), `framing.test.ts` (every canvas shape across the orbit, the
+  near and far planes round the player and the depth buffer's step against the disc's layers, see
   "The scene"), `controls.test.ts`, `vu.test.ts`,
   `vu-materials.test.ts`, `interaction.test.ts`, `orbit.test.ts`, and `textures/` (`grain`,
   `images`, `layout`, `paint`, `painter`, and `disc-printer` on fake canvases and textures: a blank
@@ -1101,6 +1107,12 @@ site"), in this order:
   embed's page again. Once a track has ended, the embed has dropped its list, and a command sent to
   it throws "Cannot perform operation; no list was loaded." inside its iframe; only a `loadUri`
   brings it back (hence the end watchdog and the first load's `play()`, in "Playback").
+- **The disc's printed layers are microns apart** (`make_disc` in `parts.py`: the label 20 µm over
+  the clear body's top, the foil rings 5 µm over the label), as a Cycles render wants them; a depth
+  buffer tells them apart only with the near plane well out. At 0.02 m its step at the player was
+  about 4 µm, and every disc's rim and hub ring came out ragged, toothed like a gear, worst in the
+  rack. A new layer as thin, or a frame that brings the camera nearer, needs the same check
+  (`framing.test.ts`).
 - **In Chrome a backdrop filter bounds its descendants' backdrop filters**: an element inside a
   panel that had one blurred nothing behind it of the panel's own content (the presets ghosted
   through the picker's popover). Hence the panels' glass on their `::before`; keep any new frosted
