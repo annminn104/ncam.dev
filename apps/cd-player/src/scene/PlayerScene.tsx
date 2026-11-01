@@ -6,7 +6,7 @@ import { assetUrl } from '../lib/asset-url';
 import type { PlayerSceneProps } from '../scene-props';
 import { skinById } from '../skins';
 import { CameraRig } from './CameraRig';
-import { FOV, isWide } from './framing';
+import { FAR, FOV, NEAR, isWide } from './framing';
 import { skinColours } from './materials';
 import { loadPlayerModel, type PlayerModel } from './model';
 import { PlayerRig } from './PlayerRig';
@@ -128,7 +128,7 @@ export function PlayerScene(props: PlayerSceneProps) {
       // replaces with this one.
       shadows="percentage"
       gl={{ alpha: true, antialias: true, powerPreference: 'high-performance' }}
-      camera={{ fov: FOV, near: 0.02, far: 10 }}
+      camera={{ fov: FOV, near: NEAR, far: FAR }}
       onCreated={({ gl }) => {
         gl.setClearColor(0x000000, 0);
         gl.toneMapping = AgXToneMapping;

@@ -1,6 +1,6 @@
 import { PerspectiveCamera, Vector3 } from 'three';
 import { describe, expect, it } from 'vitest';
-import { FOV, frameDistance, frameFor, frameForViewport, isWide } from './framing';
+import { FAR, FOV, NEAR, frameDistance, frameFor, frameForViewport, isWide } from './framing';
 import { PITCH_LIMIT, YAW_LIMIT } from './orbit';
 
 const dist = (f: ReturnType<typeof frameFor>) =>
@@ -9,22 +9,43 @@ const dist = (f: ReturnType<typeof frameFor>) =>
 // cd-player.glb's bounding box in three's Y-up metres: the player alone, lid open, centred at x = 0.
 const BOX = { min: [-0.152, -0.003, -0.199], max: [0.152, 0.319, 0.152] } as const;
 
+/** The hero camera of a canvas this size, turned by the orbit, as PlayerScene makes it. */
+function heroCamera(width: number, height: number, yaw = 0, pitch = 0): PerspectiveCamera {
+  const frame = frameForViewport(width, height, yaw, pitch);
+  const camera = new PerspectiveCamera(FOV, width / height, NEAR, FAR);
+  camera.position.set(...frame.position);
+  camera.lookAt(...frame.target);
+  camera.updateMatrixWorld();
+  return camera;
+}
+
+function boxCorners(): Vector3[] {
+  const out: Vector3[] = [];
+  for (const x of [BOX.min[0], BOX.max[0]])
+    for (const y of [BOX.min[1], BOX.max[1]])
+      for (const z of [BOX.min[2], BOX.max[2]]) out.push(new Vector3(x, y, z));
+  return out;
+}
+
 /**
  * The box's eight corners in normalised device coordinates (±1 is the canvas's edge), seen from
  * the hero camera of a canvas this size, turned by the orbit. The corners are the worst case: the
  * player's own silhouette is smaller than its box.
  */
 function corners(width: number, height: number, yaw = 0, pitch = 0): Vector3[] {
-  const frame = frameForViewport(width, height, yaw, pitch);
-  const camera = new PerspectiveCamera(FOV, width / height, 0.02, 10);
-  camera.position.set(...frame.position);
-  camera.lookAt(...frame.target);
-  camera.updateMatrixWorld();
-  const out: Vector3[] = [];
-  for (const x of [BOX.min[0], BOX.max[0]])
-    for (const y of [BOX.min[1], BOX.max[1]])
-      for (const z of [BOX.min[2], BOX.max[2]]) out.push(new Vector3(x, y, z).project(camera));
-  return out;
+  const camera = heroCamera(width, height, yaw, pitch);
+  return boxCorners().map((corner) => corner.project(camera));
+}
+
+/** How far in front of the camera, along its axis, each of the box's corners stands (metres). */
+function depths(width: number, height: number, yaw = 0, pitch = 0): number[] {
+  const camera = heroCamera(width, height, yaw, pitch);
+  return boxCorners().map((corner) => -corner.applyMatrix4(camera.matrixWorldInverse).z);
+}
+
+/** The step of a 24-bit depth buffer `depth` metres in front of the camera: far(z − near) / z(far − near). */
+function depthStep(depth: number): number {
+  return (depth * depth * (FAR - NEAR)) / (FAR * NEAR * 2 ** 24);
 }
 
 /**
@@ -93,6 +114,34 @@ describe('framing', () => {
       const half = (axis: 'x' | 'y') =>
         (Math.max(...c.map((p) => p[axis])) - Math.min(...c.map((p) => p[axis]))) / 2;
       expect(Math.max(half('x'), half('y')), `${width}×${height}`).toBeGreaterThanOrEqual(0.7);
+    }
+  });
+
+  it('holds the player between the near and far planes, with room for what flies off it', () => {
+    for (const [width, height] of SHAPES) {
+      for (const [yaw, pitch] of TURNS) {
+        const at = `${width}×${height}, yaw ${yaw.toFixed(2)}, pitch ${pitch.toFixed(2)}`;
+        const depth = depths(width, height, yaw, pitch);
+        // 0.2 m to spare: a disc flying to or from the side, the case turning over.
+        expect(Math.min(...depth) - NEAR, at).toBeGreaterThan(0.2);
+        expect(FAR - Math.max(...depth), at).toBeGreaterThan(0.2);
+      }
+    }
+  });
+
+  // The disc (make_disc in art/blender/scripts/parts.py) lays its label 20 µm over its clear
+  // body's top and the foil rings 5 µm over the label, as a Cycles render wants them. The depth
+  // buffer must tell them apart at the player, or they fight and every disc's rim and hub ring
+  // comes out ragged: with the near plane at 0.02 m its step at the player was about 4 µm.
+  it('resolves the foil 5 µm over the disc’s label in six depth steps or more', () => {
+    const foilOverLabel = 5e-6;
+    // Canvases half as wide as tall and wider: every stage but a portrait monitor's rail (down to
+    // about 0.26), whose camera stands 2.5 to 4 m back, the foil two or three steps over the
+    // label there; the page drew it clean at 1440 × 2560 all the same.
+    for (const [width, height] of SHAPES.filter(([w, h]) => w / h >= 0.5)) {
+      const farthest = Math.max(...depths(width, height));
+      const steps = foilOverLabel / depthStep(farthest);
+      expect(steps, `${width}×${height}`).toBeGreaterThanOrEqual(6);
     }
   });
 });

@@ -8,6 +8,15 @@
  * model's box through `frameForViewport` over the shapes and the turns).
  */
 export const FOV = 30;
+/**
+ * The camera's near and far planes (metres). The near one stands as far out as the frame allows
+ * (the camera is never nearer than about 1.1 m to the player's middle, 0.8 m to its nearest
+ * corner): a depth buffer's step grows with the square of the distance over `NEAR`, and the
+ * disc's printed layers are microns apart (src/scene/framing.test.ts). At 0.02 m they fought, and
+ * every disc's rim and hub ring came out ragged.
+ */
+export const NEAR = 0.5;
+export const FAR = 10;
 /** Where the camera looks: the player's centre line, which leaves it in the middle of its canvas. */
 const TARGET: readonly [number, number, number] = [0, 0.132, 0.01];
 const DIRECTION = (() => {
