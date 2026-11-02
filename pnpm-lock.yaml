@@ -440,8 +440,8 @@ importers:
         specifier: ^14.0.0
         version: 14.6.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       hls.js:
-        specifier: ^1.7.3
-        version: 1.7.3
+        specifier: ^1.7.4
+        version: 1.7.4
       lucide-react:
         specifier: ^1.52.0
         version: 1.61.0(@types/react@19.3.0)(react@19.3.1)
@@ -6071,8 +6071,8 @@ packages:
   hls.js@1.5.20:
     resolution: {integrity: sha512-uu0VXUK52JhihhnN/MVVo1lvqNNuhoxkonqgO3IpjvQiGpJBdIXMGkofjQb/j9zvV7a1SW8U9g1FslWx/1HOiQ==}
 
-  hls.js@1.7.3:
-    resolution: {integrity: sha512-MsPlx6yVW4Qv4C7mEVou4/gk/5cN2dVxOTnrNjPSmyH2f0Ln+/UkG10Ax1PE6OvrmTVPKgQYozTtBaPOuCzq7A==}
+  hls.js@1.7.4:
+    resolution: {integrity: sha512-3GlxGdPvT2YHvQYOt+yOzT/DEior/qJVNIylHA77kgeoBTdQQqi70GwefNEUmHQeNGyjC8U62+bruqW/Tpm+tg==}
 
   hoist-non-react-statics@3.3.2:
     resolution: {integrity: sha512-/gGivxi8JPKWNm/W0jSmzcMPpfpPLc3dY/6GxhX2hQ9iGj3aDfklV4ET7NjKpSinLpJ5vafa9iiGIEZg10SfBw==}
@@ -11766,7 +11766,7 @@ snapshots:
       cross-env: 7.0.3
       detect-gpu: 5.0.70
       glsl-noise: 0.0.0
-      hls.js: 1.7.3
+      hls.js: 1.7.4
       maath: 0.10.8(@types/three@0.186.0)(three@0.186.1)
       meshline: 3.3.1(three@0.186.1)
       react: 19.3.1
@@ -15639,7 +15639,7 @@ snapshots:
 
   hls.js@1.5.20: {}
 
-  hls.js@1.7.3: {}
+  hls.js@1.7.4: {}
 
   hoist-non-react-statics@3.3.2:
     dependencies:
