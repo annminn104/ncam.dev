@@ -1,6 +1,14 @@
 import { useEffect, useRef, useState, type FocusEvent, type KeyboardEvent } from 'react';
 import { flushSync } from 'react-dom';
-import { CLEAR_PARTS, CLEAR_SWATCHES, PART_NAMES, type ClearPart } from '../clear-looks';
+import {
+  CLEAR_PARTS,
+  CLEAR_SWATCHES,
+  PART_NAMES,
+  type BoardSwatch,
+  type FrameSwatch,
+  type LightSwatch,
+  type ShellSwatch,
+} from '../clear-looks';
 import { lookLabel, lookOf, lookSwatch, type LookState } from '../looks';
 import { MODELS, modelById, type ModelId } from '../models';
 import type { ModelLoad } from '../scene-props';
@@ -73,17 +81,10 @@ export function optionForPress(
 }
 
 /** The colour a Clear part's swatch shows: the shell's tint, the light's glow, else its colour. */
-function swatchColour(part: ClearPart, id: string): string {
-  switch (part) {
-    case 'shell':
-      return CLEAR_SWATCHES.shell.find((s) => s.id === id)?.tint ?? '';
-    case 'light':
-      return CLEAR_SWATCHES.light.find((s) => s.id === id)?.glow ?? '';
-    case 'frame':
-      return CLEAR_SWATCHES.frame.find((s) => s.id === id)?.colour ?? '';
-    case 'board':
-      return CLEAR_SWATCHES.board.find((s) => s.id === id)?.colour ?? '';
-  }
+function swatchColour(swatch: ShellSwatch | FrameSwatch | BoardSwatch | LightSwatch): string {
+  if ('tint' in swatch) return swatch.tint;
+  if ('glow' in swatch) return swatch.glow;
+  return swatch.colour;
 }
 
 /** The menu's groups: the model, then the suitcase's skins or the Clear model's parts. */
@@ -115,7 +116,7 @@ function groupsFor(look: LookState, onChange: (next: LookState) => void): Group[
       options: CLEAR_SWATCHES[part].map((s) => ({
         id: s.id,
         name: s.name,
-        swatch: swatchColour(part, s.id),
+        swatch: swatchColour(s),
       })),
       value: look.clear[part],
       pick: (id: string) => onChange({ ...look, clear: { ...look.clear, [part]: id } }),
@@ -139,7 +140,7 @@ export function tickOn(hex: string): 'light' | 'dark' {
 /** What the menu says while a model downloads, or after it failed; null otherwise. */
 export function loadLine(load: ModelLoad | null): string | null {
   if (!load || load.status === 'ready') return null;
-  if (load.status === 'failed') return `Couldn’t load ${modelById(load.model).name}`;
+  if (load.status === 'failed') return `Couldn't load ${modelById(load.model).name}`;
   return load.fraction === null ? 'Loading…' : `Loading ${Math.round(load.fraction * 100)}%`;
 }
 
@@ -233,7 +234,8 @@ export function LookMenu({ look, open, onChange, load }: MenuProps) {
       {groupsFor(look, onChange).map((group) => (
         <RadioGroup key={group.label} group={group} />
       ))}
-      {/* Always rendered, so a line set inside the closed popover is announced. */}
+      {/* Always rendered: a live region added with its text is not announced, so a line set while
+          the popover is open is. (A closed popover is `hidden`: nothing says a line then.) */}
       <p className="cdp-skin__load" role="status">
         {line}
       </p>

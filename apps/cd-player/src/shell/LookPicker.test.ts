@@ -99,7 +99,7 @@ describe('LookMenu', () => {
   it('says how the model’s download goes, and when it failed', () => {
     expect(loadLine({ model: 'clear', status: 'loading', fraction: 0.63 })).toBe('Loading 63%');
     expect(loadLine({ model: 'clear', status: 'loading', fraction: null })).toBe('Loading…');
-    expect(loadLine({ model: 'clear', status: 'failed' })).toBe('Couldn’t load Clear');
+    expect(loadLine({ model: 'clear', status: 'failed' })).toBe("Couldn't load Clear");
     expect(loadLine({ model: 'clear', status: 'ready' })).toBeNull();
     expect(loadLine(null)).toBeNull();
   });
@@ -111,7 +111,7 @@ describe('LookMenu', () => {
 
   it('says a model failed even after the look went back to the one on show', () => {
     const html = menu(DEFAULT_LOOK_STATE, { model: 'clear', status: 'failed' });
-    expect(html).toContain('<p class="cdp-skin__load" role="status">Couldn’t load Clear</p>');
+    expect(html).toContain('<p class="cdp-skin__load" role="status">Couldn&#x27;t load Clear</p>');
   });
 
   it('keeps its status line in the markup, empty, so a later line is announced', () => {
