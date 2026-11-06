@@ -1,15 +1,19 @@
+import { createLogger } from '@ncam/logger';
 import { Canvas, useThree } from '@react-three/fiber';
-import { useEffect, useEffectEvent, useLayoutEffect, useState } from 'react';
+import { useEffect, useEffectEvent, useLayoutEffect, useRef, useState } from 'react';
 import { AgXToneMapping, PMREMGenerator } from 'three';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { assetUrl } from '../lib/asset-url';
 import { DEFAULT_MODEL, modelById } from '../models';
-import type { PlayerSceneProps } from '../scene-props';
+import type { ModelLoad, PlayerSceneProps } from '../scene-props';
 import { CameraRig } from './CameraRig';
 import { FAR, FOV, isWide, nearFor } from './framing';
 import { skinColours } from './materials';
 import { loadPlayerModel, type PlayerModel } from './model';
+import { createModelHolder, NOTHING_HELD, type Held } from './model-holder';
 import { PlayerRig } from './PlayerRig';
+
+const log = createLogger({ scope: 'cd-player' });
 
 /** A studio: a PMREM'd RoomEnvironment for reflections, a soft key that casts, a warm rim. */
 function Studio({ narrow }: { narrow: boolean }) {
@@ -62,63 +66,123 @@ function ShadowFloor() {
   );
 }
 
-export function PlayerScene(props: PlayerSceneProps) {
-  const { assetBase, bridge, look, onReady, onFail, onProgress } = props;
-  const [model, setModel] = useState<PlayerModel | null>(null);
-  const [narrow] = useState(() => !isWide(window.innerWidth));
-  // The suitcase's GLB: whatever look is shown: the scene does not switch models yet.
-  const modelPath = modelById(DEFAULT_MODEL).glb;
-  // Read when the download reports, so a new callback never starts the download again.
-  const report = useEffectEvent((fraction: number | null) => onProgress(fraction));
+/**
+ * Compiles a loaded model's shaders for the scene's lights and environment before it is shown, so
+ * its first frames never stall on them, then hands it back.
+ */
+function Precompile({ model, onDone }: { model: PlayerModel; onDone(model: PlayerModel): void }) {
+  const gl = useThree((state) => state.gl);
+  const scene = useThree((state) => state.scene);
+  const camera = useThree((state) => state.camera);
+  // Read when the compile lands, so the scene's renders never start it again.
+  const done = useEffectEvent((compiled: PlayerModel) => onDone(compiled));
   useEffect(() => {
+    let live = true;
+    void gl.compileAsync(model.root, camera, scene).then(() => {
+      if (live) done(model);
+    });
+    return () => {
+      live = false;
+    };
+  }, [gl, scene, camera, model]);
+  return null;
+}
+
+export function PlayerScene(props: PlayerSceneProps) {
+  const { assetBase, bridge, look, onReady, onFail, onProgress, onModel } = props;
+  const wanted = modelById(look.model);
+  // The model on show and the next one, loaded and compiling, as the holder (model-holder.ts)
+  // holds them: it disposes every model it lets go of, so none is drawn stale or left behind.
+  const [{ shown, next }, setHeld] = useState<Held<PlayerModel>>(NOTHING_HELD);
+  const [holder] = useState(() => createModelHolder<PlayerModel>(setHeld));
+  const booted = shown !== null;
+  const [narrow] = useState(() => !isWide(window.innerWidth));
+  // Read when the download reports or ends, so a new callback never starts the download again.
+  const report = useEffectEvent((fraction: number | null) => onProgress(fraction));
+  const reportModel = useEffectEvent((load: ModelLoad) => onModel(load));
+  const fail = useEffectEvent((error: Error) => onFail(error));
+  // Read as a load lands: it is held against the look of that moment, not of its start.
+  const arrive = useEffectEvent((model: PlayerModel) => holder.loaded(model, wanted.id));
+
+  // One load per wanted model: the boot's reports go to onProgress (the loader and the stall
+  // watch), a later change's to onModel (the picker).
+  useEffect(() => {
+    if (shown?.id === wanted.id) return;
     let cancelled = false;
-    let loaded: PlayerModel | null = null;
-    // A load this effect lets go of (a failed boot, StrictMode's first run, a remount) stops
-    // downloading, so the next boot asks for the GLB anew instead of waiting on a stalled request.
+    // A load this effect lets go of (another model chosen, a failed boot, StrictMode's first run,
+    // a remount) stops downloading, so the next one asks for the GLB anew instead of waiting on a
+    // stalled request.
     const download = new AbortController();
-    loadPlayerModel(
-      modelById(DEFAULT_MODEL),
-      assetUrl(modelPath, assetBase),
-      (fraction) => {
-        // A load this effect has let go of says nothing.
-        if (!cancelled) report(fraction);
-      },
-      download.signal,
-    ).then(
-      (next) => {
-        loaded = next;
-        if (cancelled) next.dispose();
-        else setModel(next);
+    const reportLoad = (fraction: number | null) => {
+      // A load this effect has let go of says nothing.
+      if (cancelled) return;
+      if (booted) reportModel({ model: wanted.id, status: 'loading', fraction });
+      else report(fraction);
+    };
+    loadPlayerModel(wanted, assetUrl(wanted.glb, assetBase), reportLoad, download.signal).then(
+      (model) => {
+        // A model it has let go of is never drawn.
+        if (cancelled) model.dispose();
+        else arrive(model);
       },
       (error: unknown) => {
-        if (!cancelled) onFail(error instanceof Error ? error : new Error(String(error)));
+        if (cancelled) return;
+        if (booted) {
+          log.warn('cd-player.model-failed', { model: wanted.id, error: String(error) });
+          reportModel({ model: wanted.id, status: 'failed' });
+        } else fail(error instanceof Error ? error : new Error(String(error)));
       },
     );
     return () => {
       cancelled = true;
       download.abort();
-      // The model goes with its path: a disposed one is never drawn.
-      setModel(null);
-      loaded?.dispose();
     };
-  }, [assetBase, modelPath, onFail]);
+  }, [assetBase, wanted, shown, booted]);
 
-  // The look, in place: before the model's first frame (a layout effect runs before any frame the
-  // canvas draws) and on every change.
+  // A model loaded for a look the visitor has since changed goes before it is ever shown.
+  useEffect(() => {
+    holder.want(wanted.id);
+  }, [holder, wanted]);
+  // Whatever the scene holds goes with it.
+  useEffect(() => () => holder.release(), [holder]);
+
+  // A model is on show once its rig has drawn three frames: the boot's first (onReady), and each
+  // one, the boot's too, for the picker (onModel). Only then does the model it replaced go: the
+  // canvas commits in its own time, after this component, and until it has taken that model out of
+  // the scene a frame may still draw it.
+  const announced = useRef(false);
+  const announce = (model: PlayerModel) => {
+    holder.settle(model);
+    if (!announced.current) {
+      announced.current = true;
+      onReady();
+    }
+    onModel({ model: model.id, status: 'ready' });
+  };
+
+  // The look the model on show wears: the visitor's while it names that model, and while another
+  // one loads, the last that did (a look holds one model's colours, its LCD's and its VU's too).
+  const [worn, setWorn] = useState(look);
+  if (shown?.id === look.model && worn !== look) setWorn(look);
+
+  // The look, in place: before a model's first frame (a layout effect runs before any frame the
+  // canvas draws) and on every change, on the model it names alone, so the next one swaps in
+  // already in its own colours.
   useLayoutEffect(() => {
-    model?.applyLook(look);
-  }, [model, look]);
+    if (shown?.id === look.model) shown.applyLook(look);
+    if (next?.id === look.model) next.applyLook(look);
+  }, [shown, next, look]);
 
   // Dev builds only (production builds drop the branch): the live check reads the recoloured
   // materials here.
   useEffect(() => {
-    if (!import.meta.env.DEV || !model) return;
+    if (!import.meta.env.DEV || !shown) return;
     const probe = window as Window & { __cdpSkinColours?: () => Record<string, string> };
-    probe.__cdpSkinColours = () => skinColours(model.root);
+    probe.__cdpSkinColours = () => skinColours(shown.root);
     return () => {
       delete probe.__cdpSkinColours;
     };
-  }, [model]);
+  }, [shown]);
 
   return (
     <Canvas
@@ -137,8 +201,18 @@ export function PlayerScene(props: PlayerSceneProps) {
     >
       <Studio narrow={narrow} />
       <ShadowFloor />
-      <CameraRig model={DEFAULT_MODEL} />
-      {model && <PlayerRig model={model} bridge={bridge} look={look} onReady={onReady} />}
+      <CameraRig model={shown?.id ?? wanted.id} />
+      {shown && (
+        <PlayerRig
+          // One rig per model: a new one is seated from the view at once, with its own ready probe.
+          key={shown.id}
+          model={shown}
+          bridge={bridge}
+          look={worn}
+          onReady={() => announce(shown)}
+        />
+      )}
+      {next && <Precompile model={next} onDone={(model) => holder.compiled(model, wanted.id)} />}
     </Canvas>
   );
 }

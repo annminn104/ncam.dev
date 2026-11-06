@@ -16,6 +16,7 @@ import { BootStallError, describeFailure } from './failure';
 import { remoteBase } from './lib/asset-url';
 import { createLinkLoader, IDLE_LINK, type LinkState } from './link-loader';
 import { DEFAULT_LOOK_STATE, lookAccent, lookOf, type LookState } from './looks';
+import { DEFAULT_MODEL, type ModelId } from './models';
 import {
   LOOK_SCRIPT,
   readLast,
@@ -39,6 +40,7 @@ import {
   sameCollection,
   type CollectionRef,
 } from './routes';
+import type { ModelLoad } from './scene-props';
 import { Backdrop } from './shell/Backdrop';
 import { EnterButton } from './shell/EnterButton';
 import { Hud } from './shell/Hud';
@@ -108,27 +110,32 @@ export default function App({ controller, initial = null, assetBase = '', initia
     },
   }));
   const { engine, snapshot } = usePlayerEngine(deps, initial, ref);
+  const [boot, dispatchBoot] = useReducer(bootReducer, INITIAL_BOOT);
   // The player's look (src/looks.ts): the model, the suitcase's skin and the Clear model's colours.
   // The suitcase in Blush on the server and on the first render of a hydration, so the markup
   // matches; the visitor's saved one right after it (LOOK_SCRIPT has already painted its accent on
-  // the server's markup; the scene mounts later and boots in it); saved on each change. A look is
-  // never in the URL.
+  // the server's markup; the scene mounts later and boots in it); saved on each change, but a model
+  // chosen while the scene is live only when it comes on show (onModel, below). A look is never in
+  // the URL.
   const [lookState, setLookState] = useState<LookState>(initialLook ?? DEFAULT_LOOK_STATE);
   useEffect(() => {
     setLookState(readLookState(safeStorage()));
   }, []);
-  const changeLook = useCallback((next: LookState) => {
-    setLookState(next);
-    const storage = safeStorage();
-    writeSkin(storage, next.skin);
-    writeClearLook(storage, next.clear);
-    writeModel(storage, next.model);
-  }, []);
+  const changeLook = useCallback(
+    (next: LookState) => {
+      setLookState(next);
+      const storage = safeStorage();
+      writeSkin(storage, next.skin);
+      writeClearLook(storage, next.clear);
+      // Chosen before the scene is live, the model is kept at once, and the boot loads it.
+      if (boot.phase !== 'live') writeModel(storage, next.model);
+    },
+    [boot.phase],
+  );
   // Once per change: the scene recolours its model whenever `look` is a new object, and App renders
   // on every playback, progress and boot update.
   const look = useMemo(() => lookOf(lookState), [lookState]);
   const accent = lookAccent(look);
-  const [boot, dispatchBoot] = useReducer(bootReducer, INITIAL_BOOT);
   // The page settled and the scene did not start by itself (a software rasteriser, reduced
   // motion): "Open the player" stands where the loader was until the visitor starts it.
   const [manual, setManual] = useState(false);
@@ -162,6 +169,18 @@ export default function App({ controller, initial = null, assetBase = '', initia
   const onFail = useCallback((error: unknown) => {
     log.error('cd-player.scene-failed', { error: String(error) });
     dispatchBoot({ type: 'fail', failure: describeFailure(error) });
+  }, []);
+  // The model on the stage, as the scene reports it (onModel, the boot's model included): what the
+  // picker says of a change; each model saved once it is on show; and a change that fails undone,
+  // the look going back to the model still shown.
+  const [, setModelLoad] = useState<ModelLoad | null>(null);
+  const shownModel = useRef<ModelId>(DEFAULT_MODEL);
+  const onModel = useCallback((load: ModelLoad) => {
+    setModelLoad(load);
+    if (load.status === 'ready') shownModel.current = load.model;
+    if (load.status === 'ready') writeModel(safeStorage(), load.model);
+    if (load.status === 'failed')
+      setLookState((state) => ({ ...state, model: shownModel.current }));
   }, []);
 
   // A boot that goes quiet, on the scene's code or on the model's download, fails like any other,
@@ -343,6 +362,7 @@ export default function App({ controller, initial = null, assetBase = '', initia
             onReady={onReady}
             onFail={onFail}
             onProgress={onProgress}
+            onModel={onModel}
           />
         )}
         {/* After the scene layer, so it draws over the invisible canvas and fades out with it. */}

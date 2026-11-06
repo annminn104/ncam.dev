@@ -204,3 +204,16 @@ describe('App and the skins', () => {
     expect(html).not.toContain(LOOK_SCRIPT);
   });
 });
+
+describe('App and the model on the stage', () => {
+  it('saves a model once it is on show, and goes back to the one shown when a change fails', () => {
+    // The scene reports through effects and callbacks a server render never runs: the wiring is
+    // read from the source, as the loader's place is above.
+    const source = readFileSync(new URL('./App.tsx', import.meta.url), 'utf8');
+    expect(source).toMatch(
+      /load\.status === 'ready'\)\s*writeModel\(safeStorage\(\), load\.model\)/,
+    );
+    expect(source).toMatch(/load\.status === 'failed'\)\s*setLookState\(/);
+    expect(source).toMatch(/boot\.phase !== 'live'[\s\S]{0,80}writeModel\(/);
+  });
+});
