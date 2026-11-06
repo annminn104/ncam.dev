@@ -9,9 +9,11 @@ import {
   type Object3D,
   type Texture,
 } from 'three';
+import type { ModelId } from '../models';
 import type { RequiredNode } from './contract';
-import { ARM_REST, type DiscPose, type Pose } from './director';
+import { ARM_PLAY, ARM_REST, type DiscPose, type Pose } from './director';
 import type { PlayerModel } from './model';
+import { SCENE_PROFILES } from './profiles';
 import { DISC_COPIES, emptyShelf, type Place, type StageState } from './stage';
 
 /** The rack's slots in the model, slot 0 the next to play: each the pose of a disc in it. */
@@ -300,9 +302,15 @@ function showBooklet(rig: Rig, next: boolean): void {
   rig.case.booklet.needsUpdate = true;
 }
 
+/** The director's arm angle (ARM_REST … ARM_PLAY) as this model's own (its profile's rest … play). */
+export function modelArmAngle(model: ModelId, angle: number): number {
+  const { rest, play } = SCENE_PROFILES[model].arm;
+  return rest + ((angle - ARM_REST) / (ARM_PLAY - ARM_REST)) * (play - rest);
+}
+
 /** Puts every moving part where `pose` says, and notes where it left the arm and the spin. */
 export function applyPose(rig: Rig, pose: Pose, dt: number): void {
-  rig.arm.node.rotation.y = rig.arm.baseRotationY + pose.armAngle;
+  rig.arm.node.rotation.y = rig.arm.baseRotationY + modelArmAngle(rig.model.id, pose.armAngle);
   rig.arm.node.position.y = rig.arm.baseY + pose.armLift * ARM_LIFT_M;
   rig.spin = (rig.spin + dt * SPIN_RAD_S * pose.spin) % (2 * Math.PI);
   rig.last.armAngle = pose.armAngle;

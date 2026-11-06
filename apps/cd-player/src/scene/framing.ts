@@ -1,15 +1,21 @@
+import { DEFAULT_MODEL, type ModelId } from '../models';
+import { SCENE_PROFILES } from './profiles';
+
 /**
- * The hero camera, in three's Y-up metres, for cd-player.glb: the player alone, lid open, 0.30 m
- * wide, 0.32 high and 0.35 deep, centred at x = 0. Its angle and lens are those of the approved
- * Cycles still (Blender's camera sat at (-0.42, -0.80, 0.47); three's axes are (x, z, -y)). The
- * canvas is the page's stage alone (`.cdp-stage` in src/styles/app.css), which no panel covers, so
- * the camera aims at the player and stands just far enough back for the whole of it to show in a
- * canvas of any shape, whichever way the orbit turns it (src/scene/framing.test.ts projects the
- * model's box through `frameForViewport` over the shapes and the turns).
+ * The hero camera, in three's Y-up metres. Each model has its own aim, direction and fit in
+ * src/scene/profiles.ts. The suitcase (cd-player.glb) is framed as the player alone, lid open,
+ * 0.30 m wide, 0.32 high and 0.35 deep, centred at x = 0: its angle and lens are those of the
+ * approved Cycles still (Blender's camera sat at (-0.42, -0.80, 0.47); three's axes are (x, z, -y)).
+ * The canvas is the page's stage alone (`.cdp-stage` in src/styles/app.css), which no panel covers,
+ * so the camera aims at the model and stands just far enough back for a box of the profile's half-width
+ * (`across`) and half-height (`up`) round the aim to show in a canvas of any shape, whichever way
+ * the orbit turns it (src/scene/framing.test.ts projects each model's box through
+ * `frameForViewport` over the shapes and the turns).
  */
 export const FOV = 30;
 /**
- * The camera's near and far planes (metres). The near one stands as far out as the frame allows
+ * The camera's near and far planes (metres); a model's profile may name its own near
+ * (`nearFor`). The near one stands as far out as the frame allows
  * (the camera is never nearer than about 1.1 m to the player's middle, 0.8 m to its nearest
  * corner): a depth buffer's step grows with the square of the distance over `NEAR`, and the
  * disc's printed layers are microns apart (src/scene/framing.test.ts). At 0.02 m they fought, and
@@ -17,15 +23,6 @@ export const FOV = 30;
  */
 export const NEAR = 0.5;
 export const FAR = 10;
-/** Where the camera looks: the player's centre line, which leaves it in the middle of its canvas. */
-const TARGET: readonly [number, number, number] = [0, 0.132, 0.01];
-const DIRECTION = (() => {
-  const d = [-0.48, 0.338, 0.79];
-  const n = Math.hypot(d[0], d[1], d[2]);
-  return [d[0] / n, d[1] / n, d[2] / n] as const;
-})();
-/** The player with its lid open fits in a sphere about this big (metres). */
-const RADIUS = 0.285;
 /**
  * At or below this width (CSS px) the scene draws as on a phone, with a smaller shadow map and pixel
  * ratio (src/scene/PlayerScene.tsx). The layout's own breakpoints are in src/styles/app.css.
@@ -37,11 +34,24 @@ export interface Frame {
   target: [number, number, number];
 }
 
-/** How far the camera stands so that a sphere of `radius` round its aim fits the canvas. */
-export function frameDistance(aspect: number, fovDeg = FOV, radius = RADIUS): number {
+/** The near plane for this model: its profile's own, or NEAR. */
+export function nearFor(model: ModelId): number {
+  return SCENE_PROFILES[model].near ?? NEAR;
+}
+
+/**
+ * How far the camera stands so that what lies within `across` (half its width) and `up` (half its
+ * height) of its aim fits the canvas: the sphere of that radius when the two are equal.
+ */
+export function frameDistance(
+  aspect: number,
+  fovDeg = FOV,
+  across = SCENE_PROFILES[DEFAULT_MODEL].frame.across,
+  up = SCENE_PROFILES[DEFAULT_MODEL].frame.up,
+): number {
   const tanV = Math.tan((fovDeg * Math.PI) / 360);
-  const vertical = radius / Math.sin(Math.atan(tanV));
-  const horizontal = radius / Math.sin(Math.atan(tanV * aspect));
+  const vertical = up / Math.sin(Math.atan(tanV));
+  const horizontal = across / Math.sin(Math.atan(tanV * aspect));
   return Math.max(vertical, horizontal);
 }
 
@@ -51,14 +61,26 @@ export function isWide(width: number): boolean {
 }
 
 /** The hero frame for a canvas of this size (CSS px): what the camera rig holds, every frame. */
-export function frameForViewport(width: number, height: number, yaw = 0, pitch = 0): Frame {
-  return frameFor(width / Math.max(height, 1), yaw, pitch);
+export function frameForViewport(
+  width: number,
+  height: number,
+  yaw = 0,
+  pitch = 0,
+  model: ModelId = DEFAULT_MODEL,
+): Frame {
+  return frameFor(width / Math.max(height, 1), yaw, pitch, model);
 }
 
-export function frameFor(aspect: number, yaw = 0, pitch = 0): Frame {
-  const distance = frameDistance(aspect);
-  const target: [number, number, number] = [TARGET[0], TARGET[1], TARGET[2]];
-  const [dx, dy, dz] = DIRECTION;
+export function frameFor(
+  aspect: number,
+  yaw = 0,
+  pitch = 0,
+  model: ModelId = DEFAULT_MODEL,
+): Frame {
+  const { target: aim, direction, across, up } = SCENE_PROFILES[model].frame;
+  const distance = frameDistance(aspect, FOV, across, up);
+  const target: [number, number, number] = [aim[0], aim[1], aim[2]];
+  const [dx, dy, dz] = direction;
   const x = dx * Math.cos(yaw) + dz * Math.sin(yaw);
   const z = -dx * Math.sin(yaw) + dz * Math.cos(yaw);
   const horizontal = Math.hypot(x, z);

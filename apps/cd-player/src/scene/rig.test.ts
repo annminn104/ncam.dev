@@ -4,6 +4,7 @@ import type { TrackView } from '../bridge';
 import type { RequiredNode } from './contract';
 import {
   ARM_PLAY,
+  ARM_REST,
   FLIP_EDGE_MS,
   planChange,
   posePlan,
@@ -14,7 +15,7 @@ import {
 } from './director';
 import type { Slots } from './materials';
 import type { PlayerModel } from './model';
-import { applyPose, rigFor } from './rig';
+import { applyPose, modelArmAngle, rigFor } from './rig';
 import {
   DISC_COPIES,
   RACK_SLOTS,
@@ -111,6 +112,7 @@ function fakeModel() {
   root.add(player);
   const dispose = vi.fn();
   const model: PlayerModel = {
+    id: 'suitcase',
     root,
     nodes: nodes as Record<RequiredNode, Object3D>,
     slots: {} as Slots,
@@ -176,6 +178,19 @@ describe('rigFor', () => {
     expect(rig.seat.quaternion.angleTo(model.nodes.disc_seat.quaternion)).toBeLessThan(1e-6);
     // The reach of its half-width and depth across the turn, and a centimetre.
     expect(rig.case.lift).toBeCloseTo(Math.hypot(CASE_W / 2, CASE_DEEP) + 0.01, 6);
+  });
+});
+
+describe('modelArmAngle', () => {
+  it('is the director’s own angle for the suitcase', () => {
+    for (const angle of [ARM_REST, -0.2, ARM_PLAY])
+      expect(modelArmAngle('suitcase', angle)).toBeCloseTo(angle, 12);
+  });
+
+  it('maps the director’s rest and play to the Clear model’s own', () => {
+    expect(modelArmAngle('clear', ARM_REST)).toBeCloseTo(0, 12);
+    expect(modelArmAngle('clear', ARM_PLAY)).toBeCloseTo(0.52, 12);
+    expect(modelArmAngle('clear', ARM_PLAY / 2)).toBeCloseTo(0.26, 12);
   });
 });
 

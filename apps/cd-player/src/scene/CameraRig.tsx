@@ -1,6 +1,7 @@
 import { useFrame, useThree } from '@react-three/fiber';
 import { useEffect, useRef } from 'react';
-import { frameForViewport } from './framing';
+import type { ModelId } from '../models';
+import { frameForViewport, nearFor } from './framing';
 import { interaction, releaseLost } from './interaction';
 import {
   dragOrbit,
@@ -30,7 +31,7 @@ interface Press {
  * Holds the hero framing for the canvas's size, every frame (resizes included), turned by a drag;
  * a double-click, or a double tap, recentres it.
  */
-export function CameraRig() {
+export function CameraRig({ model }: { model: ModelId }) {
   const camera = useThree((state) => state.camera);
   const size = useThree((state) => state.size);
   const gl = useThree((state) => state.gl);
@@ -104,8 +105,19 @@ export function CameraRig() {
 
   useFrame((_, dt) => {
     orbit.current = stepOrbit(orbit.current, dt);
-    const frame = frameForViewport(size.width, size.height, orbit.current.yaw, orbit.current.pitch);
+    const frame = frameForViewport(
+      size.width,
+      size.height,
+      orbit.current.yaw,
+      orbit.current.pitch,
+      model,
+    );
     camera.position.set(...frame.position);
+    const near = nearFor(model);
+    if (camera.near !== near) {
+      camera.near = near;
+      camera.updateProjectionMatrix();
+    }
     camera.lookAt(...frame.target);
   });
   return null;

@@ -7,7 +7,7 @@ import type { Look } from '../looks';
 import { DEFAULT_MODEL, modelById } from '../models';
 import type { PlayerSceneProps } from '../scene-props';
 import { CameraRig } from './CameraRig';
-import { FAR, FOV, NEAR, isWide } from './framing';
+import { FAR, FOV, isWide, nearFor } from './framing';
 import { skinColours } from './materials';
 import { loadPlayerModel, type PlayerModel } from './model';
 import { PlayerRig } from './PlayerRig';
@@ -80,6 +80,7 @@ export function PlayerScene(props: PlayerSceneProps) {
     // downloading, so the next boot asks for the GLB anew instead of waiting on a stalled request.
     const download = new AbortController();
     loadPlayerModel(
+      modelById(DEFAULT_MODEL),
       assetUrl(modelPath, assetBase),
       (fraction) => {
         // A load this effect has let go of says nothing.
@@ -130,7 +131,7 @@ export function PlayerScene(props: PlayerSceneProps) {
       // replaces with this one.
       shadows="percentage"
       gl={{ alpha: true, antialias: true, powerPreference: 'high-performance' }}
-      camera={{ fov: FOV, near: NEAR, far: FAR }}
+      camera={{ fov: FOV, near: nearFor(DEFAULT_MODEL), far: FAR }}
       onCreated={({ gl }) => {
         gl.setClearColor(0x000000, 0);
         gl.toneMapping = AgXToneMapping;
@@ -139,7 +140,7 @@ export function PlayerScene(props: PlayerSceneProps) {
     >
       <Studio narrow={narrow} />
       <ShadowFloor />
-      <CameraRig />
+      <CameraRig model={DEFAULT_MODEL} />
       {model && <PlayerRig model={model} bridge={bridge} look={look} onReady={onReady} />}
     </Canvas>
   );

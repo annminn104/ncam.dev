@@ -18,6 +18,7 @@ function fakeModel() {
   });
   const dispose = vi.fn();
   const model: PlayerModel = {
+    id: 'suitcase',
     root,
     nodes: nodes as Record<RequiredNode, Object3D>,
     slots: {} as Slots,

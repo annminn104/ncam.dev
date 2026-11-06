@@ -2,7 +2,8 @@ import { LoaderUtils, type Group, type Mesh, type Object3D } from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 import type { Look } from '../looks';
-import { REQUIRED_NODES, type RequiredNode } from './contract';
+import { type ModelId, type ModelProfile } from '../models';
+import { OPTIONAL_NODES, REQUIRED_NODES, type OptionalNode, type RequiredNode } from './contract';
 import { upgradeMaterials, type Slots } from './materials';
 
 export class ModelContractError extends Error {
@@ -13,8 +14,10 @@ export class ModelContractError extends Error {
 }
 
 export interface PlayerModel {
+  id: ModelId;
   root: Group;
-  nodes: Record<RequiredNode, Object3D>;
+  /** The contract's nodes, and the optional ones this GLB has. */
+  nodes: Record<RequiredNode, Object3D> & Partial<Record<OptionalNode, Object3D>>;
   slots: Slots;
   /** Recolours the model for `look` in place: no reload, no new download (materials.ts). */
   applyLook(look: Look): void;
@@ -80,10 +83,11 @@ export async function downloadModel(
 }
 
 /**
- * Loads the player; `onProgress` hears the GLB's download as it goes (see `downloadModel`),
+ * Loads the player `profile` names; `onProgress` hears the GLB's download as it goes (see `downloadModel`),
  * and `signal` aborts the download (a scene that lets go of the load).
  */
 export async function loadPlayerModel(
+  profile: ModelProfile,
   url: string,
   onProgress?: (fraction: number | null) => void,
   signal?: AbortSignal,
@@ -93,7 +97,7 @@ export async function loadPlayerModel(
   loader.setMeshoptDecoder(MeshoptDecoder);
   const gltf = await loader.parseAsync(data, LoaderUtils.extractUrlBase(url));
   const root = gltf.scene;
-  const nodes = {} as Record<RequiredNode, Object3D>;
+  const nodes = {} as PlayerModel['nodes'];
   const missing: string[] = [];
   for (const name of REQUIRED_NODES) {
     const node = root.getObjectByName(name);
@@ -101,6 +105,10 @@ export async function loadPlayerModel(
     else missing.push(name);
   }
   if (missing.length) throw new ModelContractError(missing);
+  for (const name of OPTIONAL_NODES) {
+    const node = root.getObjectByName(name);
+    if (node) nodes[name] = node;
+  }
   root.traverse((object) => {
     const mesh = object as Mesh;
     if (mesh.isMesh) {
@@ -111,6 +119,7 @@ export async function loadPlayerModel(
   const materials = upgradeMaterials(root);
   root.updateMatrixWorld(true);
   return {
+    id: profile.id,
     root,
     nodes,
     slots: materials.slots,
