@@ -21,8 +21,7 @@ by Python running inside Blender, not modelled by hand.
   chips, LCD, VU strip and silkscreened logo, the speakers, four AA cells, the keys and their own
   board, the handle and its tag, the knob, the nameplate, the stand with the rack's five slots and
   the standing case. `clear_look(spec)` reads a look from `src/clear-looks.json` and
-  `build_clear_materials(look)` makes its materials; a render also gets the backdrop seen through
-  the shell (`see_through_backdrop`) and dark reflection flags (`clear_flags`).
+  `build_clear_materials(look)` makes its materials.
 - `blender/scripts/build_clear.py`: the Clear model's web scene, with the names the page drives
   (`src/scene/contract.ts`) and the door's `door_hinge`.
 - `blender/scripts/export.py`: the background entry. It meshes curves and text, adds UVs, and
@@ -31,7 +30,9 @@ by Python running inside Blender, not modelled by hand.
   `CDP_HERO_VIEW=hero|lid` (the suitcase) or `hero|inside` (the Clear model),
   `CDP_HERO_QUALITY=preview|final`, into `.out/v2-<view>-<quality>.png`, or
   `.out/clear/<shell>-<frame>-<board>-<light>/clear-<view>-<quality>.png` for the Clear model
-  (`CDP_CLEAR_LOOK`, below). For the owner's gates and the docs only.
+  (`CDP_CLEAR_LOOK`, below), whose studio also sees the backdrop through the shell
+  (`see_through_backdrop`) and sets dark reflection flags round it (`clear_flags`). For the owner's
+  gates and the docs only.
 - `blender/tools/bl.py`: talks to a running Blender through the Blender Lab MCP add-on's socket
   (127.0.0.1:9876, `{"type": "execute", "code": …}` + NUL). Use it for interactive design work;
   the build never needs it.

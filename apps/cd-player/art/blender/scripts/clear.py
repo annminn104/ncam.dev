@@ -93,57 +93,6 @@ def _windings(m, pitch_mm=0.32):
     return m
 
 
-def see_through_backdrop():
-    """A render's world (new_scene's): the camera sees the flat backdrop, reflections and the light
-    the studio HDRI. A ray that has only passed through glass on its way from the camera is still
-    the camera's view, so it sees the backdrop too: without this, the shell would show the HDRI
-    behind it, as if its back were smoked."""
-    w = SC.world if SC is not None else None
-    if w is None or w.node_tree is None:
-        return
-    nt = w.node_tree
-    lp = next((n for n in nt.nodes if n.type == "LIGHT_PATH"), None)
-    mix = next((n for n in nt.nodes if n.type == "MIX_SHADER"), None)
-    if lp is None or mix is None:
-        return
-
-    def math_node(op, a, b):
-        node = nt.nodes.new("ShaderNodeMath")
-        node.operation = op
-        for socket, value in zip(node.inputs, (a, b)):
-            if isinstance(value, (int, float)):
-                socket.default_value = value
-            else:
-                nt.links.new(value, socket)
-        return node.outputs[0]
-
-    # Through glass and nothing else: a transmission ray with no reflection and no diffuse bounce
-    # behind it (Cycles counts a refraction in Transmission Depth, never in Glossy Depth), and not a
-    # shadow ray.
-    only_glass = math_node("MULTIPLY", math_node("LESS_THAN", lp.outputs["Glossy Depth"], 0.5),
-                           math_node("LESS_THAN", lp.outputs["Diffuse Depth"], 0.5))
-    through = math_node("MULTIPLY", lp.outputs["Is Transmission Ray"], only_glass)
-    seen = math_node("MAXIMUM", lp.outputs["Is Camera Ray"], through)
-    nt.links.new(math_node("MULTIPLY", seen, math_node("SUBTRACT", 1.0, lp.outputs["Is Shadow Ray"])),
-                 mix.inputs["Fac"])
-
-
-def clear_flags():
-    """A render's flags: dark cards out of the camera's sight that only reflections see, as a
-    photographer sets them round a clear product, so the shell's edges and walls read against the
-    light backdrop. They cast no shadow and light nothing."""
-    m = mat("flag", (0.012, 0.012, 0.014, 1), rough=0.9)
-    for name, loc, size, target in (("flag_l", L(-760, 620, 300), (700, 600), L(0, 0, 150)),
-                                    ("flag_r", L(820, 620, 300), (700, 600), L(0, 0, 150)),
-                                    ("flag_floor", L(0, -900, 0.6), (2400, 1500), L(0, -900, 100))):
-        ob = rbox(name, (size[0], size[1], 1.0), m, loc=loc)
-        ob.rotation_euler = (Vector(target) - Vector(loc)).to_track_quat("Z", "Y").to_euler()
-        for attr in ("visible_camera", "visible_diffuse", "visible_transmission", "visible_volume_scatter",
-                     "visible_shadow"):
-            setattr(ob, attr, False)
-    return m
-
-
 def build_clear_materials(look):
     """The Clear model's materials on top of build_materials() (the disc's and the case's): the four
     a look colours, from its swatches, and the fixed ones of the parts inside."""
@@ -178,7 +127,6 @@ def build_clear_materials(look):
     M["wire_red"] = mat("wire_red", lin(176, 30, 28), rough=0.45, coat=0.2)
     if not WEB:
         _shadow_colour(M["clear_shell"], [0.97 * c for c in wall[:3]])
-        see_through_backdrop()
         add_bump(M["clear_frame"], "noise", scale=6000, strength=0.05, distance=0.00008)  # bead-blasted
         _windings(M["copper"])
         # Render-only: the LCD's lit and unlit segments, the VU's top three segments unlit.
