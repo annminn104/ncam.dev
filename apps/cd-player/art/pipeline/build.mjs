@@ -1,6 +1,7 @@
 // Builds public/assets/cd-player.glb (or, given `clear`, cd-player-clear.glb) from the Blender
-// scripts: Blender, in the background, writes art/.out/<name>.raw.glb (art/blender/scripts/export.py); gltf-transform then dedups, welds,
-// prunes (keeping the empty pivots) and meshopt-compresses it. Run by hand; the output is committed.
+// scripts: Blender, in the background, writes art/.out/<name>.raw.glb
+// (art/blender/scripts/export.py); gltf-transform then dedups, welds, prunes (keeping the empty
+// pivots) and meshopt-compresses it. Run by hand; the output is committed.
 import { spawnSync } from 'node:child_process';
 import { mkdirSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
