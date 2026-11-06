@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import type { CollectionRef } from '../routes';
-import type { SkinId } from '../skins';
+import type { LookState } from '../looks';
 import type { Collection } from '../spotify/types';
 import { Presets } from './Presets';
 import { SkinPicker } from './SkinPicker';
@@ -16,9 +16,9 @@ interface Props {
   /** Loads the link again, beside an error that trying again may fix (a 502, a stall). */
   onRetry?: () => void;
   onSubmit(input: string): void;
-  /** The player's colourway, picked after Share. */
-  skin: SkinId;
-  onSkin(id: SkinId): void;
+  /** The player's look; its skin is picked after Share. */
+  look: LookState;
+  onLook(next: LookState): void;
   /** The collection in view, and the one being loaded, for "Popular on Spotify" (Presets). */
   current: CollectionRef | null;
   busy: CollectionRef | null;
@@ -52,8 +52,8 @@ export function LinkBar({
   invalid = false,
   onRetry,
   onSubmit,
-  skin,
-  onSkin,
+  look,
+  onLook,
   current,
   busy,
   onPick,
@@ -100,7 +100,7 @@ export function LinkBar({
         <button type="button" className="cdp-button" onClick={share}>
           {shared === 'copied' ? 'Copied' : shared === 'failed' ? "Couldn't copy" : 'Share'}
         </button>
-        <SkinPicker skin={skin} onChange={onSkin} />
+        <SkinPicker skin={look.skin} onChange={(skin) => onLook({ ...look, skin })} />
       </form>
       {error && (
         <div className="cdp-link__error">

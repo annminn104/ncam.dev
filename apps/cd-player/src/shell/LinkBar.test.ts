@@ -1,6 +1,7 @@
 import { createElement } from 'react';
 import { renderToString } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
+import { DEFAULT_LOOK_STATE } from '../looks';
 import { copyText, LinkBar } from './LinkBar';
 
 type Props = Parameters<typeof LinkBar>[0];
@@ -12,8 +13,8 @@ const render = (over: Partial<Props> = {}) =>
       loading: false,
       error: null,
       onSubmit: () => {},
-      skin: 'blush',
-      onSkin: () => {},
+      look: DEFAULT_LOOK_STATE,
+      onLook: () => {},
       current: null,
       busy: null,
       onPick: () => {},
@@ -74,7 +75,7 @@ describe('LinkBar and Popular on Spotify', () => {
 
 describe('LinkBar and Player', () => {
   it('puts Player after Share, inside the link form', () => {
-    const html = render({ skin: 'sage' });
+    const html = render({ look: { ...DEFAULT_LOOK_STATE, skin: 'sage' } });
     const share = html.indexOf('>Share</button>');
     const picker = html.indexOf('<div class="cdp-skin">');
     expect(share).toBeGreaterThan(-1);

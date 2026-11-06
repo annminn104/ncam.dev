@@ -1,13 +1,21 @@
 import { runInNewContext } from 'node:vm';
 import { describe, expect, it } from 'vitest';
+import { CLEAR_SWATCHES, DEFAULT_CLEAR_LOOK } from './clear-looks';
 import {
+  CLEAR_KEY,
+  LOOK_SCRIPT,
+  MODEL_KEY,
+  readClearLook,
   readLast,
+  readLookState,
+  readModel,
   readSkin,
   restoreTarget,
   SKIN_KEY,
-  SKIN_SCRIPT,
   STORAGE_KEY,
+  writeClearLook,
   writeLast,
+  writeModel,
   writeSkin,
 } from './persist';
 import { DEFAULT_COLLECTION, type CollectionRef } from './routes';
@@ -83,32 +91,103 @@ describe('the saved skin', () => {
   });
 });
 
-describe('SKIN_SCRIPT', () => {
+describe('the saved model and the Clear model’s colours', () => {
+  const broken = {
+    getItem: () => {
+      throw new Error('denied');
+    },
+    setItem: () => {
+      throw new Error('denied');
+    },
+  };
+
+  it('round-trips the model under ncam.cd-player.model, the suitcase for anything else', () => {
+    const storage = memory();
+    writeModel(storage, 'clear');
+    expect(MODEL_KEY).toBe('ncam.cd-player.model');
+    expect(readModel(storage)).toBe('clear');
+    for (const junk of ['glass', '', 'Clear']) {
+      expect(readModel(memory({ [MODEL_KEY]: junk })), junk).toBe('suitcase');
+    }
+    expect(readModel(null)).toBe('suitcase');
+    expect(readModel(broken)).toBe('suitcase');
+    expect(() => writeModel(broken, 'clear')).not.toThrow();
+  });
+
+  it('round-trips the Clear look as JSON, part by part', () => {
+    const storage = memory();
+    const look = { shell: 'smoke', frame: 'black', board: 'purple', light: 'pink' };
+    writeClearLook(storage, look);
+    expect(CLEAR_KEY).toBe('ncam.cd-player.clear');
+    expect(readClearLook(storage)).toEqual(look);
+    expect(readClearLook(memory({ [CLEAR_KEY]: '{"shell":"smoke","light":"neon"}' }))).toEqual({
+      ...DEFAULT_CLEAR_LOOK,
+      shell: 'smoke',
+    });
+    for (const junk of ['{nope', '"clear"', 'null', '[]']) {
+      expect(readClearLook(memory({ [CLEAR_KEY]: junk })), junk).toEqual(DEFAULT_CLEAR_LOOK);
+    }
+    expect(readClearLook(broken)).toEqual(DEFAULT_CLEAR_LOOK);
+  });
+
+  it('reads the whole look state', () => {
+    const storage = memory({
+      [MODEL_KEY]: 'clear',
+      [SKIN_KEY]: 'sage',
+      [CLEAR_KEY]: '{"light":"lime"}',
+    });
+    expect(readLookState(storage)).toEqual({
+      model: 'clear',
+      skin: 'sage',
+      clear: { ...DEFAULT_CLEAR_LOOK, light: 'lime' },
+    });
+  });
+});
+
+describe('LOOK_SCRIPT', () => {
   /** Runs it as the browser does, as the root's child; returns what it set on the root's style. */
   function paint(storage: Pick<Storage, 'getItem'> | null): Record<string, string> {
     const set: Record<string, string> = {};
     const style = { setProperty: (name: string, value: string) => void (set[name] = value) };
-    runInNewContext(SKIN_SCRIPT, {
+    runInNewContext(LOOK_SCRIPT, {
       ...(storage ? { localStorage: storage } : {}),
       document: { currentScript: { parentNode: { style } } },
     });
     return set;
   }
 
-  it('paints the saved skin’s accent pair on the root, as App renders it after hydrating', () => {
+  it('paints the saved skin’s pair on the suitcase, as App renders it after hydrating', () => {
     for (const skin of SKINS) {
       expect(paint(memory({ [SKIN_KEY]: skin.id })), skin.id).toEqual({
         '--cdp-accent': skin.accent,
         '--cdp-on-accent': skin.onAccent,
       });
     }
+    expect(paint(memory())).toEqual({});
   });
 
-  it('paints nothing where readSkin finds no skin, and never throws', () => {
-    expect(paint(memory())).toEqual({});
+  it('paints nothing where readSkin finds no skin', () => {
     for (const junk of ['midnight', '', 'SAGE', 'toString', '__proto__', 'constructor']) {
       expect(paint(memory({ [SKIN_KEY]: junk })), junk).toEqual({});
     }
+  });
+
+  it('paints the saved light’s pair on the Clear model, its default light’s for junk', () => {
+    const pair = (id: string) => {
+      const light = CLEAR_SWATCHES.light.find((l) => l.id === id)!;
+      return { '--cdp-accent': light.accent, '--cdp-on-accent': light.onAccent };
+    };
+    expect(paint(memory({ [MODEL_KEY]: 'clear', [CLEAR_KEY]: '{"light":"pink"}' }))).toEqual(
+      pair('pink'),
+    );
+    for (const junk of [undefined, '{nope', '{"light":"neon"}', '{"light":"__proto__"}']) {
+      const store: Record<string, string> = { [MODEL_KEY]: 'clear' };
+      if (junk !== undefined) store[CLEAR_KEY] = junk;
+      expect(paint(memory(store)), String(junk)).toEqual(pair(DEFAULT_CLEAR_LOOK.light));
+    }
+  });
+
+  it('never throws, and can never end the script element it is written into', () => {
     // No storage at all, and storage that throws (a sandboxed frame, a private mode).
     expect(paint(null)).toEqual({});
     expect(
@@ -118,10 +197,7 @@ describe('SKIN_SCRIPT', () => {
         },
       }),
     ).toEqual({});
-  });
-
-  it('can never end the script element it is written into', () => {
-    expect(SKIN_SCRIPT).not.toMatch(/<\/script|<!--/i);
+    expect(LOOK_SCRIPT).not.toMatch(/<\/script|<!--/i);
   });
 });
 

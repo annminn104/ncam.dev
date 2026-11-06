@@ -1,3 +1,6 @@
+import { CLEAR_SWATCHES, clearLookFrom, DEFAULT_CLEAR_LOOK, type ClearLook } from './clear-looks';
+import type { LookState } from './looks';
+import { DEFAULT_MODEL, modelById, type ModelId } from './models';
 import { DEFAULT_COLLECTION, SPOTIFY_ID, sameCollection, type CollectionRef } from './routes';
 import { DEFAULT_SKIN, SKINS, skinById, type SkinId } from './skins';
 
@@ -54,18 +57,78 @@ export function writeSkin(storage: WriteStore | null, id: SkinId): void {
   }
 }
 
+/** The visitor's model (src/models.ts): the suitcase unless they chose the Clear one. */
+export const MODEL_KEY = 'ncam.cd-player.model';
+/** The Clear model's colours, part by part (src/clear-looks.ts), as JSON. */
+export const CLEAR_KEY = 'ncam.cd-player.clear';
+
+/** The saved model; nothing saved, an id no model has, or storage that throws is the suitcase. */
+export function readModel(storage: ReadStore | null): ModelId {
+  try {
+    return modelById(storage?.getItem(MODEL_KEY)).id;
+  } catch {
+    // Unreadable or blocked storage is no saved model.
+    return DEFAULT_MODEL;
+  }
+}
+
+export function writeModel(storage: WriteStore | null, id: ModelId): void {
+  try {
+    storage?.setItem(MODEL_KEY, id);
+  } catch {
+    // A full or blocked storage just forgets.
+  }
+}
+
+/** The saved Clear colours, part by part; a part that is missing or unknown is its default. */
+export function readClearLook(storage: ReadStore | null): ClearLook {
+  try {
+    const raw = storage?.getItem(CLEAR_KEY);
+    return clearLookFrom(raw ? (JSON.parse(raw) as unknown) : null);
+  } catch {
+    // Unreadable storage or JSON that does not parse is no saved look.
+    return DEFAULT_CLEAR_LOOK;
+  }
+}
+
+export function writeClearLook(storage: WriteStore | null, look: ClearLook): void {
+  try {
+    storage?.setItem(CLEAR_KEY, JSON.stringify(look));
+  } catch {
+    // A full or blocked storage just forgets.
+  }
+}
+
+/** Everything saved: the model, the suitcase's skin and the Clear model's colours. */
+export function readLookState(storage: ReadStore | null): LookState {
+  return { model: readModel(storage), skin: readSkin(storage), clear: readClearLook(storage) };
+}
+
+const SKIN_PAIRS = Object.fromEntries(SKINS.map((skin) => [skin.id, [skin.accent, skin.onAccent]]));
+const LIGHT_PAIRS = Object.fromEntries(
+  CLEAR_SWATCHES.light.map((light) => [light.id, [light.accent, light.onAccent]]),
+);
+
 /**
- * The saved skin's accent pair on `.cdp-root` before the first paint: the text of the inline
+ * The accent pair of the saved look on `.cdp-root` before the first paint: the text of the inline
  * script App renders as the root's first child, which the browser runs as it parses the server's
- * markup. The server and the first client render are in Blush, so the trees match, and the page's
- * pastel is made from the accent: without it a saved Sage would paint Blush's whole page until the
- * remote hydrates. React leaves the attribute as it is when it hydrates (it never patches a
- * server attribute) and then applies the same saved skin. A copy React renders on the client never
- * runs, so `mount()` starts App in the saved skin instead. What `readSkin` refuses changes nothing.
+ * markup. It paints the saved light's pair when the saved model is the Clear one (its default
+ * light's where the saved colours name none) and the saved skin's pair otherwise. The server and
+ * the first client render are in the suitcase's Blush, so the trees match, and the page's pastel
+ * is made from the accent: without it a saved Sage or a saved pink light would paint Blush's whole
+ * page until the remote hydrates. React leaves the attribute as it is when it hydrates (it never
+ * patches a server attribute) and then applies the same saved look. A copy React renders on the
+ * client never runs, so `mount()` starts App in the saved look instead. It reads only own keys of
+ * its tables, so no saved value can pick a prototype's, and it never throws: what `readLookState`
+ * refuses, or storage that throws, changes nothing.
  */
-export const SKIN_SCRIPT = `(function(){try{var m=${JSON.stringify(
-  Object.fromEntries(SKINS.map((skin) => [skin.id, [skin.accent, skin.onAccent]])),
-)},k=localStorage.getItem(${JSON.stringify(SKIN_KEY)}),a=k&&Object.prototype.hasOwnProperty.call(m,k)?m[k]:0,s=document.currentScript.parentNode.style;if(a){s.setProperty('--cdp-accent',a[0]);s.setProperty('--cdp-on-accent',a[1]);}}catch(e){}})();`;
+export const LOOK_SCRIPT = `(function(){try{var s=${JSON.stringify(SKIN_PAIRS)},l=${JSON.stringify(
+  LIGHT_PAIRS,
+)},t=localStorage,h=Object.prototype.hasOwnProperty,a=0,k;if(t.getItem(${JSON.stringify(
+  MODEL_KEY,
+)})==='clear'){try{k=JSON.parse(t.getItem(${JSON.stringify(CLEAR_KEY)})).light}catch(e){}a=typeof k==='string'&&h.call(l,k)?l[k]:l[${JSON.stringify(
+  DEFAULT_CLEAR_LOOK.light,
+)}]}else{k=t.getItem(${JSON.stringify(SKIN_KEY)});a=k&&h.call(s,k)?s[k]:0}if(a){var r=document.currentScript.parentNode.style;r.setProperty('--cdp-accent',a[0]);r.setProperty('--cdp-on-accent',a[1])}}catch(e){}})();`;
 
 /**
  * Where `/` should send the visitor: the collection they last loaded. Only the first time the caller

@@ -14,13 +14,16 @@ import { createBridge } from './bridge';
 import { BootStallError, describeFailure } from './failure';
 import { remoteBase } from './lib/asset-url';
 import { createLinkLoader, IDLE_LINK, type LinkState } from './link-loader';
+import { DEFAULT_LOOK_STATE, lookAccent, lookOf, type LookState } from './looks';
 import {
+  LOOK_SCRIPT,
   readLast,
-  readSkin,
+  readLookState,
   restoreTarget,
   safeStorage,
-  SKIN_SCRIPT,
+  writeClearLook,
   writeLast,
+  writeModel,
   writeSkin,
 } from './persist';
 import { createEmbedPlayer, type EmbedCallbacks } from './playback/embed-controller';
@@ -43,7 +46,6 @@ import { Loader } from './shell/Loader';
 import { NowPlaying } from './shell/NowPlaying';
 import { SceneHost } from './shell/SceneHost';
 import { Tracklist } from './shell/Tracklist';
-import { DEFAULT_SKIN, skinById, type SkinId } from './skins';
 import { createSpotifyClient } from './spotify/client';
 import { linkErrorMessage, parseSpotifyLink } from './spotify/link';
 import { backdropFor, loaderPercent, nowPlayingFor } from './view';
@@ -74,16 +76,16 @@ export interface AppProps {
    */
   assetBase?: string;
   /**
-   * The skin of the first render, where it is known: `mount()` reads the saved one, since a client
-   * render has no server markup to match. Without it the first render is Blush, as the server's
-   * markup and its hydration must agree, and the root opens with SKIN_SCRIPT, which paints the
-   * saved skin's accent on that markup as the browser parses it (a copy React renders on the
-   * client would never run, and React warns of one).
+   * The look of the first render, where it is known: `mount()` reads the saved one, since a client
+   * render has no server markup to match. Without it the first render is the suitcase in Blush, as
+   * the server's markup and its hydration must agree, and the root opens with LOOK_SCRIPT, which
+   * paints the saved look's accent on that markup as the browser parses it (a copy React renders
+   * on the client would never run, and React warns of one).
    */
-  initialSkin?: SkinId;
+  initialLook?: LookState;
 }
 
-export default function App({ controller, initial = null, assetBase = '', initialSkin }: AppProps) {
+export default function App({ controller, initial = null, assetBase = '', initialLook }: AppProps) {
   const route = useSyncExternalStore(
     controller.subscribe,
     controller.getRoute,
@@ -105,19 +107,24 @@ export default function App({ controller, initial = null, assetBase = '', initia
     },
   }));
   const { engine, snapshot } = usePlayerEngine(deps, initial, ref);
-  // The player's colourway (src/skins.ts). Blush on the server and on the first render of a
-  // hydration, so the markup matches; the visitor's saved one right after it (SKIN_SCRIPT has
-  // already painted its accent on the server's markup; the scene mounts later and boots in it);
-  // saved on each change. A skin is never in the URL.
-  const [skin, setSkin] = useState<SkinId>(initialSkin ?? DEFAULT_SKIN);
+  // The player's look (src/looks.ts): the model, the suitcase's skin and the Clear model's colours.
+  // The suitcase in Blush on the server and on the first render of a hydration, so the markup
+  // matches; the visitor's saved one right after it (LOOK_SCRIPT has already painted its accent on
+  // the server's markup; the scene mounts later and boots in it); saved on each change. A look is
+  // never in the URL.
+  const [lookState, setLookState] = useState<LookState>(initialLook ?? DEFAULT_LOOK_STATE);
   useEffect(() => {
-    setSkin(readSkin(safeStorage()));
+    setLookState(readLookState(safeStorage()));
   }, []);
-  const changeSkin = useCallback((id: SkinId) => {
-    setSkin(id);
-    writeSkin(safeStorage(), id);
+  const changeLook = useCallback((next: LookState) => {
+    setLookState(next);
+    const storage = safeStorage();
+    writeSkin(storage, next.skin);
+    writeClearLook(storage, next.clear);
+    writeModel(storage, next.model);
   }, []);
-  const look = skinById(skin);
+  const look = lookOf(lookState);
+  const accent = lookAccent(look);
   const [boot, dispatchBoot] = useReducer(bootReducer, INITIAL_BOOT);
   // The page settled and the scene did not start by itself (a software rasteriser, reduced
   // motion): "Open the player" stands where the loader was until the visitor starts it.
@@ -297,12 +304,12 @@ export default function App({ controller, initial = null, assetBase = '', initia
   return (
     <div
       className="cdp-root"
-      // The skin's accent, read by every accent use in styles/app.css.
-      style={{ '--cdp-accent': look.accent, '--cdp-on-accent': look.onAccent } as CSSProperties}
+      // The look's accent, read by every accent use in styles/app.css.
+      style={{ '--cdp-accent': accent.accent, '--cdp-on-accent': accent.onAccent } as CSSProperties}
     >
-      {/* The saved skin's accent, painted as the browser parses the server's markup: first, so it
+      {/* The saved look's accent, painted as the browser parses the server's markup: first, so it
           runs before anything of the root is drawn. */}
-      {initialSkin === undefined && <script dangerouslySetInnerHTML={{ __html: SKIN_SCRIPT }} />}
+      {initialLook === undefined && <script dangerouslySetInnerHTML={{ __html: LOOK_SCRIPT }} />}
       <Backdrop artUrl={backdrop.artUrl} />
       <LinkBar
         collection={snapshot.collection}
@@ -313,8 +320,8 @@ export default function App({ controller, initial = null, assetBase = '', initia
         invalid={linkError?.from === 'link'}
         onRetry={retry && linkError ? () => void loader.load(retry, linkError.from) : undefined}
         onSubmit={loadLink}
-        skin={skin}
-        onSkin={changeSkin}
+        look={lookState}
+        onLook={changeLook}
         current={shown}
         busy={link.pending}
         // The collection on show is already there: pressing its preset does nothing.
@@ -328,7 +335,7 @@ export default function App({ controller, initial = null, assetBase = '', initia
           <SceneHost
             assetBase={remoteBase(assetBase)}
             bridge={deps.bridge}
-            skin={skin}
+            look={look}
             live={live}
             onReady={onReady}
             onFail={onFail}

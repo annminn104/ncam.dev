@@ -1,9 +1,8 @@
 import { Canvas, useThree } from '@react-three/fiber';
-import { useEffect, useEffectEvent, useLayoutEffect, useMemo, useState } from 'react';
+import { useEffect, useEffectEvent, useLayoutEffect, useState } from 'react';
 import { AgXToneMapping, PMREMGenerator } from 'three';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { assetUrl } from '../lib/asset-url';
-import type { Look } from '../looks';
 import { DEFAULT_MODEL, modelById } from '../models';
 import type { PlayerSceneProps } from '../scene-props';
 import { CameraRig } from './CameraRig';
@@ -64,12 +63,10 @@ function ShadowFloor() {
 }
 
 export function PlayerScene(props: PlayerSceneProps) {
-  const { assetBase, bridge, skin, onReady, onFail, onProgress } = props;
+  const { assetBase, bridge, look, onReady, onFail, onProgress } = props;
   const [model, setModel] = useState<PlayerModel | null>(null);
-  // The scene still takes the suitcase's skin, so its look is the suitcase in that skin.
-  const look = useMemo<Look>(() => ({ model: 'suitcase', skin }), [skin]);
   const [narrow] = useState(() => !isWide(window.innerWidth));
-  // The suitcase's GLB: the look chooses the model once the shell hands the scene one (Task 8).
+  // The suitcase's GLB: whatever look is shown: the scene does not switch models yet.
   const modelPath = modelById(DEFAULT_MODEL).glb;
   // Read when the download reports, so a new callback never starts the download again.
   const report = useEffectEvent((fraction: number | null) => onProgress(fraction));
@@ -106,7 +103,7 @@ export function PlayerScene(props: PlayerSceneProps) {
     };
   }, [assetBase, modelPath, onFail]);
 
-  // The skin, in place: before the model's first frame (a layout effect runs before any frame the
+  // The look, in place: before the model's first frame (a layout effect runs before any frame the
   // canvas draws) and on every change.
   useLayoutEffect(() => {
     model?.applyLook(look);
