@@ -258,24 +258,31 @@ def xlathe(name, prof, mats, x, y, z, toward=1, seg=64, **kw):
                  rot=(0.0, math.radians(90 if toward > 0 else -90), 0.0), **kw)
 
 
+def strip_mesh(name, rows, mats, thick=0.16, **kw):
+    """A flat strip through `rows`, each a pair of points (mm) across it, given `thick` mm by
+    solidify: what band() and flex_strip() build once each has found its points' side vectors."""
+    bm = bmesh.new()
+    verts = [(bm.verts.new(a * MM), bm.verts.new(b * MM)) for a, b in rows]
+    for (a0, b0), (a1, b1) in zip(verts, verts[1:]):
+        bm.faces.new((a0, b0, b1, a1))
+    ob = from_bm(name, bm, mats if isinstance(mats, list) else [mats], **kw)
+    solidify(ob, thick)
+    return ob
+
+
 def band(name, pts, width, mats, up=(0.0, 1.0, 0.0), side=None, thick=0.16, **kw):
     """A flat strip `width` mm wide along the points (mm): a flex cable. Its width runs along `side`
     when given, else across the path and `up`, so its face turns toward `up` (the viewer's axis by
     default)."""
     P = [Vector(p) for p in pts]
     U = Vector(up)
-    bm = bmesh.new()
     rows = []
     for i, p in enumerate(P):
         t = (P[min(i + 1, len(P) - 1)] - P[max(i - 1, 0)]).normalized()
         s = Vector(side) if side else t.cross(U)
         s = s.normalized() if s.length > 1e-6 else Vector((1.0, 0.0, 0.0))
-        rows.append((bm.verts.new((p - s * (width / 2)) * MM), bm.verts.new((p + s * (width / 2)) * MM)))
-    for (a0, b0), (a1, b1) in zip(rows, rows[1:]):
-        bm.faces.new((a0, b0, b1, a1))
-    ob = from_bm(name, bm, mats if isinstance(mats, list) else [mats], **kw)
-    solidify(ob, thick)
-    return ob
+        rows.append((p - s * (width / 2), p + s * (width / 2)))
+    return strip_mesh(name, rows, mats, thick, **kw)
 
 
 def flex_strip(name, keys, width, mats, n=6, thick=0.16, **kw):
@@ -288,18 +295,13 @@ def flex_strip(name, keys, width, mats, n=6, thick=0.16, **kw):
         normals += [(a.lerp(b, j / n)).normalized() for j in range(n)]
     normals.append(Vector(keys[-1][1]).normalized())
     P = [Vector(p) for p in pts]
-    bm = bmesh.new()
     rows = []
     for i, p in enumerate(P):
         t = (P[min(i + 1, len(P) - 1)] - P[max(i - 1, 0)]).normalized()
         s = normals[i].cross(t)
         s = s.normalized() if s.length > 1e-6 else Vector((0.0, 0.0, 1.0))
-        rows.append((bm.verts.new((p - s * (width / 2)) * MM), bm.verts.new((p + s * (width / 2)) * MM)))
-    for (a0, b0), (a1, b1) in zip(rows, rows[1:]):
-        bm.faces.new((a0, b0, b1, a1))
-    ob = from_bm(name, bm, mats if isinstance(mats, list) else [mats], **kw)
-    solidify(ob, thick)
-    return ob
+        rows.append((p - s * (width / 2), p + s * (width / 2)))
+    return strip_mesh(name, rows, mats, thick, **kw)
 
 
 def resample(pts, step):
