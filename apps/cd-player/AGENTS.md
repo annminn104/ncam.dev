@@ -922,12 +922,13 @@ suitcase for an id it does not know. It is three-free, as are `skins.ts`, `clear
   GLB's own colours; a leather material's sheen follows its new base (`leatherSheen`: the base
   lifted toward white by its own luminance, 40 % at most, so a pastel leather keeps the full lift
   and a dark one its depth). A Clear look gives the shell its tint (`color`), the frame its
-  colour, metalness and roughness, the board its colour and the light its glow, and the board's silkscreen (`silk`) follows the board as the render prints it:
-  light (`SILK_LIGHT`) on a board whose linear Rec. 709 luma is under 0.45, dark (`SILK_DARK`) on
-  the white one, where a white logo would vanish. Only uniforms change: no reload, no texture, no
-  shader. `PlayerScene` applies the look in a layout effect, before a model's first frame and on
-  every change, to the model it names alone (see "Changing models"). A material the rig copies is
-  not recoloured, so keep the roles off the discs and the cases.
+  colour, metalness and roughness, the board its colour and the light its glow, and the board's
+  silkscreen (`silk`) follows the board as the render prints it: light (`SILK_LIGHT`) on a board
+  whose linear Rec. 709 luma is under 0.45, dark (`SILK_DARK`) on the white one, where a white
+  logo would vanish. Only uniforms change: no reload, no texture, no shader. `PlayerScene` applies
+  the look in a layout effect, before a model's first frame and on every change, to the model it
+  names alone (see "Changing models"). A material the rig copies is not recoloured, so keep the
+  roles off the discs and the cases.
 - **The accent**: `App` sets `--cdp-accent` and `--cdp-on-accent` inline on `.cdp-root` from the
   look's pair (`lookAccent`: the skin's `accent` and `onAccent`, or the light's); the stylesheet's
   own values are a fallback that never shows, Blush's pair, which `styles/app-css.test.ts` holds
@@ -957,13 +958,15 @@ suitcase for an id it does not know. It is three-free, as are `skins.ts`, `clear
   beside a skin; on a dot, white or the ink by the swatch's luminance (`tickOn`: white under 0.179,
   where the ink would vanish), the dot ringed in the accent's ink. A status line (`role="status"`,
   in the markup even while empty, so a line set while the popover is open is announced; with the
-  popover closed nothing says it) speaks of a model change
-  (`loadLine`): "Loading 63%", "Loading…" while the size is unknown, "Couldn't load Clear". `App`
-  hands it `pickerLoad(modelLoad, askedModel)`, the report while its model is the one the visitor
-  last asked for, so a change given up stays silent and a failed one says so after the look has
-  gone back. Opening it shows the popover, brings it into view
-  (`scrollIntoView({ block: 'nearest' })`: on a sideways phone it ran past the screen's foot, and a
-  press outside to scroll would close it), then focuses the checked model without a second scroll.
+  popover closed nothing says it) speaks of a model change (`loadLine`): "Loading 63%", "Loading…"
+  while the size is unknown, "Couldn't load Clear". `App` hands it
+  `pickerLoad(modelLoad, askedModel)`, the report while its model is the one the visitor last
+  asked for, so a change given up stays silent and a failed one says so after the look has gone
+  back. Opening it shows the popover, brings it into view (`scrollIntoView({ block: 'nearest' })`:
+  on a sideways phone it ran past the screen's foot, and a press outside to scroll would close it),
+  then focuses the checked model without a second scroll. When the model changes while it is open
+  and focus has left it (a failed change unmounts the Clear's groups under a focused swatch),
+  focus goes back to the checked model.
   Escape closes it and gives focus back to the button, as the button itself does; a click or tap
   outside, or Tab out of it, closes it. It is `min(280px, calc(100vw - 32px))` wide, right-aligned
   under its button, and while it is open the bar stands over the panels, the open sheet and the
