@@ -1,6 +1,16 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { TrackView } from '../../bridge';
-import { loadFaces, paintBooklet, paintCard, paintDisc, paintLcd, paintTag } from './paint';
+import { clearSwatch, DEFAULT_CLEAR_LOOK } from '../../clear-looks';
+import {
+  LCD_ON,
+  lcdColour,
+  loadFaces,
+  paintBooklet,
+  paintCard,
+  paintDisc,
+  paintLcd,
+  paintTag,
+} from './paint';
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -152,5 +162,14 @@ describe('the lines of text', () => {
     paintCard(canvas, { name: 'Top 50 - Global', subtitle: 'Spotify' });
     expect(texts.filter((text) => text === 'Top 50 - Global')).toHaveLength(2);
     expect(texts.at(-1)).toBe('Spotify');
+  });
+});
+
+describe('lcdColour', () => {
+  it('is the suitcase’s cyan, or the Clear model’s light', () => {
+    expect(lcdColour({ model: 'suitcase', skin: 'blush' })).toBe(LCD_ON);
+    expect(lcdColour({ model: 'clear', clear: DEFAULT_CLEAR_LOOK })).toBe(
+      clearSwatch(DEFAULT_CLEAR_LOOK, 'light').glow,
+    );
   });
 });

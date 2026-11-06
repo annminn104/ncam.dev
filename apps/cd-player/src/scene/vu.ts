@@ -1,3 +1,5 @@
+import { clearSwatch } from '../clear-looks';
+import type { Look } from '../looks';
 import type { Status } from '../playback/sequencer';
 
 /**
@@ -22,6 +24,23 @@ export const VU_COLOURS: readonly string[] = [
   '#ff8a3d',
   '#ff4040',
 ];
+
+/**
+ * The strip's colours for a look: the suitcase's amber to red, or the Clear model's light in ten
+ * brightening steps (sRGB, the last being the glow itself).
+ */
+export function vuColours(look: Look): readonly string[] {
+  if (look.model === 'suitcase') return VU_COLOURS;
+  const glow = clearSwatch(look.clear, 'light').glow;
+  const channel = (at: number, k: number) =>
+    Math.round(parseInt(glow.slice(at, at + 2), 16) * k)
+      .toString(16)
+      .padStart(2, '0');
+  return Array.from({ length: VU_SEGMENTS }, (_, i) => {
+    const k = 0.45 + (0.55 * i) / (VU_SEGMENTS - 1);
+    return `#${channel(1, k)}${channel(3, k)}${channel(5, k)}`;
+  });
+}
 
 /** An unlit segment. */
 export const VU_OFF = '#2b2022';

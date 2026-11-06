@@ -3,7 +3,7 @@ import { useMemo, useRef, useState } from 'react';
 import { Color } from 'three';
 import type { SceneBridge } from '../bridge';
 import type { PlayerModel } from './model';
-import { VU_COLOURS, VU_OFF, VU_SEGMENTS, vuFrame } from './vu';
+import { VU_OFF, VU_SEGMENTS, vuFrame } from './vu';
 import { vuMaterialsFor } from './vu-materials';
 
 /**
@@ -11,12 +11,12 @@ import { vuMaterialsFor } from './vu-materials';
  * paused (the clock stops), off when nothing is loaded, a disc is changing or nothing has played
  * yet, calm under reduced motion.
  */
-export function useVu(model: PlayerModel, bridge: SceneBridge): void {
+export function useVu(model: PlayerModel, bridge: SceneBridge, colours: readonly string[]): void {
   const segments = useMemo(() => vuMaterialsFor(model), [model]);
   const [reduced] = useState(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   const palette = useMemo(
-    () => ({ on: VU_COLOURS.map((hex) => new Color(hex)), off: new Color(VU_OFF) }),
-    [],
+    () => ({ on: colours.map((hex) => new Color(hex)), off: new Color(VU_OFF) }),
+    [colours],
   );
   // Null until a track plays: a scene that boots on a paused track keeps the strip dark.
   const clock = useRef<number | null>(null);

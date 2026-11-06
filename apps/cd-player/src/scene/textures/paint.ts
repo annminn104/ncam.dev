@@ -5,6 +5,8 @@ import {
   type MeshPhysicalMaterial,
 } from 'three';
 import type { TrackView } from '../../bridge';
+import { clearSwatch } from '../../clear-looks';
+import type { Look } from '../../looks';
 import type { Status } from '../../playback/sequencer';
 import {
   arcLayout,
@@ -23,7 +25,7 @@ const UI = "'Manrope Variable', Arial, sans-serif";
 const BLUSH = '#e296a4';
 const CREAM = '#f7eef0';
 const INK = '#2a1f24';
-const LCD_ON = '#9eeeff';
+export const LCD_ON = '#9eeeff';
 const LCD_GHOST = 'rgba(158, 238, 255, 0.08)';
 
 // The three faces the prints draw with. Canvas text never asks the page for a font, so loadFaces
@@ -284,12 +286,18 @@ function drawDigits(
   }
 }
 
+/** The display's lit colour for a look: the suitcase's cyan, or the Clear model's light. */
+export function lcdColour(look: Look): string {
+  return look.model === 'suitcase' ? LCD_ON : clearSwatch(look.clear, 'light').glow;
+}
+
 /** The deck's display: unlit "88 8:88" ghosts under the lit digits, as on a real LCD. */
 export function paintLcd(
   canvas: HTMLCanvasElement,
   trackNo: number,
   positionMs: number,
   status: Status,
+  colour: string = LCD_ON,
 ): void {
   const ctx = context(canvas);
   const { width: w, height: h } = canvas;
@@ -310,12 +318,12 @@ export function paintLcd(
     digitH * 0.8,
     LCD_GHOST,
   );
-  ctx.shadowColor = LCD_ON;
+  ctx.shadowColor = colour;
   ctx.shadowBlur = 8;
-  drawDigits(ctx, track, w * 0.07, y, digitW, digitH, LCD_ON);
-  drawDigits(ctx, time, w * 0.46, y, digitW * 0.8, digitH * 0.8, LCD_ON);
+  drawDigits(ctx, track, w * 0.07, y, digitW, digitH, colour);
+  drawDigits(ctx, time, w * 0.46, y, digitW * 0.8, digitH * 0.8, colour);
   ctx.shadowBlur = 0;
-  ctx.fillStyle = LCD_ON;
+  ctx.fillStyle = colour;
   ctx.font = bold(Math.round(h * 0.13));
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';

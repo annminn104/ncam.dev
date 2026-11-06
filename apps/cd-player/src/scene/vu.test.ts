@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { VU_COLOURS, VU_SEGMENTS, vuFrame, vuLevels } from './vu';
+import { clearSwatch, DEFAULT_CLEAR_LOOK } from '../clear-looks';
+import { VU_COLOURS, VU_SEGMENTS, vuColours, vuFrame, vuLevels } from './vu';
 
 const lit = (levels: number[]) => levels.filter((level) => level >= 1).length;
 
@@ -92,5 +93,20 @@ describe('vuFrame', () => {
     expect(out).toEqual(off);
     expect(vuFrame(clock, 'idle', 9600, false, out)).toBe(6000);
     expect(out).toEqual(off);
+  });
+});
+
+describe('vuColours', () => {
+  it('lights the Clear model’s strip in its light, in ten brightening steps', () => {
+    expect(vuColours({ model: 'suitcase', skin: 'blush' })).toBe(VU_COLOURS);
+    const amber = { ...DEFAULT_CLEAR_LOOK, light: 'amber' };
+    const colours = vuColours({ model: 'clear', clear: amber });
+    expect(colours).toHaveLength(VU_SEGMENTS);
+    expect(colours[VU_SEGMENTS - 1]).toBe(clearSwatch(amber, 'light').glow);
+    const sum = (hex: string) =>
+      [1, 3, 5].reduce((s, at) => s + parseInt(hex.slice(at, at + 2), 16), 0);
+    for (let i = 1; i < colours.length; i += 1) {
+      expect(sum(colours[i])).toBeGreaterThan(sum(colours[i - 1]));
+    }
   });
 });

@@ -16,9 +16,11 @@ import {
   type Object3D,
   type Texture,
 } from 'three';
-import type { Skin, SkinRole } from '../skins';
+import { clearSwatch } from '../clear-looks';
+import type { Look } from '../looks';
+import { skinById, type Skin, type SkinRole } from '../skins';
 import { DYNAMIC_MATERIALS, type DynamicMaterial } from './contract';
-import { MATERIAL_ROLES, SKIN_ROLES, type MaterialRole } from './material-roles';
+import { CLEAR_ROLES, MATERIAL_ROLES, SKIN_ROLES, type MaterialRole } from './material-roles';
 import { leatherNormal, quiltNormal, weaveNormal } from './textures/grain';
 
 export type Slots = Record<DynamicMaterial, MeshPhysicalMaterial | MeshBasicMaterial>;
@@ -40,8 +42,8 @@ function skinRoleOf(name: string): SkinRole | undefined {
 
 export interface UpgradedMaterials {
   slots: Slots;
-  /** Recolours the skin's roles in place (applySkin, below). */
-  applySkin(skin: Skin): void;
+  /** Recolours the model's materials in place for a look (applyLook, below). */
+  applyLook(look: Look): void;
   dispose(): void;
 }
 
@@ -229,6 +231,57 @@ export function applySkin(materials: Iterable<Material>, skin: Skin): void {
   }
 }
 
+/**
+ * The Clear board's silkscreen, as the Blender render prints it (art/blender/scripts/clear.py):
+ * light, linear (0.92, 0.92, 0.90), on a dark board, and dark, linear (0.025, 0.025, 0.03), on a
+ * light one. As sRGB hex, the way three converts them.
+ */
+export const SILK_LIGHT = '#f6f6f3';
+export const SILK_DARK = '#2c2c30';
+
+/** A board lighter than this (Rec. 709 luma of its linear colour) takes the dark silkscreen. */
+const SILK_LUMA_SWITCH = 0.45;
+
+/**
+ * Recolours `materials` in place for `look`: the suitcase's skin roles from its skin (as
+ * `applySkin` did), or the Clear model's parts from their swatches, its silkscreen following the
+ * board. Uniforms only.
+ */
+export function applyLook(materials: Iterable<Material>, look: Look): void {
+  if (look.model === 'suitcase') {
+    applySkin(materials, skinById(look.skin));
+    return;
+  }
+  const board = clearSwatch(look.clear, 'board').colour;
+  for (const material of materials) {
+    if (material.name === 'silk') {
+      const { r, g, b } = new Color(board);
+      const luma = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+      (material as MeshPhysicalMaterial).color.set(
+        luma < SILK_LUMA_SWITCH ? SILK_LIGHT : SILK_DARK,
+      );
+      continue;
+    }
+    const part = Object.hasOwn(CLEAR_ROLES, material.name) ? CLEAR_ROLES[material.name] : undefined;
+    if (!part) continue;
+    const surface = material as MeshPhysicalMaterial;
+    if (part === 'shell') {
+      const { tint } = clearSwatch(look.clear, 'shell');
+      surface.color.set(tint);
+      surface.attenuationColor.set(tint);
+    } else if (part === 'frame') {
+      const frame = clearSwatch(look.clear, 'frame');
+      surface.color.set(frame.colour);
+      surface.metalness = frame.metalness;
+      surface.roughness = frame.roughness;
+    } else if (part === 'board') {
+      surface.color.set(board);
+    } else {
+      (material as MeshBasicMaterial).color.set(clearSwatch(look.clear, 'light').glow);
+    }
+  }
+}
+
 /** The materials under `root` a skin recolours, by name, as sRGB hex (for the live check). */
 export function skinColours(root: Object3D): Record<string, string> {
   const colours: Record<string, string> = {};
@@ -285,7 +338,7 @@ export function upgradeMaterials(root: Object3D): UpgradedMaterials {
   });
   return {
     slots: slots as Slots,
-    applySkin: (skin: Skin) => applySkin(made.values(), skin),
+    applyLook: (look: Look) => applyLook(made.values(), look),
     dispose: () => {
       for (const material of made.values()) material.dispose();
       maps.grain.dispose();

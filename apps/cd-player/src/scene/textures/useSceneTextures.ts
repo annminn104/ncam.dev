@@ -52,7 +52,7 @@ const nothingShown = (): Shown => ({
  * the luggage tag, and the display, at most once a second. The discs and the booklet are
  * useDiscPrints'.
  */
-export function useSceneTextures(rig: Rig, bridge: SceneBridge): void {
+export function useSceneTextures(rig: Rig, bridge: SceneBridge, lcdColour: string): void {
   const [surfaces] = useState(makeSurfaces);
   const shown = useRef<Shown>(nothingShown());
 
@@ -64,13 +64,13 @@ export function useSceneTextures(rig: Rig, bridge: SceneBridge): void {
     shown.current = nothingShown();
     paintCard(canvases.card, null);
     paintTag(canvases.tag, null);
-    paintLcd(canvases.lcd, 0, 0, 'idle');
+    paintLcd(canvases.lcd, 0, 0, 'idle', lcdColour);
     const all = [textures.tag, textures.card, textures.lcd];
     for (const texture of all) texture.needsUpdate = true;
     return () => {
       for (const texture of all) texture.dispose();
     };
-  }, [rig, surfaces]);
+  }, [rig, surfaces, lcdColour]);
 
   useEffect(() => {
     const { canvases, textures } = surfaces;
@@ -118,7 +118,7 @@ export function useSceneTextures(rig: Rig, bridge: SceneBridge): void {
     lcd.track = view.trackNo;
     lcd.second = second;
     lcd.status = view.status;
-    paintLcd(surfaces.canvases.lcd, view.trackNo, view.positionMs, view.status);
+    paintLcd(surfaces.canvases.lcd, view.trackNo, view.positionMs, view.status, lcdColour);
     surfaces.textures.lcd.needsUpdate = true;
   });
 }

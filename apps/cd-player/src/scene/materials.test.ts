@@ -8,12 +8,24 @@ import {
   MeshBasicMaterial,
   MeshPhysicalMaterial,
   MeshStandardMaterial,
+  SRGBColorSpace,
   Texture,
+  type Material,
 } from 'three';
 import { describe, expect, it } from 'vitest';
+import { clearSwatch, type ClearLook } from '../clear-looks';
 import { SKINS, skinById, type Skin } from '../skins';
 import { DYNAMIC_MATERIALS } from './contract';
-import { applySkin, leatherSheen, makeMaterial, skinColours, upgradeMaterials } from './materials';
+import {
+  applyLook,
+  applySkin,
+  leatherSheen,
+  makeMaterial,
+  SILK_DARK,
+  SILK_LIGHT,
+  skinColours,
+  upgradeMaterials,
+} from './materials';
 import { SKIN_ROLES } from './material-roles';
 
 const meshOf = (name: string, color = '#ffffff') =>
@@ -182,7 +194,7 @@ describe('applySkin', () => {
     const { root, upgraded } = scene();
     const before = root.children.map((child) => (child as Mesh).material);
     for (const skin of SKINS) {
-      upgraded.applySkin(skin);
+      upgraded.applyLook({ model: 'suitcase', skin: skin.id });
       const expected = Object.fromEntries(
         Object.entries(SKIN_ROLES).map(([name, role]) => [name, skin.palette[role]]),
       );
@@ -194,7 +206,7 @@ describe('applySkin', () => {
 
   it('leaves every other material as the GLB made it', () => {
     const { root, upgraded } = scene();
-    upgraded.applySkin(skinById('cherry'));
+    upgraded.applyLook({ model: 'suitcase', skin: 'cherry' });
     expect(materialOf(root, 'chrome').color.getHexString()).toBe('8090a0');
     expect(materialOf(root, 'btn').color.getHexString()).toBe('d0c0b0');
     expect(materialOf(root, 'art_disc').color.getHexString()).toBe('ffffff');
@@ -204,7 +216,7 @@ describe('applySkin', () => {
   it('lifts the leather sheen from its new base, and leaves the lining its white one', () => {
     const { root, upgraded } = scene();
     for (const skin of SKINS) {
-      upgraded.applySkin(skin);
+      upgraded.applyLook({ model: 'suitcase', skin: skin.id });
       expect(materialOf(root, 'leather').sheenColor.getHexString(), skin.id).toBe(
         leatherSheen(new Color(skin.palette.leather)).getHexString(),
       );
@@ -219,11 +231,11 @@ describe('applySkin', () => {
       const { sheenColor, color } = materialOf(root, name);
       return gap(sheenColor, color);
     };
-    upgraded.applySkin(skinById('cherry'));
+    upgraded.applyLook({ model: 'suitcase', skin: 'cherry' });
     expect(sheenGap('leather')).toBeLessThan(0.1);
     expect(sheenGap('trim')).toBeLessThan(0.1);
     // Blush's leather is a light one, its trim a dark one.
-    upgraded.applySkin(skinById('blush'));
+    upgraded.applyLook({ model: 'suitcase', skin: 'blush' });
     expect(sheenGap('leather')).toBeGreaterThan(0.2);
     expect(sheenGap('trim')).toBeLessThan(0.1);
     upgraded.dispose();
@@ -233,7 +245,11 @@ describe('applySkin', () => {
     const { root, upgraded } = scene();
     const blush = skinById('blush');
     const probe: Skin = { ...blush, palette: { ...blush.palette, leather: '#e296a4' } };
-    upgraded.applySkin(probe);
+    const materials = new Set<Material>();
+    root.traverse((object) => {
+      if ((object as Mesh).isMesh) materials.add((object as Mesh).material as Material);
+    });
+    applySkin(materials, probe);
     // Blender's lin(226, 150, 164): the GLB's baseColorFactor for leather.
     const { r, g, b } = materialOf(root, 'leather').color;
     expect(r).toBeCloseTo(0.76052, 4);
@@ -247,5 +263,56 @@ describe('applySkin', () => {
     const cream = skinById('cream');
     applySkin([deck], cream);
     expect(deck.color.getHexString()).toBe(cream.palette.deck.slice(1));
+  });
+});
+
+describe('applyLook', () => {
+  const clearMaterials = () => ({
+    shell: new MeshPhysicalMaterial({ name: 'clear_shell' }),
+    frame: new MeshPhysicalMaterial({ name: 'clear_frame' }),
+    board: new MeshPhysicalMaterial({ name: 'board' }),
+    light: new MeshBasicMaterial({ name: 'light' }),
+    silk: new MeshPhysicalMaterial({ name: 'silk' }),
+    leather: new MeshPhysicalMaterial({ name: 'leather' }),
+  });
+  const hex = (c: Color) => `#${c.getHexString(SRGBColorSpace)}`;
+  const look: ClearLook = { shell: 'blush', frame: 'black', board: 'purple', light: 'pink' };
+
+  it('colours the Clear model part by part from its swatches', () => {
+    const m = clearMaterials();
+    applyLook(Object.values(m), { model: 'clear', clear: look });
+    expect(hex(m.shell.color)).toBe(clearSwatch(look, 'shell').tint);
+    expect(hex(m.shell.attenuationColor)).toBe(clearSwatch(look, 'shell').tint);
+    expect(hex(m.frame.color)).toBe(clearSwatch(look, 'frame').colour);
+    expect(m.frame.metalness).toBe(clearSwatch(look, 'frame').metalness);
+    expect(m.frame.roughness).toBe(clearSwatch(look, 'frame').roughness);
+    expect(hex(m.board.color)).toBe(clearSwatch(look, 'board').colour);
+    expect(hex(m.light.color)).toBe(clearSwatch(look, 'light').glow);
+  });
+
+  it('leaves the suitcase’s materials to its skin, and the Clear model’s to its look', () => {
+    const m = clearMaterials();
+    const before = hex(m.leather.color);
+    applyLook(Object.values(m), { model: 'clear', clear: look });
+    expect(hex(m.leather.color)).toBe(before);
+    const shell = hex(m.shell.color);
+    applyLook(Object.values(m), { model: 'suitcase', skin: 'cherry' });
+    expect(hex(m.shell.color)).toBe(shell);
+    expect(hex(m.leather.color)).toBe(skinById('cherry').palette.leather);
+  });
+
+  it('prints the silkscreen light on a dark board and dark on the white one, as the render does', () => {
+    const m = clearMaterials();
+    applyLook(Object.values(m), { model: 'clear', clear: { ...look, board: 'green' } });
+    expect(hex(m.silk.color)).toBe(SILK_LIGHT);
+    applyLook(Object.values(m), { model: 'clear', clear: { ...look, board: 'white' } });
+    expect(hex(m.silk.color)).toBe(SILK_DARK);
+  });
+
+  it('leaves the silkscreen alone for a suitcase look', () => {
+    const m = clearMaterials();
+    const before = hex(m.silk.color);
+    applyLook(Object.values(m), { model: 'suitcase', skin: 'cherry' });
+    expect(hex(m.silk.color)).toBe(before);
   });
 });

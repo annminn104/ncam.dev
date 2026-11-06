@@ -21,7 +21,7 @@ function fakeModel() {
     root,
     nodes: nodes as Record<RequiredNode, Object3D>,
     slots: {} as Slots,
-    applySkin: vi.fn(),
+    applyLook: vi.fn(),
     dispose,
   };
   return { model, shared, meshes, dispose };

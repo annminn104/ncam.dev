@@ -115,7 +115,7 @@ function fakeModel() {
     nodes: nodes as Record<RequiredNode, Object3D>,
     slots: {} as Slots,
     dispose,
-    applySkin: vi.fn(),
+    applyLook: vi.fn(),
   };
   return { model, label, booklet, dispose, slots, lid, caseSeat };
 }

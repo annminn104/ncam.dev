@@ -1,11 +1,11 @@
 import { Canvas, useThree } from '@react-three/fiber';
-import { useEffect, useEffectEvent, useLayoutEffect, useState } from 'react';
+import { useEffect, useEffectEvent, useLayoutEffect, useMemo, useState } from 'react';
 import { AgXToneMapping, PMREMGenerator } from 'three';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { assetUrl } from '../lib/asset-url';
+import type { Look } from '../looks';
 import { DEFAULT_MODEL, modelById } from '../models';
 import type { PlayerSceneProps } from '../scene-props';
-import { skinById } from '../skins';
 import { CameraRig } from './CameraRig';
 import { FAR, FOV, NEAR, isWide } from './framing';
 import { skinColours } from './materials';
@@ -66,6 +66,8 @@ function ShadowFloor() {
 export function PlayerScene(props: PlayerSceneProps) {
   const { assetBase, bridge, skin, onReady, onFail, onProgress } = props;
   const [model, setModel] = useState<PlayerModel | null>(null);
+  // The scene still takes the suitcase's skin, so its look is the suitcase in that skin.
+  const look = useMemo<Look>(() => ({ model: 'suitcase', skin }), [skin]);
   const [narrow] = useState(() => !isWide(window.innerWidth));
   // The suitcase's GLB: the look chooses the model once the shell hands the scene one (Task 8).
   const modelPath = modelById(DEFAULT_MODEL).glb;
@@ -106,8 +108,8 @@ export function PlayerScene(props: PlayerSceneProps) {
   // The skin, in place: before the model's first frame (a layout effect runs before any frame the
   // canvas draws) and on every change.
   useLayoutEffect(() => {
-    model?.applySkin(skinById(skin));
-  }, [model, skin]);
+    model?.applyLook(look);
+  }, [model, look]);
 
   // Dev builds only (production builds drop the branch): the live check reads the recoloured
   // materials here.
@@ -138,7 +140,7 @@ export function PlayerScene(props: PlayerSceneProps) {
       <Studio narrow={narrow} />
       <ShadowFloor />
       <CameraRig />
-      {model && <PlayerRig model={model} bridge={bridge} onReady={onReady} />}
+      {model && <PlayerRig model={model} bridge={bridge} look={look} onReady={onReady} />}
     </Canvas>
   );
 }
