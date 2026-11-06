@@ -14,12 +14,13 @@ import { SCENE_PROFILES } from './profiles';
  */
 export const FOV = 30;
 /**
- * The camera's near and far planes (metres); a model's profile may name its own near
- * (`nearFor`). The near one stands as far out as the frame allows
- * (the camera is never nearer than about 1.1 m to the player's middle, 0.8 m to its nearest
- * corner): a depth buffer's step grows with the square of the distance over `NEAR`, and the
- * disc's printed layers are microns apart (src/scene/framing.test.ts). At 0.02 m they fought, and
- * every disc's rim and hub ring came out ragged.
+ * The camera's near and far planes (metres). `NEAR` is the suitcase's near plane, and every model
+ * without a near of its own in its profile: the suitcase's camera is never nearer than about
+ * 1.1 m to the player's middle (0.8 m to its nearest corner), so the plane stands as far out as
+ * the frame allows. A model's profile may name its own near plane, as the Clear's does (0.52);
+ * `nearFor` reads it. A depth buffer's step grows with the square of the distance over the near
+ * plane, and the disc's printed layers are microns apart (src/scene/framing.test.ts). At 0.02 m
+ * they fought, and every disc's rim and hub ring came out ragged.
  */
 export const NEAR = 0.5;
 export const FAR = 10;

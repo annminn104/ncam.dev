@@ -13,6 +13,8 @@ const dist = (f: ReturnType<typeof frameFor>) =>
  * rest (the player, its plinth, handle and knob, the stand, the jewel case and its easel) with a
  * 120 mm disc in each of the five rack slots, which the page puts there; the discs lie within the
  * stand's own extent. The Clear's door is a second box (`DOOR`), the extent it sweeps from shut to open.
+ * The Clear's numbers were measured with three's GLTFLoader over public/assets/cd-player-clear.glb:
+ * measure them again whenever that GLB changes.
  */
 const BOXES = {
   suitcase: { min: [-0.152, -0.003, -0.199], max: [0.152, 0.319, 0.152] },
@@ -47,6 +49,9 @@ function heroCamera(
 /**
  * The Clear's door (cd-player-clear.glb's `door_hinge`, at (-0.079, 0.1501, 0.0405)): its shut
  * box, and the corners it sweeps through between shut and open (0 to -100° about the hinge's Y).
+ * The hinge stands 0.1501 m up. The box was measured with three's GLTFLoader over
+ * public/assets/cd-player-clear.glb, the door swept about its hinge: measure it again whenever
+ * that GLB changes.
  */
 const DOOR = {
   hinge: [-0.079, 0.0405],

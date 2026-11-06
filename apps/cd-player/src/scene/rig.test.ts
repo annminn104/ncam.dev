@@ -15,6 +15,7 @@ import {
 } from './director';
 import type { Slots } from './materials';
 import type { PlayerModel } from './model';
+import { SCENE_PROFILES } from './profiles';
 import { applyPose, modelArmAngle, rigFor } from './rig';
 import {
   DISC_COPIES,
@@ -185,6 +186,10 @@ describe('modelArmAngle', () => {
   it('is the director’s own angle for the suitcase', () => {
     for (const angle of [ARM_REST, -0.2, ARM_PLAY])
       expect(modelArmAngle('suitcase', angle)).toBeCloseTo(angle, 12);
+  });
+
+  it('is the identity only while the suitcase’s profile arm agrees with the director’s', () => {
+    expect(SCENE_PROFILES.suitcase.arm).toEqual({ rest: ARM_REST, play: ARM_PLAY });
   });
 
   it('maps the director’s rest and play to the Clear model’s own', () => {
