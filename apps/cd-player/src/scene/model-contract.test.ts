@@ -160,6 +160,29 @@ describe('public/assets/cd-player-clear.glb (art/pipeline/build.mjs clear)', () 
     for (const name of Object.keys(CLEAR_ROLES)) expect(names, name).toContain(name);
   });
 
+  it('keeps the UVs of every printed primitive', () => {
+    const printed = new Set<string>(DYNAMIC_MATERIALS);
+    const seen = new Set<string>();
+    for (const mesh of json.meshes) {
+      for (const primitive of mesh.primitives) {
+        const name =
+          primitive.material === undefined ? '' : (json.materials[primitive.material].name ?? '');
+        if (!printed.has(name)) continue;
+        seen.add(name);
+        expect(primitive.attributes.TEXCOORD_0, name).toBeDefined();
+      }
+    }
+    expect([...seen].sort()).toEqual([...printed].sort());
+  });
+
+  it('turns the keys, the knob and the door on empties that carry their parts', () => {
+    for (const pivot of [...PIVOTS, 'door_hinge']) {
+      expect(node(pivot), pivot).toBeDefined();
+      expect(node(pivot).mesh, pivot).toBeUndefined();
+      expect(node(pivot).children?.length ?? 0, pivot).toBeGreaterThan(0);
+    }
+  });
+
   it('hangs the five rack slots from the stand, as empties', () => {
     for (let i = 0; i < 5; i += 1) {
       expect(parentOf(`rack_slot_${i}`)).toBe('lid_hinge');
