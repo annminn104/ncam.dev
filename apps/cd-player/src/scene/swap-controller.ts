@@ -53,6 +53,8 @@ export interface SwapControllerOptions {
   /** The bridge's view: the engine publishes the one a swap leads to before it asks for it. */
   view(): SceneView;
   reduced: boolean;
+  /** The model has a door: its plans wait for it (withDoor). */
+  door: boolean;
   /** Whether the page is hidden now (a background tab, a locked phone): no frame runs then. */
   hidden(): boolean;
   clock: SwapClock;
@@ -238,7 +240,10 @@ export function createSwapController(options: SwapControllerOptions): SwapContro
       followed = null;
       const after = view();
       const change = classifyChange(lineupOf(stage.shelf), after, to);
-      begin(planChange(change, stage.shelf, targetOf(after, to), stage.last), resolve);
+      begin(
+        planChange(change, stage.shelf, targetOf(after, to), stage.last, { door: options.door }),
+        resolve,
+      );
     });
 
   return {
@@ -273,7 +278,7 @@ export function createSwapController(options: SwapControllerOptions): SwapContro
       if (key === followed) return;
       followed = key;
       const change = classifyChange(lineupOf(stage.shelf), next, null);
-      begin(planChange(change, stage.shelf, target, stage.last), () => {});
+      begin(planChange(change, stage.shelf, target, stage.last, { door: options.door }), () => {});
     },
     frame: (pose) => {
       const change = current;

@@ -194,6 +194,45 @@ describe('modelArmAngle', () => {
   });
 });
 
+describe('the door', () => {
+  /** The fake model as the Clear: its id, and a hinge turned a little at rest. */
+  function clearModel() {
+    const { model } = fakeModel();
+    const hinge = named(new Object3D(), 'door_hinge');
+    hinge.rotation.y = 0.1;
+    model.root.add(hinge);
+    const clear: PlayerModel = {
+      ...model,
+      id: 'clear',
+      nodes: { ...model.nodes, door_hinge: hinge },
+    };
+    return { model: clear, hinge };
+  }
+
+  it('is the hinge of a model whose profile has a door, with the turn that opens it', () => {
+    const { model, hinge } = clearModel();
+    expect(rigFor(model).door).toEqual({ node: hinge, base: 0.1, angle: -(100 * Math.PI) / 180 });
+  });
+
+  it('is none for a model without one, hinge or no hinge', () => {
+    expect(rigFor(fakeModel().model).door).toBeNull();
+    const { model } = clearModel();
+    expect(rigFor({ ...model, id: 'suitcase' }).door).toBeNull();
+  });
+
+  it('turns the hinge from its shut angle to the open one as the pose opens it', () => {
+    const { model, hinge } = clearModel();
+    const rig = rigFor(model);
+    const rest = restingPose(emptyShelf(), false, false);
+    applyPose(rig, { ...rest, door: 0 }, 0);
+    expect(hinge.rotation.y).toBeCloseTo(0.1, 12);
+    applyPose(rig, { ...rest, door: 1 }, 0);
+    expect(hinge.rotation.y).toBeCloseTo(0.1 - (100 * Math.PI) / 180, 12);
+    applyPose(rig, { ...rest, door: 0.5 }, 0);
+    expect(hinge.rotation.y).toBeCloseTo(0.1 - (50 * Math.PI) / 180, 12);
+  });
+});
+
 describe('applyPose', () => {
   it('rests each copy where the shelf puts it, and hides the spare', () => {
     const { model } = fakeModel();

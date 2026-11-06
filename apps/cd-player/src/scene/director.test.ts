@@ -3,14 +3,17 @@ import type { TrackView } from '../bridge';
 import {
   ARM_PLAY,
   ARM_REST,
+  DOOR_OPEN_MS,
   DURATION,
   FLIP_EDGE_MS,
   FLIP_MS,
   PRINT_LEAD_MS,
+  doorAt,
   planChange,
   posePlan,
   restingArm,
   restingPose,
+  withDoor,
   type Plan,
 } from './director';
 import {
@@ -372,5 +375,49 @@ describe('restingPose', () => {
     expect(restsOn(waiting)).toEqual(['0', '1', null, null, null, null, null]);
     expect(restingPose(waiting, true, true).armAngle).toBe(ARM_REST);
     expect(restsOn(emptyShelf())).toEqual([null, null, null, null, null, null, null]);
+  });
+});
+
+describe('the door (a model that has one)', () => {
+  const PLANS = { FIRST, NEXT, PREV, PICK, PICK_1, PICK_4, SIDE, COLLECTION, RESTACK };
+  const touches = (m: Plan['moves'][number]) => m.from === 'spindle' || m.to === 'spindle';
+
+  it('is all the way open while a disc leaves the spindle or comes onto it', () => {
+    for (const [label, base] of Object.entries(PLANS)) {
+      const p = withDoor(base);
+      for (const move of p.moves.filter(touches)) {
+        for (let t = move.start; t <= move.end; t += 10) {
+          expect(doorAt(p.door, t), `${label} ${t}`).toBeGreaterThanOrEqual(0.999);
+        }
+      }
+    }
+  });
+
+  it('is shut at the change’s start and end, and stays shut with nothing at the spindle', () => {
+    for (const [label, base] of Object.entries(PLANS)) {
+      const p = withDoor(base);
+      expect(doorAt(p.door, 0), label).toBe(0);
+      expect(doorAt(p.door, p.duration), label).toBe(0);
+      if (!base.moves.some(touches)) expect(p.door, label).toBeNull();
+    }
+  });
+
+  it('makes a change whose first spindle move comes too soon wait for the door', () => {
+    const p = withDoor(FIRST);
+    const first = Math.min(...p.moves.filter(touches).map((m) => m.start));
+    expect(first).toBe(DOOR_OPEN_MS);
+    expect(p.duration).toBe(
+      FIRST.duration +
+        (DOOR_OPEN_MS - Math.min(...FIRST.moves.filter(touches).map((m) => m.start))),
+    );
+    expect(p.arm?.at).toBe(
+      DOOR_OPEN_MS - Math.min(...FIRST.moves.filter(touches).map((m) => m.start)),
+    );
+  });
+
+  it('changes nothing for a model without a door', () => {
+    expect(NEXT.door).toBeNull();
+    expect(posePlan(NEXT, 1000, REST).door).toBe(0);
+    expect(restingPose(fillShelf(targetOf(lineup('a', 'b'))), true, true).door).toBe(0);
   });
 });

@@ -78,6 +78,8 @@ export interface Rig extends StageState {
   bookletMaps: [Texture | null, Texture | null];
   spin: number;
   arm: { node: Object3D; baseRotationY: number; baseY: number };
+  /** The door's hinge, for a model with one: where it is shut, and the turn that opens it. */
+  door: { node: Object3D; base: number; angle: number } | null;
   /** The spindle's seat, in world space (the discs live at the root). */
   seat: { position: Vector3; quaternion: Quaternion };
   /** Each rack slot, in world space. */
@@ -160,6 +162,7 @@ export function rigFor(model: PlayerModel): Rig {
     lift: flipLift(nodes.case),
     booklet: ownMaterial(nodes.case, 'art_booklet'),
   };
+  const doorAngle = SCENE_PROFILES[model.id].door?.angle;
   const rig: Rig = {
     model,
     discs,
@@ -176,6 +179,10 @@ export function rigFor(model: PlayerModel): Rig {
       baseRotationY: nodes.arm_pivot.rotation.y,
       baseY: nodes.arm_pivot.position.y,
     },
+    door:
+      nodes.door_hinge && doorAngle !== undefined
+        ? { node: nodes.door_hinge, base: nodes.door_hinge.rotation.y, angle: doorAngle }
+        : null,
     seat: { position: seatPosition, quaternion: seatQuaternion },
     slots,
   };
@@ -318,4 +325,5 @@ export function applyPose(rig: Rig, pose: Pose, dt: number): void {
   rig.discs.forEach((copy, index) => placeDisc(rig, copy, pose.discs[index] ?? null));
   placeCase(rig, pose.caseLift, pose.caseTurn);
   showBooklet(rig, pose.bookletNew);
+  if (rig.door) rig.door.node.rotation.y = rig.door.base + rig.door.angle * pose.door;
 }

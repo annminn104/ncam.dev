@@ -95,6 +95,8 @@ export interface ArmPlan {
   spinFrom: number;
   /** It starts on a disc, so it lifts off as it swings to its rest. */
   off: boolean;
+  /** When its swing away starts: 0, or later for a plan that waits for a door. */
+  at: number;
   /** When it swings back in and lowers onto the new disc; null when nothing lands. */
   back: Span | null;
 }
@@ -109,6 +111,8 @@ export interface Plan {
   flip: { start: number; end: number; booklet: TrackView | null } | null;
   /** Null: the arm holds its resting pose (Shuffle or Repeat with the disc left on the spindle). */
   arm: ArmPlan | null;
+  /** The door's swing, for a model with one; null: it stays shut (or there is none). */
+  door: DoorPlan | null;
   /** The shelf once the change is over. */
   after: Shelf;
 }
@@ -136,6 +140,8 @@ export interface Pose extends ArmPose {
   caseTurn: number;
   /** The booklet shows the turn's new print. */
   bookletNew: boolean;
+  /** The door open, 0 (shut) … 1 (all the way); 0 for a model with none. */
+  door: number;
 }
 
 const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
@@ -274,6 +280,7 @@ export function planChange(
   shelf: Shelf,
   target: Target,
   last: { armAngle: number; spin: number },
+  options?: { door?: boolean },
 ): Plan {
   const timeline = timelineFor(change, shelf, target);
   const timing = TIMING[timeline];
@@ -417,6 +424,7 @@ export function planChange(
           from: last.armAngle,
           spinFrom: last.spin,
           off: Math.abs(last.armAngle - ARM_REST) > ARM_EPSILON,
+          at: 0,
           back: lands ? timing.armIn : null,
         }
       : null;
@@ -432,16 +440,70 @@ export function planChange(
     booklet: target.booklet,
     collection: target.collection,
   };
-  return { timeline, duration, moves, prints, flip, arm, after };
+  const plan: Plan = { timeline, duration, moves, prints, flip, arm, door: null, after };
+  return options?.door ? withDoor(plan) : plan;
+}
+
+/** The Clear model's door through a change: swinging open over `open`, shut over `shut` (ms in). */
+export interface DoorPlan {
+  open: Span;
+  shut: Span;
+}
+
+/** How long the door takes to swing all the way open, and shut. */
+export const DOOR_OPEN_MS = 250;
+export const DOOR_SHUT_MS = 300;
+
+const touchesSpindle = (move: DiscMove) => move.from === 'spindle' || move.to === 'spindle';
+
+/** `plan`, every time in it `ms` later: the moves, the prints asked for in it, the case and the arm. */
+function delayPlan(plan: Plan, ms: number): Plan {
+  return {
+    ...plan,
+    duration: plan.duration + ms,
+    moves: plan.moves.map((move) => ({ ...move, start: move.start + ms, end: move.end + ms })),
+    prints: plan.prints.map((order) => (order.at > 0 ? { ...order, at: order.at + ms } : order)),
+    flip: plan.flip && { ...plan.flip, start: plan.flip.start + ms, end: plan.flip.end + ms },
+    arm: plan.arm && {
+      ...plan.arm,
+      at: plan.arm.at + ms,
+      back: plan.arm.back && [plan.arm.back[0] + ms, plan.arm.back[1] + ms],
+    },
+  };
+}
+
+/**
+ * The plan for a model with a door: the door all the way open before a disc leaves the spindle or
+ * comes onto it, and shutting once the last of them is over. A plan whose first such move starts
+ * sooner than the door can open waits for it, everything in it that much later.
+ */
+export function withDoor(plan: Plan): Plan {
+  const first = Math.min(...plan.moves.filter(touchesSpindle).map((move) => move.start));
+  if (!Number.isFinite(first)) return { ...plan, door: null };
+  const waited = first < DOOR_OPEN_MS ? delayPlan(plan, DOOR_OPEN_MS - first) : plan;
+  const spindle = waited.moves.filter(touchesSpindle);
+  const openAt = Math.min(...spindle.map((move) => move.start)) - DOOR_OPEN_MS;
+  const shutAt = Math.max(...spindle.map((move) => move.end));
+  const door: DoorPlan = {
+    open: [openAt, openAt + DOOR_OPEN_MS],
+    shut: [shutAt, shutAt + DOOR_SHUT_MS],
+  };
+  return { ...waited, door, duration: Math.max(waited.duration, door.shut[1]) };
+}
+
+/** How far open the door is `tMs` into a change: 0 shut … 1 open, eased; 0 with no door. */
+export function doorAt(door: DoorPlan | null, tMs: number): number {
+  if (!door) return 0;
+  return span(tMs, door.open[0], door.open[1]) - span(tMs, door.shut[0], door.shut[1]);
 }
 
 function armAt(arm: ArmPlan, t: number): ArmPose {
-  const away = span(t, ARM_AWAY[0], ARM_AWAY[1]);
+  const away = span(t, arm.at + ARM_AWAY[0], arm.at + ARM_AWAY[1]);
   const back = arm.back ? span(t, arm.back[0], arm.back[1]) : 0;
   return {
     armAngle: arm.from + (ARM_REST - arm.from) * away + (ARM_PLAY - ARM_REST) * back,
     armLift: Math.max(
-      arm.off ? bump(t, ARM_LIFT_OFF[0], ARM_LIFT_OFF[1]) : 0,
+      arm.off ? bump(t, arm.at + ARM_LIFT_OFF[0], arm.at + ARM_LIFT_OFF[1]) : 0,
       arm.back ? bump(t, arm.back[0] - 50, arm.back[1] + 50) : 0,
     ),
     spin: arm.spinFrom * (1 - away) + (arm.back ? span(t, arm.back[1] - 150, arm.back[1] + 50) : 0),
@@ -474,7 +536,7 @@ export function posePlan(plan: Plan, tMs: number, rest: ArmPose): Pose {
     bookletNew = t >= start + FLIP_EDGE_MS;
   }
   const arm = plan.arm ? armAt(plan.arm, t) : rest;
-  return { ...arm, discs, caseLift, caseTurn, bookletNew };
+  return { ...arm, discs, caseLift, caseTurn, bookletNew, door: doorAt(plan.door, t) };
 }
 
 /** Between changes: the arm on the disc while a track is loaded, the disc spinning while it plays. */
@@ -499,5 +561,6 @@ export function restingPose(shelf: Shelf, loaded: boolean, playing: boolean): Po
     caseLift: 0,
     caseTurn: 0,
     bookletNew: false,
+    door: 0,
   };
 }

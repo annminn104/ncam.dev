@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { EMPTY_VIEW, type SceneView, type TrackView } from '../bridge';
-import { ARM_PLAY, DURATION, type Timeline } from './director';
+import { ARM_PLAY, DOOR_OPEN_MS, DURATION, type Timeline } from './director';
 import { emptyShelf, lineupOf, type PrintSize, type StageState } from './stage';
 import {
   createSwapController,
@@ -39,7 +39,7 @@ const freshStage = (): StageState => ({
 const flush = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
 
 /** A controller on a fake clock whose prints land (or fail) when the test says. */
-function harness(options: { reduced?: boolean; hidden?: boolean } = {}) {
+function harness(options: { reduced?: boolean; hidden?: boolean; door?: boolean } = {}) {
   const stage = freshStage();
   /** The page as the controller sees it: hidden or not, and the bridge's view. */
   const page = { hidden: options.hidden ?? false, view: lineup(null) };
@@ -85,6 +85,7 @@ function harness(options: { reduced?: boolean; hidden?: boolean } = {}) {
     printer,
     view: () => page.view,
     reduced: options.reduced ?? false,
+    door: options.door ?? false,
     hidden: () => page.hidden,
     clock,
     onPrintFailed: failed,
@@ -133,7 +134,10 @@ function harness(options: { reduced?: boolean; hidden?: boolean } = {}) {
 }
 
 /** A harness whose shelf holds `view` already, its prints landed. */
-async function seated(view: SceneView, options: { reduced?: boolean; hidden?: boolean } = {}) {
+async function seated(
+  view: SceneView,
+  options: { reduced?: boolean; hidden?: boolean; door?: boolean } = {},
+) {
   const h = harness(options);
   h.page.view = view;
   h.controller.seat(view);
@@ -268,6 +272,7 @@ describe('createSwapController: a change', () => {
       printer: throwing,
       view: () => lineup('b', 'c'),
       reduced: false,
+      door: false,
       hidden: () => false,
       clock: { now: () => 0, after: () => () => {} },
       onPrintFailed: failed,
@@ -318,6 +323,20 @@ describe('createSwapController: a change', () => {
     expect(change.settled).toBe(true);
     expect(h.printsAfter(7)).toEqual([[2, 'c', 1024]]);
     expect(h.stage.shelf.rack).toEqual([2, 3, 4, 5, 6]);
+  });
+
+  it('waits for a door: a first play with one ends on the clock later by the door’s wait', async () => {
+    const h = await seated(lineup(null, 'a', 'b', 'c', 'd', 'e'), { door: true });
+    const change = h.swap(lineup('a', 'b', 'c', 'd', 'e', 'f'), 'a');
+    h.landAll();
+    await flush();
+    h.page.hidden = true;
+    h.advance(DURATION.first + SETTLE_SLACK_MS);
+    await flush();
+    expect(change.settled).toBe(false);
+    h.advance(DURATION.first + DOOR_OPEN_MS + SETTLE_SLACK_MS);
+    await flush();
+    expect(change.settled).toBe(true);
   });
 
   it('finishes a change at once in a hidden page, with no frame and no wait for its prints', async () => {
