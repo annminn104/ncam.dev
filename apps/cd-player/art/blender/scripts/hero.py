@@ -16,8 +16,9 @@ board, the LCD and the mechanism through the shell. `preview` is 800 x 600 at 24
 art/.out/v2-<view>-<quality>.png, or art/.out/v2-<view>-grid-<quality>.png when parts.py builds
 the grid layout. CDP_SKIN=<id> (an id of src/skins.json) renders that skin instead of Blush, into
 art/.out/skins/<id>/. The Clear model renders its default look, or CDP_CLEAR_LOOK=<shell>,<frame>,
-<board>,<light> (ids of src/clear-looks.json), into art/.out/clear/<look>/clear-<view>-<quality>.png.
-Also runs in a live Blender through tools/bl.py.
+<board>,<light> (ids of src/clear-looks.json), into art/.out/clear/<look>/clear-<view>-<quality>.png;
+CDP_SKIN with the Clear model, or CDP_CLEAR_LOOK with the suitcase, stops the run too. Also runs in
+a live Blender through tools/bl.py.
 """
 import math
 import os
@@ -45,6 +46,14 @@ MODEL = setting("CDP_MODEL", "suitcase", ("suitcase", "clear"))
 VIEW = setting("CDP_HERO_VIEW", "hero", ("hero", "lid") if MODEL == "suitcase" else ("hero", "inside"))
 QUALITY = setting("CDP_HERO_QUALITY", "preview", ("preview", "final"))
 SKIN = os.environ.get("CDP_SKIN")  # an id of src/skins.json; unset renders Blush, empty is an error
+CLEAR_LOOK = os.environ.get("CDP_CLEAR_LOOK")  # shell,frame,board,light ids of src/clear-looks.json
+# Each model takes its own colours: the other's setting would be ignored unannounced.
+if MODEL == "clear" and SKIN is not None:
+    raise SystemExit("hero.py: CDP_SKIN colours the suitcase; the Clear model takes "
+                     "CDP_CLEAR_LOOK=<shell>,<frame>,<board>,<light>, not CDP_SKIN=%r" % SKIN)
+if MODEL == "suitcase" and CLEAR_LOOK is not None:
+    raise SystemExit("hero.py: CDP_CLEAR_LOOK colours the Clear model (CDP_MODEL=clear); the suitcase "
+                     "takes CDP_SKIN=<id>, not CDP_CLEAR_LOOK=%r" % CLEAR_LOOK)
 os.makedirs(OUT, exist_ok=True)
 
 
@@ -137,7 +146,7 @@ def suitcase_scene():
 
 def clear_scene():
     exec(compile(open(BASE + "/clear.py").read(), "clear.py", "exec"), globals())
-    look, ids = clear_look(os.environ.get("CDP_CLEAR_LOOK"))
+    look, ids = clear_look(CLEAR_LOOK)
     new_scene("cd_player_clear", res=(1600, 1200), samples=128)
     build_clear_materials(look)
     see_through_backdrop(SC.world)

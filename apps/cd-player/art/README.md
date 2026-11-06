@@ -77,9 +77,10 @@ the shell's tint, the frame (the plinth, the door's bezel, the keys, the handle,
 the stand's cheeks), the board and the light (the ring round the disc, the VU strip, the keys'
 icons). `CDP_MODEL=clear` renders it in its default look, or in the one
 `CDP_CLEAR_LOOK=<shell>,<frame>,<board>,<light>` names (ids of that file), into
-`.out/clear/<shell>-<frame>-<board>-<light>/clear-<view>-<quality>.png`; `hero` is the
-three-quarter still between the stand and the case, `inside` a close-up of the board and the
-mechanism through the shell:
+`.out/clear/<shell>-<frame>-<board>-<light>/clear-<view>-<quality>.png` (`CDP_SKIN` is the
+suitcase's alone: with the Clear model it stops the run, as `CDP_CLEAR_LOOK` does with the
+suitcase); `hero` is the three-quarter still between the stand and the case, `inside` a close-up of
+the board and the mechanism through the shell:
 
     CDP_MODEL=clear CDP_CLEAR_LOOK=smoke,black,black,amber CDP_HERO_VIEW=inside \
       CDP_HERO_QUALITY=final /Applications/Blender.app/Contents/MacOS/Blender --background \
