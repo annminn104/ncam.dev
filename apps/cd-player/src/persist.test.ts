@@ -172,6 +172,17 @@ describe('LOOK_SCRIPT', () => {
     }
   });
 
+  it('paints the saved skin’s pair for any saved model but the Clear one', () => {
+    const sage = SKINS.find((skin) => skin.id === 'sage')!;
+    for (const model of ['glass', '', 'Clear', 'suitcase']) {
+      const store = { [MODEL_KEY]: model, [SKIN_KEY]: 'sage', [CLEAR_KEY]: '{"light":"pink"}' };
+      expect(paint(memory(store)), model).toEqual({
+        '--cdp-accent': sage.accent,
+        '--cdp-on-accent': sage.onAccent,
+      });
+    }
+  });
+
   it('paints the saved light’s pair on the Clear model, its default light’s for junk', () => {
     const pair = (id: string) => {
       const light = CLEAR_SWATCHES.light.find((l) => l.id === id)!;

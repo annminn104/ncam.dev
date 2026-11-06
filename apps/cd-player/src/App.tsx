@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useMemo,
   useReducer,
   useRef,
   useState,
@@ -123,7 +124,9 @@ export default function App({ controller, initial = null, assetBase = '', initia
     writeClearLook(storage, next.clear);
     writeModel(storage, next.model);
   }, []);
-  const look = lookOf(lookState);
+  // Once per change: the scene recolours its model whenever `look` is a new object, and App renders
+  // on every playback, progress and boot update.
+  const look = useMemo(() => lookOf(lookState), [lookState]);
   const accent = lookAccent(look);
   const [boot, dispatchBoot] = useReducer(bootReducer, INITIAL_BOOT);
   // The page settled and the scene did not start by itself (a software rasteriser, reduced
