@@ -189,6 +189,22 @@ describe('createModelHolder', () => {
     expect(renders.at(-1)).toEqual({ shown: null, next: again });
   });
 
+  it('swaps nothing in for a compile that lands after the look changed, still carrying the old look', () => {
+    // PlayerScene tells the holder the look's model in the commit that changes it; Precompile's
+    // onDone carries the canvas's last look, and the canvas commits later.
+    const { held, renders } = holder();
+    const suitcase = model('suitcase');
+    held.loaded(suitcase, 'suitcase');
+    held.compiled(suitcase, 'suitcase');
+    const clear = model('clear');
+    held.loaded(clear, 'clear');
+    held.want('suitcase');
+    held.compiled(clear, 'clear');
+    expect(renders.map((each) => each.shown)).not.toContain(clear);
+    expect(renders.at(-1)).toEqual({ shown: suitcase, next: null });
+    expect(clear.dispose).toHaveBeenCalledOnce();
+  });
+
   it('never renders the Clear model for a quick Suitcase → Clear → Suitcase', () => {
     const { held, renders } = holder();
     const suitcase = model('suitcase');

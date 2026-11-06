@@ -51,7 +51,7 @@ import { SceneHost } from './shell/SceneHost';
 import { Tracklist } from './shell/Tracklist';
 import { createSpotifyClient } from './spotify/client';
 import { linkErrorMessage, parseSpotifyLink } from './spotify/link';
-import { backdropFor, loaderPercent, nowPlayingFor } from './view';
+import { backdropFor, loaderPercent, nowPlayingFor, sameLoadPercent } from './view';
 
 const log = createLogger({ scope: 'cd-player' });
 
@@ -170,18 +170,30 @@ export default function App({ controller, initial = null, assetBase = '', initia
     log.error('cd-player.scene-failed', { error: String(error) });
     dispatchBoot({ type: 'fail', failure: describeFailure(error) });
   }, []);
-  // The model on the stage, as the scene reports it (onModel, the boot's model included): what the
-  // picker says of a change; each model saved once it is on show; and a change that fails undone,
-  // the look going back to the model still shown.
+  // The model on the stage, as the scene reports it (onModel, the boot's model included). What the
+  // picker says of a change is set only when it says something new: a download's chunks once per
+  // whole percent, as the loader's count is (a size still unknown as it comes). A model on show is
+  // noted, and saved when a change brought it while the scene was live; the boot's own writes
+  // nothing, as its `ready` comes with onReady, before the phase is live (a model chosen before
+  // that was saved as it was chosen). A change that fails goes back to the model still shown.
   const [, setModelLoad] = useState<ModelLoad | null>(null);
+  const shownLoad = useRef<ModelLoad | null>(null);
   const shownModel = useRef<ModelId>(DEFAULT_MODEL);
-  const onModel = useCallback((load: ModelLoad) => {
-    setModelLoad(load);
-    if (load.status === 'ready') shownModel.current = load.model;
-    if (load.status === 'ready') writeModel(safeStorage(), load.model);
-    if (load.status === 'failed')
-      setLookState((state) => ({ ...state, model: shownModel.current }));
-  }, []);
+  const onModel = useCallback(
+    (load: ModelLoad) => {
+      if (!sameLoadPercent(shownLoad.current, load)) {
+        shownLoad.current = load;
+        setModelLoad(load);
+      }
+      if (load.status === 'ready') {
+        shownModel.current = load.model;
+        if (live) writeModel(safeStorage(), load.model);
+      }
+      if (load.status === 'failed')
+        setLookState((state) => ({ ...state, model: shownModel.current }));
+    },
+    [live],
+  );
 
   // A boot that goes quiet, on the scene's code or on the model's download, fails like any other,
   // so the loader never spins for ever (boot.ts watchStall): the watch runs while the phase is

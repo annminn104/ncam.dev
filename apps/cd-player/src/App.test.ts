@@ -206,14 +206,20 @@ describe('App and the skins', () => {
 });
 
 describe('App and the model on the stage', () => {
-  it('saves a model once it is on show, and goes back to the one shown when a change fails', () => {
+  it('saves a change once it is on show, never the boot’s own model, and goes back when one fails', () => {
     // The scene reports through effects and callbacks a server render never runs: the wiring is
     // read from the source, as the loader's place is above.
     const source = readFileSync(new URL('./App.tsx', import.meta.url), 'utf8');
+    // A `ready` while the scene is live is a change, saved once it is on show. The boot's own
+    // `ready` comes while it boots and writes nothing: that guarded write is the only one.
+    expect(source).toMatch(/const live = boot\.phase === 'live';/);
     expect(source).toMatch(
-      /load\.status === 'ready'\)\s*writeModel\(safeStorage\(\), load\.model\)/,
+      /if \(load\.status === 'ready'\) \{[^}]*\bif \(live\) writeModel\(safeStorage\(\), load\.model\);[^}]*\}/,
     );
+    expect(source.match(/writeModel\(safeStorage\(\), load\.model\)/g)).toHaveLength(1);
+    // A change that fails goes back to the model shown.
     expect(source).toMatch(/load\.status === 'failed'\)\s*setLookState\(/);
+    // A model chosen while the scene is not live is written at once, and the boot loads it.
     expect(source).toMatch(/boot\.phase !== 'live'[\s\S]{0,80}writeModel\(/);
   });
 });

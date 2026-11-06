@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import type { ModelId } from './models';
 import { initialSeq, step, type SeqEvent, type SeqState } from './playback/sequencer';
+import type { ModelLoad } from './scene-props';
 import type { ArtistDetail, Collection, Track, TrackDetail } from './spotify/types';
 import {
   backdropFor,
@@ -7,6 +9,7 @@ import {
   loaderLine,
   loaderPercent,
   nowPlayingFor,
+  sameLoadPercent,
   sceneView,
   seekRange,
   trackView,
@@ -134,6 +137,34 @@ describe('loaderPercent', () => {
 
   it('gives every chunk inside one percent the same count, so the page renders once per percent', () => {
     expect(new Set([0.625, 0.6262, 0.63, 0.6349].map(loaderPercent))).toEqual(new Set([63]));
+  });
+});
+
+describe('sameLoadPercent', () => {
+  const loading = (fraction: number | null, model: ModelId = 'clear'): ModelLoad => ({
+    model,
+    status: 'loading',
+    fraction,
+  });
+
+  it("collapses a change's chunks within one whole percent, and only those", () => {
+    expect(sameLoadPercent(loading(0.631), loading(0.634))).toBe(true);
+    expect(sameLoadPercent(loading(0.634), loading(0.641))).toBe(false);
+    expect(sameLoadPercent(loading(0.99), loading(1))).toBe(false);
+  });
+
+  it('keeps every report of a size still unknown as it comes, never as a percent', () => {
+    expect(sameLoadPercent(loading(null), loading(null))).toBe(false);
+    expect(sameLoadPercent(loading(null), loading(0))).toBe(false);
+    expect(sameLoadPercent(loading(0), loading(null))).toBe(false);
+  });
+
+  it('never collapses the first report, another model, an end or a failure', () => {
+    expect(sameLoadPercent(null, loading(0.5))).toBe(false);
+    expect(sameLoadPercent(loading(0.5, 'suitcase'), loading(0.5))).toBe(false);
+    expect(sameLoadPercent(loading(1), { model: 'clear', status: 'ready' })).toBe(false);
+    const failed: ModelLoad = { model: 'clear', status: 'failed' };
+    expect(sameLoadPercent(failed, failed)).toBe(false);
   });
 });
 

@@ -1,5 +1,6 @@
 import type { SceneView, TrackView } from './bridge';
 import { currentIndex, upcomingIndices, type SeqState } from './playback/sequencer';
+import type { ModelLoad } from './scene-props';
 import {
   pickPicture,
   type ArtistDetail,
@@ -101,6 +102,19 @@ export function seekRange(positionMs: number, durationMs: number): { max: number
 export function loaderPercent(progress: number | null): number | null {
   if (progress === null || !Number.isFinite(progress)) return null;
   return Math.min(100, Math.max(0, Math.round(progress * 100)));
+}
+
+/**
+ * Whether a model change's report (PlayerSceneProps.onModel) only repeats the last one's count: the
+ * same model downloading at the same whole percent (`loaderPercent`). `App` keeps a change's
+ * download once per percent, as it keeps the boot's; a size still unknown is kept as it comes.
+ */
+export function sameLoadPercent(last: ModelLoad | null, next: ModelLoad): boolean {
+  if (last?.status !== 'loading' || next.status !== 'loading' || last.model !== next.model) {
+    return false;
+  }
+  const percent = loaderPercent(next.fraction);
+  return percent !== null && percent === loaderPercent(last.fraction);
 }
 
 /** The loader's one line, with the count (`loaderPercent`) once the GLB's size is known. */

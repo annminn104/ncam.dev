@@ -139,8 +139,11 @@ export function PlayerScene(props: PlayerSceneProps) {
     };
   }, [assetBase, wanted, shown, booted]);
 
-  // A model loaded for a look the visitor has since changed goes before it is ever shown.
-  useEffect(() => {
+  // A model loaded for a look the visitor has since changed goes before it is ever shown. A layout
+  // effect, so the holder knows the look's model within the commit that changes it: Precompile's
+  // onDone carries the look of the canvas's own last commit, which comes later, and a compile that
+  // lands in between then finds no next to swap in.
+  useLayoutEffect(() => {
     holder.want(wanted.id);
   }, [holder, wanted]);
   // Whatever the scene holds goes with it.
