@@ -93,7 +93,7 @@ A Turborepo monorepo on pnpm workspaces, TypeScript everywhere.
 | `apps/chess`           | Cultivation Chess: chess with cultivation-treasure pieces in three 3D arenas, vs a friend or Stockfish. React 19, React Three Fiber, chess.js.                             | 9008     |
 | `apps/mini-store`      | Mini Store: a rainy-night corner store diorama with a hand-written WebGL2 renderer (no three.js), booted on the first interaction. React 19.                               | 9009     |
 | `apps/garden-home`     | Garden Home: a glass villa and its garden island from Blender modules, cut away floor by floor, behind a server-rendered poster. React 19, React Three Fiber.              | 9010     |
-| `apps/cd-player`       | CD Player: any Spotify playlist or album on a 3D suitcase CD player, played through Spotify's embed; route-aware; model generated in Blender. React 19, React Three Fiber. | 9011     |
+| `apps/cd-player`       | CD Player: any Spotify playlist or album on a 3D suitcase or a see-through CD player, played in Spotify's embed; route-aware; Blender models. React 19, React Three Fiber. | 9011     |
 | `apps/strapi`          | Strapi 5 headless CMS for the blog, with a public read-only REST API. A backend service, not a remote.                                                                     | 1337     |
 
 | Package                  | What it is                                                                                                   |
