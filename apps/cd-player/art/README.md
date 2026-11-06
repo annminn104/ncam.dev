@@ -19,8 +19,8 @@ by Python running inside Blender, not modelled by hand.
   plinth, the round glass door hinged on its left, the disc on its spindle ringed by the light
   ring, the swing arm with its voice coil, the spindle motor's copper coils, the board with its
   chips, LCD, VU strip and silkscreened logo, the speakers, four AA cells, the keys and their own
-  board, the handle and its tag, the knob, the nameplate, the stand with the rack's five slots and
-  the standing case. `clear_look(spec)` reads a look from `src/clear-looks.json` (and stops the run,
+  board, the knob standing upright on the top beside them, the handle and its tag, the nameplate,
+  the stand with the rack's five slots and the standing case. `clear_look(spec)` reads a look from `src/clear-looks.json` (and stops the run,
   naming what is wrong, on a part or a field it lacks) and `build_clear_materials(look)` makes its
   materials.
 - `blender/scripts/build_clear.py`: the Clear model's web scene, with the names the page drives

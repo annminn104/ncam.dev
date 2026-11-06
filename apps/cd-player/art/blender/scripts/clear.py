@@ -11,9 +11,9 @@ window's opening, a back plate, and one hollow band for the sides, the top and t
 filled block, which would refract everything inside it). Behind the round glass door, hinged on
 its left, the disc stands on its spindle, ringed by the light ring, the laser's swing arm and the
 motor behind it; the board runs along the bottom with the LCD, the VU strip and the silkscreened
-logo; a speaker either side; four AA cells across the back under the top; six keys and the handle
-on top, the tag hanging from the handle over the front, the knob on the right side and the
-nameplate on the plinth.
+logo; a speaker either side; four AA cells across the back under the top; six keys, the knob
+(standing upright, right of the keys) and the handle on top, the tag hanging from the handle over
+the front and the nameplate on the plinth.
 
 Its colours come part by part from src/clear-looks.json (clear_look): build_clear_materials(look)
 makes the four parts' materials (clear_shell, clear_frame, board, light) and the fixed ones. The
@@ -203,6 +203,7 @@ KEYS = ("prev", "play", "next", "stop", "rpt", "mode")
 WORDS = {"rpt": "RPT", "mode": "MODE"}  # button_icon draws the other four
 KEY_Y, KEY_PITCH = -14.0, 25.0
 HANDLE_X, HANDLE_Y, HANDLE_H = 104.0, 14.0, 30.0
+KNOB_X, KNOB_Y, KNOB_RING = 107.0, KEY_Y, 15.2   # the knob on top, in the keys' row; its ring's rim
 STAND_X, STAND_Y, STAND_TURN = 252.0, 12.0, math.radians(-18.0)
 SLOT_DY, SLOT_DZ, TREAD0 = 18.0, 20.0, 12.0   # each slot further back and higher than the last
 SLOT_TILT = math.radians(15.0)                # the rack's discs lean back
@@ -988,9 +989,10 @@ TAG_ROT = (math.radians(90), math.radians(4.0), 0.0)
 
 
 def clear_tag(name, root, playlist):
-    """The luggage tag, its cord looped round the handle's right upright and over the top's front
-    edge, the clear acrylic tag hanging against the front plate above the right speaker; its face
-    is the page's tag_print (`<name>`), in a render a cream card lettered NAME and the collection."""
+    """The luggage tag hanging against the front plate above the right speaker, its cord over the
+    top's front edge right of the knob, back along the top's right edge, behind the knob and once
+    round the handle's right upright; its face is the page's tag_print (`<name>`), in a render a
+    cream card lettered NAME and the collection."""
     loc = (TAG_X, FRONT_Y - 0.6 - 0.9, TAG_Z)
     tag = empty(name + "_root", L(*loc), TAG_ROT, parent=root)
     rbox(name + "_body", (36, 58, 1.8), M["door_glass"], bevel_mm=0.6, parent=tag)
@@ -1006,10 +1008,15 @@ def clear_tag(name, root, playlist):
             rbox("%s_rule_%d" % (name, k), (24, 0.25, 0.04), M["ink"], parent=tag, loc=L(0, yy, 0.97))
     eye = Vector(world_of(loc, TAG_ROT, (0.0, 24.0, 0.0)))
     top = Z1
-    # Up from the eyelet, over the top's front edge, back along the top past the handle's mount and
-    # once round its upright, above the mount's collar.
-    cord = smooth_path([tuple(eye), (eye.x, eye.y - 0.6, eye.z + 5.0), (eye.x - 1.5, FRONT_Y - 1.3, top - 1.6),
-                        (eye.x - 3.0, FRONT_Y + 2.0, top + 1.0), (HANDLE_X + 6.0, HANDLE_Y - 11.0, top + 1.0),
+    side = KNOB_X + KNOB_RING + 4.3   # the cord's run along the top, clear of the knob's ring
+    # Up from the eyelet in front of the tag and rightward, over the top's front edge, back along the
+    # top's right edge, then left behind the knob (in front of the handle's mount) and once round its
+    # upright, above the mount's collar.
+    cord = smooth_path([tuple(eye), (eye.x + 1.4, FRONT_Y - 3.7, eye.z + 3.0), (eye.x + 7.0, FRONT_Y - 3.9, top - 3.8),
+                        (side - 1.3, FRONT_Y - 3.0, top - 1.2), (side - 0.3, FRONT_Y - 0.7, top + 1.5),
+                        (side, FRONT_Y + 5.0, top + 1.05), (side, KNOB_Y + 8.0, top + 1.05),
+                        (side - 2.0, HANDLE_Y - 11.8, top + 1.05), (HANDLE_X + 13.0, HANDLE_Y - 10.4, top + 1.05),
+                        (HANDLE_X + 7.2, HANDLE_Y - 10.4, top + 3.5),
                         (HANDLE_X + 6.5, HANDLE_Y - 10.0, top + 9.4), (HANDLE_X + 6.4, HANDLE_Y - 2.5, top + 11.4),
                         (HANDLE_X + 2.5, HANDLE_Y + 6.2, top + 12.2), (HANDLE_X - 5.6, HANDLE_Y + 2.4, top + 12.8),
                         (HANDLE_X - 4.4, HANDLE_Y - 5.6, top + 12.4), (HANDLE_X + 3.4, HANDLE_Y - 6.8, top + 11.6)], 6)
@@ -1018,16 +1025,21 @@ def clear_tag(name, root, playlist):
 
 
 def clear_knob(name, root):
-    """The knurled knob on the right side (the page turns it to scrub): its pivot's local Z points
-    out of the side."""
-    knob = empty(name + "_knob", L(BODY_W / 2 + 0.05, -6.0, DOOR_Z + 30.0), rot=(0.0, math.radians(90), 0.0),
-                 parent=root)
+    """The knurled knob standing on the top, in the keys' row right of their deck (the page turns it
+    to scrub): its pivot, at its base, has its local Z up (three's +Y), as the suitcase's knob, so
+    the page turns it about its vertical and finds its top (Box3.max.y) above the pivot. A
+    frame-coloured ring, the top's, seats it (only the knob turns); the ring clears the keys' deck
+    by 6.8 mm, the handle's mount by 5.3, and the top's front and right edges by 7.6 and 7.8."""
+    lathe(name + "_knob_ring", [(KNOB_RING - 1.8, 0.0), (KNOB_RING, 0.0), (KNOB_RING, 0.6), (KNOB_RING - 0.4, 1.0),
+                                (KNOB_RING - 1.8, 1.0)], M["clear_frame"], seg=96, parent=root,
+          loc=L(KNOB_X, KNOB_Y, Z1 + 0.02))
+    knob = empty(name + "_knob", L(KNOB_X, KNOB_Y, Z1 + 0.05), parent=root)
     lathe(name + "_knob_skirt", [(0.01, 0.0), (12.6, 0.0), (12.6, 1.2), (12.0, 1.8), (0.01, 1.8)], M["alu_side"],
           seg=96, parent=knob)
     lathe(name + "_knob_body", [(0.01, 1.8), (10.8, 1.8), (10.8, 13.0), (10.2, 14.0), (9.0, 14.6), (0.01, 14.7)],
           M["alu_side"], seg=160, ridge=({1, 2}, 0.38), parent=knob)
     annulus(name + "_knob_top", 8.9, 0.4, M["alu"], z_mm=14.72, seg=96, parent=knob)
-    rbox(name + "_knob_mark", (4.6, 1.0, 0.12), M["ink_dark"], parent=knob, loc=L(-4.6, 0.0, 14.74))
+    rbox(name + "_knob_mark", (1.0, 4.6, 0.12), M["ink_dark"], parent=knob, loc=L(0.0, 4.6, 14.74))
     return knob
 
 
