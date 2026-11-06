@@ -3,6 +3,7 @@ import { useEffect, useEffectEvent, useLayoutEffect, useState } from 'react';
 import { AgXToneMapping, PMREMGenerator } from 'three';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { assetUrl } from '../lib/asset-url';
+import { DEFAULT_MODEL, modelById } from '../models';
 import type { PlayerSceneProps } from '../scene-props';
 import { skinById } from '../skins';
 import { CameraRig } from './CameraRig';
@@ -66,9 +67,8 @@ export function PlayerScene(props: PlayerSceneProps) {
   const { assetBase, bridge, skin, onReady, onFail, onProgress } = props;
   const [model, setModel] = useState<PlayerModel | null>(null);
   const [narrow] = useState(() => !isWide(window.innerWidth));
-  // A skin names its model. The four share one GLB, so a change recolours it in place (below);
-  // a skin with another model would load that one instead, through the effect that follows.
-  const modelPath = skinById(skin).model;
+  // The suitcase's GLB: the look chooses the model once the shell hands the scene one (Task 8).
+  const modelPath = modelById(DEFAULT_MODEL).glb;
   // Read when the download reports, so a new callback never starts the download again.
   const report = useEffectEvent((fraction: number | null) => onProgress(fraction));
   useEffect(() => {

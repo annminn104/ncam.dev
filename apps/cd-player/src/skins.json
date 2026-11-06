@@ -3,7 +3,6 @@
     {
       "id": "blush",
       "name": "Blush",
-      "model": "assets/cd-player.glb",
       "accent": "#e8a3b0",
       "onAccent": "#2a1a1e",
       "palette": {
@@ -19,7 +18,6 @@
     {
       "id": "sage",
       "name": "Sage",
-      "model": "assets/cd-player.glb",
       "accent": "#a9c6a5",
       "onAccent": "#15241a",
       "palette": {
@@ -35,7 +33,6 @@
     {
       "id": "cream",
       "name": "Cream",
-      "model": "assets/cd-player.glb",
       "accent": "#dcbb8f",
       "onAccent": "#2b1d10",
       "palette": {
@@ -51,7 +48,6 @@
     {
       "id": "cherry",
       "name": "Cherry",
-      "model": "assets/cd-player.glb",
       "accent": "#e5737b",
       "onAccent": "#2b0c10",
       "palette": {

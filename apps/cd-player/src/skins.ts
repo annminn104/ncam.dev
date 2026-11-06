@@ -14,8 +14,6 @@ export interface Skin {
   id: SkinId;
   /** What the picker calls it: 'Blush', 'Sage', 'Cream' or 'Cherry'. */
   name: string;
-  /** The GLB's path under public/: 'assets/cd-player.glb' for all four. */
-  model: string;
   /** The UI accent, sRGB hex. */
   accent: string;
   /** Text and icons on the accent, sRGB hex. */

@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_SKIN, SKINS, skinById, type SkinRole } from './skins';
+import { BLACK, WHITE, contrast, cssNumber, cssToken, inkOf, mix, rgb } from './testing/contrast';
 
 // Every role, held to the type by the compiler: a role added to SkinRole and missing here (or the
 // other way round) fails the typecheck.
@@ -16,62 +17,10 @@ const ROLE_SET: Record<SkinRole, true> = {
 const ROLES = Object.keys(ROLE_SET).sort();
 const HEX = /^#[0-9a-f]{6}$/;
 
-/** An sRGB colour's channels, 0 to 255, unrounded. */
-type Rgb = readonly [number, number, number];
-const WHITE: Rgb = [255, 255, 255];
-const BLACK: Rgb = [0, 0, 0];
-
-function rgb(hex: string): Rgb {
-  return [1, 3, 5].map((at) => parseInt(hex.slice(at, at + 2), 16)) as unknown as Rgb;
-}
-
-/** `color-mix(in srgb, a share, b)`, and a colour at an alpha of `share` over b alike. */
-function mix(a: Rgb, share: number, b: Rgb): Rgb {
-  return a.map((c, i) => c * share + b[i] * (1 - share)) as unknown as Rgb;
-}
-
-/** The accent's ink, --cdp-accent-ink: `color-mix(in srgb, accent 50%, black)`. */
-const inkOf = (accent: Rgb) => mix(accent, 0.5, BLACK);
-
-/** WCAG 2's relative luminance of an sRGB colour. */
-function luminance(colour: Rgb): number {
-  const [r, g, b] = colour.map((c) => {
-    const v = c / 255;
-    return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
-  });
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-}
-
-/** WCAG 2's contrast ratio of two sRGB colours, the lighter over the darker. */
-function contrast(a: Rgb, b: Rgb): number {
-  const [light, dark] = [luminance(a), luminance(b)].sort((x, y) => y - x);
-  return (light + 0.05) / (dark + 0.05);
-}
-
-const css = readFileSync(new URL('./styles/app.css', import.meta.url), 'utf8');
-
-/** A colour token of .cdp-root in src/styles/app.css: `#rrggbb`, or `rgb(r g b)` with an alpha. */
-function token(name: string): { colour: Rgb; alpha: number } {
-  const value = new RegExp(`--cdp-${name}:\\s*([^;]+);`).exec(css)?.[1].trim() ?? '';
-  if (HEX.test(value)) return { colour: rgb(value), alpha: 1 };
-  const parts = /^rgb\((\d+) (\d+) (\d+)(?: \/ ([\d.]+))?\)$/.exec(value);
-  if (!parts) throw new Error(`--cdp-${name} is not a colour this test reads: ${value}`);
-  const [, r, g, b, alpha] = parts;
-  return { colour: [Number(r), Number(g), Number(b)], alpha: alpha ? Number(alpha) : 1 };
-}
-
-/** A number the stylesheet writes, found by `pattern`'s one group. */
-function cssNumber(pattern: RegExp): number {
-  const value = Number(pattern.exec(css)?.[1]);
-  if (!Number.isFinite(value)) throw new Error(`not in src/styles/app.css: ${String(pattern)}`);
-  return value;
-}
-
 describe('skins', () => {
-  it('offers Blush, Sage, Cream and Cherry in that order, all on the one GLB', () => {
+  it('offers Blush, Sage, Cream and Cherry in that order', () => {
     expect(SKINS.map((skin) => skin.id)).toEqual(['blush', 'sage', 'cream', 'cherry']);
     expect(SKINS.map((skin) => skin.name)).toEqual(['Blush', 'Sage', 'Cream', 'Cherry']);
-    for (const skin of SKINS) expect(skin.model, skin.id).toBe('assets/cd-player.glb');
   });
 
   it('gives every role a colour in every skin, and no other key', () => {
@@ -95,7 +44,7 @@ describe('skins', () => {
   });
 
   it('keeps the text on every accent at 4.5:1, on its fill hovered and pressed too', () => {
-    const ink = token('ink').colour;
+    const ink = cssToken('ink').colour;
     // The fills of Load and Play: mixed with the ink on hover, with black while pressed.
     const hover = cssNumber(
       /\.cdp-button--primary:hover:not\(:disabled\)\s*\{\s*background:\s*color-mix\(in srgb, var\(--cdp-accent\) (\d+)%, var\(--cdp-ink\)\);/,
@@ -127,7 +76,7 @@ describe('skins', () => {
       /--cdp-wash:\s*color-mix\(in srgb, var\(--cdp-accent\) (\d+)%, rgb\(255 255 255\)\);/,
     );
     const art = cssNumber(/\.cdp-backdrop__layer::before\s*\{[^}]*opacity:\s*([\d.]+);/);
-    const [ink, faint, error, panel] = ['ink', 'ink-faint', 'error', 'panel'].map(token);
+    const [ink, faint, error, panel] = ['ink', 'ink-faint', 'error', 'panel'].map(cssToken);
     for (const skin of SKINS) {
       const accent = rgb(skin.accent);
       const page = mix(mix(accent, wash / 100, WHITE), 1 - art, BLACK);
