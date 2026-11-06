@@ -25,22 +25,56 @@ import json
 import math
 import os
 import random
+import re
 
 import bmesh
 from mathutils import Euler, Vector
 
 CLEAR_PARTS = ("shell", "frame", "board", "light")
 CLEAR_DEFAULT = {"shell": "clear", "frame": "silver", "board": "green", "light": "ice"}
+# What this script reads of each part's swatches, beside their `id`: an sRGB hex, or a number.
+SWATCH_FIELDS = {"shell": {"tint": "hex"}, "frame": {"colour": "hex", "metalness": "number", "roughness": "number"},
+                 "board": {"colour": "hex"}, "light": {"glow": "hex"}}
+HEX_COLOUR = re.compile(r"#[0-9a-fA-F]{6}")
+
+
+def _field_ok(value, kind):
+    if kind == "hex":
+        return isinstance(value, str) and HEX_COLOUR.fullmatch(value) is not None
+    return isinstance(value, (int, float)) and not isinstance(value, bool)
 
 
 def clear_swatches():
+    """src/clear-looks.json's swatches, part -> id -> swatch. It stops the run, naming the file and
+    what is wrong, unless every part is a list of swatches, each with an id and the fields this
+    script reads (SWATCH_FIELDS): a part or a field it lacked would otherwise fail later, as a
+    traceback."""
     path = os.path.normpath(os.path.join(_scripts_dir(), "..", "..", "..", "src", "clear-looks.json"))
     try:
         with open(path, encoding="utf-8") as f:
             data = json.load(f)
     except (OSError, ValueError) as err:
         raise SystemExit("clear.py: cannot read %s (%s: %s)" % (path, type(err).__name__, err))
-    return {part: {s["id"]: s for s in data[part]} for part in CLEAR_PARTS}
+    if not isinstance(data, dict):
+        raise SystemExit("clear.py: %s must be an object with the parts %s" % (path, ", ".join(CLEAR_PARTS)))
+    swatches = {}
+    for part in CLEAR_PARTS:
+        listed = data.get(part)
+        if not isinstance(listed, list) or not listed:
+            raise SystemExit("clear.py: %s has no %s swatches (a non-empty list)" % (path, part))
+        swatches[part] = {}
+        for i, swatch in enumerate(listed):
+            if not isinstance(swatch, dict):
+                raise SystemExit("clear.py: %s: %s swatch %d is not an object (%r)" % (path, part, i, swatch))
+            sid = swatch.get("id")
+            if not isinstance(sid, str) or not sid:
+                raise SystemExit("clear.py: %s: %s swatch %d has no id" % (path, part, i))
+            for field, kind in SWATCH_FIELDS[part].items():
+                if not _field_ok(swatch.get(field), kind):
+                    raise SystemExit("clear.py: %s: %s %r has no %s %s (%r)" % (
+                        path, part, sid, "#rrggbb" if kind == "hex" else "numeric", field, swatch.get(field)))
+            swatches[part][sid] = swatch
+    return swatches
 
 
 def clear_look(spec=None):
