@@ -1237,6 +1237,11 @@
 .cdp-skin .cdp-skin__menu[hidden] {
   display: none;
 }
+/* While the popover is open the bar stands over what comes after it in the page: the card, a panel
+   of the same z-index, which stands under the bar on a sideways phone, and the way in. */
+.cdp-bar:has(.cdp-skin__menu:not([hidden])) {
+  z-index: 5;
+}
 .cdp-skin .cdp-skin__option {
   display: flex;
   align-items: center;

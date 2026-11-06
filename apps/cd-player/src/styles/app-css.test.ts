@@ -356,6 +356,17 @@ describe('app.css: the look picker', () => {
     );
   });
 
+  // On a sideways phone the card stands under the bar in one column, and as a panel of the same
+  // z-index after it in the page it covered all of the popover but its first groups.
+  it('stands the bar over the panels, the open sheet and the way in while its popover is open', () => {
+    const z = (declarations: string) => Number(/z-index:\s*(\d+);/.exec(declarations)?.[1]);
+    const panels = /\.cdp-bar,\s*\.cdp-tracks,\s*\.cdp-now\s*\{([^}]*)\}/.exec(css)?.[1] ?? '';
+    const open = z(rule('.cdp-bar:has(.cdp-skin__menu:not([hidden]))'));
+    expect(open).toBeGreaterThan(z(panels));
+    expect(open).toBeGreaterThan(z(rule('.cdp-gate')));
+    expect(open).toBeGreaterThan(z(inner(phone, '.cdp-tracks.is-open')));
+  });
+
   it('draws a Clear part’s colours as 28 px square dots, the chosen one ringed in the accent’s ink', () => {
     expect(rule('.cdp-skin__dot')).toMatch(/width:\s*28px;\s*height:\s*28px;/);
     expect(rule('.cdp-skin__dot')).toMatch(/border-radius:\s*var\(--cdp-radius-control\);/);
