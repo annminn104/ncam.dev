@@ -109,7 +109,16 @@ describe('downloadModel', () => {
       downloadModel(URL_, undefined, undefined, () =>
         Promise.resolve(new Response('Not Found', { status: 404 })),
       ),
-    ).rejects.toThrow(/404/);
+    ).rejects.toThrow('cd-player.glb answered 404');
+    // The Clear's own file is named, not the suitcase's.
+    await expect(
+      downloadModel(
+        'https://cd-player.example/assets/cd-player-clear.glb?v=2',
+        undefined,
+        undefined,
+        () => Promise.resolve(new Response('Not Found', { status: 404 })),
+      ),
+    ).rejects.toThrow('cd-player-clear.glb answered 404');
   });
 });
 

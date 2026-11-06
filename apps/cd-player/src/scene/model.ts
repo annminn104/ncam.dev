@@ -1,14 +1,24 @@
-import { LoaderUtils, type Group, type Mesh, type Object3D } from 'three';
+import { LoaderUtils } from 'three';
+import type { Group, Mesh, Object3D } from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 import type { Look } from '../looks';
-import { type ModelId, type ModelProfile } from '../models';
+import type { ModelId, ModelProfile } from '../models';
 import { OPTIONAL_NODES, REQUIRED_NODES, type OptionalNode, type RequiredNode } from './contract';
 import { upgradeMaterials, type Slots } from './materials';
 
+/** The file a model URL names, for the errors and the logs: its last path segment. */
+function modelFile(url: string): string {
+  const path = url.split(/[?#]/)[0];
+  return path.slice(path.lastIndexOf('/') + 1) || path;
+}
+
 export class ModelContractError extends Error {
-  constructor(readonly missing: string[]) {
-    super(`cd-player.glb is missing ${missing.join(', ')}`);
+  constructor(
+    readonly missing: string[],
+    file = 'the model',
+  ) {
+    super(`${file} is missing ${missing.join(', ')}`);
     this.name = 'ModelContractError';
   }
 }
@@ -59,7 +69,7 @@ export async function downloadModel(
 ): Promise<ArrayBuffer> {
   onProgress?.(null);
   const response = await fetchModel(url, { signal });
-  if (!response.ok) throw new Error(`cd-player.glb answered ${response.status}`);
+  if (!response.ok) throw new Error(`${modelFile(url)} answered ${response.status}`);
   if (!onProgress || !response.body) return response.arrayBuffer();
   const total = Number(response.headers.get('Content-Length')) || 0;
   const reader = response.body.getReader();
@@ -104,7 +114,7 @@ export async function loadPlayerModel(
     if (node) nodes[name] = node;
     else missing.push(name);
   }
-  if (missing.length) throw new ModelContractError(missing);
+  if (missing.length) throw new ModelContractError(missing, modelFile(url));
   for (const name of OPTIONAL_NODES) {
     const node = root.getObjectByName(name);
     if (node) nodes[name] = node;
