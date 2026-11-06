@@ -1223,7 +1223,7 @@
   right: 0;
   display: grid;
   gap: 2px;
-  width: 176px;
+  width: min(280px, calc(100vw - 32px));
   padding: 6px;
   /* Whiter than a panel and frosted itself: the presets under it would show through. */
   background: rgb(255 255 255 / 0.92);
@@ -1258,6 +1258,56 @@
 }
 .cdp-skin .cdp-skin__option[aria-checked='true'] {
   font-weight: 600;
+}
+/* One radio group per row: the model, then the suitcase's skins or the Clear model's parts. */
+.cdp-skin__group + .cdp-skin__group {
+  margin-top: 6px;
+  padding-top: 8px;
+  border-top: 1px solid var(--cdp-hairline);
+}
+.cdp-skin__legend {
+  display: flex;
+  justify-content: space-between;
+  margin: 0 4px 6px;
+  font-family: var(--cdp-mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--cdp-ink-faint);
+}
+.cdp-skin__models {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+}
+.cdp-skin__swatches {
+  display: flex;
+  gap: 4px;
+  padding: 0 4px;
+}
+.cdp-skin__dot {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--cdp-line-strong);
+  border-radius: var(--cdp-radius-control);
+  cursor: pointer;
+}
+.cdp-skin__dot[aria-checked='true'] {
+  outline: 2px solid var(--cdp-accent-ink);
+  outline-offset: 1px;
+}
+.cdp-skin__dot svg {
+  width: 14px;
+  height: 14px;
+  color: var(--cdp-ink);
+}
+.cdp-skin__load {
+  margin: 4px 4px 0;
+  font-size: 12px;
+  color: var(--cdp-ink-soft);
 }
 .cdp-skin__name {
   flex: 1;

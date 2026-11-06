@@ -176,7 +176,7 @@ export default function App({ controller, initial = null, assetBase = '', initia
   // noted, and saved when a change brought it while the scene was live; the boot's own writes
   // nothing, as its `ready` comes with onReady, before the phase is live (a model chosen before
   // that was saved as it was chosen). A change that fails goes back to the model still shown.
-  const [, setModelLoad] = useState<ModelLoad | null>(null);
+  const [modelLoad, setModelLoad] = useState<ModelLoad | null>(null);
   const shownLoad = useRef<ModelLoad | null>(null);
   const shownModel = useRef<ModelId>(DEFAULT_MODEL);
   const onModel = useCallback(
@@ -356,6 +356,7 @@ export default function App({ controller, initial = null, assetBase = '', initia
         onSubmit={loadLink}
         look={lookState}
         onLook={changeLook}
+        modelLoad={modelLoad}
         current={shown}
         busy={link.pending}
         // The collection on show is already there: pressing its preset does nothing.

@@ -15,6 +15,7 @@ const render = (over: Partial<Props> = {}) =>
       onSubmit: () => {},
       look: DEFAULT_LOOK_STATE,
       onLook: () => {},
+      modelLoad: null,
       current: null,
       busy: null,
       onPick: () => {},
@@ -81,7 +82,7 @@ describe('LinkBar and Player', () => {
     expect(share).toBeGreaterThan(-1);
     expect(picker).toBeGreaterThan(share);
     expect(picker).toBeLessThan(html.indexOf('</form>'));
-    expect(html).toContain('<span class="cdp-sr"> colour: Sage</span>');
+    expect(html).toContain('<span class="cdp-sr">: Suitcase, Sage</span>');
   });
 });
 

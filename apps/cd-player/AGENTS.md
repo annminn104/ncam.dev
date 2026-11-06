@@ -774,7 +774,7 @@ in), **Sage**, **Cream** and **Cherry**. **Player**, after Share in the link bar
   glass at 4.5:1, the accent's ink (each sRGB channel halved, as the `color-mix` with black makes
   it) on the glass at 3:1. The live page measured the help line at 4.66:1 at its worst, over the
   twelve presets' covers and a black one.
-- **The picker** (`src/shell/SkinPicker.tsx`): a button showing the current skin's swatch (its
+- **The picker** (`src/shell/LookPicker.tsx`): a button showing the current skin's swatch (its
   leather), named "Player colour: Blush" and so on, that opens a popover holding the four as a
   radio group. The arrow keys move and choose at once (they wrap), Home and End go to the first
   and the last, but a key held with Alt, Ctrl or Cmd is the browser's (Alt+Arrow is Back and
@@ -988,7 +988,7 @@ Unit tests (`src/**/*.test.ts`, node environment, run by the root `pnpm test`):
   image hosts only), `skins.test.ts` (a colour for every role in every skin, the colours' format,
   the accents' contrast, hovered and pressed, and the shell's on the darkest glass and page,
   `skinById`) and
-  `shell/SkinPicker.test.ts` (the picker's markup rendered, and its keys through `skinForPress`,
+  `shell/LookPicker.test.ts` (the picker's markup rendered, and its keys through `optionForPress`,
   modified ones left to the browser);
 - data: `spotify/embed.test.ts` (fixture pages for a playlist, a track, an artist and the not-found
   page, and layout changes), `spotify/types.test.ts`, `spotify/client.test.ts` (the messages,

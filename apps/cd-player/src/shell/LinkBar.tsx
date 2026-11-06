@@ -1,9 +1,10 @@
 import { useState, type FormEvent } from 'react';
 import type { CollectionRef } from '../routes';
 import type { LookState } from '../looks';
+import type { ModelLoad } from '../scene-props';
 import type { Collection } from '../spotify/types';
 import { Presets } from './Presets';
-import { SkinPicker } from './SkinPicker';
+import { LookPicker } from './LookPicker';
 
 interface Props {
   collection: Collection | null;
@@ -16,9 +17,11 @@ interface Props {
   /** Loads the link again, beside an error that trying again may fix (a 502, a stall). */
   onRetry?: () => void;
   onSubmit(input: string): void;
-  /** The player's look; its skin is picked after Share. */
+  /** The player's look; its model and colours are picked after Share. */
   look: LookState;
   onLook(next: LookState): void;
+  /** The model change in progress, as the scene reports it. */
+  modelLoad: ModelLoad | null;
   /** The collection in view, and the one being loaded, for "Popular on Spotify" (Presets). */
   current: CollectionRef | null;
   busy: CollectionRef | null;
@@ -54,6 +57,7 @@ export function LinkBar({
   onSubmit,
   look,
   onLook,
+  modelLoad,
   current,
   busy,
   onPick,
@@ -100,7 +104,7 @@ export function LinkBar({
         <button type="button" className="cdp-button" onClick={share}>
           {shared === 'copied' ? 'Copied' : shared === 'failed' ? "Couldn't copy" : 'Share'}
         </button>
-        <SkinPicker skin={look.skin} onChange={(skin) => onLook({ ...look, skin })} />
+        <LookPicker look={look} onChange={onLook} load={modelLoad} />
       </form>
       {error && (
         <div className="cdp-link__error">

@@ -348,6 +348,23 @@ describe('app.css: Popular on Spotify', () => {
   });
 });
 
+describe('app.css: the look picker', () => {
+  it('sizes the popover to its groups, never past the screen', () => {
+    expect(rule('.cdp-skin .cdp-skin__menu')).not.toMatch(/width:\s*176px/);
+    expect(rule('.cdp-skin .cdp-skin__menu')).toMatch(
+      /width:\s*min\(280px, calc\(100vw - 32px\)\);/,
+    );
+  });
+
+  it('draws a Clear part’s colours as 28 px square dots, the chosen one ringed in the accent’s ink', () => {
+    expect(rule('.cdp-skin__dot')).toMatch(/width:\s*28px;\s*height:\s*28px;/);
+    expect(rule('.cdp-skin__dot')).toMatch(/border-radius:\s*var\(--cdp-radius-control\);/);
+    expect(rule(".cdp-skin__dot[aria-checked='true']")).toMatch(
+      /outline:\s*2px solid var\(--cdp-accent-ink\);/,
+    );
+  });
+});
+
 describe('app.css: the skin picker', () => {
   /** The block that cuts the picker's button down to its swatch. */
   const swatchOnly = /@media \(max-width: 920px\)\s*\{([\s\S]*?)\n\}/.exec(css)?.[1] ?? '';
