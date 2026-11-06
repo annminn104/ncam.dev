@@ -1,18 +1,23 @@
-"""Cycles stills of the suitcase CD player, headless:
+"""Cycles stills of the CD players, headless:
 
-    CDP_HERO_VIEW=hero|lid CDP_HERO_QUALITY=preview|final \\
+    CDP_MODEL=suitcase|clear CDP_HERO_VIEW=hero|lid|inside CDP_HERO_QUALITY=preview|final \\
       /Applications/Blender.app/Contents/MacOS/Blender --background --factory-startup \\
       --python-exit-code 1 --python apps/cd-player/art/blender/scripts/hero.py
 
+CDP_MODEL picks the player: `suitcase` (the default) or `clear` (clear.py). The suitcase's views:
 `hero` is the three-quarter product still the design was approved from (the lid open, a disc
 spinning, five more in the rack, a stack of cases beside it); `lid` looks straight into the open
-lid (the case, the rack and its discs, the strap and the plate). `preview` is 800 x 600 at 24
-samples, `final` 1600 x 1200 at 160; any other value of either stops the run with exit 1, naming
-the valid ones. The art it prints is the gallery's thumbnails
-(apps/portfolio/public/thumbnails), so anyone can rerun it. The PNG lands in
+lid (the case, the rack and its discs, the strap and the plate). The Clear model's: `hero`, the
+three-quarter still of the player between its stand and its case, and `inside`, a close-up of the
+board, the LCD and the mechanism through the shell. `preview` is 800 x 600 at 24 samples, `final`
+1600 x 1200 at 160; any other value of the model, the view or the quality stops the run with exit
+1, naming the valid ones. The art it prints is the gallery's thumbnails
+(apps/portfolio/public/thumbnails), so anyone can rerun it. The suitcase's PNG lands in
 art/.out/v2-<view>-<quality>.png, or art/.out/v2-<view>-grid-<quality>.png when parts.py builds
 the grid layout. CDP_SKIN=<id> (an id of src/skins.json) renders that skin instead of Blush, into
-art/.out/skins/<id>/. Also runs in a live Blender through tools/bl.py.
+art/.out/skins/<id>/. The Clear model renders its default look, or CDP_CLEAR_LOOK=<shell>,<frame>,
+<board>,<light> (ids of src/clear-looks.json), into art/.out/clear/<look>/clear-<view>-<quality>.png.
+Also runs in a live Blender through tools/bl.py.
 """
 import math
 import os
@@ -36,42 +41,79 @@ def setting(name, default, valid):
     return value
 
 
-VIEW = setting("CDP_HERO_VIEW", "hero", ("hero", "lid"))
+MODEL = setting("CDP_MODEL", "suitcase", ("suitcase", "clear"))
+VIEW = setting("CDP_HERO_VIEW", "hero", ("hero", "lid") if MODEL == "suitcase" else ("hero", "inside"))
 QUALITY = setting("CDP_HERO_QUALITY", "preview", ("preview", "final"))
 SKIN = os.environ.get("CDP_SKIN")  # an id of src/skins.json; unset renders Blush, empty is an error
 os.makedirs(OUT, exist_ok=True)
 
-new_scene("cd_player_suitcase", res=(1600, 1200), samples=128)
-build_materials(skin_palette(SKIN) if SKIN is not None else None)
 
-artist = image_mat("art_disc", THUMBS + "viktor.jpg", 117, 117, coat=0.6, rough=0.3)
-album = image_mat("art_booklet", THUMBS + "mindloop.jpg", 120, 120, coat=0.3)
-rack_art = [image_mat("art_rack_%d" % i, THUMBS + f, 117, 117, coat=0.6, rough=0.3) for i, f in enumerate(
-    ("holodex.jpg", "bali.jpg", "garden-home.jpg", "immersive-ocean.jpg", "toonhub.jpg"))]
-covers = [image_mat("art_cover_%d" % i, THUMBS + f, 120, 120, coat=0.3) for i, f in enumerate(
-    ("chess.jpg", "mini-store.jpg", "cd-player.jpg"))]
+def studio():
+    area_light("key", L(-900, -950, 1300), L(0, 0, 100), 1.3, 62, size_y=0.9)
+    area_light("kicker", L(-700, 600, 500), L(0, 0, 150), 0.6, 30, color=(1.0, 0.94, 0.95))
+    area_light("rim", L(700, 900, 900), L(0, 0, 120), 0.9, 40, color=(1.0, 0.96, 0.93))
+    area_light("fill", L(1100, -500, 350), L(0, 0, 80), 1.1, 14)
 
-floor = rbox("floor", (5000, 5000, 10), M["floor"], loc=L(0, 0, -5))
-floor.is_shadow_catcher = True
-make_player("player", artist, album, rack_art)
-bpy.data.objects["player_disc"].rotation_euler = (0, 0, math.radians(-8))
-for i, cov in enumerate(covers):
-    make_case("stack_%d" % i, cov, L(272, 40, 3.4 + i * 10.45), (0, 0, math.radians(14 - i * 9)))
-make_case("open_case", covers[1], L(318, -178, 3.4), (0, 0, math.radians(-24)), open_deg=168.0)
 
-area_light("key", L(-900, -950, 1300), L(0, 0, 100), 1.3, 62, size_y=0.9)
-area_light("kicker", L(-700, 600, 500), L(0, 0, 150), 0.6, 30, color=(1.0, 0.94, 0.95))
-area_light("rim", L(700, 900, 900), L(0, 0, 120), 0.9, 40, color=(1.0, 0.96, 0.93))
-area_light("fill", L(1100, -500, 350), L(0, 0, 80), 1.1, 14)
-if VIEW == "lid":
-    # Straight into the open lid: its inner face leans back 10 degrees, its centre is at
-    # (0, 165, 196); the camera stands 680 mm out along the face's normal.
-    camera("cam", L(0, -505, 314), L(0, 165, 196), lens=50, fstop=8.0, focus=L(0, 165, 196))
-else:
-    camera("cam", L(-420, -800, 470), L(60, -10, 132), lens=50, fstop=7.1, focus=L(-10, -40, 90))
+def suitcase_scene():
+    new_scene("cd_player_suitcase", res=(1600, 1200), samples=128)
+    build_materials(skin_palette(SKIN) if SKIN is not None else None)
 
-PNG = OUT + ("skins/%s/" % SKIN if SKIN is not None else "") + "v2-%s%s-%s.png" % (
-    VIEW, "-grid" if RACK_LAYOUT == "grid" else "", QUALITY)
+    artist = image_mat("art_disc", THUMBS + "viktor.jpg", 117, 117, coat=0.6, rough=0.3)
+    album = image_mat("art_booklet", THUMBS + "mindloop.jpg", 120, 120, coat=0.3)
+    rack_art = [image_mat("art_rack_%d" % i, THUMBS + f, 117, 117, coat=0.6, rough=0.3) for i, f in enumerate(
+        ("holodex.jpg", "bali.jpg", "garden-home.jpg", "immersive-ocean.jpg", "toonhub.jpg"))]
+    covers = [image_mat("art_cover_%d" % i, THUMBS + f, 120, 120, coat=0.3) for i, f in enumerate(
+        ("chess.jpg", "mini-store.jpg", "cd-player.jpg"))]
+
+    floor = rbox("floor", (5000, 5000, 10), M["floor"], loc=L(0, 0, -5))
+    floor.is_shadow_catcher = True
+    make_player("player", artist, album, rack_art)
+    bpy.data.objects["player_disc"].rotation_euler = (0, 0, math.radians(-8))
+    for i, cov in enumerate(covers):
+        make_case("stack_%d" % i, cov, L(272, 40, 3.4 + i * 10.45), (0, 0, math.radians(14 - i * 9)))
+    make_case("open_case", covers[1], L(318, -178, 3.4), (0, 0, math.radians(-24)), open_deg=168.0)
+
+    studio()
+    if VIEW == "lid":
+        # Straight into the open lid: its inner face leans back 10 degrees, its centre is at
+        # (0, 165, 196); the camera stands 680 mm out along the face's normal.
+        camera("cam", L(0, -505, 314), L(0, 165, 196), lens=50, fstop=8.0, focus=L(0, 165, 196))
+    else:
+        camera("cam", L(-420, -800, 470), L(60, -10, 132), lens=50, fstop=7.1, focus=L(-10, -40, 90))
+
+    return OUT + ("skins/%s/" % SKIN if SKIN is not None else "") + "v2-%s%s-%s.png" % (
+        VIEW, "-grid" if RACK_LAYOUT == "grid" else "", QUALITY)
+
+
+def clear_scene():
+    exec(compile(open(BASE + "/clear.py").read(), "clear.py", "exec"), globals())
+    look, ids = clear_look(os.environ.get("CDP_CLEAR_LOOK"))
+    new_scene("cd_player_clear", res=(1600, 1200), samples=128)
+    build_clear_materials(look)
+    artist = image_mat("art_disc", THUMBS + "viktor.jpg", 117, 117, coat=0.6, rough=0.3)
+    album = image_mat("art_booklet", THUMBS + "mindloop.jpg", 120, 120, coat=0.3)
+    rack_art = [image_mat("art_rack_%d" % i, THUMBS + f, 117, 117, coat=0.6, rough=0.3) for i, f in enumerate(
+        ("holodex.jpg", "bali.jpg", "garden-home.jpg", "immersive-ocean.jpg", "toonhub.jpg"))]
+    M["card_print"] = mat("card_print", (0.92, 0.9, 0.88, 1), rough=0.4)
+    M["tag_print"] = mat("tag_print", (0.92, 0.9, 0.88, 1), rough=0.55)
+    M["lcd_screen"] = mat("lcd_screen", lin(14, 22, 26), rough=0.2, emit=lin(*hexrgb(look["light"]["glow"])),
+                          emit_s=0.06)
+    floor = rbox("floor", (5000, 5000, 10), M["floor"], loc=L(0, 0, -5))
+    floor.is_shadow_catcher = True
+    make_clear_player("clear", artist, album, look, rack_art)
+    studio()
+    clear_flags()
+    if VIEW == "inside":
+        # Low from the left: the board's chips, logo, LCD and VU strip, the door's lower edge, the
+        # arm's magnet, the nameplate.
+        camera("cam", L(-205, -275, 128), L(-12, 2, 70), lens=55, fstop=5.6, focus=L(-30, 4, 62))
+    else:
+        camera("cam", L(-255, -880, 400), L(2, 10, 122), lens=50, fstop=7.1, focus=L(0, -38, 140))
+    return OUT + "clear/%s/clear-%s-%s.png" % ("-".join(ids[p] for p in CLEAR_PARTS), VIEW, QUALITY)
+
+
+PNG = clear_scene() if MODEL == "clear" else suitcase_scene()
 os.makedirs(os.path.dirname(PNG), exist_ok=True)
 if QUALITY == "final":
     render(PNG, res=(1600, 1200), samples=160)

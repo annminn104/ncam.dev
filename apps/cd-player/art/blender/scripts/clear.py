@@ -1,0 +1,1145 @@
+"""The Clear model: an upright, see-through CD player (art/blender/scripts/build_clear.py names
+what the page drives; hero.py renders it when CDP_MODEL=clear).
+
+Needs cdkit's and parts.py's namespace (exec'd after them). Blender's axes as in parts.py: x
+right, y away from the viewer (the front faces -y), z up, millimetres through L(x, y, z). The
+player stands at the origin, the stand with the rack's five slots on its right, the jewel case on
+its left.
+
+The body is a clear polycarbonate box on a plinth of the frame's colour: a front plate with the
+window's opening, a back plate, and one hollow band for the sides, the top and the bottom (never a
+filled block, which would refract everything inside it). Behind the round glass door, hinged on
+its left, the disc stands on its spindle, ringed by the light ring, the laser's swing arm and the
+motor behind it; the board runs along the bottom with the LCD, the VU strip and the silkscreened
+logo; a speaker either side; four AA cells across the back under the top; six keys and the handle
+on top, the tag hanging from the handle over the front, the knob on the right side and the
+nameplate on the plinth.
+
+Its colours come part by part from src/clear-looks.json (clear_look): build_clear_materials(look)
+makes the four parts' materials (clear_shell, clear_frame, board, light) and the fixed ones. The
+web build (WEB) carries the empties the page drives at rest, the prints as plain planes and no
+discs in the rack; a render (not WEB) plays: the arm over the disc, discs in the rack, the LCD
+and the VU lit, the tag and the plate lettered.
+"""
+import json
+import math
+import os
+import random
+
+import bmesh
+from mathutils import Euler, Vector
+
+CLEAR_PARTS = ("shell", "frame", "board", "light")
+CLEAR_DEFAULT = {"shell": "clear", "frame": "silver", "board": "green", "light": "ice"}
+
+
+def clear_swatches():
+    path = os.path.normpath(os.path.join(_scripts_dir(), "..", "..", "..", "src", "clear-looks.json"))
+    try:
+        with open(path, encoding="utf-8") as f:
+            data = json.load(f)
+    except (OSError, ValueError) as err:
+        raise SystemExit("clear.py: cannot read %s (%s: %s)" % (path, type(err).__name__, err))
+    return {part: {s["id"]: s for s in data[part]} for part in CLEAR_PARTS}
+
+
+def clear_look(spec=None):
+    """A look from "shell,frame,board,light" (hero.py's CDP_CLEAR_LOOK); None is the default."""
+    swatches = clear_swatches()
+    if spec is None:
+        ids = dict(CLEAR_DEFAULT)
+    else:
+        parts = spec.split(",")
+        if len(parts) != 4:
+            raise SystemExit("clear.py: CDP_CLEAR_LOOK needs shell,frame,board,light: %r" % spec)
+        ids = dict(zip(CLEAR_PARTS, parts))
+    for part, sid in ids.items():
+        if sid not in swatches[part]:
+            raise SystemExit("clear.py: no %s %r (%s)" % (part, sid, ", ".join(swatches[part])))
+    return {part: swatches[part][ids[part]] for part in CLEAR_PARTS}, ids
+
+
+# ------------------------------------------------------------------ materials
+def _hex(h):
+    """'#rrggbb' -> linear RGBA, as parts.py turns its palettes (lin(*hexrgb(h)))."""
+    return lin(*hexrgb(h))
+
+
+def _luma(c):
+    return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]
+
+
+def _shadow_colour(m, rgb):
+    """mat() lets Cycles' shadow rays through glass, faintly grey: tint them as the glass is."""
+    for node in m.node_tree.nodes:
+        if node.type == "BSDF_TRANSPARENT":
+            node.inputs["Color"].default_value = (rgb[0], rgb[1], rgb[2], 1.0)
+
+
+def _windings(m, pitch_mm=0.32):
+    """Copper wire wound round a coil (Cycles only): fine bands across the coil's local x."""
+    nt = m.node_tree
+    wave = nt.nodes.new("ShaderNodeTexWave")
+    wave.wave_type = "BANDS"
+    wave.bands_direction = "X"
+    wave.wave_profile = "SIN"
+    wave.inputs["Scale"].default_value = 0.31416 / (pitch_mm * MM)
+    nt.links.new(obj_coords(m, 1.0), wave.inputs["Vector"])
+    bump = nt.nodes.new("ShaderNodeBump")
+    bump.inputs["Strength"].default_value = 0.6
+    bump.inputs["Distance"].default_value = 0.00008
+    nt.links.new(wave.outputs["Fac"], bump.inputs["Height"])
+    nt.links.new(bump.outputs["Normal"], bsdf(m).inputs["Normal"])
+    return m
+
+
+def see_through_backdrop():
+    """A render's world (new_scene's): the camera sees the flat backdrop, reflections and the light
+    the studio HDRI. A ray that has only passed through glass on its way from the camera is still
+    the camera's view, so it sees the backdrop too: without this, the shell would show the HDRI
+    behind it, as if its back were smoked."""
+    w = SC.world if SC is not None else None
+    if w is None or w.node_tree is None:
+        return
+    nt = w.node_tree
+    lp = next((n for n in nt.nodes if n.type == "LIGHT_PATH"), None)
+    mix = next((n for n in nt.nodes if n.type == "MIX_SHADER"), None)
+    if lp is None or mix is None:
+        return
+
+    def math_node(op, a, b):
+        node = nt.nodes.new("ShaderNodeMath")
+        node.operation = op
+        for socket, value in zip(node.inputs, (a, b)):
+            if isinstance(value, (int, float)):
+                socket.default_value = value
+            else:
+                nt.links.new(value, socket)
+        return node.outputs[0]
+
+    # Through glass and nothing else: a transmission ray with no reflection and no diffuse bounce
+    # behind it (Cycles counts a refraction in Transmission Depth, never in Glossy Depth), and not a
+    # shadow ray.
+    only_glass = math_node("MULTIPLY", math_node("LESS_THAN", lp.outputs["Glossy Depth"], 0.5),
+                           math_node("LESS_THAN", lp.outputs["Diffuse Depth"], 0.5))
+    through = math_node("MULTIPLY", lp.outputs["Is Transmission Ray"], only_glass)
+    seen = math_node("MAXIMUM", lp.outputs["Is Camera Ray"], through)
+    nt.links.new(math_node("MULTIPLY", seen, math_node("SUBTRACT", 1.0, lp.outputs["Is Shadow Ray"])),
+                 mix.inputs["Fac"])
+
+
+def clear_flags():
+    """A render's flags: dark cards out of the camera's sight that only reflections see, as a
+    photographer sets them round a clear product, so the shell's edges and walls read against the
+    light backdrop. They cast no shadow and light nothing."""
+    m = mat("flag", (0.012, 0.012, 0.014, 1), rough=0.9)
+    for name, loc, size, target in (("flag_l", L(-760, 620, 300), (700, 600), L(0, 0, 150)),
+                                    ("flag_r", L(820, 620, 300), (700, 600), L(0, 0, 150)),
+                                    ("flag_floor", L(0, -900, 0.6), (2400, 1500), L(0, -900, 100))):
+        ob = rbox(name, (size[0], size[1], 1.0), m, loc=loc)
+        ob.rotation_euler = (Vector(target) - Vector(loc)).to_track_quat("Z", "Y").to_euler()
+        for attr in ("visible_camera", "visible_diffuse", "visible_transmission", "visible_volume_scatter",
+                     "visible_shadow"):
+            setattr(ob, attr, False)
+    return m
+
+
+def build_clear_materials(look):
+    """The Clear model's materials on top of build_materials() (the disc's and the case's): the four
+    a look colours, from its swatches, and the fixed ones of the parts inside."""
+    build_materials()
+    shell, frame, board, light = (look[p] for p in CLEAR_PARTS)
+    tint = _hex(shell["tint"])
+    glow = _hex(light["glow"])
+    # Cycles tints a transmissive surface at each crossing, in and out: a wall's two faces give the
+    # swatch's tint once, as the page's shell (its front faces only) tints once per wall.
+    wall = tint if WEB else tuple(math.sqrt(c) for c in tint[:3]) + (1.0,)
+    M["clear_shell"] = mat("clear_shell", wall, rough=0.05, trans=1.0, ior=1.49)
+    M["door_glass"] = mat("door_glass", (0.98, 0.99, 1.0, 1), rough=0.02, trans=1.0, ior=1.52)
+    M["clear_frame"] = mat("clear_frame", _hex(frame["colour"]), metal=float(frame["metalness"]),
+                           rough=float(frame["roughness"]))
+    board_rgb = _hex(board["colour"])
+    M["board"] = mat("board", board_rgb, rough=0.28, coat=0.6, coat_rough=0.12)
+    # The light's glow: bright enough to read as lit, not so bright that AgX bleaches it to white.
+    M["light"] = mat("light", (0, 0, 0, 1), emit=glow, emit_s=3.2)
+    # One emissive material for the ten VU segments: the page clones it per segment and lights
+    # them (src/scene/vu-materials.ts), so the GLB carries 1.0; a render's lit segments glow at 3.
+    M["vu"] = mat("vu", (0.02, 0.02, 0.022, 1), rough=0.3, emit=glow, emit_s=1.0 if WEB else 3.0)
+    M["chip"] = mat("chip", (0.02, 0.02, 0.022, 1), rough=0.35)
+    M["copper"] = mat("copper", lin(184, 115, 51), metal=1.0, rough=0.25)
+    M["flex"] = mat("flex", lin(196, 110, 28), rough=0.4, coat=0.4)
+    # The silkscreen is white, and black on a white board, as a real board is printed.
+    silk = (0.92, 0.92, 0.9, 1) if _luma(board_rgb) < 0.45 else (0.025, 0.025, 0.03, 1)
+    M["silk"] = mat("silk", silk, rough=0.7)
+    M["solder"] = mat("solder", (0.8, 0.8, 0.82, 1), metal=1.0, rough=0.2)
+    M["cell"] = mat("cell", lin(30, 30, 34), rough=0.45, coat=0.3)
+    M["magnet"] = mat("magnet", (0.32, 0.32, 0.34, 1), metal=1.0, rough=0.4)
+    M["surround"] = mat("surround", (0.03, 0.03, 0.035, 1), rough=0.85)
+    M["wire_red"] = mat("wire_red", lin(176, 30, 28), rough=0.45, coat=0.2)
+    if not WEB:
+        _shadow_colour(M["clear_shell"], [0.97 * c for c in wall[:3]])
+        see_through_backdrop()
+        add_bump(M["clear_frame"], "noise", scale=6000, strength=0.05, distance=0.00008)  # bead-blasted
+        _windings(M["copper"])
+        # Render-only: the LCD's lit and unlit segments, the VU's top three segments unlit.
+        M["lcd_glow"] = mat("lcd_glow", (0, 0, 0, 1), emit=glow, emit_s=2.4)
+        M["vu_dim"] = mat("vu_dim", (0.02, 0.02, 0.022, 1), rough=0.3, emit=glow, emit_s=0.12)
+    return M
+
+
+# ------------------------------------------------------------------ dimensions (mm)
+BODY_W, BODY_H, BODY_D, BODY_R = 300.0, 214.0, 76.0, 20.0
+WALL = 3.0
+PLINTH_W, PLINTH_D, PLINTH_H, PLINTH_Y = 318.0, 112.0, 30.0, -8.0
+FOOT_H = 1.5                        # the plinth's rubber feet
+Z0 = PLINTH_H + 0.1                 # the body's underside, on the plinth
+Z1 = Z0 + BODY_H                    # its top
+ZC = (Z0 + Z1) / 2
+FRONT_Y, BACK_Y = -BODY_D / 2, BODY_D / 2
+IN_F, IN_B = FRONT_Y + WALL, BACK_Y - WALL   # the plates' inner faces
+DOOR_R = 75.0                       # the door: 150 across its bezel
+BEZEL_IN = 68.5                     # the bezel's inner edge
+GLASS_R = 69.0                      # the glass, its edge held in the bezel
+DOOR_T = 5.0                        # the bezel's thickness
+HOLE_R = 64.0                       # the opening in the front plate: the disc passes through it
+DOOR_Z = ZC + 13.0                  # the window's centre: the disc's
+HINGE_X = -(DOOR_R + 4.0)           # the hinge's axis, left of the door
+HINGE_Y = FRONT_Y - DOOR_T / 2
+DISC_Y = FRONT_Y + 14.0             # the disc's mid-plane, 14 mm behind the front
+SPK_X, SPK_R = 114.0, 29.5          # the speakers' centres and their baskets' rim
+GRILLE_R = 22.5                     # the perforated insert in front of each cone
+ARM_X, ARM_Z = 66.0, DOOR_Z - 56.0  # the swing arm's pivot, lower right of the disc
+ARM_Y = DISC_Y + 8.0                # the arm's mid-plane, behind the disc
+ARM_LEN = 56.0                      # pivot to lens: off the rim at rest, over the music playing
+ARM_PLAY = math.radians(-30.0)      # a render's arm, over the disc (Blender's y rotation)
+CHASSIS_Y = DISC_Y + 15.9           # the mechanism's plate, behind the motor and the arm
+BOARD_Z0, BOARD_Z1 = Z0 + 4.0, Z0 + 54.0      # its parts are laid out at these heights (mm)
+BOARD_W = BODY_W - 2 * WALL - 10.0
+FACE_Y = 7.0                        # the board's front face (its parts stand toward the viewer)
+SCREWS = [(sx * (BODY_W / 2 - 14.0), z) for sx in (-1, 1) for z in (Z0 + 14.0, Z1 - 14.0)]
+KEYS = ("prev", "play", "next", "stop", "rpt", "mode")
+WORDS = {"rpt": "RPT", "mode": "MODE"}  # button_icon draws the other four
+KEY_Y, KEY_PITCH = -14.0, 25.0
+HANDLE_X, HANDLE_Y, HANDLE_H = 104.0, 14.0, 30.0
+STAND_X, STAND_Y, STAND_TURN = 252.0, 12.0, math.radians(-18.0)
+SLOT_DY, SLOT_DZ, TREAD0 = 18.0, 20.0, 12.0   # each slot further back and higher than the last
+SLOT_TILT = math.radians(15.0)                # the rack's discs lean back
+CASE_X, CASE_Y = -238.0, 34.0
+CASE_LEAN, CASE_TURN = math.radians(8.0), math.radians(-5.0)
+EASEL_T = 3.0
+
+FRONT = (math.radians(90), 0.0, 0.0)                # local z toward the viewer (-y), local y up
+BACK = (math.radians(-90), 0.0, 0.0)                # local z away from the viewer (+y)
+SIDE = (math.radians(90), 0.0, math.radians(90))    # local x back (+y), y up, z right (+x)
+
+
+# ------------------------------------------------------------------ helpers
+def fslab(name, outlines, y0, y1, mats, bevel_mm=0.0, res=3, x=0.0, z=0.0, parent=None):
+    """A flat shape standing up, facing the viewer: `outlines` in (x, z) mm round (x, z), filled
+    from y0 to y1 (mm, in its parent's frame)."""
+    return slab(name, outlines, -y1, -y0, mats, bevel_mm=bevel_mm, res=res, parent=parent,
+                loc=L(x, 0.0, z), rot=FRONT)
+
+
+def sslab(name, outlines, x0, x1, mats, bevel_mm=0.0, res=3, parent=None):
+    """A side profile: `outlines` in (y, z) mm, filled across from x0 to x1."""
+    return slab(name, outlines, x0, x1, mats, bevel_mm=bevel_mm, res=res, parent=parent, rot=SIDE)
+
+
+def ylathe(name, prof, mats, x, y, z, toward=-1, seg=96, **kw):
+    """A lathe whose axis runs along y through (x, z): its profile's (r, d), d mm from y toward the
+    viewer (toward=-1) or away from it (toward=+1)."""
+    return lathe(name, prof, mats, seg=seg, loc=L(x, y, z), rot=FRONT if toward < 0 else BACK, **kw)
+
+
+def xlathe(name, prof, mats, x, y, z, toward=1, seg=64, **kw):
+    """A lathe along x: its profile's (r, d), d mm from x toward +x (toward=1) or -x."""
+    return lathe(name, prof, mats, seg=seg, loc=L(x, y, z),
+                 rot=(0.0, math.radians(90 if toward > 0 else -90), 0.0), **kw)
+
+
+def band(name, pts, width, mats, up=(0.0, 1.0, 0.0), side=None, thick=0.16, **kw):
+    """A flat strip `width` mm wide along the points (mm): a flex cable. Its width runs along `side`
+    when given, else across the path and `up`, so its face turns toward `up` (the viewer's axis by
+    default)."""
+    P = [Vector(p) for p in pts]
+    U = Vector(up)
+    bm = bmesh.new()
+    rows = []
+    for i, p in enumerate(P):
+        t = (P[min(i + 1, len(P) - 1)] - P[max(i - 1, 0)]).normalized()
+        s = Vector(side) if side else t.cross(U)
+        s = s.normalized() if s.length > 1e-6 else Vector((1.0, 0.0, 0.0))
+        rows.append((bm.verts.new((p - s * (width / 2)) * MM), bm.verts.new((p + s * (width / 2)) * MM)))
+    for (a0, b0), (a1, b1) in zip(rows, rows[1:]):
+        bm.faces.new((a0, b0, b1, a1))
+    ob = from_bm(name, bm, mats if isinstance(mats, list) else [mats], **kw)
+    solidify(ob, thick)
+    return ob
+
+
+def flex_strip(name, keys, width, mats, n=6, thick=0.16, **kw):
+    """A flex cable through `keys` [((x, y, z), face normal), ...] (mm): a smooth path whose face
+    turns from each key's normal to the next, so it can fold and twist as a real one does."""
+    pts = smooth_path([k[0] for k in keys], n)
+    normals = []
+    for i in range(len(keys) - 1):
+        a, b = Vector(keys[i][1]).normalized(), Vector(keys[i + 1][1]).normalized()
+        normals += [(a.lerp(b, j / n)).normalized() for j in range(n)]
+    normals.append(Vector(keys[-1][1]).normalized())
+    P = [Vector(p) for p in pts]
+    bm = bmesh.new()
+    rows = []
+    for i, p in enumerate(P):
+        t = (P[min(i + 1, len(P) - 1)] - P[max(i - 1, 0)]).normalized()
+        s = normals[i].cross(t)
+        s = s.normalized() if s.length > 1e-6 else Vector((0.0, 0.0, 1.0))
+        rows.append((bm.verts.new((p - s * (width / 2)) * MM), bm.verts.new((p + s * (width / 2)) * MM)))
+    for (a0, b0), (a1, b1) in zip(rows, rows[1:]):
+        bm.faces.new((a0, b0, b1, a1))
+    ob = from_bm(name, bm, mats if isinstance(mats, list) else [mats], **kw)
+    solidify(ob, thick)
+    return ob
+
+
+def resample(pts, step):
+    """Points every `step` mm along a polyline (mm)."""
+    P = [Vector(p) for p in pts]
+    out = [P[0]]
+    left = step
+    for a, b in zip(P, P[1:]):
+        seg = (b - a).length
+        pos = 0.0
+        while seg - pos >= left:
+            pos += left
+            out.append(a + (b - a) * (pos / seg))
+            left = step
+        left -= seg - pos
+    if (out[-1] - P[-1]).length > 1e-6:
+        out.append(P[-1])
+    return out
+
+
+def wire_pair(name, pts, mats, r=0.55, pitch=7.0, **kw):
+    """Two insulated wires twisted round each other along the (mm) points: mats[0] and mats[1]."""
+    path = resample(smooth_path(pts, 8), 2.2 if WEB else 1.0)
+    t0 = (path[1] - path[0]).normalized()
+    n = t0.cross(Vector((0.0, 0.0, 1.0)))
+    if n.length < 1e-6:
+        n = t0.cross(Vector((1.0, 0.0, 0.0)))
+    n.normalize()
+    frames = []
+    s = 0.0
+    for i, p in enumerate(path):
+        t = (path[min(i + 1, len(path) - 1)] - path[max(i - 1, 0)]).normalized()
+        n = (n - t * n.dot(t)).normalized()  # parallel transport: the twist never flips
+        if i:
+            s += (p - path[i - 1]).length
+        frames.append((p, n, t.cross(n), s))
+    for k, m in enumerate(mats):
+        line = []
+        for p, nn, bb, ss in frames:
+            a = 2 * math.pi * ss / pitch + math.pi * k
+            line.append(tuple(p + (nn * math.cos(a) + bb * math.sin(a)) * (r * 1.02)))
+        tube("%s_%d" % (name, k), line, r, m, res=1, **kw)
+
+
+def capsule(c1, r1, c2, r2, seg=24):
+    """The outline round two circles (mm): their convex hull."""
+    a, b = Vector(c1), Vector(c2)
+    d = b - a
+    th = math.atan2(d.y, d.x)
+    ph = math.acos(max(-1.0, min(1.0, (r1 - r2) / d.length)))
+    pts = []
+    for i in range(seg + 1):  # round the far side of the first circle
+        ang = th + ph + (2 * math.pi - 2 * ph) * i / seg
+        pts.append((a.x + r1 * math.cos(ang), a.y + r1 * math.sin(ang)))
+    for i in range(seg + 1):  # and the near side of the second
+        ang = th - ph + 2 * ph * i / seg
+        pts.append((b.x + r2 * math.cos(ang), b.y + r2 * math.sin(ang)))
+    return pts
+
+
+def sector(r0, r1, a0, a1, seg=16, cx=0.0, cy=0.0):
+    """An annular sector (mm, degrees), as one outline."""
+    outer = [(cx + r1 * math.cos(math.radians(a0 + (a1 - a0) * i / seg)),
+              cy + r1 * math.sin(math.radians(a0 + (a1 - a0) * i / seg))) for i in range(seg + 1)]
+    inner = [(cx + r0 * math.cos(math.radians(a1 - (a1 - a0) * i / seg)),
+              cy + r0 * math.sin(math.radians(a1 - (a1 - a0) * i / seg))) for i in range(seg + 1)]
+    return outer + inner
+
+
+def world_of(parent_loc_mm, rot, local_mm):
+    """A point (mm) of a frame at parent_loc_mm turned by rot (Euler)."""
+    v = Euler(rot).to_matrix() @ Vector(local_mm)
+    return tuple(Vector(parent_loc_mm) + v)
+
+
+def screw_head(name, x, y, z, root, r=2.6, toward=-1, slot=35.0):
+    """A pan head with a cross recess, its underside at y, facing the viewer (toward=-1)."""
+    ylathe(name, [(0.01, 0), (r, 0), (r, 0.35), (r * 0.86, 0.9), (0.01, 1.05)], M["chrome"], x, y, z,
+           toward=toward, seg=32, parent=root)
+    for k in range(2):
+        cross = rbox("%s_x%d" % (name, k), (r * 1.15, r * 0.24, 0.3), M["ink_dark"], parent=root,
+                     loc=L(x, y + toward * 0.95, z))
+        cross.rotation_euler = (math.radians(90), math.radians(slot + 90 * k), 0.0)
+
+
+# ------------------------------------------------------------------ the body and the plinth
+def grille_holes(r_max=19.0, pitch=4.4, hole=0.95):
+    holes = [circle(hole, 12)]
+    ring = 1
+    while ring * pitch <= r_max:
+        rr = ring * pitch
+        n = int(round(2 * math.pi * rr / pitch))
+        for k in range(n):
+            a = 2 * math.pi * (k + 0.5 * (ring % 2)) / n
+            holes.append(circle(hole, 12, cx=rr * math.cos(a), cy=rr * math.sin(a)))
+        ring += 1
+    return holes
+
+
+def clear_body(name, root):
+    S = M["clear_shell"]
+    outer = rrect(BODY_W, BODY_H, BODY_R, seg=12, cy=ZC)
+    speakers = [circle(GRILLE_R, 96, cx=sx * SPK_X, cy=DOOR_Z) for sx in (-1, 1)]
+    fslab(name + "_shell_front", [outer, circle(HOLE_R, 192, cy=DOOR_Z)] + speakers, FRONT_Y, IN_F, S,
+          bevel_mm=1.2, parent=root)
+    fslab(name + "_shell_back", [outer], IN_B, BACK_Y, S, bevel_mm=1.2, parent=root)
+    # The sides, the top and the bottom: one hollow band between the plates.
+    inner = rrect(BODY_W - 2 * WALL, BODY_H - 2 * WALL, BODY_R - WALL, seg=12, cy=ZC)
+    fslab(name + "_shell_band", [outer, inner], IN_F, IN_B, S, bevel_mm=0.5, parent=root)
+    # The speakers' perforated inserts, set in the front plate's openings.
+    for side, sx in (("l", -1), ("r", 1)):
+        fslab("%s_grille_%s" % (name, side), [circle(GRILLE_R - 0.06, 96)] + grille_holes(), FRONT_Y + 0.35,
+              IN_F - 0.35, S, bevel_mm=0.0 if WEB else 0.25, x=sx * SPK_X, z=DOOR_Z, parent=root)
+    # The corner bosses and the screws that close the shell.
+    for k, (x, z) in enumerate(SCREWS):
+        ylathe("%s_boss_%d" % (name, k), [(1.7, 0), (4.4, 0), (4.4, IN_B - IN_F), (1.7, IN_B - IN_F)], S, x,
+               IN_B, z, toward=-1, seg=32, parent=root)
+        ylathe("%s_boss_screw_%d" % (name, k), [(0.01, 0), (1.45, 0), (1.45, 24.0), (0.01, 24.0)],
+               M["chrome"], x, IN_F, z, toward=1, seg=16, parent=root)
+        screw_head("%s_screw_%d" % (name, k), x, FRONT_Y - 0.02, z, root, slot=20.0 + 25.0 * k)
+    # The plinth, in the frame's colour, on four rubber feet.
+    plinth = slab(name + "_plinth", [rrect(PLINTH_W, PLINTH_D, 12.0, seg=10, cy=PLINTH_Y)], FOOT_H, PLINTH_H,
+                  M["clear_frame"], bevel_mm=2.5, res=4, parent=root)
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            lathe("%s_foot_%d%d" % (name, sx, sy), [(0.01, 0), (9.0, 0), (9.0, FOOT_H + 0.4), (0.01, FOOT_H + 0.4)],
+                  M["rubber"], seg=32, parent=root,
+                  loc=L(sx * (PLINTH_W / 2 - 24.0), PLINTH_Y + sy * (PLINTH_D / 2 - 20.0), 0.0))
+    return plinth
+
+
+def clear_plate(name, root, playlist):
+    """The clear acrylic nameplate on the plinth's front, on two standoffs: the ncam logo engraved
+    at its left, the print (`<name>_plate_print`, the page's card_print) or, in a render, NOW
+    SPINNING and the collection on a brushed strip."""
+    y_face = PLINTH_Y - PLINTH_D / 2
+    zc = (FOOT_H + PLINTH_H) / 2
+    front = y_face - 3.6
+    fslab(name + "_plate", [rrect(164.0, 20.0, 2.5)], front, y_face - 0.6, M["door_glass"], bevel_mm=0.6,
+          z=zc, parent=root)
+    for k, x in enumerate((-75.0, 75.0)):
+        ylathe("%s_plate_post_%d" % (name, k), [(0.01, 0), (2.4, 0), (2.4, 0.62), (0.01, 0.62)], M["chrome"],
+               x, y_face, zc, toward=-1, seg=24, parent=root)
+        ylathe("%s_plate_cap_%d" % (name, k), [(0.01, 0), (2.3, 0), (2.2, 0.5), (1.6, 0.95), (0.01, 1.1)],
+               M["alu_side"], x, front - 0.02, zc, toward=-1, seg=24, parent=root)
+    text(name + "_plate_logo", "ncam", 7.0, M["ink"], font="futura", parent=root,
+         loc=L(-54.0, front - 0.03, zc - 0.5), rot=FRONT)
+    # The print: 106 x 18.8 mm, the aspect of the page's 1024 x 182 canvas (paintCard).
+    px = 15.0
+    if WEB:
+        rbox(name + "_plate_print", (106.0, 18.8, 0.05), M["card_print"], parent=root,
+             loc=L(px, front - 0.04, zc), rot=FRONT)
+    else:
+        rbox(name + "_plate_field", (106.0, 15.4, 0.3), M["alu_side"], bevel_mm=0.1, parent=root,
+             loc=L(px, front - 0.16, zc), rot=FRONT)
+        text(name + "_plate_t1", "NOW SPINNING", 2.3, M["ink"], font="avenir", parent=root,
+             loc=L(px, front - 0.33, zc + 4.1), rot=FRONT)
+        text(name + "_plate_t2", playlist, 4.8, M["ink_dark"], font="futura", parent=root,
+             loc=L(px, front - 0.33, zc - 2.0), rot=FRONT)
+
+
+# ------------------------------------------------------------------ the door
+def clear_door(name, root):
+    """The round door, hinged on its left: its hinge empty's local Z is Blender's up, which the
+    glTF export turns into three's Y, the axis the page turns it about (a negative turn swings it
+    out toward the viewer). It holds the bezel, the glass, the pull and the door's knuckle."""
+    F = M["clear_frame"]
+    hinge = empty(name + "_door", L(HINGE_X, HINGE_Y, DOOR_Z), parent=root)
+    cx = -HINGE_X                     # the door's centre, from its hinge
+    back = FRONT_Y - HINGE_Y - 0.02   # the bezel's back face, just off the front plate
+    ylathe(name + "_door_bezel", [(BEZEL_IN, 0), (DOOR_R, 0), (DOOR_R, DOOR_T - 1.1), (DOOR_R - 1.1, DOOR_T),
+                                  (BEZEL_IN + 0.8, DOOR_T), (BEZEL_IN, DOOR_T - 0.8)], F, cx, back, 0.0,
+           toward=-1, seg=192, parent=hinge)
+    fslab(name + "_door_glass", [circle(GLASS_R, 192)], back - DOOR_T + 1.1, back - 1.0, M["door_glass"],
+          bevel_mm=0.5, x=cx, parent=hinge)
+    face = back - DOOR_T - 0.02
+    text(name + "_bezel_logo", "ncam", 3.4, M["ink"], font="futura", parent=hinge,
+         loc=L(cx, face, -(BEZEL_IN + 0.8 + DOOR_R - 1.1) / 2), rot=FRONT)
+    rbox(name + "_door_pull", (6.0, DOOR_T - 1.2, 15.0), F, bevel_mm=1.4, parent=hinge,
+         loc=L(cx + DOOR_R + 1.8, back - DOOR_T / 2, 0.0))
+    # The hinge: the door's knuckle between two on the front plate, one pin through all three.
+    lathe(name + "_door_knuckle", [(0.01, -6.4), (3.0, -6.4), (3.0, 6.4), (0.01, 6.4)], F, seg=32, parent=hinge)
+    rbox(name + "_door_lug", (6.5, 4.0, 11.0), F, bevel_mm=0.8, parent=hinge, loc=L(3.6, 0.0, 0.0))
+    for k, s in enumerate((-1, 1)):
+        lathe("%s_hinge_knuckle_%d" % (name, k), [(0.01, 7.0), (3.0, 7.0), (3.0, 19.0), (0.01, 19.0)], F, seg=32,
+              parent=root, loc=L(HINGE_X, HINGE_Y, DOOR_Z), rot=(0.0, 0.0, 0.0) if s > 0 else (math.pi, 0.0, 0.0))
+        rbox("%s_hinge_leaf_%d" % (name, k), (7.0, FRONT_Y - HINGE_Y - 0.04, 12.0), F, bevel_mm=0.5, parent=root,
+             loc=L(HINGE_X + 0.8, (HINGE_Y + FRONT_Y) / 2 - 0.02, DOOR_Z + s * 13.0))
+    lathe(name + "_hinge_pin", [(0.01, -20.0), (1.2, -20.0), (1.6, -19.6), (1.6, 19.6), (1.2, 20.0), (0.01, 20.0)],
+          M["chrome"], seg=24, parent=root, loc=L(HINGE_X, HINGE_Y, DOOR_Z))
+    return hinge
+
+
+def clear_light_ring(name, root):
+    """The light ring round the disc, just behind the front plate's opening (the light's colour)."""
+    ylathe(name + "_light_ring", [(61.3, 0), (65.4, 0), (65.4, 2.2), (64.8, 2.8), (61.9, 2.8), (61.3, 2.2)],
+           M["light"], 0.0, IN_F + 0.03, DOOR_Z, toward=1, seg=192, parent=root)
+
+
+# ------------------------------------------------------------------ the disc, the spindle and the motor
+def clear_disc(name, root, disc_label):
+    """The disc stands behind the door, its label to the viewer, on the spindle: the turntable
+    behind it, the post through its hole with three balls in front, the motor further back."""
+    disc = make_disc(name + "_disc", disc_label, L(0, DISC_Y, DOOR_Z), rot=FRONT, parent=root)
+    back = DISC_Y + 0.6
+    ylathe(name + "_turntable", [(0.01, 0.5), (12.4, 0.5), (12.4, 2.4), (11.6, 3.0), (0.01, 3.0)],
+           M["hub_black"], 0.0, back, DOOR_Z, toward=1, seg=96, parent=root)
+    ylathe(name + "_turntable_pad", [(8.6, 0.0), (12.0, 0.0), (12.0, 0.5), (8.6, 0.5)], M["rubber"], 0.0,
+           back + 0.02, DOOR_Z, toward=1, seg=96, parent=root)
+    ylathe(name + "_spindle", [(0.01, 0.0), (7.3, 0.0), (7.3, 4.2), (6.6, 4.9), (2.4, 5.1), (0.01, 5.15)],
+           M["chrome"], 0.0, DISC_Y + 2.0, DOOR_Z, toward=-1, seg=64, parent=root)
+    for k in range(3):
+        a = 2 * math.pi * k / 3 + 0.4
+        sphere("%s_ball_%d" % (name, k), 0.9, M["chrome"], seg=12 if WEB else 24, parent=root,
+               loc=L(7.15 * math.cos(a), DISC_Y - 0.6 - 1.0, DOOR_Z + 7.15 * math.sin(a)))
+    return disc
+
+
+def clear_motor(name, root):
+    """The spindle motor behind the turntable: the rotor's bell, nine copper coils round the stator
+    (they show through the disc's clear middle), its small board."""
+    y = DISC_Y + 0.6 + 3.0
+    ylathe(name + "_motor_bell", [(0.01, 0), (8.8, 0), (8.8, 3.0), (8.2, 3.6), (0.01, 3.6)], M["chrome"], 0.0,
+           y, DOOR_Z, toward=1, seg=64, parent=root)
+    yc = y + 3.6 + 3.0
+    for k in range(9):
+        a = 2 * math.pi * k / 9 + 0.17
+        rbox("%s_coil_%d" % (name, k), (6.6, 5.4, 4.4), M["copper"], bevel_mm=1.2, parent=root,
+             loc=L(12.7 * math.cos(a), yc, DOOR_Z + 12.7 * math.sin(a)), rot=(0.0, -a, 0.0))
+    ylathe(name + "_stator", [(0.01, -2.7), (9.6, -2.7), (9.6, 2.7), (0.01, 2.7)], M["magnet"], 0.0, yc, DOOR_Z,
+           toward=1, seg=36, parent=root)
+    ylathe(name + "_motor_board", [(0.01, 0), (19.0, 0), (19.0, 1.2), (0.01, 1.2)], M["board"], 0.0, yc + 2.8,
+           DOOR_Z, toward=1, seg=48, parent=root)
+
+
+def clear_chassis(name, root):
+    """The mechanism's plate behind the motor and the arm, standing off the back plate."""
+    c1, c2 = (0.0, DOOR_Z), (ARM_X, ARM_Z)
+    holes = [circle(3.2, 20, cx=c1[0], cy=c1[1])]
+    for t, r in ((0.42, 4.6), (0.66, 3.6)):
+        holes.append(circle(r, 24, cx=c1[0] + (c2[0] - c1[0]) * t, cy=c1[1] + (c2[1] - c1[1]) * t))
+    fslab(name + "_chassis", [capsule(c1, 25.0, c2, 15.0)] + holes, CHASSIS_Y, CHASSIS_Y + 1.5, M["magnet"],
+          bevel_mm=0.4, parent=root)
+    posts = ((17.0, DOOR_Z + 15.0), (-19.0, DOOR_Z - 9.0), (ARM_X + 9.0, ARM_Z + 8.0))
+    for k, (x, z) in enumerate(posts):
+        ylathe("%s_chassis_post_%d" % (name, k), [(0.01, 0), (2.8, 0), (2.8, IN_B - CHASSIS_Y - 1.5),
+                                                   (0.01, IN_B - CHASSIS_Y - 1.5)], M["clear_shell"], x,
+               CHASSIS_Y + 1.5, z, toward=1, seg=24, parent=root)
+        screw_head("%s_chassis_screw_%d" % (name, k), x, CHASSIS_Y - 0.02, z, root, r=2.0, slot=10.0 + 40 * k)
+
+
+# ------------------------------------------------------------------ the swing arm
+def clear_arm(name, root, playing=False):
+    """The laser on its swing arm, behind the disc: the pivot's local Z runs along the disc's
+    normal toward the viewer (three's Y after export), so the page turns it about its own Y. At
+    rest the lens stands 6 mm off the disc's rim; turned +0.52 rad about three's Y (ARM_PLAY,
+    -30 degrees about Blender's world Y) it is 38 mm from the centre, over the music."""
+    pivot = empty(name + "_arm", L(ARM_X, ARM_Y, ARM_Z), rot=(math.radians(90), ARM_PLAY if playing else 0.0, 0.0),
+                  parent=root)
+    A = M["alu_side"]
+    arm = [(7.0 * math.cos(math.radians(a)), 7.0 * math.sin(math.radians(a))) for a in range(180, 361, 15)]
+    arm += [(4.6, ARM_LEN)] + [(4.6 * math.cos(math.radians(a)), ARM_LEN + 4.6 * math.sin(math.radians(a)))
+                               for a in range(15, 180, 15)] + [(-4.6, ARM_LEN)]
+    slot = rrect(3.6, 22.0, 1.8, cy=ARM_LEN * 0.5)
+    slab(name + "_arm_beam", [arm, slot, circle(1.75, 20)], -1.2, 1.2, A, bevel_mm=0.45, parent=pivot)
+    # The other end: a slim spoke out to the voice coil, which swings in the magnet's gap.
+    tail = [(-1.7, -6.4), (-1.7, -18.8), (-5.8, -18.8), (-5.8, -26.4), (5.8, -26.4), (5.8, -18.8), (1.7, -18.8),
+            (1.7, -6.4)]
+    slab(name + "_arm_tail", [tail], -1.0, 1.0, A, bevel_mm=0.4, parent=pivot)
+    rbox(name + "_arm_coil", (8.4, 5.6, 5.2), M["copper"], bevel_mm=1.3, parent=pivot, loc=L(0, -22.6, 0))
+    # The optical block at the tip, its lens toward the disc.
+    rbox(name + "_arm_sled", (12.0, 12.5, 6.0), M["chip"], bevel_mm=0.8, parent=pivot, loc=L(0, ARM_LEN + 0.8, 1.2))
+    lathe(name + "_arm_lens_ring", [(2.5, 0), (3.7, 0), (3.7, 0.5), (2.5, 0.5)], M["chrome"], seg=32,
+          parent=pivot, loc=L(0, ARM_LEN + 1.6, 4.2))
+    lathe(name + "_arm_lens", [(0.01, 0), (2.5, 0), (2.4, 0.6), (1.7, 1.1), (0.01, 1.3)], M["black_glass"],
+          seg=32, parent=pivot, loc=L(0, ARM_LEN + 1.6, 4.2))
+    for k, x in enumerate((-4.9, 4.9)):
+        rbox("%s_arm_focus_%d" % (name, k), (1.8, 4.2, 1.4), M["copper"], bevel_mm=0.3, parent=pivot,
+             loc=L(x, ARM_LEN + 1.6, 4.9))
+    rbox(name + "_arm_flex", (6.0, ARM_LEN - 10.0, 0.16), M["flex"], parent=pivot,
+         loc=L(0, (ARM_LEN - 10.0) / 2 + 3.0, -1.36))
+    # Fixed to the chassis: the pivot's bearing, its cap, the magnet's two plates round the coil.
+    depth = CHASSIS_Y - (ARM_Y + 1.6) + 0.05
+    ylathe(name + "_arm_bearing", [(0.01, 0), (6.0, 0), (6.0, depth - 0.6), (6.6, depth), (0.01, depth)],
+           M["hub_black"], ARM_X, ARM_Y + 1.6, ARM_Z, toward=1, seg=40, parent=root)
+    ylathe(name + "_arm_cap", [(0.01, -4.0), (1.6, -4.0), (1.6, 0.0), (2.6, 0.0), (2.6, 0.6), (2.0, 1.2),
+                               (0.01, 1.3)], M["chrome"], ARM_X, ARM_Y - 1.22, ARM_Z, toward=-1, seg=32, parent=root)
+    # The coil swings from 270 degrees (at rest, straight down) to 300 (playing): the posts that
+    # join the plates stand clear of it at either end.
+    for k, (y0, y1) in enumerate(((ARM_Y - 5.2, ARM_Y - 3.9), (ARM_Y + 3.9, ARM_Y + 5.2))):
+        fslab("%s_arm_yoke_%d" % (name, k), [sector(18.4, 27.0, 240.0, 326.0, seg=14)], y0, y1, M["magnet"],
+              bevel_mm=0.3, x=ARM_X, z=ARM_Z, parent=root)
+        fslab("%s_arm_magnet_%d" % (name, k), [sector(19.4, 26.0, 254.0, 312.0, seg=12)],
+              y1 if k == 0 else y0 - 1.0, y1 + 1.0 if k == 0 else y0, M["chrome"], bevel_mm=0.2, x=ARM_X, z=ARM_Z,
+              parent=root)
+    for k, a in enumerate((247.0, 318.5)):
+        ca, sa = math.cos(math.radians(a)), math.sin(math.radians(a))
+        lathe("%s_arm_yoke_post_%d" % (name, k), [(0.01, -3.9), (2.2, -3.9), (2.2, 3.9), (0.01, 3.9)], M["magnet"],
+              seg=20, parent=root, loc=L(ARM_X + 22.5 * ca, ARM_Y, ARM_Z + 22.5 * sa), rot=FRONT)
+        screw_head("%s_arm_yoke_screw_%d" % (name, k), ARM_X + 22.5 * ca, ARM_Y - 5.22, ARM_Z + 22.5 * sa, root,
+                   r=1.5, slot=20.0 + 50 * k)
+    rbox(name + "_arm_stop", (4.0, 3.0, 4.0), M["rubber"], bevel_mm=1.0, parent=root,
+         loc=L(ARM_X + 8.5, ARM_Y + 2.4, ARM_Z + 6.0))
+    return pivot
+
+
+# ------------------------------------------------------------------ the board and what is on it
+def part(name, x, z, w, h, t, mats, root, bevel=0.0, rot=0.0):
+    """A block lying on the board's face: w x h (x, z) mm, t mm proud of it (the web build keeps
+    only the bevels it could show)."""
+    ob = rbox(name, (w, t, h), mats, bevel_mm=bevel if (not WEB or bevel >= 0.5) else 0.0, parent=root,
+              loc=L(x, FACE_Y - t / 2, z))
+    if rot:
+        ob.rotation_euler = (0.0, math.radians(rot), 0.0)
+    return ob
+
+
+def chip(name, root, x, z, w, h, pins_x, pins_z, pitch=1.0, t=1.5, label=None):
+    """A black package with gull-wing legs: pins_x along its top and bottom edges, pins_z along its
+    sides (a QFP has both, an SOIC only one pair)."""
+    part(name, x, z, w, h, t, M["chip"], root, bevel=0.25)
+    k = 0
+    for side in (-1, 1):
+        for i in range(pins_x):
+            px = x + (i - (pins_x - 1) / 2) * pitch
+            part("%s_leg_%d" % (name, k), px, z + side * (h / 2 + 0.55), 0.34, 1.3, 0.28, M["solder"], root)
+            k += 1
+        for i in range(pins_z):
+            pz = z + (i - (pins_z - 1) / 2) * pitch
+            part("%s_leg_%d" % (name, k), x + side * (w / 2 + 0.55), pz, 1.3, 0.34, 0.28, M["solder"], root)
+            k += 1
+    ylathe(name + "_dot", [(0.01, 0), (0.45, 0), (0.45, 0.02), (0.01, 0.02)], M["ink"], x - w / 2 + 1.3,
+           FACE_Y - t - 0.01, z + h / 2 - 1.3, toward=-1, seg=12, parent=root)
+    if label and not WEB:
+        text(name + "_mark", label, min(1.6, h * 0.24), M["ink"], font="din", parent=root,
+             loc=L(x, FACE_Y - t - 0.02, z - h * 0.12), rot=FRONT)
+
+
+def electrolytic(name, root, x, z, r, h):
+    ylathe(name, [(0.01, 0), (r, 0), (r, h - 0.5), (r - 0.45, h), (0.01, h)], M["cell"], x, FACE_Y, z,
+           toward=-1, seg=32, parent=root)
+    ylathe(name + "_top", [(0.01, 0), (r - 0.55, 0), (r - 0.55, 0.05), (0.01, 0.05)], M["solder"], x,
+           FACE_Y - h - 0.01, z, toward=-1, seg=32, parent=root)
+    for k in range(2):
+        score = rbox("%s_score_%d" % (name, k), (r * 1.1, 0.25, 0.06), M["ink_dark"], parent=root,
+                     loc=L(x, FACE_Y - h - 0.06, z))
+        score.rotation_euler = (math.radians(90), math.radians(45 + 90 * k), 0.0)
+
+
+def passive(name, root, x, z, rot=0.0, cap=False):
+    """An 0805 resistor (black) or capacitor (tan-grey) with its two tinned ends."""
+    body = part(name, x, z, 1.3, 1.25, 0.5, M["magnet"] if cap else M["chip"], root, bevel=0.1, rot=rot)
+    a = math.radians(rot)
+    for k, s in enumerate((-1, 1)):
+        part("%s_end_%d" % (name, k), x + s * 0.8 * math.cos(a), z - s * 0.8 * math.sin(a), 0.42, 1.27, 0.52,
+             M["solder"], root, rot=rot)
+    return body
+
+
+def silk_box(name, root, x, z, w, h):
+    """A silkscreened outline round a part."""
+    fslab(name, [rrect(w + 0.5, h + 0.5, 0.4), rrect(w, h, 0.2)], FACE_Y - 0.045, FACE_Y - 0.015, M["silk"],
+          x=x, z=z, parent=root)
+
+
+def silk(name, root, body, x, z, size=1.7, font="avenir", align="CENTER"):
+    """Silkscreened lettering; the web build leaves out what the page could never read (under 3 mm)."""
+    if WEB and size < 3.0:
+        return None
+    return text(name, body, size, M["silk"], font=font, align=align, parent=root, loc=L(x, FACE_Y - 0.03, z),
+                rot=FRONT)
+
+
+def connector(name, root, x, z, pins=2, white=True):
+    """A JST-style header: its housing, the pins' slots."""
+    w = 2.5 * pins + 2.4
+    part(name, x, z, w, 5.6, 5.8, M["well"] if white else M["chip"], root, bevel=0.35)
+    for k in range(pins):
+        part("%s_slot_%d" % (name, k), x + (k - (pins - 1) / 2) * 2.5, z + 0.4, 1.5, 2.4, 5.84, M["chip"], root)
+
+
+def clear_board(name, root, playing=False):
+    """The board across the lower part of the body, its parts facing the viewer: the LCD under the
+    window, the VU strip on its right, the silkscreened logo on its left, the chips, the
+    capacitors, the crystal, the passives, the connectors, the vias."""
+    cz = (BOARD_Z0 + BOARD_Z1) / 2
+    holes = [circle(4.8, 24, cx=x, cy=z) for x, z in SCREWS if z < ZC]
+    board = fslab(name + "_board", [rrect(BOARD_W, BOARD_Z1 - BOARD_Z0, 3.0, cy=cz)] + holes, FACE_Y,
+                  FACE_Y + 1.6, M["board"], bevel_mm=0.3, parent=root)
+    # The DSP and two smaller chips, the crystal.
+    chip(name + "_u1", root, -112.0, 62.0, 14.0, 14.0, 10, 10, label="NC-2601")
+    chip(name + "_u2", root, -110.0, 43.0, 5.0, 4.0, 4, 0, pitch=1.27, t=1.4)
+    chip(name + "_u3", root, 112.0, 67.0, 6.2, 5.0, 4, 0, pitch=1.27, t=1.4)
+    part(name + "_y1", -91.0, 66.0, 11.0, 4.6, 3.6, M["solder"], root, bevel=1.5)
+    part(name + "_l1", 100.0, 73.0, 6.0, 6.0, 3.4, M["chip"], root, bevel=0.6)
+    for k, (x, z, r, h) in enumerate(((-128.0, 72.0, 4.0, 9.0), (-92.0, 46.0, 3.15, 7.0), (126.0, 49.0, 5.0, 11.0),
+                                      (108.0, 46.0, 3.15, 7.0))):
+        electrolytic("%s_c%d" % (name, k + 1), root, x, z, r, h)
+    # Passives: a row under the window, a few round the chips.
+    k = 0
+    for i in range(11):
+        passive("%s_r%d" % (name, k), root, -40.0 + i * 8.0, 70.5, rot=90.0 if i % 2 else 0.0, cap=bool(i % 3 == 1))
+        k += 1
+    for x, z, rot in ((-100.0, 55.0, 90.0), (-100.0, 59.0, 90.0), (-124.0, 50.0, 0.0), (-121.0, 81.0, 0.0),
+                      (-80.0, 76.0, 90.0), (-76.0, 76.0, 90.0), (92.0, 64.0, 0.0), (120.0, 60.0, 90.0),
+                      (34.0, 40.0, 0.0), (-34.0, 40.0, 0.0), (-34.0, 62.0, 90.0), (31.0, 62.0, 90.0)):
+        passive("%s_r%d" % (name, k), root, x, z, rot=rot, cap=bool(k % 2))
+        k += 1
+    for x, z in ((40.0, 38.6), (47.0, 38.6), (81.0, 38.6), (88.0, 38.6), (100.0, 38.4), (116.0, 38.4),
+                 (-70.0, 62.0), (-50.0, 62.0)):
+        passive("%s_r%d" % (name, k), root, x, z, rot=0.0 if k % 3 else 90.0, cap=bool(k % 2))
+        k += 1
+    # Tantalum capacitors (amber), the amplifiers by the speakers' connectors, a regulator, a header.
+    for i, (x, z, rot) in enumerate(((-86.0, 57.0, 0.0), (-66.0, 66.4, 90.0), (101.0, 60.0, 0.0), (131.0, 59.0, 90.0))):
+        part("%s_t%d" % (name, i), x, z, 3.5, 2.8, 1.9, M["flex"], root, bevel=0.35, rot=rot)
+        part("%s_t%d_band" % (name, i), x - (1.2 if not rot else 0.0), z + (1.0 if rot else 0.0),
+             0.6 if not rot else 2.9, 2.9 if not rot else 0.6, 1.95, M["well"], root)
+    chip(name + "_u4", root, 46.0, 64.0, 5.0, 4.0, 4, 0, pitch=1.27, t=1.4)
+    chip(name + "_u5", root, 128.0, 70.0, 5.0, 4.0, 4, 0, pitch=1.27, t=1.4)
+    part(name + "_q1", -122.0, 42.0, 2.9, 1.6, 1.1, M["chip"], root, bevel=0.15)
+    for i, (dx, dz) in enumerate(((-0.95, -1.15), (0.95, -1.15), (0.0, 1.15))):
+        part("%s_q1_leg_%d" % (name, i), -122.0 + dx, 42.0 + dz, 0.4, 0.8, 0.2, M["solder"], root)
+    part(name + "_j5", -84.0, 38.6, 12.9, 5.2, 2.6, M["chip"], root, bevel=0.3)
+    for i in range(10):
+        part("%s_j5_pin_%d" % (name, i), -84.0 + (i // 2 - 2) * 2.54, 38.6 + (i % 2 - 0.5) * 2.54, 0.64, 0.64, 8.4,
+             M["solder"], root)
+    # Connectors: the cells', the two speakers', the laser's flex, the keys' ribbon.
+    connector(name + "_j1", root, -102.0, 80.0)
+    connector(name + "_j2", root, -126.0, 80.5)
+    connector(name + "_j4", root, 112.0, 80.5)
+    part(name + "_j3", 88.0, 80.0, 16.0, 4.4, 2.6, M["chip"], root, bevel=0.3)
+    part(name + "_j3_latch", 88.0, 81.6, 15.0, 1.0, 2.9, M["well"], root)
+    part(name + "_j6", 128.0, 80.4, 12.0, 4.4, 2.6, M["chip"], root, bevel=0.3)
+    part(name + "_j6_latch", 128.0, 82.0, 11.0, 1.0, 2.9, M["well"], root)
+    # The LCD on its standoffs, the VU strip, the logo.
+    clear_lcd(name, root, playing)
+    clear_vu(name, root, playing)
+    silk(name + "_silk_logo", root, "ncam", -58.0, 53.0, size=10.0, font="futura")
+    silk(name + "_silk_model", root, "CD-02  SEE-THROUGH PLAYER", -58.0, 44.0, size=1.9)
+    silk(name + "_silk_rev", root, "REV A  2026", -58.0, 40.6, size=1.6)
+    silk(name + "_silk_level", root, "LEVEL", 64.0, 42.2, size=1.9)
+    for label, x, z in (("U1", -112.0, 71.6), ("U2", -110.0, 37.5), ("U3", 112.0, 73.4), ("Y1", -91.0, 71.0),
+                        ("C1", -128.0, 64.0), ("C2", -92.0, 38.8), ("C3", 126.0, 40.0), ("C4", 108.0, 38.8),
+                        ("L1", 100.0, 79.0), ("J1", -102.0, 74.2), ("J2", -126.0, 74.8), ("J3", 88.0, 75.8),
+                        ("J4", 112.0, 74.8), ("J5", -84.0, 43.6), ("J6", 128.0, 76.0), ("U4", 46.0, 69.0),
+                        ("U5", 128.0, 75.0), ("Q1", -122.0, 46.0), ("+", -96.0, 82.2)):
+        silk("%s_silk_%s" % (name, label.replace("+", "p")), root, label, x, z, size=1.7)
+    for x, z, w, h in ((-112.0, 62.0, 17.6, 17.6), (-110.0, 43.0, 7.6, 6.6), (112.0, 67.0, 8.8, 7.6),
+                       (-91.0, 66.0, 12.6, 6.2), (100.0, 73.0, 7.6, 7.6)):
+        silk_box("%s_silk_box_%d_%d" % (name, int(x), int(z)), root, x, z, w, h)
+    # Vias and test points, scattered where the parts leave room.
+    rng = random.Random(26)
+    keep = ((-120, 54, 16, 16), (-110, 43, 9, 8), (-91, 66, 13, 7), (-58, 49, 34, 16), (0, 51, 62, 28),
+            (64, 51, 62, 14), (112, 67, 10, 9), (100, 73, 8, 8), (88, 80, 18, 7), (-102, 80, 9, 8),
+            (-126, 80.5, 9, 8), (112, 80.5, 9, 8), (128, 80.4, 14, 7), (106, 46, 8, 8), (128, 70, 9, 9),
+            (101, 60, 6, 6), (131, 59, 6, 6), (-86, 57, 6, 6), (-66, 66.4, 6, 6), (46, 64, 9, 8),
+            (-84, 38.6, 15, 12), (-122, 42, 5, 5), (-128, 72, 10, 10), (-92, 46, 8, 8), (126, 49, 12, 12),
+            (108, 46, 8, 8), (0, 70.5, 90, 4), (-136, 40, 12, 12), (136, 40, 12, 12))
+    vias = 0
+    while vias < (26 if WEB else 60):
+        x = rng.uniform(-BOARD_W / 2 + 4, BOARD_W / 2 - 4)
+        z = rng.uniform(BOARD_Z0 + 3, BOARD_Z1 - 3)
+        if any(abs(x - kx) < kw / 2 + 1 and abs(z - kz) < kh / 2 + 1 for kx, kz, kw, kh in keep):
+            continue
+        annulus("%s_via_%d" % (name, vias), 0.55, 0.22, M["solder"], seg=12, parent=root,
+                loc=L(x, FACE_Y - 0.02, z), rot=FRONT)
+        vias += 1
+    return board
+
+
+def clear_lcd(name, root, playing):
+    """The LCD module on four standoffs, its screen the page's lcd_screen print (54 x 24 mm's
+    aspect, as the suitcase's: the page paints 256 x 112)."""
+    x, z = 0.0, 51.0
+    face = FACE_Y - 7.5
+    for k, (dx, dz) in enumerate(((-26.0, -9.5), (26.0, -9.5), (-26.0, 9.5), (26.0, 9.5))):
+        ylathe("%s_lcd_post_%d" % (name, k), [(0.01, 0), (1.3, 0), (1.3, 4.5), (0.01, 4.5)], M["solder"],
+               x + dx, FACE_Y, z + dz, toward=-1, seg=16, parent=root)
+    fslab(name + "_lcd_frame", [rrect(58.0, 24.0, 1.2), rrect(49.6, 22.0, 0.6)], face, face + 3.0, M["chip"],
+          bevel_mm=0.3, x=x, z=z, parent=root)
+    rbox(name + "_lcd_back", (57.0, 23.0, 0.6), M["chip"], parent=root, loc=L(x, face + 2.7, z), rot=FRONT)
+    band(name + "_lcd_tail", [(x, face + 3.0, z - 11.5), (x, face + 3.6, z - 13.5), (x, FACE_Y - 0.4, z - 14.2)],
+         18.0, M["flex"], side=(1.0, 0.0, 0.0), parent=root)
+    rbox(name + "_lcd_screen", (48.0, 21.0, 0.05), M["lcd_screen"], parent=root, loc=L(x, face + 0.6, z), rot=FRONT)
+    if WEB:
+        return
+    # A render lights the track and the time over the unlit segments.
+    y = face + 0.56
+    on = M["lcd_glow"] if playing else M["lcd_ghost"]
+    text(name + "_lcd_g1", "88", 11.0, M["lcd_ghost"], font="din", parent=root, loc=L(x - 12.5, y + 0.01, z - 1.6),
+         rot=FRONT)
+    text(name + "_lcd_t1", "01", 11.0, on, font="din", parent=root, loc=L(x - 12.5, y, z - 1.6), rot=FRONT)
+    text(name + "_lcd_g2", "8:88", 7.6, M["lcd_ghost"], font="din", parent=root, loc=L(x + 10.5, y + 0.01, z - 2.6),
+         rot=FRONT)
+    text(name + "_lcd_t2", "1:24", 7.6, on, font="din", parent=root, loc=L(x + 10.5, y, z - 2.6), rot=FRONT)
+    text(name + "_lcd_cd", "CD   PLAY   RPT", 2.2, on, font="avenir", align="LEFT", parent=root,
+         loc=L(x - 21.5, y, z + 7.4), rot=FRONT)
+
+
+def clear_vu(name, root, playing):
+    """The ten VU segments on a black bar module, one `vu` material for all ten (the page clones it
+    per segment); a render lights the first seven."""
+    x0, z = 64.0, 51.0
+    face = FACE_Y - 4.0
+    rbox(name + "_vu_body", (58.0, 4.0, 11.0), M["chip"], bevel_mm=0.4, parent=root, loc=L(x0, FACE_Y - 2.0, z))
+    for k in range(10):
+        lit = WEB or (playing and k < 7)
+        rbox("%s_vu_seg_%d" % (name, k), (3.8, 6.6, 0.3), M["vu"] if lit else M["vu_dim"], parent=root,
+             loc=L(x0 + (k - 4.5) * 5.2, face - 0.12, z), rot=FRONT)
+
+
+# ------------------------------------------------------------------ the mechanism, the cells, the wires
+def clear_mechanism(name, root, playing=False):
+    """The motor, the mechanism's plate, the flex from the laser to the board, the four AA cells
+    across the back under the top, the twisted wires to the board."""
+    clear_motor(name, root)
+    clear_chassis(name, root)
+    # The flex from the arm's pivot: out to the right in front of its bearing, folded back past the
+    # mechanism's plate, twisted and down into its connector on the board.
+    start = world_of((ARM_X, ARM_Y, ARM_Z), (math.radians(90), ARM_PLAY if playing else 0.0, 0.0), (0.0, 3.0, -1.36))
+    y = start[1]
+    viewer, left = (0.0, -1.0, 0.0), (-1.0, 0.0, 0.0)
+    flex_strip(name + "_flex", [(start, viewer), ((ARM_X + 8.0, y - 0.05, ARM_Z + 3.4), viewer),
+                                ((ARM_X + 16.5, y + 0.9, ARM_Z + 3.6), (-0.7, -0.7, 0.0)),
+                                ((ARM_X + 19.2, y + 4.6, ARM_Z + 2.6), left),
+                                ((ARM_X + 19.8, CHASSIS_Y + 4.0, ARM_Z - 0.6), left),
+                                ((87.0, FACE_Y - 6.5, BOARD_Z1 + 3.0), (-0.5, -0.86, 0.0)),
+                                ((88.0, FACE_Y - 2.2, BOARD_Z1 - 2.6), viewer)], 6.6, M["flex"], parent=root)
+    clear_cells(name, root)
+    red, black = M["wire_red"], M["rubber"]
+    # The cells' pair down the left, between the disc and the left speaker, into J1.
+    wire_pair(name + "_wire_cells", [(-58.5, 9.0, CELL_Z - 2.0), (-66.0, 12.0, CELL_Z - 12.0), (-76.0, 14.0, 190.0),
+                                     (-80.0, 13.0, 130.0), (-90.0, 9.0, 96.0), (-102.0, FACE_Y - 3.6, BOARD_Z1 + 1.0),
+                                     (-102.0, FACE_Y - 4.0, 82.6)], [red, black])
+    # Each speaker's pair, from its terminals down into J2 and J4.
+    for side, sx, jx in (("l", -1, -126.0), ("r", 1, 112.0)):
+        x = sx * SPK_X
+        wire_pair("%s_wire_%s" % (name, side), [(x, IN_F + 5.0, DOOR_Z - SPK_R - 3.5),
+                                                 (x + sx * 4.0, -16.0, DOOR_Z - SPK_R - 14.0),
+                                                 ((x + jx) / 2 + sx * 3.0, -4.0, BOARD_Z1 + 6.0),
+                                                 (jx, FACE_Y - 3.8, BOARD_Z1 + 0.6), (jx, FACE_Y - 4.0, 82.8)],
+                  [red, black])
+
+
+CELL_R, CELL_L = 7.25, 50.5
+CELL_Z = Z1 - WALL - CELL_R - 1.0
+CELL_ROWS = (4.8, 20.6)
+
+
+def clear_cells(name, root):
+    """Four AA cells in a clear tray across the back, under the top: two rows of two, end to end."""
+    T = M["door_glass"]
+    y0, y1 = CELL_ROWS[0] - CELL_R - 1.2, CELL_ROWS[1] + CELL_R + 1.2
+    yc = (y0 + y1) / 2
+    zb = CELL_Z - CELL_R - 0.25
+    slab(name + "_cells_tray", [rrect(118.0, y1 - y0, 3.0, cy=yc)], zb - 1.6, zb, T, bevel_mm=0.5, parent=root)
+    for k, x in enumerate((-57.8, 0.0, 57.8)):
+        rbox("%s_cells_wall_%d" % (name, k), (2.0, y1 - y0, 13.0), T, bevel_mm=0.5, parent=root,
+             loc=L(x, yc, zb + 6.5))
+    for row, y in enumerate(CELL_ROWS):
+        for k, (x, toward) in enumerate(((-56.2, 1), (56.2, -1))):
+            # Each cell from its flat (negative) end against a spring, its nub at the middle wall.
+            tag = "%s_cell_%d%d" % (name, row, k)
+            xlathe(tag, [(0.01, 0.0), (6.7, 0.0), (7.25, 0.55), (7.25, CELL_L - 0.55), (6.7, CELL_L), (0.01, CELL_L)],
+                   M["cell"], x + toward * 2.6, y, CELL_Z, toward=toward, seg=40, parent=root)
+            xlathe(tag + "_end", [(0.01, 0.0), (6.4, 0.0), (6.4, 0.08), (0.01, 0.08)], M["solder"],
+                   x + toward * 2.58, y, CELL_Z, toward=-toward, seg=32, parent=root)
+            xlathe(tag + "_top", [(6.9, 0.0), (7.3, 0.0), (7.3, 15.0), (6.9, 15.0)], M["solder"],
+                   x + toward * (2.6 + CELL_L - 15.4), y, CELL_Z, toward=toward, seg=40, parent=root)
+            xlathe(tag + "_nub", [(0.01, 0.0), (2.7, 0.0), (2.7, 1.3), (2.3, 1.6), (0.01, 1.6)], M["solder"],
+                   x + toward * (2.6 + CELL_L), y, CELL_Z, toward=toward, seg=24, parent=root)
+            # The spring at the flat end: a coil from the wall to the cell.
+            turns = 3 if WEB else 5
+            pts = []
+            for i in range(turns * (8 if WEB else 14) + 1):
+                a = 2 * math.pi * i / (8 if WEB else 14)
+                pts.append((x + toward * (0.2 + 2.2 * i / (turns * (8 if WEB else 14))),
+                            y + 3.2 * math.cos(a), CELL_Z + 3.2 * math.sin(a)))
+            tube(tag + "_spring", pts, 0.38, M["solder"], res=1, parent=root)
+            rbox(tag + "_plate", (0.3, 8.0, 8.0), M["solder"], parent=root,
+                 loc=L(x + toward * (2.6 + CELL_L + 1.6 + 0.4), y, CELL_Z))
+
+
+# ------------------------------------------------------------------ the speakers
+def clear_speakers(name, root):
+    """A speaker either side of the door, behind the front plate's perforated inserts: the
+    basket's rim screwed to the plate, the rubber surround, the frame-coloured cone and its dust
+    cap, the spokes, the magnet behind showing through the shell, two terminals."""
+    for side, sx in (("l", -1), ("r", 1)):
+        x = sx * SPK_X
+        tag = "%s_spk_%s" % (name, side)
+        ylathe(tag + "_rim", [(26.1, 0), (SPK_R, 0), (SPK_R, 1.0), (26.1, 1.0)], M["magnet"], x, IN_F + 0.05, DOOR_Z,
+               toward=1, seg=96, parent=root)
+        y = IN_F + 2.6   # the surround's foot
+        ylathe(tag + "_surround", [(25.8, 0), (25.6, 0.8), (25.0, 1.45), (24.0, 1.75), (23.0, 1.45), (22.4, 0.8),
+                                   (22.2, 0), (22.2, -0.4), (25.8, -0.4)], M["surround"], x, y, DOOR_Z, toward=-1,
+               seg=96, parent=root)
+        ylathe(tag + "_cone", [(22.3, 0.0), (15.5, -2.4), (8.6, -6.0), (8.6, -6.6), (15.5, -2.95), (22.3, -0.5)],
+               M["clear_frame"], x, y, DOOR_Z, toward=-1, seg=96, parent=root)
+        ylathe(tag + "_cap", [(0.01, -6.0 + 2.6), (3.4, -6.0 + 2.4), (6.1, -6.0 + 1.6), (8.4, -6.0 + 0.35),
+                              (8.7, -6.0), (8.7, -6.4), (0.01, -6.4)], M["hub_black"], x, y, DOOR_Z, toward=-1,
+               seg=64, parent=root)
+        # The magnet: front plate, ring, back plate, pole.
+        ylathe(tag + "_pole_plate", [(5.4, 0), (14.0, 0), (14.0, 1.2), (5.4, 1.2)], M["chrome"], x, y + 7.2, DOOR_Z,
+               toward=1, seg=64, parent=root)
+        ylathe(tag + "_magnet", [(6.2, 0), (15.5, 0), (15.5, 6.0), (6.2, 6.0)], M["magnet"], x, y + 8.4, DOOR_Z,
+               toward=1, seg=64, parent=root)
+        ylathe(tag + "_back_plate", [(0.01, 0), (15.0, 0), (15.0, 1.4), (14.4, 2.0), (0.01, 2.0)], M["chrome"], x,
+               y + 14.4, DOOR_Z, toward=1, seg=64, parent=root)
+        ylathe(tag + "_pole", [(0.01, 0), (5.0, 0), (5.0, 7.0), (0.01, 7.0)], M["chrome"], x, y + 14.4, DOOR_Z,
+               toward=-1, seg=32, parent=root)
+        for k in range(4):
+            a = math.radians(45 + 90 * k)
+            ca, sa = math.cos(a), math.sin(a)
+            tube("%s_spoke_%d" % (tag, k), [(x + 27.4 * ca, IN_F + 1.0, DOOR_Z + 27.4 * sa),
+                                            (x + 24.0 * ca, IN_F + 3.6, DOOR_Z + 24.0 * sa),
+                                            (x + 14.6 * ca, y + 7.4, DOOR_Z + 14.6 * sa)], 0.9, M["magnet"], res=1,
+                 parent=root)
+            screw_head("%s_screw_%d" % (tag, k), x + 27.6 * ca, FRONT_Y - 0.02, DOOR_Z + 27.6 * sa, root, r=1.6,
+                       slot=30.0 * k)
+        for k, dx in enumerate((-4.0, 4.0)):
+            rbox("%s_tab_%d" % (tag, k), (2.4, 0.4, 5.0), M["solder"], parent=root,
+                 loc=L(x + dx, IN_F + 5.0, DOOR_Z - SPK_R - 1.8))
+
+
+# ------------------------------------------------------------------ the top: keys, handle, tag
+def clear_keys(name, root):
+    """Six keys in a frame-coloured deck on top: each key an empty (the page sinks it 1.2 mm), a
+    clear stem under a frame-coloured cap, its icon lit in the light's colour."""
+    top = Z1
+    F = M["clear_frame"]
+    holes = [rrect(19.4, 15.4, 3.0, cx=(i - 2.5) * KEY_PITCH, cy=KEY_Y) for i in range(len(KEYS))]
+    slab(name + "_key_deck", [rrect(170.0, 24.0, 6.0, cy=KEY_Y)] + holes, top + 0.05, top + 2.05, F, bevel_mm=0.6,
+         parent=root)
+    for i, kind in enumerate(KEYS):
+        key = empty("%s_btn_%s" % (name, kind), L((i - 2.5) * KEY_PITCH, KEY_Y, top), parent=root)
+        rbox("%s_btn_%s_stem" % (name, kind), (12.0, 8.4, 3.35), M["door_glass"], bevel_mm=0.6, parent=key,
+             loc=L(0, 0, 0.15 + 3.35 / 2))
+        rbox("%s_btn_%s_cap" % (name, kind), (18.0, 14.0, 5.0), F, bevel_mm=1.5, parent=key, loc=L(0, 0, 3.45 + 2.5))
+        icon = button_icon(kind)
+        if icon:  # outlines in mm round the cap's centre, printed on its top
+            icon = [[(px * 1.25, py * 1.25) for px, py in shape] for shape in icon]
+            slab("%s_btn_%s_icon" % (name, kind), icon, 8.47, 8.57, M["light"], parent=key)
+        else:
+            text("%s_btn_%s_word" % (name, kind), WORDS[kind], 3.6 if kind == "rpt" else 3.1, M["light"], font="din",
+                 parent=key, loc=L(0, 0, 8.48))
+    clear_key_board(name, root)
+
+
+def clear_key_board(name, root):
+    """Under the top, seen through it: the keys' own board, a tactile switch under each key, its
+    ribbon folded off its right end and down behind the right speaker into J6 on the main board."""
+    zb = Z1 - WALL - 5.6
+    slab(name + "_key_board", [rrect(172.0, 17.0, 2.0, cy=KEY_Y)], zb, zb + 1.6, M["board"], bevel_mm=0.2,
+         parent=root)
+    for i in range(len(KEYS)):
+        x = (i - 2.5) * KEY_PITCH
+        rbox("%s_key_switch_%d" % (name, i), (6.2, 6.2, 2.4), M["chip"], bevel_mm=0.3, parent=root,
+             loc=L(x, KEY_Y, zb + 1.6 + 1.2))
+        lathe("%s_key_plunger_%d" % (name, i), [(0.01, 0), (1.8, 0), (1.8, 0.8), (1.5, 0.95), (0.01, 0.95)],
+              M["chrome"], seg=20, parent=root, loc=L(x, KEY_Y, zb + 1.6 + 2.4))
+        for j, (dx, dy) in enumerate(((-3.6, -2.2), (3.6, -2.2), (-3.6, 2.2), (3.6, 2.2))):
+            rbox("%s_key_switch_%d_leg_%d" % (name, i, j), (1.2, 0.7, 0.3), M["solder"], parent=root,
+                 loc=L(x + dx, KEY_Y + dy, zb + 1.75))
+    rbox(name + "_key_board_jack", (9.0, 4.0, 2.2), M["chip"], bevel_mm=0.3, parent=root,
+         loc=L(80.0, KEY_Y, zb + 1.6 + 1.1))
+    # Along under the top to the right, then down behind the right speaker (clear of the corner
+    # boss), facing in, and twisted into J6.
+    up, viewer, inward = (0.0, 0.0, 1.0), (0.0, -1.0, 0.0), (-1.0, 0.0, 0.0)
+    flex_strip(name + "_key_ribbon", [((84.0, KEY_Y, zb + 1.75), up), ((100.0, KEY_Y + 1.0, zb + 0.9), up),
+                                       ((121.0, KEY_Y + 4.0, zb - 1.0), (-0.5, 0.0, 0.86)),
+                                       ((128.0, -4.0, zb - 9.0), inward), ((128.5, -2.0, 120.0), inward),
+                                       ((128.0, 1.5, 92.0), (-0.6, -0.8, 0.0)),
+                                       ((128.0, FACE_Y - 2.2, BOARD_Z1 - 2.8), viewer)], 9.0, M["flex"], parent=root)
+
+
+def clear_handle(name, root):
+    """The carry handle across the top, behind the keys, on two mounts."""
+    top = Z1
+    F = M["clear_frame"]
+    r = 12.0
+    h = top + HANDLE_H
+    pts = [(-HANDLE_X, HANDLE_Y, top + 3.0)]
+    for i in range(9):
+        a = math.radians(180 - 90 * i / 8)
+        pts.append((-HANDLE_X + r + r * math.cos(a), HANDLE_Y, h - r + r * math.sin(a)))
+    for i in range(9):
+        a = math.radians(90 - 90 * i / 8)
+        pts.append((HANDLE_X - r + r * math.cos(a), HANDLE_Y, h - r + r * math.sin(a)))
+    pts.append((HANDLE_X, HANDLE_Y, top + 3.0))
+    tube(name + "_handle", pts, 4.6, F, res=4, parent=root)
+    for k, sx in enumerate((-1, 1)):
+        x = sx * HANDLE_X
+        rbox("%s_handle_mount_%d" % (name, k), (17.0, 15.0, 7.0), F, bevel_mm=2.4, parent=root,
+             loc=L(x, HANDLE_Y, top + 3.55))
+        lathe("%s_handle_collar_%d" % (name, k), [(4.4, 0), (6.0, 0), (6.0, 1.6), (5.4, 2.2), (4.4, 2.2)],
+              M["chrome"], seg=32, parent=root, loc=L(x, HANDLE_Y, top + 7.0))
+
+
+TAG_X, TAG_Z = 112.0, Z1 - 32.5   # between the right speaker's rim and the top
+TAG_ROT = (math.radians(90), math.radians(4.0), 0.0)
+
+
+def clear_tag(name, root, playlist):
+    """The luggage tag, its cord looped round the handle's right upright and over the top's front
+    edge, the clear acrylic tag hanging against the front plate above the right speaker; its face
+    is the page's tag_print (`<name>`), in a render a cream card lettered NAME and the collection."""
+    loc = (TAG_X, FRONT_Y - 0.6 - 0.9, TAG_Z)
+    tag = empty(name + "_root", L(*loc), TAG_ROT, parent=root)
+    rbox(name + "_body", (36, 58, 1.8), M["door_glass"], bevel_mm=0.6, parent=tag)
+    tube(name + "_eyelet", circle(2.2, 20), 0.6, M["solder"], cyclic=True, parent=tag, loc=L(0, 24.0, 0.95))
+    if WEB:
+        rbox(name, (30, 44, 0.05), M["tag_print"], parent=tag, loc=L(0, -5.0, 0.95))
+    else:
+        rbox(name + "_card", (30, 44, 0.3), M["tag_print"], parent=tag, loc=L(0, -5.0, 0.8))
+        text(name + "_t1", "NAME", 1.6, M["ink"], font="avenir", align="LEFT", parent=tag, loc=L(-12.0, 12.6, 0.97))
+        text(name + "_t2", playlist, 3.0, M["ink_dark"], font="futura", align="LEFT", parent=tag,
+             loc=L(-12.0, 5.0, 0.97))
+        for k, yy in enumerate((1.0, -7.0, -15.0)):
+            rbox("%s_rule_%d" % (name, k), (24, 0.25, 0.04), M["ink"], parent=tag, loc=L(0, yy, 0.97))
+    eye = Vector(world_of(loc, TAG_ROT, (0.0, 24.0, 0.0)))
+    top = Z1
+    # Up from the eyelet, over the top's front edge, back along the top past the handle's mount and
+    # once round its upright, above the mount's collar.
+    cord = smooth_path([tuple(eye), (eye.x, eye.y - 0.6, eye.z + 5.0), (eye.x - 1.5, FRONT_Y - 1.3, top - 1.6),
+                        (eye.x - 3.0, FRONT_Y + 2.0, top + 1.0), (HANDLE_X + 6.0, HANDLE_Y - 11.0, top + 1.0),
+                        (HANDLE_X + 6.5, HANDLE_Y - 10.0, top + 9.4), (HANDLE_X + 6.4, HANDLE_Y - 2.5, top + 11.4),
+                        (HANDLE_X + 2.5, HANDLE_Y + 6.2, top + 12.2), (HANDLE_X - 5.6, HANDLE_Y + 2.4, top + 12.8),
+                        (HANDLE_X - 4.4, HANDLE_Y - 5.6, top + 12.4), (HANDLE_X + 3.4, HANDLE_Y - 6.8, top + 11.6)], 6)
+    tube(name + "_cord", cord, 0.9, M["strap"], parent=root)
+    return tag
+
+
+def clear_knob(name, root):
+    """The knurled knob on the right side (the page turns it to scrub): its pivot's local Z points
+    out of the side."""
+    knob = empty(name + "_knob", L(BODY_W / 2 + 0.05, -6.0, DOOR_Z + 30.0), rot=(0.0, math.radians(90), 0.0),
+                 parent=root)
+    lathe(name + "_knob_skirt", [(0.01, 0.0), (12.6, 0.0), (12.6, 1.2), (12.0, 1.8), (0.01, 1.8)], M["alu_side"],
+          seg=96, parent=knob)
+    lathe(name + "_knob_body", [(0.01, 1.8), (10.8, 1.8), (10.8, 13.0), (10.2, 14.0), (9.0, 14.6), (0.01, 14.7)],
+          M["alu_side"], seg=160, ridge=({1, 2}, 0.38), parent=knob)
+    annulus(name + "_knob_top", 8.9, 0.4, M["alu"], z_mm=14.72, seg=96, parent=knob)
+    rbox(name + "_knob_mark", (4.6, 1.0, 0.12), M["ink_dark"], parent=knob, loc=L(-4.6, 0.0, 14.74))
+    return knob
+
+
+# ------------------------------------------------------------------ the stand and the case
+def slot_pose(i):
+    """Slot i of the rack (0 the frontmost and lowest, nearest the player): the disc's centre in the
+    stand's frame, and its rotation (its face, the local Z, out toward the viewer, leaning back)."""
+    y_front = -42.0 + SLOT_DY * i
+    floor = Vector((y_front + 7.0, TREAD0 + SLOT_DZ * i - 4.6))   # (y, z): the slot's floor
+    u = Vector((math.sin(SLOT_TILT), math.cos(SLOT_TILT)))
+    c = floor + u * 60.15
+    return (0.0, c.x, c.y), (math.radians(90) - SLOT_TILT, 0.0, 0.0)
+
+
+def stand_profile(notches=True):
+    """The stand's side: five treads stepping back and up, each with a slot leaning back."""
+    u = Vector((math.sin(SLOT_TILT), math.cos(SLOT_TILT)))
+    n = Vector((math.cos(SLOT_TILT), -math.sin(SLOT_TILT)))
+    w = 1.2
+    y_front = -42.0
+    pts = [(y_front, 0.0)]
+    for i in range(5):
+        y = y_front + SLOT_DY * i
+        z = TREAD0 + SLOT_DZ * i
+        pts.append((y, z))
+        if notches:
+            floor = Vector((y + 7.0, z - 4.6))
+            pf, pb = floor - n * w, floor + n * w
+            mf = pf + u * ((z - pf.y) / u.y)
+            mb = pb + u * ((z - pb.y) / u.y)
+            pts += [tuple(mf), tuple(pf), tuple(pb), tuple(mb)]
+        pts.append((y + SLOT_DY + (12.0 if i == 4 else 0.0), z))
+    pts.append((y_front + SLOT_DY * 5 + 12.0, 0.0))
+    return pts
+
+
+def clear_stand(name, root, rack_labels=None):
+    """The clear stand on the right and its five slots: an empty per slot (the pose of a disc in
+    it) under `<name>_lid`, the contract's lid_hinge, which never moves; a render (rack_labels)
+    puts a disc in each, the web build leaves them empty for the page."""
+    lid = empty(name + "_lid", L(STAND_X, STAND_Y, 0.0), (0.0, 0.0, STAND_TURN), parent=root)
+    sslab(name + "_stand", [stand_profile()], -62.0, 62.0, M["door_glass"], bevel_mm=0.6, parent=lid)
+    cheek = [(y, z + 5.0) if z > 0 else (y, z) for y, z in stand_profile(notches=False)]
+    for k, (x0, x1) in enumerate(((-65.5, -62.3), (62.3, 65.5))):
+        sslab("%s_stand_cheek_%d" % (name, k), [cheek], x0, x1, M["clear_frame"], bevel_mm=0.8, parent=lid)
+    for k, (x, y) in enumerate(((-56.0, -36.0), (56.0, -36.0), (-56.0, 50.0), (56.0, 50.0))):
+        lathe("%s_stand_foot_%d" % (name, k), [(0.01, 0.0), (5.0, 0.0), (5.0, 0.8), (0.01, 0.8)], M["rubber"], seg=24,
+              parent=lid, loc=L(x, y, -0.4))
+    for i in range(5):
+        c, rot = slot_pose(i)
+        empty("%s_rack_slot_%d" % (name, i), L(*c), rot, parent=lid)
+        if rack_labels:
+            make_disc("%s_rack_disc_%d" % (name, i), rack_labels[i], L(*c), rot=rot, parent=lid)
+    return lid
+
+
+def clear_case(name, root, booklet):
+    """The jewel case standing on the left, leaning back on a clear easel, its booklet to the
+    viewer through the crystal (make_case's local z, its lid, turned toward -y)."""
+    z = 62.5 * math.cos(CASE_LEAN) + EASEL_T + 0.12
+    rot = (math.radians(90) - CASE_LEAN, 0.0, CASE_TURN)
+    case = make_case(name + "_case", booklet, L(CASE_X, CASE_Y, z), rot=rot, parent=root)
+    easel = empty(name + "_easel", L(CASE_X, CASE_Y, z), rot, parent=root)
+    rbox(name + "_easel_back", (104.0, 74.0, 3.0), M["door_glass"], bevel_mm=0.8, parent=easel,
+         loc=L(0.0, -62.5 + 37.0, -1.56))
+    foot = Vector(world_of((CASE_X, CASE_Y, z), rot, (0.0, -62.5, -1.56)))
+    turn = (0.0, 0.0, CASE_TURN)
+    rbox(name + "_easel_base", (150.0, 46.0, EASEL_T), M["door_glass"], bevel_mm=0.8, parent=root,
+         loc=L(foot.x, foot.y - 9.0, EASEL_T / 2), rot=turn)
+    for k, sx in enumerate((-1, 1)):
+        # A gusset behind the back rest at each end, clear of its slant.
+        at = Vector(world_of((foot.x, foot.y, 0.0), turn, (sx * 46.0, 19.0, EASEL_T + 6.0)))
+        rbox("%s_easel_rib_%d" % (name, k), (3.0, 30.0, 12.0), M["door_glass"], bevel_mm=0.6, parent=root,
+             loc=L(*at), rot=turn)
+    return case
+
+
+def make_clear_player(name, disc_label, booklet, look, rack_labels=None, playlist="Top 50 · Global"):
+    """The whole Clear model under the empty `name`. `look` is the swatches (clear_look): the
+    materials take their colours from it (build_clear_materials); the geometry is the same for every
+    look. A render (not WEB) plays: the arm over the disc, the LCD and seven VU segments lit."""
+    playing = not WEB
+    root = empty(name, L(0, 0, 0))
+    clear_body(name, root)
+    clear_plate(name, root, playlist)
+    clear_door(name, root)
+    clear_light_ring(name, root)
+    clear_disc(name, root, disc_label)
+    clear_arm(name, root, playing)
+    clear_board(name, root, playing)
+    clear_mechanism(name, root, playing)
+    clear_speakers(name, root)
+    clear_keys(name, root)
+    clear_handle(name, root)
+    clear_tag(name + "_tag", root, playlist)
+    clear_knob(name, root)
+    clear_stand(name, root, rack_labels)
+    clear_case(name, root, booklet)
+    return root
