@@ -956,7 +956,8 @@ suitcase for an id it does not know. It is three-free, as are `skins.ts`, `clear
   `optionForPress`). The choice is `aria-checked` and a tick, not colour alone: in the accent's ink
   beside a skin; on a dot, white or the ink by the swatch's luminance (`tickOn`: white under 0.179,
   where the ink would vanish), the dot ringed in the accent's ink. A status line (`role="status"`,
-  in the markup even while empty, so a line set later is announced) speaks of a model change
+  in the markup even while empty, so a line set while the popover is open is announced; with the
+  popover closed nothing says it) speaks of a model change
   (`loadLine`): "Loading 63%", "Loading…" while the size is unknown, "Couldn't load Clear". `App`
   hands it `pickerLoad(modelLoad, askedModel)`, the report while its model is the one the visitor
   last asked for, so a change given up stays silent and a failed one says so after the look has
