@@ -1,3 +1,4 @@
+import type { ClearPart } from '../clear-looks';
 import type { SkinRole } from '../skins';
 
 /**
@@ -19,7 +20,10 @@ export type MaterialRole =
   | 'gloss-black'
   | 'emissive'
   | 'print'
-  | 'screen';
+  | 'screen'
+  | 'clear-shell'
+  | 'frame'
+  | 'pcb';
 
 export const MATERIAL_ROLES: Readonly<Record<string, MaterialRole>> = {
   leather: 'leather',
@@ -55,6 +59,20 @@ export const MATERIAL_ROLES: Readonly<Record<string, MaterialRole>> = {
   card_print: 'print',
   tag_print: 'print',
   lcd_screen: 'screen',
+  clear_shell: 'clear-shell',
+  door_glass: 'crystal',
+  clear_frame: 'frame',
+  board: 'pcb',
+  light: 'emissive',
+  chip: 'gloss-black',
+  copper: 'metal',
+  flex: 'matte',
+  silk: 'matte',
+  solder: 'metal',
+  cell: 'plastic',
+  magnet: 'metal',
+  surround: 'matte',
+  wire_red: 'matte',
 };
 
 /**
@@ -71,4 +89,12 @@ export const SKIN_ROLES: Readonly<Record<string, SkinRole>> = {
   hardware: 'hardware',
   deck: 'deck',
   grille: 'grille',
+};
+
+/** GLB material name → the Clear model's part that colours it (src/clear-looks.ts). */
+export const CLEAR_ROLES: Readonly<Record<string, ClearPart>> = {
+  clear_shell: 'shell',
+  clear_frame: 'frame',
+  board: 'board',
+  light: 'light',
 };

@@ -1,5 +1,5 @@
-// Builds public/assets/cd-player.glb from the Blender scripts: Blender, in the background, writes
-// art/.out/cd-player.raw.glb (art/blender/scripts/export.py); gltf-transform then dedups, welds,
+// Builds public/assets/cd-player.glb (or, given `clear`, cd-player-clear.glb) from the Blender
+// scripts: Blender, in the background, writes art/.out/<name>.raw.glb (art/blender/scripts/export.py); gltf-transform then dedups, welds,
 // prunes (keeping the empty pivots) and meshopt-compresses it. Run by hand; the output is committed.
 import { spawnSync } from 'node:child_process';
 import { mkdirSync, statSync } from 'node:fs';
@@ -11,8 +11,11 @@ import { MeshoptDecoder, MeshoptEncoder } from 'meshoptimizer';
 
 const APP = fileURLToPath(new URL('../../', import.meta.url));
 const BLENDER = process.env.BLENDER_BIN ?? '/Applications/Blender.app/Contents/MacOS/Blender';
-const RAW = `${APP}art/.out/cd-player.raw.glb`;
-const OUT = `${APP}public/assets/cd-player.glb`;
+const MODEL = process.argv[2] ?? 'suitcase';
+if (!['suitcase', 'clear'].includes(MODEL)) throw new Error(`build.mjs: unknown model ${MODEL}`);
+const NAME = MODEL === 'suitcase' ? 'cd-player' : 'cd-player-clear';
+const RAW = `${APP}art/.out/${NAME}.raw.glb`;
+const OUT = `${APP}public/assets/${NAME}.glb`;
 
 mkdirSync(`${APP}art/.out`, { recursive: true });
 mkdirSync(`${APP}public/assets`, { recursive: true });
@@ -31,7 +34,7 @@ const blender = spawnSync(
     '--out',
     RAW,
   ],
-  { stdio: 'inherit' },
+  { stdio: 'inherit', env: { ...process.env, CDP_MODEL: MODEL } },
 );
 if (blender.status !== 0) {
   console.error(`art:build: Blender exited with ${blender.status}`);

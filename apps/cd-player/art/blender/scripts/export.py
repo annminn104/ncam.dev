@@ -13,7 +13,12 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ARGS = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
 OUT = ARGS[ARGS.index("--out") + 1]
 
-for _file in ("cdkit.py", "parts.py", "build_player.py"):
+MODEL = os.environ.get("CDP_MODEL", "suitcase")
+SCRIPTS = {"suitcase": ("cdkit.py", "parts.py", "build_player.py"),
+           "clear": ("cdkit.py", "parts.py", "clear.py", "build_clear.py")}
+if MODEL not in SCRIPTS:
+    raise SystemExit("export.py: CDP_MODEL must be suitcase or clear, not %r" % MODEL)
+for _file in SCRIPTS[MODEL]:
     exec(compile(open(os.path.join(HERE, _file)).read(), _file, "exec"), globals())
 WEB = True  # cdkit's functions read it at call time
 

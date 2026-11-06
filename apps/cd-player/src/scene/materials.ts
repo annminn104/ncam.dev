@@ -1,6 +1,7 @@
 import {
   Color,
   DataTexture,
+  FrontSide,
   LinearFilter,
   LinearMipmapLinearFilter,
   MeshBasicMaterial,
@@ -133,6 +134,24 @@ export function makeMaterial(
         // booklet's art). A faint reflection and the refracted edges still read as glass.
         specularIntensity: 0.3,
       });
+    case 'clear-shell':
+      // The see-through shell: clear, faintly tinted (the shell's swatch sets `attenuationColor`
+      // and `color`), its back faces left out so the inside shows through one wall at a time.
+      return new MeshPhysicalMaterial({
+        name: source.name,
+        color: new Color('#ffffff'),
+        metalness: 0,
+        roughness: 0.05,
+        transmission: 1,
+        thickness: 0.003,
+        ior: 1.49,
+        specularIntensity: 0.4,
+        side: FrontSide,
+      });
+    case 'frame':
+      return physical(source, { roughness: source.roughness, metalness: source.metalness });
+    case 'pcb':
+      return physical(source, { roughness: 0.3, clearcoat: 0.6, clearcoatRoughness: 0.12 });
     case 'metal':
       return physical(source, {
         metalness: 1,

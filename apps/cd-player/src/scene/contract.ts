@@ -37,6 +37,13 @@ export const REQUIRED_NODES = [
 ] as const;
 export type RequiredNode = (typeof REQUIRED_NODES)[number];
 
+/**
+ * Nodes a model may have: the Clear model's door. The page drives them when they are there
+ * (src/scene/profiles.ts names each model's).
+ */
+export const OPTIONAL_NODES = ['door_hinge'] as const;
+export type OptionalNode = (typeof OPTIONAL_NODES)[number];
+
 /** Materials whose maps the page paints at runtime (src/scene/textures). */
 export const DYNAMIC_MATERIALS = [
   'art_disc',

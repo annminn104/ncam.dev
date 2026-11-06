@@ -1,9 +1,9 @@
 import { readFileSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { DYNAMIC_MATERIALS, REQUIRED_NODES } from './contract';
+import { DYNAMIC_MATERIALS, OPTIONAL_NODES, REQUIRED_NODES } from './contract';
 import { readGlbJson, triangleCount } from './glb';
-import { MATERIAL_ROLES, SKIN_ROLES } from './material-roles';
+import { CLEAR_ROLES, MATERIAL_ROLES, SKIN_ROLES } from './material-roles';
 
 const GLB = fileURLToPath(new URL('../../public/assets/cd-player.glb', import.meta.url));
 /** Box-mapped in export.py (one UV unit per 5 cm), for the maps the page tiles over them. */
@@ -127,5 +127,55 @@ describe('public/assets/cd-player.glb (art/pipeline/build.mjs)', () => {
   it('keeps meshes on leaf nodes, so quantisation never scales a pivot', () => {
     for (const node of json.nodes)
       if (node.children?.length) expect(node.mesh, node.name).toBeUndefined();
+  });
+});
+
+const CLEAR_GLB = fileURLToPath(
+  new URL('../../public/assets/cd-player-clear.glb', import.meta.url),
+);
+
+describe('public/assets/cd-player-clear.glb (art/pipeline/build.mjs clear)', () => {
+  const json = readGlbJson(new Uint8Array(readFileSync(CLEAR_GLB)));
+  const index = new Map(json.nodes.map((node, i) => [node.name ?? '', i]));
+  const node = (name: string) => json.nodes[index.get(name) ?? -1];
+  const parentOf = (name: string) =>
+    json.nodes.find((candidate) => candidate.children?.includes(index.get(name) ?? -1))?.name;
+  const materialOf = (name: string) => {
+    const mesh = node(name)?.mesh;
+    if (mesh === undefined) return undefined;
+    const material = json.meshes[mesh].primitives[0].material;
+    return material === undefined ? undefined : json.materials[material].name;
+  };
+
+  it('has every node the page drives, and its door', () => {
+    const names = new Set(json.nodes.map((n) => n.name));
+    for (const name of [...REQUIRED_NODES, ...OPTIONAL_NODES])
+      expect(names.has(name), name).toBe(true);
+  });
+
+  it('has every printed material, a role for every material, and the four parts a look colours', () => {
+    const names = json.materials.map((material) => material.name ?? '');
+    for (const name of DYNAMIC_MATERIALS) expect(names).toContain(name);
+    for (const name of names) expect(MATERIAL_ROLES[name], name).toBeDefined();
+    for (const name of Object.keys(CLEAR_ROLES)) expect(names, name).toContain(name);
+  });
+
+  it('hangs the five rack slots from the stand, as empties', () => {
+    for (let i = 0; i < 5; i += 1) {
+      expect(parentOf(`rack_slot_${i}`)).toBe('lid_hinge');
+      expect(node(`rack_slot_${i}`).mesh).toBeUndefined();
+    }
+  });
+
+  it('prints the tag on the tag node, and lights the ten VU segments with one material', () => {
+    expect(materialOf('tag')).toBe('tag_print');
+    for (let i = 0; i < 10; i += 1) expect(materialOf(`vu_seg_${i}`), String(i)).toBe('vu');
+  });
+
+  it('stays inside its budget, meshopt-compressed, with meshes on leaf nodes only', () => {
+    expect(statSync(CLEAR_GLB).size).toBeLessThanOrEqual(4 * 1024 * 1024);
+    expect(triangleCount(json)).toBeLessThanOrEqual(150_000);
+    expect(json.extensionsUsed).toContain('EXT_meshopt_compression');
+    for (const n of json.nodes) if (n.children?.length) expect(n.mesh, n.name).toBeUndefined();
   });
 });
