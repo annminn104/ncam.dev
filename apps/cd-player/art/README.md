@@ -20,13 +20,13 @@ by Python running inside Blender, not modelled by hand.
   ring, the swing arm with its voice coil, the spindle motor's copper coils, the board with its
   chips, LCD, VU strip and silkscreened logo, the speakers, four AA cells, the keys and their own
   board, the knob standing upright on the top beside them, the handle and its tag, the nameplate,
-  the stand with the rack's five slots and the standing case. `clear_look(spec)` reads a look from `src/clear-looks.json` (and stops the run,
-  naming what is wrong, on a part or a field it lacks) and `build_clear_materials(look)` makes its
-  materials.
+  the stand with the rack's five slots and the standing case. `clear_look(spec)` reads a look
+  from `src/clear-looks.json` (and stops the run, naming what is wrong, on a part or a field it
+  lacks) and `build_clear_materials(look)` makes its materials.
 - `blender/scripts/build_clear.py`: the Clear model's web scene, with the names the page drives
   (`src/scene/contract.ts`) and the door's `door_hinge`.
-- `blender/scripts/export.py`: the background entry. It meshes curves and text, adds UVs, and
-  writes the raw GLB.
+- `blender/scripts/export.py`: the background entry. It builds the model `CDP_MODEL` names
+  (`suitcase`, the default, or `clear`), meshes curves and text, adds UVs, and writes the raw GLB.
 - `blender/scripts/hero.py`: the Cycles stills, headless: `CDP_MODEL=suitcase|clear`,
   `CDP_HERO_VIEW=hero|lid` (the suitcase) or `hero|inside` (the Clear model),
   `CDP_HERO_QUALITY=preview|final`, into `.out/v2-<view>-<quality>.png`, or
@@ -42,11 +42,15 @@ by Python running inside Blender, not modelled by hand.
 
 Needs Blender 5.2.2 LTS (`/Applications/Blender.app`, or `BLENDER_BIN`).
 
-    pnpm --filter @ncam/cd-player art:build
+    pnpm --filter @ncam/cd-player art:build         # the suitcase
+    pnpm --filter @ncam/cd-player art:build:clear   # the Clear model
 
-It writes `public/assets/cd-player.glb` (committed). `src/scene/model-contract.test.ts` checks the
-names, the materials, where things are parented and the budget (150k triangles, 4 MB). The
-committed model is about 100,633 triangles and 777 KB. Rebuild after any change to the scripts.
+They write `public/assets/cd-player.glb` and `public/assets/cd-player-clear.glb` (both committed;
+`pipeline/build.mjs` hands the model to `export.py` as `CDP_MODEL`).
+`src/scene/model-contract.test.ts` checks each one's names, materials, where things are parented
+and the budget (150k triangles, 4 MB). The committed suitcase is about 100,633 triangles and
+777 KB, the Clear model about 106,246 and 802 KB. Rebuild a model after any change to its scripts
+(`cdkit.py` and `parts.py` are both models').
 
 ## Renders
 
