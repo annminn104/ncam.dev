@@ -268,6 +268,18 @@ export function LookPicker({ look, onChange, load }: Props) {
     return () => document.removeEventListener('pointerdown', onPointerDown, true);
   }, [open]);
 
+  // A model change that fails sends the look back, and the groups of the model the focus was in
+  // unmount under it: focus falls to <body> and Escape no longer reaches this root. Put it back
+  // on the checked model.
+  useEffect(() => {
+    if (!open) return;
+    const active = document.activeElement;
+    if (active && active !== document.body && root.current?.contains(active)) return;
+    root.current
+      ?.querySelector<HTMLButtonElement>(`#${MENU_ID} [role="radio"][aria-checked="true"]`)
+      ?.focus({ preventScroll: true });
+  }, [open, look.model]);
+
   const toggle = () => {
     if (open) {
       setOpen(false);

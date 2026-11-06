@@ -188,4 +188,14 @@ describe('LookPicker opening', () => {
     expect(source).toMatch(/scrollIntoView\(\{ block: 'nearest' \}\)/);
     expect(source).toMatch(/focus\(\{ preventScroll: true \}\)/);
   });
+
+  it('puts focus back on the checked model when a change unmounts the focused part', () => {
+    // A failed change returns the look to the Suitcase: the Clear's groups unmount under the focus
+    // and it falls to <body>. An effect keyed on the look's model brings it back to the menu.
+    const source = readFileSync(new URL('./LookPicker.tsx', import.meta.url), 'utf8');
+    const effect = source.match(/useEffect\(\(\) => \{[^]*?\}, \[open, look\.model\]\)/);
+    expect(effect?.[0]).toMatch(/document\.activeElement/);
+    expect(effect?.[0]).toMatch(/\[role="radio"\]\[aria-checked="true"\]/);
+    expect(effect?.[0]).toMatch(/focus\(\{ preventScroll: true \}\)/);
+  });
 });
