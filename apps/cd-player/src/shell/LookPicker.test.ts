@@ -11,6 +11,7 @@ import {
   loadLine,
   optionForKey,
   optionForPress,
+  tickOn,
   type KeyPress,
 } from './LookPicker';
 
@@ -107,11 +108,24 @@ describe('LookMenu', () => {
     expect(html).toContain('<p class="cdp-skin__load" role="status">Loading 50%</p>');
   });
 
-  it('never shows the last report of a change the visitor gave up', () => {
-    // The look went back to the suitcase while Clear was loading: that report is stale.
-    const html = menu(DEFAULT_LOOK_STATE, { model: 'clear', status: 'loading', fraction: 0.5 });
-    expect(html).not.toContain('cdp-skin__load');
-    expect(html).not.toContain('Loading');
+  it('says a model failed even after the look went back to the one on show', () => {
+    const html = menu(DEFAULT_LOOK_STATE, { model: 'clear', status: 'failed' });
+    expect(html).toContain('<p class="cdp-skin__load" role="status">Couldn’t load Clear</p>');
+  });
+
+  it('keeps its status line in the markup, empty, so a later line is announced', () => {
+    expect(menu(DEFAULT_LOOK_STATE)).toContain('<p class="cdp-skin__load" role="status"></p>');
+  });
+
+  it('puts a white tick on a dark swatch and the ink on a light one', () => {
+    expect(tickOn('#000000')).toBe('light');
+    expect(tickOn('#1a1a1a')).toBe('light');
+    expect(tickOn('#ffffff')).toBe('dark');
+    expect(tickOn('#c0c0c0')).toBe('dark');
+    const html = menu(CLEAR);
+    expect(html).toContain('aria-label="Black" class="cdp-skin__dot cdp-skin__dot--dark"');
+    expect(html).toContain('aria-label="Purple" class="cdp-skin__dot cdp-skin__dot--dark"');
+    expect(html).toContain('aria-label="Silver" class="cdp-skin__dot"');
   });
 });
 

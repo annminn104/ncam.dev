@@ -51,7 +51,7 @@ import { SceneHost } from './shell/SceneHost';
 import { Tracklist } from './shell/Tracklist';
 import { createSpotifyClient } from './spotify/client';
 import { linkErrorMessage, parseSpotifyLink } from './spotify/link';
-import { backdropFor, loaderPercent, nowPlayingFor, sameLoadPercent } from './view';
+import { backdropFor, loaderPercent, nowPlayingFor, pickerLoad, sameLoadPercent } from './view';
 
 const log = createLogger({ scope: 'cd-player' });
 
@@ -121,9 +121,16 @@ export default function App({ controller, initial = null, assetBase = '', initia
   useEffect(() => {
     setLookState(readLookState(safeStorage()));
   }, []);
+  // The model the visitor last chose, which the look goes back from when a change fails: the picker
+  // speaks of this one (pickerLoad).
+  const [askedModel, setAskedModel] = useState<ModelId>((initialLook ?? DEFAULT_LOOK_STATE).model);
+  useEffect(() => {
+    setAskedModel(readLookState(safeStorage()).model);
+  }, []);
   const changeLook = useCallback(
     (next: LookState) => {
       setLookState(next);
+      setAskedModel(next.model);
       const storage = safeStorage();
       writeSkin(storage, next.skin);
       writeClearLook(storage, next.clear);
@@ -356,7 +363,7 @@ export default function App({ controller, initial = null, assetBase = '', initia
         onSubmit={loadLink}
         look={lookState}
         onLook={changeLook}
-        modelLoad={modelLoad}
+        modelLoad={pickerLoad(modelLoad, askedModel)}
         current={shown}
         busy={link.pending}
         // The collection on show is already there: pressing its preset does nothing.

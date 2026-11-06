@@ -1,5 +1,6 @@
 import type { SceneView, TrackView } from './bridge';
 import { currentIndex, upcomingIndices, type SeqState } from './playback/sequencer';
+import type { ModelId } from './models';
 import type { ModelLoad } from './scene-props';
 import {
   pickPicture,
@@ -115,6 +116,15 @@ export function sameLoadPercent(last: ModelLoad | null, next: ModelLoad): boolea
   }
   const percent = loaderPercent(next.fraction);
   return percent !== null && percent === loaderPercent(last.fraction);
+}
+
+/**
+ * What the picker says of a model change: the report while its `model` is the one the visitor last
+ * asked for, else nothing. A change given up before it loads stays silent (the visitor asked for
+ * the other model), and one that failed says so after the look went back, until they ask again.
+ */
+export function pickerLoad(load: ModelLoad | null, asked: ModelId): ModelLoad | null {
+  return load?.model === asked ? load : null;
 }
 
 /** The loader's one line, with the count (`loaderPercent`) once the GLB's size is known. */

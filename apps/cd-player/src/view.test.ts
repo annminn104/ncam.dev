@@ -9,6 +9,7 @@ import {
   loaderLine,
   loaderPercent,
   nowPlayingFor,
+  pickerLoad,
   sameLoadPercent,
   sceneView,
   seekRange,
@@ -137,6 +138,26 @@ describe('loaderPercent', () => {
 
   it('gives every chunk inside one percent the same count, so the page renders once per percent', () => {
     expect(new Set([0.625, 0.6262, 0.63, 0.6349].map(loaderPercent))).toEqual(new Set([63]));
+  });
+});
+
+describe('pickerLoad', () => {
+  const reports: ModelLoad[] = [
+    { model: 'clear', status: 'loading', fraction: 0.5 },
+    { model: 'clear', status: 'ready' },
+    { model: 'clear', status: 'failed' },
+  ];
+
+  it('keeps a report of the model the visitor last asked for', () => {
+    for (const load of reports) expect(pickerLoad(load, 'clear')).toBe(load);
+  });
+
+  it('drops a report of the other model, so a change given up stays silent', () => {
+    for (const load of reports) expect(pickerLoad(load, 'suitcase')).toBeNull();
+  });
+
+  it('has nothing to say before any report', () => {
+    expect(pickerLoad(null, 'clear')).toBeNull();
   });
 });
 

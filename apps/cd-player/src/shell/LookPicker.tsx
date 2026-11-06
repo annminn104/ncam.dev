@@ -16,8 +16,12 @@ interface Option {
   swatch?: string;
 }
 
+/** How a group is drawn: the models side by side, the skins as rows, a part's colours as dots. */
+type Variant = 'models' | 'rows' | 'dots';
+
 interface Group {
   label: string;
+  variant: Variant;
   options: readonly Option[];
   value: string;
   pick(id: string): void;
@@ -86,6 +90,7 @@ function swatchColour(part: ClearPart, id: string): string {
 function groupsFor(look: LookState, onChange: (next: LookState) => void): Group[] {
   const model: Group = {
     label: 'Model',
+    variant: 'models',
     options: MODELS.map((m) => ({ id: m.id, name: m.name })),
     value: look.model,
     pick: (id) => onChange({ ...look, model: id as ModelId }),
@@ -95,6 +100,7 @@ function groupsFor(look: LookState, onChange: (next: LookState) => void): Group[
       model,
       {
         label: 'Player colour',
+        variant: 'rows',
         options: SKINS.map((s) => ({ id: s.id, name: s.name, swatch: s.palette.leather })),
         value: look.skin,
         pick: (id) => onChange({ ...look, skin: id as SkinId }),
@@ -105,6 +111,7 @@ function groupsFor(look: LookState, onChange: (next: LookState) => void): Group[
     model,
     ...CLEAR_PARTS.map((part) => ({
       label: PART_NAMES[part],
+      variant: 'dots' as const,
       options: CLEAR_SWATCHES[part].map((s) => ({
         id: s.id,
         name: s.name,
@@ -114,6 +121,19 @@ function groupsFor(look: LookState, onChange: (next: LookState) => void): Group[
       pick: (id: string) => onChange({ ...look, clear: { ...look.clear, [part]: id } }),
     })),
   ];
+}
+
+/**
+ * Whether the tick on a swatch of `hex` (#rrggbb) is white or the ink: white on the dark ones, where
+ * the ink would vanish. The switch is the luminance at which white and black have the same contrast
+ * (0.179).
+ */
+export function tickOn(hex: string): 'light' | 'dark' {
+  const [r, g, b] = [1, 3, 5].map((at) => {
+    const v = parseInt(hex.slice(at, at + 2), 16) / 255;
+    return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b < 0.179 ? 'light' : 'dark';
 }
 
 /** What the menu says while a model downloads, or after it failed; null otherwise. */
@@ -129,7 +149,8 @@ export function loadLine(load: ModelLoad | null): string | null {
  * `aria-label` (a Clear part's colours); otherwise they are rows of a name and, if it has one, a
  * swatch.
  */
-function RadioGroup({ group, dots }: { group: Group; dots: boolean }) {
+function RadioGroup({ group }: { group: Group }) {
+  const dots = group.variant === 'dots';
   const refs = useRef<(HTMLButtonElement | null)[]>([]);
   const ids = group.options.map((option) => option.id);
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -150,7 +171,7 @@ function RadioGroup({ group, dots }: { group: Group; dots: boolean }) {
         role="radiogroup"
         aria-label={group.label}
         className={
-          dots ? 'cdp-skin__swatches' : group.label === 'Model' ? 'cdp-skin__models' : undefined
+          dots ? 'cdp-skin__swatches' : group.variant === 'models' ? 'cdp-skin__models' : undefined
         }
         onKeyDown={onKeyDown}
       >
@@ -164,7 +185,11 @@ function RadioGroup({ group, dots }: { group: Group; dots: boolean }) {
               aria-checked={checked}
               tabIndex={checked ? 0 : -1}
               aria-label={dots ? option.name : undefined}
-              className={dots ? 'cdp-skin__dot' : 'cdp-skin__option'}
+              className={
+                dots
+                  ? `cdp-skin__dot${option.swatch && tickOn(option.swatch) === 'light' ? ' cdp-skin__dot--dark' : ''}`
+                  : 'cdp-skin__option'
+              }
               style={dots ? { backgroundColor: option.swatch } : undefined}
               ref={(element) => {
                 refs.current[index] = element;
@@ -199,21 +224,19 @@ interface MenuProps {
 /**
  * The popover: the model, then its colours, each a radio group whose arrows choose as they move.
  * A key held with Alt, Ctrl or Cmd is the browser's, never a choice (`optionForPress`). Its status
- * line follows only the model the look wants: the last report of a change the visitor gave up is
- * stale and never shows.
+ * line says what `load` says: the caller hands it the load of the model the visitor last chose.
  */
 export function LookMenu({ look, open, onChange, load }: MenuProps) {
-  const line = load?.model === look.model ? loadLine(load) : null;
+  const line = loadLine(load);
   return (
     <div id={MENU_ID} className="cdp-skin__menu" hidden={!open}>
-      {groupsFor(look, onChange).map((group, index) => (
-        <RadioGroup key={group.label} group={group} dots={look.model === 'clear' && index > 0} />
+      {groupsFor(look, onChange).map((group) => (
+        <RadioGroup key={group.label} group={group} />
       ))}
-      {line && (
-        <p className="cdp-skin__load" role="status">
-          {line}
-        </p>
-      )}
+      {/* Always rendered, so a line set inside the closed popover is announced. */}
+      <p className="cdp-skin__load" role="status">
+        {line}
+      </p>
     </div>
   );
 }
