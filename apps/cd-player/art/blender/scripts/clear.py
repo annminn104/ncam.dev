@@ -189,14 +189,14 @@ def build_clear_materials(look):
 
 # ------------------------------------------------------------------ dimensions (mm)
 BODY_W, BODY_H, BODY_D, BODY_R = 300.0, 214.0, 76.0, 20.0
-WALL = 3.0
+SHELL_WALL = 3.0                    # the shell's walls (parts.py's WALL, the suitcase's, shares these globals)
 PLINTH_W, PLINTH_D, PLINTH_H, PLINTH_Y = 318.0, 112.0, 30.0, -8.0
 FOOT_H = 1.5                        # the plinth's rubber feet
 Z0 = PLINTH_H + 0.1                 # the body's underside, on the plinth
 Z1 = Z0 + BODY_H                    # its top
 ZC = (Z0 + Z1) / 2
 FRONT_Y, BACK_Y = -BODY_D / 2, BODY_D / 2
-IN_F, IN_B = FRONT_Y + WALL, BACK_Y - WALL   # the plates' inner faces
+IN_F, IN_B = FRONT_Y + SHELL_WALL, BACK_Y - SHELL_WALL   # the plates' inner faces
 DOOR_R = 75.0                       # the door: 150 across its bezel
 BEZEL_IN = 68.5                     # the bezel's inner edge
 GLASS_R = 69.0                      # the glass, its edge held in the bezel
@@ -214,7 +214,7 @@ ARM_LEN = 56.0                      # pivot to lens: off the rim at rest, over t
 ARM_PLAY = math.radians(-30.0)      # a render's arm, over the disc (Blender's y rotation)
 CHASSIS_Y = DISC_Y + 15.9           # the mechanism's plate, behind the motor and the arm
 BOARD_Z0, BOARD_Z1 = Z0 + 4.0, Z0 + 54.0      # its parts are laid out at these heights (mm)
-BOARD_W = BODY_W - 2 * WALL - 10.0
+BOARD_W = BODY_W - 2 * SHELL_WALL - 10.0
 FACE_Y = 7.0                        # the board's front face (its parts stand toward the viewer)
 SCREWS = [(sx * (BODY_W / 2 - 14.0), z) for sx in (-1, 1) for z in (Z0 + 14.0, Z1 - 14.0)]
 KEYS = ("prev", "play", "next", "stop", "rpt", "mode")
@@ -409,7 +409,7 @@ def clear_body(name, root):
           bevel_mm=1.2, parent=root)
     fslab(name + "_shell_back", [outer], IN_B, BACK_Y, S, bevel_mm=1.2, parent=root)
     # The sides, the top and the bottom: one hollow band between the plates.
-    inner = rrect(BODY_W - 2 * WALL, BODY_H - 2 * WALL, BODY_R - WALL, seg=12, cy=ZC)
+    inner = rrect(BODY_W - 2 * SHELL_WALL, BODY_H - 2 * SHELL_WALL, BODY_R - SHELL_WALL, seg=12, cy=ZC)
     fslab(name + "_shell_band", [outer, inner], IN_F, IN_B, S, bevel_mm=0.5, parent=root)
     # The speakers' perforated inserts, set in the front plate's openings.
     for side, sx in (("l", -1), ("r", 1)):
@@ -847,7 +847,7 @@ def clear_mechanism(name, root, playing=False):
 
 
 CELL_R, CELL_L = 7.25, 50.5
-CELL_Z = Z1 - WALL - CELL_R - 1.0
+CELL_Z = Z1 - SHELL_WALL - CELL_R - 1.0
 CELL_ROWS = (4.8, 20.6)
 
 
@@ -954,7 +954,7 @@ def clear_keys(name, root):
 def clear_key_board(name, root):
     """Under the top, seen through it: the keys' own board, a tactile switch under each key, its
     ribbon folded off its right end and down behind the right speaker into J6 on the main board."""
-    zb = Z1 - WALL - 5.6
+    zb = Z1 - SHELL_WALL - 5.6
     slab(name + "_key_board", [rrect(172.0, 17.0, 2.0, cy=KEY_Y)], zb, zb + 1.6, M["board"], bevel_mm=0.2,
          parent=root)
     for i in range(len(KEYS)):
