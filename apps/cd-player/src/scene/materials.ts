@@ -282,14 +282,20 @@ export function applyLook(materials: Iterable<Material>, look: Look): void {
   }
 }
 
-/** The materials under `root` a skin recolours, by name, as sRGB hex (for the live check). */
+/**
+ * The materials under `root` a look recolours, by name, as sRGB hex (for the live check): a skin's
+ * roles on the suitcase, the Clear model's parts and its silkscreen.
+ */
 export function skinColours(root: Object3D): Record<string, string> {
   const colours: Record<string, string> = {};
   root.traverse((object) => {
     const mesh = object as Mesh;
     if (!mesh.isMesh) return;
     const material = mesh.material as MeshStandardMaterial;
-    if (skinRoleOf(material.name)) colours[material.name] = `#${material.color.getHexString()}`;
+    const { name } = material;
+    if (skinRoleOf(name) || Object.hasOwn(CLEAR_ROLES, name) || name === 'silk') {
+      colours[name] = `#${material.color.getHexString()}`;
+    }
   });
   return colours;
 }

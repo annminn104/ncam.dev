@@ -315,4 +315,19 @@ describe('applyLook', () => {
     applyLook(Object.values(m), { model: 'suitcase', skin: 'cherry' });
     expect(hex(m.silk.color)).toBe(before);
   });
+
+  it('reports the Clear model’s colours to the live check, part by part', () => {
+    const m = clearMaterials();
+    const root = new Group();
+    for (const material of Object.values(m)) root.add(new Mesh(new BoxGeometry(), material));
+    applyLook(Object.values(m), { model: 'clear', clear: look });
+    expect(skinColours(root)).toEqual({
+      clear_shell: clearSwatch(look, 'shell').tint,
+      clear_frame: clearSwatch(look, 'frame').colour,
+      board: clearSwatch(look, 'board').colour,
+      light: clearSwatch(look, 'light').glow,
+      silk: SILK_LIGHT,
+      leather: hex(m.leather.color),
+    });
+  });
 });
