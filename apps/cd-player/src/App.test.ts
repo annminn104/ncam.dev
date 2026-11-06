@@ -222,4 +222,13 @@ describe('App and the model on the stage', () => {
     // A model chosen while the scene is not live is written at once, and the boot loads it.
     expect(source).toMatch(/boot\.phase !== 'live'[\s\S]{0,80}writeModel\(/);
   });
+
+  it('makes the root’s accent from the model on show once live, never the chosen one alone', () => {
+    const source = readFileSync(new URL('./App.tsx', import.meta.url), 'utf8');
+    expect(source).toMatch(/accentModelFor\(\s*live,\s*onShow,\s*lookState\.model\s*\)/);
+    // A `ready` notes the model on show, which turns the page as it comes.
+    expect(source).toMatch(
+      /if \(load\.status === 'ready'\) \{[^}]*\bsetOnShow\(load\.model\);[^}]*\}/,
+    );
+  });
 });

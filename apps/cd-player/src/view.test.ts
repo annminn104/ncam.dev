@@ -9,6 +9,7 @@ import {
   loaderLine,
   loaderPercent,
   nowPlayingFor,
+  accentModelFor,
   pickerLoad,
   sameLoadPercent,
   sceneView,
@@ -248,5 +249,21 @@ describe('the next five', () => {
   it('follows the shuffled play order under Shuffle', () => {
     // Seed 7 orders the eight as 0, 4, 6, 1, 2, 3, 5, 7 (a first, as it plays).
     expect(ids(playing(0, { type: 'TOGGLE_SHUFFLE', seed: 7 }))).toEqual(['e', 'g', 'b', 'd', 'f']);
+  });
+});
+
+describe('accentModelFor', () => {
+  it('follows the chosen model while the scene is not live', () => {
+    expect(accentModelFor(false, 'suitcase', 'clear')).toBe('clear');
+    expect(accentModelFor(false, null, 'suitcase')).toBe('suitcase');
+  });
+
+  it('follows the chosen model while live with nothing on show yet', () => {
+    expect(accentModelFor(true, null, 'clear')).toBe('clear');
+  });
+
+  it('follows the model on show once live, whatever is chosen', () => {
+    expect(accentModelFor(true, 'suitcase', 'clear')).toBe('suitcase');
+    expect(accentModelFor(true, 'clear', 'suitcase')).toBe('clear');
   });
 });

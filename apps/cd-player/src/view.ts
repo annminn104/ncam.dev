@@ -127,6 +127,15 @@ export function pickerLoad(load: ModelLoad | null, asked: ModelId): ModelLoad | 
   return load?.model === asked ? load : null;
 }
 
+/**
+ * The model whose colours the page wears: the one on the stage once the scene is live, so a
+ * change turns the page as its model comes on show (and a change that fails never does), else
+ * the one chosen, which the boot loads.
+ */
+export function accentModelFor(live: boolean, onShow: ModelId | null, chosen: ModelId): ModelId {
+  return live && onShow !== null ? onShow : chosen;
+}
+
 /** The loader's one line, with the count (`loaderPercent`) once the GLB's size is known. */
 export function loaderLine(percent: number | null): string {
   return percent === null ? 'Loading the player' : `Loading the player ${percent}%`;

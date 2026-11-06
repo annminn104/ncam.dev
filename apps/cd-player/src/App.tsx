@@ -51,7 +51,14 @@ import { SceneHost } from './shell/SceneHost';
 import { Tracklist } from './shell/Tracklist';
 import { createSpotifyClient } from './spotify/client';
 import { linkErrorMessage, parseSpotifyLink } from './spotify/link';
-import { backdropFor, loaderPercent, nowPlayingFor, pickerLoad, sameLoadPercent } from './view';
+import {
+  accentModelFor,
+  backdropFor,
+  loaderPercent,
+  nowPlayingFor,
+  pickerLoad,
+  sameLoadPercent,
+} from './view';
 
 const log = createLogger({ scope: 'cd-player' });
 
@@ -115,8 +122,9 @@ export default function App({ controller, initial = null, assetBase = '', initia
   // The suitcase in Blush on the server and on the first render of a hydration, so the markup
   // matches; the visitor's saved one right after it (LOOK_SCRIPT has already painted its accent on
   // the server's markup; the scene mounts later and boots in it); saved on each change, but a model
-  // chosen while the scene is live only when it comes on show (onModel, below). A look is never in
-  // the URL.
+  // chosen while the scene is live only when it comes on show (onModel, below). The scene gets the
+  // chosen look, so the next model swaps in in its own colours; the page wears the colours of the
+  // model on show (`accent`, below). A look is never in the URL.
   const [lookState, setLookState] = useState<LookState>(initialLook ?? DEFAULT_LOOK_STATE);
   useEffect(() => {
     setLookState(readLookState(safeStorage()));
@@ -142,7 +150,6 @@ export default function App({ controller, initial = null, assetBase = '', initia
   // Once per change: the scene recolours its model whenever `look` is a new object, and App renders
   // on every playback, progress and boot update.
   const look = useMemo(() => lookOf(lookState), [lookState]);
-  const accent = lookAccent(look);
   // The page settled and the scene did not start by itself (a software rasteriser, reduced
   // motion): "Open the player" stands where the loader was until the visitor starts it.
   const [manual, setManual] = useState(false);
@@ -182,10 +189,21 @@ export default function App({ controller, initial = null, assetBase = '', initia
   // whole percent, as the loader's count is (a size still unknown as it comes). A model on show is
   // noted, and saved when a change brought it while the scene was live; the boot's own writes
   // nothing, as its `ready` comes with onReady, before the phase is live (a model chosen before
-  // that was saved as it was chosen). A change that fails goes back to the model still shown.
+  // that was saved as it was chosen). The page wears the model on show: a model chosen while the
+  // scene is live turns it in the render that its `ready` arrives. A change that fails goes back to
+  // the model still shown and never turned the page.
   const [modelLoad, setModelLoad] = useState<ModelLoad | null>(null);
   const shownLoad = useRef<ModelLoad | null>(null);
   const shownModel = useRef<ModelId>(DEFAULT_MODEL);
+  const [onShow, setOnShow] = useState<ModelId | null>(null);
+  // The page's accent: the model on show's colours once the scene is live, else the chosen model's
+  // (nothing is on the stage, the boot loads it, and LOOK_SCRIPT has painted the saved one). Colour
+  // changes within the model on show turn the page at once.
+  const accent = useMemo(
+    () =>
+      lookAccent(lookOf({ ...lookState, model: accentModelFor(live, onShow, lookState.model) })),
+    [lookState, live, onShow],
+  );
   const onModel = useCallback(
     (load: ModelLoad) => {
       if (!sameLoadPercent(shownLoad.current, load)) {
@@ -194,6 +212,7 @@ export default function App({ controller, initial = null, assetBase = '', initia
       }
       if (load.status === 'ready') {
         shownModel.current = load.model;
+        setOnShow(load.model);
         if (live) writeModel(safeStorage(), load.model);
       }
       if (load.status === 'failed')
