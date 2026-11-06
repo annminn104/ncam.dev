@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { createElement } from 'react';
 import { renderToString } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
@@ -177,5 +178,14 @@ describe('the keys (the menu keeps a key it picks with from the page, and only t
     for (const key of ['Enter', ' ', 'Tab', 'Escape', 'a']) {
       expect(optionForPress(press(key), ids, 'b'), key).toBeNull();
     }
+  });
+});
+
+describe('LookPicker opening', () => {
+  it('brings the popover into view, then focuses without a second scroll', () => {
+    // No DOM in this repo's tests: the wiring is read from the source.
+    const source = readFileSync(new URL('./LookPicker.tsx', import.meta.url), 'utf8');
+    expect(source).toMatch(/scrollIntoView\(\{ block: 'nearest' \}\)/);
+    expect(source).toMatch(/focus\(\{ preventScroll: true \}\)/);
   });
 });

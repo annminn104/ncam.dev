@@ -273,11 +273,14 @@ export function LookPicker({ look, onChange, load }: Props) {
       setOpen(false);
       return;
     }
-    // Shown first, so focus can land on the checked model.
+    // Shown first, so focus can land on the checked model. Brought into view too: on a short
+    // screen (a sideways phone) it runs past the foot, and a press outside to scroll would close
+    // it. Focus then scrolls nothing a second time.
     flushSync(() => setOpen(true));
+    document.getElementById(MENU_ID)?.scrollIntoView({ block: 'nearest' });
     root.current
       ?.querySelector<HTMLButtonElement>(`#${MENU_ID} [role="radio"][aria-checked="true"]`)
-      ?.focus();
+      ?.focus({ preventScroll: true });
   };
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
