@@ -34,28 +34,30 @@ interface Shown {
   /** The collection the plate and the tag were printed for. */
   card: string;
   /**
-   * What the display shows: the three things it changes with, compared every frame (a key string
-   * would be an allocation per frame).
+   * What the display shows: the four things it changes with, compared every frame (a key string
+   * would be an allocation per frame), its colour (the Clear model's light) among them.
    */
-  lcd: { track: number; second: number; status: Status | null };
+  lcd: { track: number; second: number; status: Status | null; colour: string | null };
 }
 
 const NONE = '\u0000';
 
 const nothingShown = (): Shown => ({
   card: NONE,
-  lcd: { track: -1, second: -1, status: null },
+  lcd: { track: -1, second: -1, status: null, colour: null },
 });
 
 /**
  * Prints the bridge's view on the player's other prints: the plate with the collection's name,
- * the luggage tag, and the display, at most once a second. The discs and the booklet are
- * useDiscPrints'.
+ * the luggage tag, and the display, at most once a second and whenever its colour changes. The
+ * discs and the booklet are useDiscPrints'.
  */
 export function useSceneTextures(rig: Rig, bridge: SceneBridge, lcdColour: string): void {
   const [surfaces] = useState(makeSurfaces);
   const shown = useRef<Shown>(nothingShown());
 
+  // Once per rig: the defaults until the view's prints are made. A new display colour is the
+  // frame's to print (below), so it never takes the plate and the tag back to their defaults.
   useEffect(() => {
     const { canvases, textures } = surfaces;
     setMap(rig.model.slots.tag_print, textures.tag);
@@ -64,13 +66,12 @@ export function useSceneTextures(rig: Rig, bridge: SceneBridge, lcdColour: strin
     shown.current = nothingShown();
     paintCard(canvases.card, null);
     paintTag(canvases.tag, null);
-    paintLcd(canvases.lcd, 0, 0, 'idle', lcdColour);
     const all = [textures.tag, textures.card, textures.lcd];
     for (const texture of all) texture.needsUpdate = true;
     return () => {
       for (const texture of all) texture.dispose();
     };
-  }, [rig, surfaces, lcdColour]);
+  }, [rig, surfaces]);
 
   useEffect(() => {
     const { canvases, textures } = surfaces;
@@ -114,10 +115,18 @@ export function useSceneTextures(rig: Rig, bridge: SceneBridge, lcdColour: strin
     const view = bridge.getView();
     const lcd = shown.current.lcd;
     const second = Math.floor(view.positionMs / 1000);
-    if (lcd.track === view.trackNo && lcd.second === second && lcd.status === view.status) return;
+    if (
+      lcd.track === view.trackNo &&
+      lcd.second === second &&
+      lcd.status === view.status &&
+      lcd.colour === lcdColour
+    ) {
+      return;
+    }
     lcd.track = view.trackNo;
     lcd.second = second;
     lcd.status = view.status;
+    lcd.colour = lcdColour;
     paintLcd(surfaces.canvases.lcd, view.trackNo, view.positionMs, view.status, lcdColour);
     surfaces.textures.lcd.needsUpdate = true;
   });
