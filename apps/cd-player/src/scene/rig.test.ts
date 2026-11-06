@@ -344,6 +344,15 @@ describe('applyPose', () => {
     }
   });
 
+  it('reaches each way out of the spindle along its seat’s own normal', () => {
+    const { model } = fakeModel();
+    const rig = rigFor(model);
+    // The suitcase's seat turns only about the vertical: its normal is straight up.
+    expect(rig.seat.out.distanceTo(new Vector3(0, 1, 0))).toBeLessThan(1e-12);
+    expect(rig.flight.reach).toEqual(SCENE_PROFILES.suitcase.flight.reach);
+    expect(rig.flight.aside.toArray()).toEqual(SCENE_PROFILES.suitcase.flight.aside);
+  });
+
   it('lifts the case clear of the lid before it turns over, and swaps the booklet as it passes edge-on', () => {
     const { model, lid, caseSeat } = fakeModel();
     const rig = rigFor(model);
@@ -371,5 +380,113 @@ describe('applyPose', () => {
     // Back at rest the case sits in its seat again.
     applyPose(rig, restingPose(plan.after, true, true), 0);
     expect(rig.case.object.position.distanceTo(rig.case.seat)).toBeLessThan(1e-9);
+  });
+});
+
+describe('the Clear model’s flights', () => {
+  /**
+   * The fake model posed as cd-player-clear.glb: the spindle's seat upright behind the door (its
+   * normal +z), the stand's hinge right of the shell turned 18° toward it, and the five slots in it,
+   * each 20 mm above and 18 mm behind the one below it and leaning back 15°. Measured with three's
+   * GLTFLoader over public/assets/cd-player-clear.glb: measure them again whenever that GLB changes.
+   */
+  function clearSet() {
+    const { model, slots, lid } = fakeModel();
+    const { disc, disc_seat: seat } = model.nodes;
+    seat.position.set(0, 0.1501, 0.024);
+    seat.rotation.set(Math.PI / 2, 0, 0);
+    disc.position.copy(seat.position);
+    disc.quaternion.copy(seat.quaternion);
+    lid.position.set(0.252, 0, -0.012);
+    lid.rotation.set(0, (-18 * Math.PI) / 180, 0);
+    slots.forEach((slot, k) => {
+      slot.position.set(0, 0.0655 + 0.02 * k, 0.0194 - 0.018 * k);
+      slot.rotation.set((75 * Math.PI) / 180, 0, 0);
+    });
+    const clear: PlayerModel = { ...model, id: 'clear' };
+    return rigFor(clear);
+  }
+
+  /**
+   * Where a point would stand inside the Clear shell's walls (cd-player-clear.glb, metres): its
+   * outline 300 × 214 mm with 20 mm corners from 30.1 mm up, the front plate from z 35 to 38 mm but
+   * for the opening the disc passes through (64 mm round the window's middle), the back plate
+   * from -38 to -35 mm, and the 3 mm band round the sides, the top and the bottom between them.
+   */
+  function inShell(p: Vector3): string | null {
+    const outline = (inset: number) => {
+      const halfW = 0.15 - inset;
+      const bottom = 0.0301 + inset;
+      const top = 0.2441 - inset;
+      const r = 0.02 - inset;
+      if (Math.abs(p.x) > halfW || p.y < bottom || p.y > top) return false;
+      const cx = Math.min(Math.max(p.x, -halfW + r), halfW - r);
+      const cy = Math.min(Math.max(p.y, bottom + r), top - r);
+      return Math.hypot(p.x - cx, p.y - cy) <= r;
+    };
+    if (!outline(0)) return null;
+    if (p.z >= 0.035 && p.z <= 0.038) {
+      return Math.hypot(p.x, p.y - 0.1501) > 0.064 ? 'front plate' : null;
+    }
+    if (p.z <= -0.035 && p.z >= -0.038) return 'back plate';
+    if (Math.abs(p.z) < 0.035 && !outline(0.003)) return 'band';
+    return null;
+  }
+
+  /** Every point of a disc copy's rim (Ø 120 mm) that stands in the shell's walls, as posed. */
+  function rimInShell(object: Object3D): string[] {
+    object.updateMatrixWorld(true);
+    const hits: string[] = [];
+    for (let k = 0; k < 96; k++) {
+      const turn = (k / 96) * 2 * Math.PI;
+      const rim = new Vector3(0.06 * Math.cos(turn), 0, 0.06 * Math.sin(turn));
+      const wall = inShell(rim.applyMatrix4(object.matrixWorld));
+      if (wall) hits.push(wall);
+    }
+    return hits;
+  }
+
+  it('reaches the spindle in through the door, along its seat’s normal', () => {
+    const rig = clearSet();
+    expect(rig.seat.out.distanceTo(new Vector3(0, 0, 1))).toBeLessThan(1e-12);
+    const disc = rig.discs[1].object;
+    // Close to landing it comes in square to the window, from in front of it.
+    applyPose(rig, only(1, { from: 0, to: 'spindle', along: 0.95 }), 0);
+    const offset = disc.position.clone().sub(rig.seat.position);
+    expect(offset.dot(rig.seat.out)).toBeGreaterThan(0);
+    expect(Math.hypot(offset.x, offset.y)).toBeLessThan(0.004);
+  });
+
+  it('flies every way to and from the spindle through the door’s opening, never through the shell', () => {
+    const rig = clearSet();
+    const ways: [string, DiscPose['from'], DiscPose['to']][] = [
+      ...[0, 1, 2, 3, 4].map((slot): [string, DiscPose['from'], DiscPose['to']] => [
+        `slot ${slot} onto the spindle`,
+        slot,
+        'spindle',
+      ]),
+      ['the spindle back into slot 0', 'spindle', 0],
+      ['the spindle out of sight', 'spindle', null],
+      ['out of sight onto the spindle', null, 'spindle'],
+    ];
+    for (const [way, from, to] of ways) {
+      for (let step = 0; step <= 200; step++) {
+        const along = step / 200;
+        applyPose(rig, only(1, { from, to, along }), 0);
+        const disc = rig.discs[1].object;
+        if (!disc.visible) continue;
+        expect(rimInShell(disc), `${way}, along ${along}`).toEqual([]);
+      }
+    }
+  });
+
+  it('sends a disc leaving the spindle out of the door and to the right, away from its hinge', () => {
+    const rig = clearSet();
+    const leaving = rig.discs[0].object;
+    applyPose(rig, only(0, { from: 'spindle', to: null, along: 0.3 }), 0);
+    const offset = leaving.position.clone().sub(rig.seat.position);
+    expect(offset.z).toBeGreaterThan(0.04);
+    expect(offset.x).toBeGreaterThan(0);
+    expect(offset.y).toBeGreaterThan(0);
   });
 });

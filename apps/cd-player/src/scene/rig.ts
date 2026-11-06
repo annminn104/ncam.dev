@@ -26,23 +26,11 @@ const RACK_NODES = [
 ] as const satisfies readonly RequiredNode[];
 const ARM_LIFT_M = 0.006;
 const SPIN_RAD_S = (200 / 60) * 2 * Math.PI;
-/**
- * A disc flying to or from the spindle leaves its place, and reaches the other, along each one's
- * normal: the Bézier's handles reach this far (out of the lid, past its rim, before it turns
- * down to the deck). Between two slots a disc moves in a straight line: each slot stands behind
- * the one below it, so a pop-out would cross a neighbour, and the straight way only widens the
- * gaps, as between discs further apart.
- */
-const HANDLE_M = 0.08;
-/** Out of sight from the spindle: up and to the left (where a disc from the side comes from too). */
-const ASIDE_UP_M = 0.06;
-const ASIDE_ACROSS_M = 0.16;
 /** Room between the turning case and the lid's lining, past the reach of its half-width. */
 const CASE_FLIP_MARGIN_M = 0.01;
 /** A disc this small is out of sight. */
 const HIDDEN_BELOW = 1e-3;
 const UP = new Vector3(0, 1, 0);
-const LEFT = new Vector3(-1, 0, 0);
 /** The case's own vertical in the open lid (Blender's Y): it turns over about it. */
 const CASE_AXIS = new Vector3(0, 0, 1);
 
@@ -80,10 +68,18 @@ export interface Rig extends StageState {
   arm: { node: Object3D; baseRotationY: number; baseY: number };
   /** The door's hinge, for a model with one: where it is shut, and the turn that opens it. */
   door: { node: Object3D; base: number; angle: number } | null;
-  /** The spindle's seat, in world space (the discs live at the root). */
-  seat: { position: Vector3; quaternion: Quaternion };
+  /**
+   * The spindle's seat, in world space (the discs live at the root), and its normal: the way a disc
+   * leaves and reaches it, as a slot's is (up out of the suitcase's deck, out of the Clear's door).
+   */
+  seat: { position: Vector3; quaternion: Quaternion; out: Vector3 };
   /** Each rack slot, in world space. */
   slots: PlaceFrame[];
+  /**
+   * The model's flights (its profile's): how far their handles reach out of a slot and out of the
+   * spindle, and where a disc leaving the spindle goes out of sight, from its seat.
+   */
+  flight: { reach: { slot: number; spindle: number }; aside: Vector3 };
 }
 
 /** Gives every mesh under `root` that wears `name` one copy of it, so each instance prints its own. */
@@ -162,7 +158,8 @@ export function rigFor(model: PlayerModel): Rig {
     lift: flipLift(nodes.case),
     booklet: ownMaterial(nodes.case, 'art_booklet'),
   };
-  const doorAngle = SCENE_PROFILES[model.id].door?.angle;
+  const profile = SCENE_PROFILES[model.id];
+  const doorAngle = profile.door?.angle;
   const rig: Rig = {
     model,
     discs,
@@ -183,8 +180,16 @@ export function rigFor(model: PlayerModel): Rig {
       nodes.door_hinge && doorAngle !== undefined
         ? { node: nodes.door_hinge, base: nodes.door_hinge.rotation.y, angle: doorAngle }
         : null,
-    seat: { position: seatPosition, quaternion: seatQuaternion },
+    seat: {
+      position: seatPosition,
+      quaternion: seatQuaternion,
+      out: UP.clone().applyQuaternion(seatQuaternion),
+    },
     slots,
+    flight: {
+      reach: { ...profile.flight.reach },
+      aside: new Vector3(...profile.flight.aside),
+    },
   };
   // The model's own dispose knows only its shared materials: the copies go with it.
   const prints = [...discs.map((disc) => disc.label), jewelCase.booklet];
@@ -219,7 +224,7 @@ function placeAt(rig: Rig, place: Place, into: PlaceFrame): PlaceFrame {
     into.quaternion
       .copy(rig.seat.quaternion)
       .multiply(spinQuaternion.setFromAxisAngle(UP, rig.spin));
-    into.out.copy(UP);
+    into.out.copy(rig.seat.out);
     return into;
   }
   const slot = rig.slots[place];
@@ -230,16 +235,26 @@ function placeAt(rig: Rig, place: Place, into: PlaceFrame): PlaceFrame {
 }
 
 /**
- * Out of sight from `place`: up and to the left of the spindle; for a slot, the slot itself (a
- * rack disc shrinks away, or grows in, where it stands: any way out of the lid would pass
- * through the discs in front of it).
+ * Out of sight from `place`: the profile's `aside` from the spindle (up and to the left of the
+ * suitcase's, out of the Clear's door and up to its right); for a slot, the slot itself (a rack
+ * disc shrinks away, or grows in, where it stands: any way out of the lid would pass through the
+ * discs in front of it).
  */
 function asideOf(rig: Rig, place: Place, into: PlaceFrame): PlaceFrame {
   placeAt(rig, place, into);
-  if (place === 'spindle') {
-    into.position.addScaledVector(UP, ASIDE_UP_M).addScaledVector(LEFT, ASIDE_ACROSS_M);
-  }
+  if (place === 'spindle') into.position.add(rig.flight.aside);
   return into;
+}
+
+/**
+ * How far a way to or from the spindle reaches out of `place` before it turns: out of a slot, or
+ * out of the spindle (and out of sight beside it). Between two slots a disc moves in a straight
+ * line: each slot stands behind the one below it, so a pop-out would cross a neighbour, and the
+ * straight way only widens the gaps, as between discs further apart.
+ */
+function reachOf(rig: Rig, place: Place | null, flies: boolean): number {
+  if (!flies) return 0;
+  return place === 'spindle' || place === null ? rig.flight.reach.spindle : rig.flight.reach.slot;
 }
 
 function placeDisc(rig: Rig, copy: DiscCopy, pose: DiscPose | null): void {
@@ -276,9 +291,8 @@ function placeDisc(rig: Rig, copy: DiscCopy, pose: DiscPose | null): void {
   }
   object.visible = true;
   const flies = pose.from === 'spindle' || pose.to === 'spindle';
-  const reach = flies ? HANDLE_M : 0;
-  handleA.copy(start.position).addScaledVector(start.out, reach);
-  handleB.copy(end.position).addScaledVector(end.out, reach);
+  handleA.copy(start.position).addScaledVector(start.out, reachOf(rig, pose.from, flies));
+  handleB.copy(end.position).addScaledVector(end.out, reachOf(rig, pose.to, flies));
   // A cubic Bézier: out of the one place along its normal, into the other along its own (with
   // no reach, a straight line between two slots, or no way at all for a disc changing size).
   const u = 1 - a;
