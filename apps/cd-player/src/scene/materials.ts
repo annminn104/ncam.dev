@@ -137,8 +137,8 @@ export function makeMaterial(
         specularIntensity: 0.3,
       });
     case 'clear-shell':
-      // The see-through shell: clear, faintly tinted (the shell's swatch sets `attenuationColor`
-      // and `color`), its back faces left out so the inside shows through one wall at a time.
+      // The see-through shell: clear, faintly tinted (the shell's swatch sets `color`),
+      // its back faces left out so the inside shows through one wall at a time.
       return new MeshPhysicalMaterial({
         name: source.name,
         color: new Color('#ffffff'),
@@ -268,7 +268,6 @@ export function applyLook(materials: Iterable<Material>, look: Look): void {
     if (part === 'shell') {
       const { tint } = clearSwatch(look.clear, 'shell');
       surface.color.set(tint);
-      surface.attenuationColor.set(tint);
     } else if (part === 'frame') {
       const frame = clearSwatch(look.clear, 'frame');
       surface.color.set(frame.colour);

@@ -921,9 +921,8 @@ suitcase for an id it does not know. It is three-free, as are `skins.ts`, `clear
   working colour, the conversion `lin()` makes in `cdkit.py`, so Blush's values give back the
   GLB's own colours; a leather material's sheen follows its new base (`leatherSheen`: the base
   lifted toward white by its own luminance, 40 % at most, so a pastel leather keeps the full lift
-  and a dark one its depth). A Clear look gives the shell its tint (`color` and
-  `attenuationColor`), the frame its colour, metalness and roughness, the board its colour and the
-  light its glow, and the board's silkscreen (`silk`) follows the board as the render prints it:
+  and a dark one its depth). A Clear look gives the shell its tint (`color`), the frame its
+  colour, metalness and roughness, the board its colour and the light its glow, and the board's silkscreen (`silk`) follows the board as the render prints it:
   light (`SILK_LIGHT`) on a board whose linear Rec. 709 luma is under 0.45, dark (`SILK_DARK`) on
   the white one, where a white logo would vanish. Only uniforms change: no reload, no texture, no
   shader. `PlayerScene` applies the look in a layout effect, before a model's first frame and on

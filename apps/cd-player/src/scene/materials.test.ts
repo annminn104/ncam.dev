@@ -282,7 +282,6 @@ describe('applyLook', () => {
     const m = clearMaterials();
     applyLook(Object.values(m), { model: 'clear', clear: look });
     expect(hex(m.shell.color)).toBe(clearSwatch(look, 'shell').tint);
-    expect(hex(m.shell.attenuationColor)).toBe(clearSwatch(look, 'shell').tint);
     expect(hex(m.frame.color)).toBe(clearSwatch(look, 'frame').colour);
     expect(m.frame.metalness).toBe(clearSwatch(look, 'frame').metalness);
     expect(m.frame.roughness).toBe(clearSwatch(look, 'frame').roughness);
