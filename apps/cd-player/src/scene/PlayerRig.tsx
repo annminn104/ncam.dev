@@ -9,6 +9,7 @@ import { lcdColour } from './textures/paint';
 import { useSceneTextures } from './textures/useSceneTextures';
 import { useControls } from './useControls';
 import { useDirector } from './useDirector';
+import { usePlayIcon } from './play-icon';
 import { useVu } from './useVu';
 import { vuColours } from './vu';
 
@@ -36,6 +37,7 @@ export function PlayerRig({ model, bridge, look, onReady }: Props) {
   const printer = useDiscPrints(rig, bridge);
   useDirector(rig, bridge, printer);
   useVu(model, bridge, vu);
+  usePlayIcon(model, bridge);
   const handlers = useControls(rig, bridge);
   useReadyProbe(onReady);
   return <primitive object={model.root} {...handlers} />;

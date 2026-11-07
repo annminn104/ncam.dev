@@ -14,6 +14,8 @@ PIVOTS = {
     "clear_btn_prev": "btn_prev",
     "clear_btn_next": "btn_next",
     "clear_btn_play": "btn_play",
+    "clear_btn_play_icon_play": "icon_play",
+    "clear_btn_play_icon_pause": "icon_pause",
     "clear_btn_stop": "btn_stop",
     "clear_btn_rpt": "btn_rpt",
     "clear_btn_mode": "btn_mode",

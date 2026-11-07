@@ -115,6 +115,14 @@ describe('public/assets/cd-player.glb (art/pipeline/build.mjs)', () => {
     expect(MATERIAL_ROLES.vu).toBe('emissive');
   });
 
+  it('prints ▶ and ‖ as two meshes on the play key, in the dark ink', () => {
+    for (const icon of ['icon_play', 'icon_pause']) {
+      expect(node(icon).mesh, icon).toBeDefined();
+      expect(parentOf(icon), icon).toBe('btn_play');
+      expect(materialOf(icon), icon).toBe('ink_dark');
+    }
+  });
+
   it('keeps the deck’s printed marks off the keys and the knob', () => {
     for (const pivot of PIVOTS) {
       const children = childrenOf(pivot);
@@ -205,6 +213,14 @@ describe('public/assets/cd-player-clear.glb (art/pipeline/build.mjs clear)', () 
   it('prints the tag on the tag node, and lights the ten VU segments with one material', () => {
     expect(materialOf('tag')).toBe('tag_print');
     for (let i = 0; i < 10; i += 1) expect(materialOf(`vu_seg_${i}`), String(i)).toBe('vu');
+  });
+
+  it('prints ▶ and ‖ as two meshes on the play key, in the light', () => {
+    for (const icon of ['icon_play', 'icon_pause']) {
+      expect(node(icon).mesh, icon).toBeDefined();
+      expect(parentOf(icon), icon).toBe('btn_play');
+      expect(materialOf(icon), icon).toBe('light');
+    }
   });
 
   it('stays inside its budget, meshopt-compressed, with meshes on leaf nodes only', () => {

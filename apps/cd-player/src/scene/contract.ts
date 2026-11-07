@@ -12,6 +12,8 @@ export const REQUIRED_NODES = [
   'btn_stop',
   'btn_rpt',
   'btn_mode',
+  'icon_play',
+  'icon_pause',
   'disc',
   'case',
   'case_lid_hinge',

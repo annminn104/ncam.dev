@@ -13,6 +13,8 @@ PIVOTS = {
     "player_btn_prev": "btn_prev",
     "player_btn_next": "btn_next",
     "player_btn_play": "btn_play",
+    "player_btn_icon_play": "icon_play",
+    "player_btn_icon_pause": "icon_pause",
     "player_btn_stop": "btn_stop",
     "player_btn_rpt": "btn_rpt",
     "player_btn_mode": "btn_mode",

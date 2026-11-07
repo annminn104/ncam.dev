@@ -79,7 +79,9 @@ the colour `build_materials()` gives it.
 `src/clear-looks.json`, the file the page reads, holds the Clear model's colours part by part:
 the shell's tint, the frame (the plinth, the door's bezel, the keys, the handle, the speaker cones,
 the stand's cheeks), the board and the light (the ring round the disc, the VU strip, the keys'
-icons). `CDP_MODEL=clear` renders it in its default look, or in the one
+icons). The play key carries two icons, ▶ and ‖ (`button_icon("play")` and `("pause")` in
+`parts.py`), built as `icon_play` / `icon_pause` in both models and shown one at a time by the
+page. `CDP_MODEL=clear` renders it in its default look, or in the one
 `CDP_CLEAR_LOOK=<shell>,<frame>,<board>,<light>` names (ids of that file), into
 `.out/clear/<shell>-<frame>-<board>-<light>/clear-<view>-<quality>.png` (`CDP_SKIN` is the
 suitcase's alone: with the Clear model it stops the run, as `CDP_CLEAR_LOOK` does with the

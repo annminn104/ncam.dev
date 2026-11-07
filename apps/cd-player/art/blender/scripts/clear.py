@@ -926,8 +926,13 @@ def clear_keys(name, root):
         rbox("%s_btn_%s_cap" % (name, kind), (18.0, 14.0, 5.0), F, bevel_mm=1.5, parent=key, loc=L(0, 0, 3.45 + 2.5))
         icon = button_icon(kind)
         if icon:  # outlines in mm round the cap's centre, printed on its top
-            icon = [[(px * 1.25, py * 1.25) for px, py in shape] for shape in icon]
-            slab("%s_btn_%s_icon" % (name, kind), icon, 8.47, 8.57, M["light"], parent=key)
+            scaled = lambda shapes: [[(px * 1.25, py * 1.25) for px, py in shape] for shape in shapes]
+            if kind == "play":  # ▶ and ‖ on the same cap: the page shows one at a time
+                slab("%s_btn_play_icon_play" % name, scaled(icon), 8.47, 8.57, M["light"], parent=key)
+                slab("%s_btn_play_icon_pause" % name, scaled(button_icon("pause")), 8.47, 8.57, M["light"],
+                     parent=key)
+            else:
+                slab("%s_btn_%s_icon" % (name, kind), scaled(icon), 8.47, 8.57, M["light"], parent=key)
         else:
             text("%s_btn_%s_word" % (name, kind), WORDS[kind], 3.6 if kind == "rpt" else 3.1, M["light"], font="din",
                  parent=key, loc=L(0, 0, 8.48))

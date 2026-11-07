@@ -403,7 +403,11 @@ pivots `lid_hinge`, `arm_pivot`, `knob` and `btn_prev`, `btn_next`, `btn_play`, 
 `case_lid_hinge`) that the rig poses where it stands and never copies, `card` (the plate) and `tag`
 (the luggage tag's printed face), the empties `disc_seat` (on the spindle), `case_seat` and
 `rack_slot_0` … `rack_slot_4` (under `lid_hinge`, each the pose of a disc in the rack: slot 0 is
-the lowest, nearest the player), and the VU strip's `vu_seg_0` … `vu_seg_9`. `lid_hinge` is the
+the lowest, nearest the player), the VU strip's `vu_seg_0` … `vu_seg_9`, and the play key's two
+icons `icon_play` (▶) and `icon_pause` (‖), meshes under `btn_play` (`ink_dark` on the suitcase,
+`light` on the Clear) of which `usePlayIcon` (`src/scene/play-icon.ts`) shows one by the status
+(‖ while `playing` or `swapping`, ▶ while `paused`, `idle` and before any status; `visible` is
+written only when the answer changes). `lid_hinge` is the
 suitcase's lid and the Clear's stand (the page moves neither). `OPTIONAL_NODES` are the nodes a
 model may have, the Clear's door `door_hinge`: the loader takes each one it finds, and the rig
 drives it where the model's profile has a door (below). `DYNAMIC_MATERIALS` are the five
