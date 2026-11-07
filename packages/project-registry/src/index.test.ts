@@ -13,6 +13,7 @@ describe('project-registry', () => {
       'chess',
       'mini-store',
       'garden-home',
+      'cd-player',
     ]);
   });
 
@@ -40,8 +41,9 @@ describe('project-registry', () => {
     // The host's splat route answers 200 at any depth, so this flag is what
     // keeps /projects/<id>/anything out of the index for the remotes that
     // render a single page. Absent must mean no.
-    expect(getProject('holodex')?.routeAware).toBe(true);
-    for (const p of projects.filter((p) => p.id !== 'holodex')) {
+    const routeAware = projects.filter((p) => p.routeAware).map((p) => p.id);
+    expect(routeAware).toEqual(['holodex', 'cd-player']);
+    for (const p of projects.filter((p) => !routeAware.includes(p.id))) {
       expect(p.routeAware).toBeUndefined();
     }
   });

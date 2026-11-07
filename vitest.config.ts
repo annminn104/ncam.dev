@@ -16,6 +16,7 @@ export default defineConfig({
       'apps/chess/src/**/*.test.ts',
       'apps/mini-store/src/**/*.test.ts',
       'apps/garden-home/src/**/*.test.ts',
+      'apps/cd-player/src/**/*.test.ts',
       'apps/toonhub/src/**/*.test.ts',
       'apps/portfolio/src/lib/**/*.test.ts',
       // Components rendered to a string with react-dom/server (still no DOM).

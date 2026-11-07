@@ -16,6 +16,9 @@ apps/holodex/public/gallery/*.webp
 # apps/chess figures: raw Blender exports and review captures (scripts/build-figures.mjs,
 # scripts/capture-presets.mjs); the packed GLBs in public/presets/ are committed
 apps/chess/art/.out/
+# apps/cd-player: the raw Blender export and previews (art/pipeline/build.mjs); the packed GLB
+# in public/assets/ is committed
+apps/cd-player/art/.out/
 # Lighthouse CI reports (lighthouserc.cjs)
 .lighthouseci/
 

@@ -1,0 +1,1348 @@
+.cdp-root {
+  /* Frosted white glass over a pastel page: dark type, white panels the page shows through. */
+  --cdp-ink: rgb(36 22 28);
+  --cdp-ink-soft: rgb(36 22 28 / 0.78);
+  --cdp-ink-faint: rgb(36 22 28 / 0.68);
+  --cdp-panel: rgb(255 255 255 / 0.6);
+  /* The glass's bright edge, round every panel. */
+  --cdp-edge: rgb(255 255 255 / 0.75);
+  --cdp-line: rgb(36 22 28 / 0.14);
+  --cdp-line-strong: rgb(36 22 28 / 0.26);
+  --cdp-hairline: rgb(36 22 28 / 0.08);
+  --cdp-control: rgb(255 255 255 / 0.55);
+  --cdp-control-hover: rgb(255 255 255 / 0.8);
+  --cdp-control-press: rgb(255 255 255 / 0.95);
+  --cdp-shadow: rgb(90 40 60 / 0.16);
+  /* Dark enough for 4.5:1 on the glass over the darkest art, not only on white. */
+  --cdp-error: #a1211a;
+  --cdp-accent: #e8a3b0;
+  --cdp-on-accent: #2a1a1e;
+  /* The accent's marks where they stand on the white glass (the ring, the playing row, the
+     progress, the switches on): half the accent, half black, for 3:1 and more on white. */
+  --cdp-accent-ink: color-mix(in srgb, var(--cdp-accent) 50%, rgb(0 0 0));
+  /* The page's pastel, from the skin's accent, and a warm glow beside it. */
+  --cdp-wash: color-mix(in srgb, var(--cdp-accent) 38%, rgb(255 255 255));
+  --cdp-warm: rgb(255 228 204);
+  --cdp-radius: 6px;
+  --cdp-radius-control: 4px;
+  --cdp-ui: 'Manrope Variable', 'Manrope Fallback', system-ui, sans-serif;
+  --cdp-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  position: relative;
+  isolation: isolate;
+  /* The rail, the stage and the side column; the breakpoints below rearrange them. */
+  display: grid;
+  grid-template-columns: 340px minmax(0, 1fr) 360px;
+  grid-template-rows: minmax(0, 1fr);
+  grid-template-areas: 'bar stage side';
+  gap: 16px;
+  box-sizing: border-box;
+  height: 100dvh;
+  padding: 20px 24px 24px;
+  /* Clipped, and never scrolled, even by find-in-page or a text fragment; `hidden` where `clip` is
+     unknown. A sticky stage then holds to the page's own scroll (the short screens' layout). */
+  overflow: hidden;
+  overflow: clip;
+  color: var(--cdp-ink);
+  font-family: var(--cdp-ui);
+  background: var(--cdp-wash);
+  -webkit-font-smoothing: antialiased;
+}
+
+.cdp-root *,
+.cdp-root *::before,
+.cdp-root *::after {
+  box-sizing: border-box;
+}
+
+.cdp-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ── backdrop: a pastel page from the skin's accent, the album art blurred into it ─────────────
+   The pastel is the skin's own, so a grey album (Top 50's first track often is) still leaves the
+   page its colour; the art, multiplied, tints it toward the track's and darkens it, by 36 % at
+   most (a black cover), which the text standing on the page allows for. */
+.cdp-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+}
+.cdp-backdrop__layer {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(
+      90% 70% at 18% 12%,
+      color-mix(in srgb, var(--cdp-accent) 70%, rgb(255 255 255)) 0%,
+      transparent 70%
+    ),
+    radial-gradient(
+      80% 80% at 85% 90%,
+      color-mix(in srgb, var(--cdp-accent) 45%, var(--cdp-warm)) 0%,
+      transparent 70%
+    ),
+    var(--cdp-wash);
+}
+.cdp-backdrop__layer::before {
+  content: '';
+  position: absolute;
+  inset: -10%;
+  background: var(--cdp-art) center / cover no-repeat;
+  filter: blur(56px) saturate(1.8);
+  transform: scale(1.2);
+  opacity: 0.36;
+  mix-blend-mode: multiply;
+}
+.cdp-backdrop__layer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgb(255 255 255 / 0.18) 0%, transparent 60%);
+}
+.cdp-backdrop__layer.is-entering {
+  animation: cdp-fade 800ms ease both;
+}
+.cdp-backdrop__grain {
+  position: absolute;
+  inset: 0;
+  opacity: 0.06;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+@keyframes cdp-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ── the stage: the player's own place, which no panel covers; the canvas fills it ─────────── */
+.cdp-stage {
+  grid-area: stage;
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* ── scene and loader: the loader holds the scene's place until it is live, then fades out as the
+   canvas fades in, both over 600 ms (FADE_MS in src/App.tsx) ───────────────────────────────── */
+.cdp-scene {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  opacity: 0;
+  transition: opacity 600ms ease;
+}
+.cdp-scene.is-live {
+  opacity: 1;
+}
+.cdp-canvas {
+  position: absolute !important;
+  inset: 0;
+  touch-action: none;
+  /* A drag or a double-click on the player is not a text selection. */
+  -webkit-user-select: none;
+  user-select: none;
+}
+/* Plain from the first paint, in the server's markup: it never enters at opacity 0 (Chrome counts
+   text for LCP only at its next repaint), and only its disc moves. It stands where "Open the
+   player" will, and comes after the scene layer in the DOM, so it draws over the invisible canvas
+   and fades out with the canvas's fade-in. */
+.cdp-loader {
+  position: absolute;
+  z-index: 2;
+  left: 50%;
+  top: 50%;
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  transition: opacity 600ms ease;
+}
+.cdp-scene.is-live ~ .cdp-loader {
+  opacity: 0;
+}
+.cdp-loader__disc {
+  display: block;
+  width: 44px;
+  height: 44px;
+  animation: cdp-spin 1.6s linear infinite;
+}
+.cdp-loader__face {
+  fill: rgb(255 255 255 / 0.55);
+  stroke: var(--cdp-line-strong);
+  stroke-width: 1;
+}
+.cdp-loader__sheen {
+  fill: rgb(255 255 255 / 0.9);
+}
+.cdp-loader__hub {
+  fill: none;
+  stroke: var(--cdp-line-strong);
+  stroke-width: 1;
+}
+.cdp-loader__line {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 18px;
+  font-variant-numeric: tabular-nums;
+  /* The full ink: it stands on the page, not on a panel, and the art can darken the page. */
+  color: var(--cdp-ink);
+  white-space: nowrap;
+}
+@keyframes cdp-spin {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+/* ── panels: frosted white glass, a bright edge, one soft shadow ───────────── */
+.cdp-bar,
+.cdp-tracks,
+.cdp-now {
+  position: relative;
+  z-index: 3;
+  border: 1px solid var(--cdp-edge);
+  border-radius: var(--cdp-radius);
+  box-shadow: 0 12px 36px var(--cdp-shadow);
+}
+/* The glass itself, under the panel's content. Not on the panel: an element with a backdrop filter
+   bounds what its children's filters see, and the picker's popover, inside the bar, would show the
+   presets under it unblurred. The page shows through, blurred and a little richer; the white keeps
+   the dark type legible. */
+.cdp-bar::before,
+.cdp-tracks::before,
+.cdp-now::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--cdp-panel);
+  -webkit-backdrop-filter: blur(24px) saturate(1.8);
+  backdrop-filter: blur(24px) saturate(1.8);
+  pointer-events: none;
+}
+/* The small labels: uppercase mono with letter spacing. */
+.cdp-eyebrow {
+  margin: 0;
+  font-family: var(--cdp-mono);
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 14px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--cdp-ink-faint);
+}
+
+/* ── link bar: the rail on a wide screen, a header over the stage elsewhere ─ */
+.cdp-bar {
+  grid-area: bar;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 0;
+  padding: 16px;
+}
+.cdp-bar__title h1 {
+  /* Manrope's content area is taller than the 1.2 line box, and the ellipsis needs overflow:
+     hidden, which would clip the tails of g, j, p, q and y. The padding extends the clip box
+     downward; the negative margin takes its height back, so nothing moves. */
+  padding-bottom: 0.1em;
+  margin: 4px 0 -0.1em;
+  font-size: clamp(20px, 1.9vw, 26px);
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cdp-bar__subtitle {
+  margin: 2px 0 0;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.35;
+  color: var(--cdp-ink-soft);
+}
+/* In the rail the field has a row of its own, Load and Share sharing the row under it. */
+.cdp-link {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.cdp-link > .cdp-button {
+  flex: 1 1 0;
+}
+.cdp-link input {
+  flex: 1 1 100%;
+  min-width: 0;
+  height: 40px;
+  padding: 0 12px;
+  font: inherit;
+  font-size: 14px;
+  color: var(--cdp-ink);
+  background: var(--cdp-control);
+  border: 1px solid var(--cdp-line);
+  border-radius: var(--cdp-radius-control);
+}
+.cdp-link input::placeholder {
+  color: var(--cdp-ink-faint);
+}
+.cdp-link input:hover {
+  border-color: var(--cdp-line-strong);
+}
+.cdp-link input:focus-visible {
+  border-color: var(--cdp-accent-ink);
+}
+.cdp-link input[aria-invalid='true'] {
+  border-color: var(--cdp-error);
+}
+.cdp-link__error {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--cdp-error);
+}
+.cdp-link__error p {
+  margin: 0;
+}
+.cdp-button {
+  height: 40px;
+  padding: 0 16px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--cdp-ink);
+  background: var(--cdp-control);
+  border: 1px solid var(--cdp-line);
+  border-radius: var(--cdp-radius-control);
+  cursor: pointer;
+}
+.cdp-button:hover:not(:disabled) {
+  background: var(--cdp-control-hover);
+  border-color: var(--cdp-line-strong);
+}
+.cdp-button:active:not(:disabled) {
+  background: var(--cdp-control-press);
+}
+.cdp-button--primary {
+  color: var(--cdp-on-accent);
+  background: var(--cdp-accent);
+  border-color: var(--cdp-accent);
+}
+.cdp-button--primary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--cdp-accent) 88%, var(--cdp-ink));
+  border-color: color-mix(in srgb, var(--cdp-accent) 88%, var(--cdp-ink));
+}
+.cdp-button--primary:active:not(:disabled) {
+  background: color-mix(in srgb, var(--cdp-accent) 86%, rgb(0 0 0));
+  border-color: color-mix(in srgb, var(--cdp-accent) 86%, rgb(0 0 0));
+}
+.cdp-button:disabled {
+  opacity: 0.55;
+  cursor: progress;
+}
+/* Retry beside the bar's error line, which it should not make much taller. */
+.cdp-button--small {
+  flex: none;
+  height: 28px;
+  padding: 0 10px;
+  font-size: 12px;
+}
+
+/* ── Popular on Spotify: rows in the rail (they scroll in what it leaves), a row of cards in the
+   header and chips on a phone (both scroll sideways; see the breakpoints) ────────────────────── */
+.cdp-presets {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--cdp-hairline);
+}
+.cdp-presets__list {
+  flex: 1;
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  min-height: 0;
+  margin: 8px 0 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+  scrollbar-width: thin;
+  scrollbar-color: var(--cdp-line-strong) transparent;
+}
+/* Positioned, so a phone's clipped tag is laid out inside its chip, in the row's scroll, and never
+   reaches past the page's edge. */
+.cdp-preset {
+  position: relative;
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+  padding: 4px 10px 4px 4px;
+  font: inherit;
+  color: var(--cdp-ink);
+  text-align: left;
+  background: var(--cdp-control);
+  border: 1px solid var(--cdp-hairline);
+  border-radius: var(--cdp-radius-control);
+  cursor: pointer;
+}
+.cdp-preset:hover {
+  background: var(--cdp-control-hover);
+  border-color: var(--cdp-line);
+}
+.cdp-preset:active {
+  background: var(--cdp-control-press);
+}
+/* The collection in view: an accent tint and border, as a switch that is on. */
+.cdp-preset.is-current {
+  background: color-mix(in srgb, var(--cdp-accent) 14%, transparent);
+  border-color: var(--cdp-accent-ink);
+}
+/* The one being loaded: its tag says "Loading…", and its cover dims, which a phone's chip shows. */
+.cdp-preset[aria-busy='true'] {
+  cursor: progress;
+}
+.cdp-preset[aria-busy='true'] .cdp-preset__cover {
+  opacity: 0.45;
+}
+.cdp-preset__cover {
+  display: block;
+  width: 44px;
+  height: 44px;
+  object-fit: cover;
+  border-radius: 2px;
+  /* What shows while it comes, or where it cannot. */
+  background: var(--cdp-control-hover);
+}
+.cdp-preset__text {
+  display: grid;
+  min-width: 0;
+}
+.cdp-preset__name {
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.3;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.cdp-preset__tag {
+  font-family: var(--cdp-mono);
+  font-size: 10px;
+  line-height: 14px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--cdp-ink-faint);
+}
+
+/* ── the side column: the now-playing card at its own height, the tracklist under it ─────────── */
+.cdp-side {
+  grid-area: side;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+}
+
+/* ── tracklist ───────────────────────────────────────────────────────────── */
+.cdp-tracks {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+/* "TRACKS · 50": a small label over the list. Where the tracklist is a column it always shows, so
+   the label toggles only the sheet of a phone or an upright tablet. */
+.cdp-tracks__toggle {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  height: 48px;
+  padding: 0 18px;
+  font: inherit;
+  font-family: var(--cdp-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--cdp-ink-soft);
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--cdp-line);
+  cursor: default;
+}
+.cdp-tracks__count {
+  color: var(--cdp-ink-faint);
+}
+/* The middle dot is drawn, not read: its alternative text is empty. */
+.cdp-tracks__count::before {
+  content: '\00b7';
+  content: '\00b7' / '';
+  margin-right: 8px;
+}
+.cdp-tracks__list {
+  flex: 1;
+  margin: 0;
+  padding: 4px 8px 8px;
+  overflow-y: auto;
+  list-style: none;
+  scrollbar-width: thin;
+  scrollbar-color: var(--cdp-line-strong) transparent;
+}
+/* Flat rows, a hairline between them. */
+.cdp-tracks__list li + li {
+  border-top: 1px solid var(--cdp-hairline);
+}
+/* A first load that failed: why, and Retry, where the tracks would be. */
+.cdp-tracks__empty {
+  display: grid;
+  gap: 12px;
+  justify-items: start;
+  padding: 16px 18px 18px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--cdp-ink-soft);
+}
+.cdp-tracks__empty p {
+  margin: 0;
+}
+.cdp-track {
+  position: relative;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+  padding: 8px 10px;
+  font: inherit;
+  text-align: left;
+  color: var(--cdp-ink);
+  background: none;
+  border: 0;
+  border-radius: var(--cdp-radius-control);
+  cursor: pointer;
+}
+.cdp-track:hover:not(:disabled) {
+  background: var(--cdp-control);
+}
+.cdp-track:active:not(:disabled) {
+  background: var(--cdp-control-hover);
+}
+.cdp-track.is-current {
+  background: var(--cdp-control);
+}
+/* The playing row's 2 px bar. */
+.cdp-track.is-current::before {
+  content: '';
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  left: 0;
+  width: 2px;
+  background: var(--cdp-accent-ink);
+}
+.cdp-track:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.cdp-track__no,
+.cdp-track__time {
+  font-family: var(--cdp-mono);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--cdp-ink-faint);
+}
+.cdp-track__text {
+  display: grid;
+  min-width: 0;
+}
+.cdp-track__title,
+.cdp-track__artists {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cdp-track__title {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+.cdp-track__artists {
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--cdp-ink-soft);
+}
+/* The explicit badge: a small outlined E. */
+.cdp-track__explicit {
+  display: inline-block;
+  min-width: 14px;
+  margin-left: 6px;
+  padding: 0 3px;
+  font-family: var(--cdp-mono);
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 12px;
+  text-align: center;
+  text-decoration: none;
+  vertical-align: 1px;
+  color: var(--cdp-ink-soft);
+  border: 1px solid var(--cdp-line-strong);
+  border-radius: 2px;
+}
+/* The playing row's equaliser: three bars, each at its own height when still. */
+.cdp-eq {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 10px;
+  vertical-align: -1px;
+}
+.cdp-eq span {
+  width: 2px;
+  height: 10px;
+  background: var(--cdp-accent-ink);
+  transform-origin: 50% 100%;
+  animation: cdp-eq 900ms ease-in-out infinite alternate;
+}
+.cdp-eq span:nth-child(1) {
+  transform: scaleY(0.55);
+}
+.cdp-eq span:nth-child(2) {
+  transform: scaleY(1);
+  animation-delay: -300ms;
+}
+.cdp-eq span:nth-child(3) {
+  transform: scaleY(0.75);
+  animation-delay: -600ms;
+}
+@keyframes cdp-eq {
+  from {
+    transform: scaleY(0.25);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+/* ── now playing ─────────────────────────────────────────────────────────── */
+.cdp-now {
+  flex: none;
+  padding: 16px;
+}
+.cdp-now__head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+.cdp-now__meta {
+  min-width: 0;
+}
+.cdp-now__title {
+  margin: 4px 0 0;
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cdp-now__artists {
+  margin: 2px 0 0;
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--cdp-ink-soft);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cdp-now__controls {
+  display: flex;
+  gap: 6px;
+  flex: none;
+}
+/* The transport keys: 32 px squares with a hairline; Play in the accent. */
+.cdp-key {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  color: var(--cdp-ink);
+  background: var(--cdp-control);
+  border: 1px solid var(--cdp-line);
+  border-radius: var(--cdp-radius-control);
+  cursor: pointer;
+}
+.cdp-key svg {
+  width: 18px;
+  height: 18px;
+}
+.cdp-key:hover {
+  background: var(--cdp-control-hover);
+  border-color: var(--cdp-line-strong);
+}
+.cdp-key:active {
+  background: var(--cdp-control-press);
+}
+.cdp-key--main {
+  color: var(--cdp-on-accent);
+  background: var(--cdp-accent);
+  border-color: var(--cdp-accent);
+}
+.cdp-key--main:hover {
+  background: color-mix(in srgb, var(--cdp-accent) 88%, var(--cdp-ink));
+  border-color: color-mix(in srgb, var(--cdp-accent) 88%, var(--cdp-ink));
+}
+.cdp-key--main:active {
+  background: color-mix(in srgb, var(--cdp-accent) 86%, rgb(0 0 0));
+  border-color: color-mix(in srgb, var(--cdp-accent) 86%, rgb(0 0 0));
+}
+/* The deck's Stop, Repeat and MODE keys and its knob, which are a few pixels wide in the 3D view on
+   a phone: the knob's seek slider, then the three small keys. The row is 8 + 28 + 6 px (its margins
+   and the 28 px slider and keys); on a phone what the card takes comes out of the stage. */
+.cdp-now__row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 0 6px;
+}
+.cdp-key--small {
+  position: relative;
+  width: 28px;
+  height: 28px;
+}
+.cdp-key--small svg {
+  width: 14px;
+  height: 14px;
+}
+/* A switch that is on takes the accent, with a dot under its icon, so its state is not colour
+   alone. */
+.cdp-key--small[aria-pressed='true'] {
+  color: var(--cdp-accent-ink);
+  background: color-mix(in srgb, var(--cdp-accent) 14%, transparent);
+  border-color: var(--cdp-accent-ink);
+}
+.cdp-key--small[aria-pressed='true']:hover {
+  background: color-mix(in srgb, var(--cdp-accent) 22%, transparent);
+}
+.cdp-key--small[aria-pressed='true']:active {
+  background: color-mix(in srgb, var(--cdp-accent) 30%, transparent);
+}
+.cdp-key--small[aria-pressed='true']::after {
+  content: '';
+  position: absolute;
+  bottom: 3px;
+  left: calc(50% - 2px);
+  width: 4px;
+  height: 4px;
+  background: currentcolor;
+  border-radius: 1px;
+}
+
+/* The seek slider: a native range input drawn as a 2 px track in a 28 px tall hit area, filled in
+   the accent up to the position. `--cdp-ratio` (set inline) is how much is filled. The square thumb
+   shows on hover, on keyboard focus, while pressed, and always where there is no hover;
+   `--cdp-shown` is 1 then. Only then is the thumb laid out, so at rest the track fills exactly to the
+   ratio, and with the thumb out the fill ends under its centre, as the browser places it. Each
+   engine's pseudo-elements are rules of their own: a selector list with one it does not know is
+   dropped whole. */
+.cdp-now__seek {
+  --cdp-thumb: 10px;
+  --cdp-shown: 0;
+  --cdp-fill: calc(
+    var(--cdp-thumb) / 2 * var(--cdp-shown) + (100% - var(--cdp-thumb) * var(--cdp-shown)) *
+      var(--cdp-ratio)
+  );
+  flex: 1;
+  min-width: 0;
+  height: 28px;
+  margin: 0;
+  padding: 0;
+  background: none;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.cdp-now__seek:hover:not(:disabled),
+.cdp-now__seek:active:not(:disabled),
+.cdp-now__seek:focus-visible {
+  --cdp-shown: 1;
+}
+@media (hover: none) {
+  .cdp-now__seek:not(:disabled) {
+    --cdp-shown: 1;
+  }
+}
+.cdp-now__seek:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+.cdp-now__seek::-webkit-slider-runnable-track {
+  height: 2px;
+  background:
+    linear-gradient(var(--cdp-accent-ink), var(--cdp-accent-ink)) 0 0 / var(--cdp-fill) 100%
+      no-repeat,
+    var(--cdp-line);
+}
+.cdp-now__seek::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: calc(var(--cdp-thumb) * var(--cdp-shown));
+  height: var(--cdp-thumb);
+  margin-top: calc((2px - var(--cdp-thumb)) / 2);
+  background: var(--cdp-ink);
+  border: 0;
+  border-radius: 1px;
+  box-shadow: 0 0 0 1px rgb(255 255 255 / 0.85);
+  transform: scale(var(--cdp-shown));
+  transition: transform 120ms ease;
+}
+.cdp-now__seek::-moz-range-track {
+  height: 2px;
+  background: var(--cdp-line);
+}
+.cdp-now__seek::-moz-range-progress {
+  height: 2px;
+  background: var(--cdp-accent-ink);
+}
+.cdp-now__seek::-moz-range-thumb {
+  width: calc(var(--cdp-thumb) * var(--cdp-shown));
+  height: var(--cdp-thumb);
+  background: var(--cdp-ink);
+  border: 0;
+  border-radius: 1px;
+  box-shadow: 0 0 0 1px rgb(255 255 255 / 0.85);
+  transform: scale(var(--cdp-shown));
+  transition: transform 120ms ease;
+}
+.cdp-now__embed:empty {
+  display: none;
+}
+.cdp-now__embed iframe {
+  display: block;
+  width: 100%;
+  border: 0;
+  border-radius: var(--cdp-radius-control);
+}
+.cdp-now__note {
+  margin: 10px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--cdp-ink-soft);
+}
+/* A note that stands where the embed would be follows the row directly, the row's own 6 px being
+   its gap: its 10 px top margin would collapse with them into a wider gap than the embed gets. */
+.cdp-now__note--lead {
+  margin-top: 0;
+}
+
+/* ── help line and the way in, at the stage's foot and its middle ────────── */
+.cdp-hud {
+  position: absolute;
+  z-index: 3;
+  left: 50%;
+  bottom: 0;
+  margin: 0;
+  transform: translateX(-50%);
+  font-size: 12px;
+  line-height: 18px;
+  /* The full ink, as the loader's line: it stands on the page. */
+  color: var(--cdp-ink);
+  white-space: nowrap;
+}
+.cdp-hud kbd {
+  display: inline-block;
+  min-width: 20px;
+  padding: 0 5px;
+  font-family: var(--cdp-mono);
+  font-size: 10px;
+  line-height: 16px;
+  text-align: center;
+  color: var(--cdp-ink);
+  background: var(--cdp-panel);
+  border: 1px solid var(--cdp-line);
+  border-radius: var(--cdp-radius-control);
+}
+.cdp-gate {
+  position: absolute;
+  z-index: 4;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+}
+/* A failure: its message on a panel, with its button when it has one. */
+.cdp-gate[role='alert'] {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  width: max-content;
+  max-width: min(340px, calc(100vw - 32px));
+  padding: 14px 16px;
+  background: var(--cdp-panel);
+  border: 1px solid var(--cdp-edge);
+  border-radius: var(--cdp-radius);
+  box-shadow: 0 12px 36px var(--cdp-shadow);
+  -webkit-backdrop-filter: blur(24px) saturate(1.8);
+  backdrop-filter: blur(24px) saturate(1.8);
+}
+.cdp-gate p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.45;
+}
+.cdp-enter {
+  height: 44px;
+  padding: 0 22px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--cdp-ink);
+  background: var(--cdp-panel);
+  border: 1px solid var(--cdp-line-strong);
+  border-radius: var(--cdp-radius-control);
+  box-shadow: 0 12px 36px var(--cdp-shadow);
+  cursor: pointer;
+}
+.cdp-enter:hover {
+  background: color-mix(in srgb, var(--cdp-panel) 88%, var(--cdp-ink));
+  border-color: var(--cdp-ink-faint);
+}
+.cdp-enter:active {
+  background: color-mix(in srgb, var(--cdp-panel) 80%, var(--cdp-ink));
+}
+.cdp-gate[role='alert'] .cdp-enter {
+  box-shadow: none;
+}
+
+.cdp-root :focus-visible {
+  outline: 2px solid var(--cdp-accent-ink);
+  outline-offset: 2px;
+}
+/* "Open the player" stands on the page, where the art can take the accent's ink under 3:1. */
+.cdp-root .cdp-enter:focus-visible {
+  outline-color: var(--cdp-ink);
+}
+/* Inside the tracklist the ring is drawn inside the control: the panel's overflow would cut it. */
+.cdp-tracks :focus-visible,
+.cdp-presets :focus-visible {
+  outline-offset: -2px;
+}
+
+/* ── tablets and small laptops: the side column stays; the rail becomes a header over the stage,
+   its field and its buttons on one row (a wrapped row would hang the picker's popover off the
+   screen's left edge, and "Loading…" would wrap it), and the help line goes. A screen from 1101 to
+   1260 px wider than 16:10 keeps the rail: the header would leave its stage too short (1200 × 630,
+   the gallery's thumbnail, among them) ──────────────────────────────────────────────────────── */
+@media (max-width: 1100px), (max-width: 1260px) and (max-aspect-ratio: 8/5) {
+  .cdp-root {
+    grid-template-columns: minmax(0, 1fr) 360px;
+    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-areas:
+      'bar side'
+      'stage side';
+  }
+  /* The header keeps its height; only the rail's list may shrink to what is left. */
+  .cdp-bar {
+    min-height: auto;
+  }
+  .cdp-link {
+    flex-wrap: nowrap;
+  }
+  .cdp-link input {
+    flex: 1 1 0;
+  }
+  .cdp-link > .cdp-button {
+    flex: none;
+  }
+  .cdp-hud {
+    display: none;
+  }
+  /* The presets as one row of cards that scrolls sideways, fading out at its right edge, with a thin
+     scrollbar for a mouse's wheel to lack; the end padding is the fade's width, so the last card
+     scrolls clear of it. */
+  .cdp-presets {
+    flex: none;
+  }
+  .cdp-presets__list {
+    display: flex;
+    gap: 8px;
+    padding-block-end: 6px;
+    padding-inline-end: 48px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-mask-image: linear-gradient(to right, rgb(0 0 0) calc(100% - 48px), rgb(0 0 0 / 0));
+    mask-image: linear-gradient(to right, rgb(0 0 0) calc(100% - 48px), rgb(0 0 0 / 0));
+  }
+  .cdp-presets__list li {
+    flex: 0 0 184px;
+  }
+  .cdp-preset {
+    grid-template-columns: 48px minmax(0, 1fr);
+    gap: 10px;
+  }
+  .cdp-preset__cover {
+    width: 48px;
+    height: 48px;
+  }
+}
+
+/* ── phones, and tablets held upright: one column, the bar, the stage and the card; the tracklist
+   becomes a bottom sheet over them all, whose closed height the root's bottom padding keeps clear
+   of the card. Upright, a tablet's side column would leave the stage a tall, narrow strip. The
+   stage keeps 220 px: on a small phone the page grows past the screen and scrolls instead ─── */
+@media (max-width: 820px) and (max-aspect-ratio: 13/10),
+  (max-width: 1260px) and (max-aspect-ratio: 4/5) {
+  .cdp-root {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(220px, 1fr) auto;
+    grid-template-areas:
+      'bar'
+      'stage'
+      'now';
+    gap: 8px;
+    height: auto;
+    min-height: 100dvh;
+    /* In the host the bar starts under its fixed "← Projects" button, which stands at the top
+       centre, over the bar's title row (the host's --stage-top-inset); standalone, 12 px. */
+    padding: var(--stage-top-inset, 12px) 12px 80px;
+  }
+  .cdp-side {
+    display: contents;
+  }
+  .cdp-bar {
+    padding: 10px 12px;
+  }
+  /* iOS Safari zooms into a focused field set under 16 px, and this full-screen page would stay
+     zoomed. The field keeps its 40 px height. */
+  .cdp-link input {
+    font-size: 16px;
+  }
+  /* Fixed, so the closed sheet stays at the screen's foot when a small phone's page scrolls. */
+  .cdp-tracks {
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    max-height: 56px;
+    transition: max-height 300ms ease;
+  }
+  .cdp-tracks.is-open {
+    z-index: 4;
+    max-height: 60dvh;
+  }
+  /* A closed sheet takes its list out of the tab order and the accessibility tree, once it has
+     finished folding away. */
+  .cdp-tracks:not(.is-open) .cdp-tracks__list {
+    visibility: hidden;
+    transition: visibility 0s linear 300ms;
+  }
+  /* The toggle fills the closed sheet (56 px less its border), under the sheet's handle. */
+  .cdp-tracks__toggle {
+    position: relative;
+    height: 54px;
+    padding: 6px 16px 0;
+    cursor: pointer;
+  }
+  .cdp-tracks:not(.is-open) .cdp-tracks__toggle {
+    border-bottom-color: transparent;
+  }
+  .cdp-tracks__toggle::before {
+    content: '';
+    position: absolute;
+    top: 7px;
+    left: calc(50% - 16px);
+    width: 32px;
+    height: 4px;
+    background: var(--cdp-line-strong);
+    border-radius: var(--cdp-radius-control);
+  }
+  .cdp-now {
+    grid-area: now;
+  }
+  /* The presets as chips, the cover and the name, the row running from edge to edge of the bar.
+     The tag stays in each chip's name for a screen reader. */
+  .cdp-presets {
+    padding-top: 10px;
+  }
+  .cdp-presets__list {
+    margin: 6px -12px 0;
+    padding: 0 12px;
+    scrollbar-width: none;
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+  .cdp-presets__list li {
+    flex: none;
+  }
+  .cdp-preset {
+    display: flex;
+    gap: 8px;
+    height: 44px;
+    padding: 3px 12px 3px 3px;
+    white-space: nowrap;
+  }
+  .cdp-preset__cover {
+    width: 36px;
+    height: 36px;
+  }
+  .cdp-preset__tag {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
+/* ── phones held sideways, and short screens up to 1100 px wider than 13:10: the stage on the
+   left at the screen's height holds still while the bar and the side column beside it scroll (a
+   header over the stage would leave it a strip, or nothing). The root is the scroller here, not
+   the page, so the stage sticks under any host: a host whose wrapper clips one axis is a scroll
+   container a sticky box would hold to instead. In the host the column starts under the
+   "← Projects" button, which stands at the top centre; a notch's side is kept clear ───────── */
+@media (max-width: 1100px) and (max-height: 600px) and (min-aspect-ratio: 1301/1000) {
+  .cdp-root {
+    grid-template-columns: minmax(0, 1fr) min(360px, 48%);
+    grid-template-rows: auto auto;
+    grid-template-areas:
+      'stage bar'
+      'stage side';
+    align-content: start;
+    gap: 8px;
+    padding: 12px max(12px, env(safe-area-inset-right)) 12px max(12px, env(safe-area-inset-left));
+    overflow: hidden auto;
+  }
+  /* Sticky within the root, whose padding already keeps it 12 px from the top: `top: 0`. */
+  .cdp-stage {
+    position: sticky;
+    top: 0;
+    align-self: start;
+    height: calc(100dvh - 24px);
+  }
+  /* The backdrop holds to the screen while the root scrolls over it. */
+  .cdp-backdrop {
+    position: fixed;
+  }
+  .cdp-bar {
+    margin-top: calc(var(--stage-top-inset, 12px) - 12px);
+  }
+  /* The rail's form, its field on a row of its own, at the 16 px iOS Safari zooms under. */
+  .cdp-link {
+    flex-wrap: wrap;
+  }
+  .cdp-link input {
+    flex: 1 1 100%;
+    font-size: 16px;
+  }
+  .cdp-link > .cdp-button {
+    flex: 1 1 0;
+  }
+  /* The list scrolls within a screen's height; the column scrolls past the card to reach it. */
+  .cdp-tracks {
+    max-height: calc(100dvh - 24px);
+  }
+}
+
+/* Where the visitor asks for less transparency, the glass is all but opaque. */
+@media (prefers-reduced-transparency: reduce) {
+  .cdp-bar::before,
+  .cdp-tracks::before,
+  .cdp-now::before,
+  .cdp-gate[role='alert'] {
+    background: rgb(255 255 255 / 0.94);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cdp-backdrop__layer.is-entering,
+  .cdp-eq span,
+  .cdp-loader__disc {
+    animation: none;
+  }
+  .cdp-scene,
+  .cdp-loader,
+  .cdp-tracks {
+    transition: none;
+  }
+  .cdp-now__seek::-webkit-slider-thumb {
+    transition: none;
+  }
+  .cdp-now__seek::-moz-range-thumb {
+    transition: none;
+  }
+}
+
+/* ── Player: the skin picker after Share, and its popover ─────────────────── */
+.cdp-skin {
+  position: relative;
+  flex: none;
+}
+.cdp-skin__button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.cdp-skin__swatch {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border: 1px solid var(--cdp-line-strong);
+  border-radius: 2px;
+}
+/* The popover hangs under the bar, right-aligned to its button, so it stays on a phone's screen. */
+.cdp-skin .cdp-skin__menu {
+  position: absolute;
+  z-index: 5;
+  top: calc(100% + 6px);
+  right: 0;
+  display: grid;
+  gap: 2px;
+  width: min(280px, calc(100vw - 32px));
+  padding: 6px;
+  /* Whiter than a panel and frosted itself: the presets under it would show through. */
+  background: rgb(255 255 255 / 0.92);
+  border: 1px solid var(--cdp-edge);
+  border-radius: var(--cdp-radius);
+  box-shadow: 0 12px 36px var(--cdp-shadow);
+  -webkit-backdrop-filter: blur(24px) saturate(1.8);
+  backdrop-filter: blur(24px) saturate(1.8);
+}
+/* Its own display would otherwise show it while hidden. */
+.cdp-skin .cdp-skin__menu[hidden] {
+  display: none;
+}
+/* While the popover is open the bar stands over what comes after it in the page: the card, a panel
+   of the same z-index, which stands under the bar on a sideways phone, and the way in. */
+.cdp-bar:has(.cdp-skin__menu:not([hidden])) {
+  z-index: 5;
+}
+.cdp-skin .cdp-skin__option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 32px;
+  padding: 0 10px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--cdp-ink);
+  text-align: left;
+  background: none;
+  border: 0;
+  border-radius: var(--cdp-radius-control);
+  cursor: pointer;
+}
+/* A white fill would not show on the near-white popover: the hover is a touch of the ink. */
+.cdp-skin .cdp-skin__option:hover {
+  background: color-mix(in srgb, var(--cdp-ink) 7%, transparent);
+}
+.cdp-skin .cdp-skin__option[aria-checked='true'] {
+  font-weight: 600;
+}
+/* One radio group per row: the model, then the suitcase's skins or the Clear model's parts. */
+.cdp-skin__group + .cdp-skin__group {
+  margin-top: 6px;
+  padding-top: 8px;
+  border-top: 1px solid var(--cdp-hairline);
+}
+.cdp-skin__legend {
+  display: flex;
+  justify-content: space-between;
+  margin: 0 4px 6px;
+  font-family: var(--cdp-mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--cdp-ink-faint);
+}
+.cdp-skin__models {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+}
+.cdp-skin__swatches {
+  display: flex;
+  gap: 4px;
+  padding: 0 4px;
+}
+.cdp-skin__dot {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--cdp-line-strong);
+  border-radius: var(--cdp-radius-control);
+  cursor: pointer;
+}
+.cdp-skin__dot[aria-checked='true'] {
+  outline: 2px solid var(--cdp-accent-ink);
+  outline-offset: 1px;
+}
+.cdp-skin__dot svg {
+  width: 14px;
+  height: 14px;
+  color: var(--cdp-ink);
+}
+/* The tick is white on a dark swatch (tickOn) and the ink on a light one. */
+.cdp-skin__dot--dark svg {
+  color: rgb(255 255 255);
+}
+.cdp-skin__load {
+  margin: 4px 4px 0;
+  font-size: 12px;
+  color: var(--cdp-ink-soft);
+}
+.cdp-skin__name {
+  flex: 1;
+}
+/* The tick beside the chosen one: its state is not colour alone. */
+.cdp-skin__option svg {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--cdp-accent-ink);
+}
+/* At 920 px and under the button is its swatch alone, square, so the link field keeps its width:
+   the tablet header starts at 821 px, where the labelled button left the field little room on the
+   buttons' row. "Player" stays in its accessible name. */
+@media (max-width: 920px) {
+  .cdp-skin__button {
+    justify-content: center;
+    aspect-ratio: 1;
+    padding-inline: 0;
+  }
+  .cdp-skin__label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}

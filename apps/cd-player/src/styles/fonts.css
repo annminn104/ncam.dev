@@ -1,0 +1,18 @@
+/* The @font-face rules: imported by src/fonts.ts on the client (standalone and ./mount) and inlined
+   by ./ssr with the host's copy of the page, so a server render asks for its fonts on first paint.
+   The page's text is Manrope; its fallback is metric-matched so the swap does not move text
+   (Lighthouse CLS). Fraunces is for the canvas prints alone (src/scene/textures/paint.ts loads it
+   when a print needs it, so the first paint never asks for it), upright and italic: their titles
+   are italic, and without the second file the browser would slant the upright one itself. */
+@import '@fontsource-variable/fraunces';
+@import '@fontsource-variable/fraunces/wght-italic.css';
+@import '@fontsource-variable/manrope';
+
+@font-face {
+  font-family: 'Manrope Fallback';
+  src: local('Arial');
+  size-adjust: 104%;
+  ascent-override: 103%;
+  descent-override: 29%;
+  line-gap-override: 0%;
+}

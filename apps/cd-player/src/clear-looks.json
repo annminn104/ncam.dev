@@ -1,0 +1,46 @@
+{
+  "shell": [
+    { "id": "clear", "name": "Clear", "tint": "#f2f6f8" },
+    { "id": "smoke", "name": "Smoke", "tint": "#8e9297" },
+    { "id": "blush", "name": "Blush", "tint": "#f1b9c7" },
+    { "id": "ice", "name": "Ice", "tint": "#bde5f4" },
+    { "id": "amber", "name": "Amber", "tint": "#f0c27a" }
+  ],
+  "frame": [
+    { "id": "silver", "name": "Silver", "colour": "#c9ccd1", "metalness": 1, "roughness": 0.32 },
+    {
+      "id": "black",
+      "name": "Matte black",
+      "colour": "#26262a",
+      "metalness": 0,
+      "roughness": 0.62
+    },
+    { "id": "white", "name": "White", "colour": "#f1f0ec", "metalness": 0, "roughness": 0.45 },
+    {
+      "id": "champagne",
+      "name": "Champagne",
+      "colour": "#d8c39b",
+      "metalness": 1,
+      "roughness": 0.3
+    }
+  ],
+  "board": [
+    { "id": "green", "name": "Green", "colour": "#1e6b3b" },
+    { "id": "black", "name": "Black", "colour": "#17181b" },
+    { "id": "white", "name": "White", "colour": "#e9ebe6" },
+    { "id": "purple", "name": "Purple", "colour": "#5b2c83" },
+    { "id": "blue", "name": "Blue", "colour": "#1f4fa3" }
+  ],
+  "light": [
+    { "id": "ice", "name": "Ice", "glow": "#7fd8ff", "accent": "#9fd3ea", "onAccent": "#0e2430" },
+    {
+      "id": "amber",
+      "name": "Amber",
+      "glow": "#ffb347",
+      "accent": "#f0c27e",
+      "onAccent": "#2b1d08"
+    },
+    { "id": "pink", "name": "Pink", "glow": "#ff79b0", "accent": "#efa3c0", "onAccent": "#2c111d" },
+    { "id": "lime", "name": "Lime", "glow": "#a8ff4f", "accent": "#bfe39a", "onAccent": "#16250a" }
+  ]
+}

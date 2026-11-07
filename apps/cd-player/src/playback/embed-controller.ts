@@ -1,0 +1,180 @@
+import { createLogger } from '@ncam/logger';
+import type { SpotifyEmbedController, SpotifyIFrameAPI, SpotifyPlaybackData } from './iframe-types';
+
+const log = createLogger({ scope: 'cd-player' });
+
+/**
+ * The official Spotify embed, driven from our own controls. The script loads on the visitor's first
+ * play action, never with the page: that click is the activation the browser's autoplay policy
+ * wants, and the embed's third-party cookies stay out of the first load. Logged-in visitors hear
+ * full tracks; everyone else gets Spotify's 30 s previews.
+ */
+export const IFRAME_API_SRC = 'https://open.spotify.com/embed/iframe-api/v1';
+
+/** The shortest seek the embed acts on (ms): it ignores a target under a second. */
+const MIN_SEEK_MS = 1000;
+
+export interface PlaybackUpdate {
+  uri: string | null;
+  paused: boolean;
+  buffering: boolean;
+  positionMs: number;
+  durationMs: number;
+}
+
+export function toUpdate(data: SpotifyPlaybackData): PlaybackUpdate {
+  return {
+    uri: data.playingURI ?? null,
+    paused: data.isPaused,
+    buffering: data.isBuffering,
+    positionMs: Math.max(0, data.position || 0),
+    durationMs: Math.max(0, data.duration || 0),
+  };
+}
+
+/** A track has played out: paused at its end, or snapped back to 0 just after being near it. */
+export function hasEnded(previous: PlaybackUpdate | null, next: PlaybackUpdate): boolean {
+  if (next.buffering || next.durationMs <= 0) return false;
+  if (next.paused && next.positionMs >= next.durationMs - 500) return true;
+  return (
+    !!previous &&
+    next.paused &&
+    next.positionMs === 0 &&
+    previous.uri === next.uri &&
+    previous.durationMs > 0 &&
+    previous.positionMs >= previous.durationMs - 1500
+  );
+}
+
+let api: Promise<SpotifyIFrameAPI> | null = null;
+
+/** Adds Spotify's script once; a failed or blocked load is tried again on the next call. */
+export function loadIframeApi(
+  host: { doc: Document; win: Window } = { doc: document, win: window },
+  timeoutMs = 15_000,
+): Promise<SpotifyIFrameAPI> {
+  if (api) return api;
+  api = new Promise<SpotifyIFrameAPI>((resolve, reject) => {
+    const fail = (message: string) => {
+      clearTimeout(timer);
+      api = null;
+      reject(new Error(message));
+    };
+    const timer = setTimeout(() => fail('the Spotify player did not load in time'), timeoutMs);
+    const previous = host.win.onSpotifyIframeApiReady;
+    host.win.onSpotifyIframeApiReady = (loaded) => {
+      clearTimeout(timer);
+      previous?.(loaded);
+      resolve(loaded);
+    };
+    const script = host.doc.createElement('script');
+    script.src = IFRAME_API_SRC;
+    script.async = true;
+    script.onerror = () => fail('the Spotify player was blocked');
+    host.doc.head.appendChild(script);
+  });
+  return api;
+}
+
+/** Tests only: forget the loaded API. */
+export function resetIframeApi(): void {
+  api = null;
+}
+
+export interface EmbedCallbacks {
+  onStarted(uri: string): void;
+  onUpdate(update: PlaybackUpdate): void;
+  onEnded(): void;
+}
+
+export interface EmbedPlayer {
+  /** Load `uri` and play it. */
+  load(uri: string): void;
+  pause(): void;
+  resume(): void;
+  seek(ms: number): void;
+  destroy(): void;
+}
+
+/**
+ * Replaces `element` with Spotify's compact embed (80 px high, the card's width) showing `firstUri`.
+ * Hand it an element React does not own: Spotify swaps it for its iframe.
+ */
+export async function createEmbedPlayer(
+  element: HTMLElement,
+  firstUri: string,
+  callbacks: EmbedCallbacks,
+  iframeApi?: SpotifyIFrameAPI,
+): Promise<EmbedPlayer> {
+  const IFrameAPI = iframeApi ?? (await loadIframeApi());
+  const controller = await new Promise<SpotifyEmbedController>((resolve) =>
+    IFrameAPI.createController(element, { uri: firstUri, width: '100%', height: 80 }, resolve),
+  );
+  let last: PlaybackUpdate | null = null;
+  let ended = false;
+  // After `load()`, an event can still arrive late for the track it replaced (say, paused at its
+  // end); taken for the new track's, it would end that one. Those are ignored whole, and only
+  // those: Spotify may report another id for a track it relinked, so dropping everything but the
+  // loaded uri would lose all of that track's events. Loading the same track again drops nothing.
+  let expected = firstUri;
+  let previous: string | null = null;
+  const isLate = (uri: string | null | undefined) =>
+    !!uri && uri === previous && previous !== expected;
+  controller.addListener('playback_started', (event) => {
+    if (isLate(event.data.playingURI)) return;
+    ended = false;
+    callbacks.onStarted(event.data.playingURI);
+  });
+  controller.addListener('playback_update', (event) => {
+    const next = toUpdate(event.data);
+    if (isLate(next.uri)) return;
+    callbacks.onUpdate(next);
+    if (!ended && hasEnded(last, next)) {
+      ended = true;
+      callbacks.onEnded();
+    }
+    last = next;
+  });
+  // What Spotify reports going wrong (a uri its script refuses, a playback error its iframe posts),
+  // kept in the console for the record; playback itself is followed through the updates above. A
+  // command the iframe cannot carry out ("no list was loaded") throws in there, never comes here.
+  controller.addListener('error', (event) =>
+    log.warn('cd-player.embed-error', { error: event.data }),
+  );
+  // Whether the page last told the embed to pause: a paused track must not play when it rewinds.
+  let paused = false;
+  // `createController` has loaded `firstUri` already, and Spotify's script never takes a uri for the
+  // one it holds: a `loadUri` of it would load the embed's page again, and the music would wait for
+  // that. So the first load of `firstUri` only plays (the script holds the command until its iframe
+  // is ready). Every other load goes through `loadUri`, later ones of `firstUri` too: once a track
+  // has ended, the embed has dropped its list.
+  let fresh = true;
+  return {
+    load(uri) {
+      previous = expected;
+      expected = uri;
+      ended = false;
+      last = null;
+      paused = false;
+      if (!fresh || uri !== firstUri) controller.loadUri(uri);
+      fresh = false;
+      controller.play();
+    },
+    pause: () => {
+      paused = true;
+      controller.pause();
+    },
+    resume: () => {
+      paused = false;
+      controller.resume();
+    },
+    // The embed ignores a seek to under a second, so the start takes its own way: a playing track
+    // restarts, a paused one (Stop) waits at its first second, since a restart would play it.
+    seek: (ms) => {
+      if (ms >= MIN_SEEK_MS) controller.seek(ms / 1000);
+      else if (paused) controller.seek(MIN_SEEK_MS / 1000);
+      else controller.restart();
+    },
+    destroy: () => controller.destroy(),
+  };
+}

@@ -20,8 +20,8 @@ slashes, `dependabot/npm_and_yarn/…`); GitHub Actions still checks their pull
 requests. Vercel reads the rule from the commit it would deploy, so it holds for
 a Dependabot branch cut from, or rebased on, a `main` that has it, and a new
 app's `vercel.json` needs it too. Create **one Vercel project per app** from this
-repo, each with the matching **Root Directory**. The live ones, and Chess, Mini Store and Garden
-Home, whose projects are yet to be created ([the order](#adding-a-remote-to-the-live-site) matters):
+repo, each with the matching **Root Directory**. The live ones, and Chess, Mini Store, Garden Home
+and CD Player, whose projects are yet to be created ([the order](#adding-a-remote-to-the-live-site) matters):
 
 | App                     | Root Directory         | Production URL                                |
 | ----------------------- | ---------------------- | --------------------------------------------- |
@@ -36,6 +36,7 @@ Home, whose projects are yet to be created ([the order](#adding-a-remote-to-the-
 | Cultivation Chess       | `apps/chess`           | https://ncam-chess.vercel.app (planned)       |
 | Mini Store              | `apps/mini-store`      | https://ncam-mini-store.vercel.app (planned)  |
 | Garden Home             | `apps/garden-home`     | https://ncam-garden-home.vercel.app (planned) |
+| CD Player               | `apps/cd-player`       | https://ncam-cd-player.vercel.app (planned)   |
 
 1. **Remotes first.** Pick the Vite framework preset; everything else comes
    from `vercel.json`. Deploy each remote and note its production URL.
@@ -62,6 +63,7 @@ Home, whose projects are yet to be created ([the order](#adding-a-remote-to-the-
    CHESS_REMOTE_URL=https://ncam-chess.vercel.app/remoteEntry.js
    MINI_STORE_REMOTE_URL=https://ncam-mini-store.vercel.app/remoteEntry.js
    GARDEN_HOME_REMOTE_URL=https://ncam-garden-home.vercel.app/remoteEntry.js
+   CD_PLAYER_REMOTE_URL=https://ncam-cd-player.vercel.app/remoteEntry.js
    NODE_OPTIONS=--experimental-vm-modules
    ```
 
@@ -90,7 +92,7 @@ Home, whose projects are yet to be created ([the order](#adding-a-remote-to-the-
    them too, or their canonicals keep naming the old origin.
 
 Hobby plan notes: one build runs at a time, so a push that touches everything
-builds the eleven projects one after another (`turbo-ignore` skips the untouched
+builds the twelve projects one after another (`turbo-ignore` skips the untouched
 ones); the plan is for non-commercial use only. Share the Turbo cache with
 `npx turbo login && npx turbo link`.
 
@@ -101,7 +103,7 @@ falls back to the `.env` default, `http://localhost:<port>/remoteEntry.js`. The
 project registry lists the project as soon as it is merged, so the home page's
 gallery (the profile remote bundles the registry), the host's sitemap and its
 `llms.txt` would all send visitors to a page whose remote cannot load. A new
-remote (Chess, Mini Store and Garden Home, today) therefore goes live in this order:
+remote (Chess, Mini Store, Garden Home and CD Player, today) therefore goes live in this order:
 
 1. Create its Vercel project (Root Directory `apps/<id>`, the Vite preset; for
    Chess `apps/chess`, named `ncam-chess`) and deploy it.
@@ -121,7 +123,7 @@ One multi-stage image builds the whole monorepo, and `docker-compose.yml` runs
 the SSR host and each remote (as a static preview) from that same image:
 
 ```bash
-docker compose up --build                     # host http://localhost:9000, remotes :9001–:9010
+docker compose up --build                     # host http://localhost:9000, remotes :9001–:9011
 docker compose --profile gateway up --build   # + nginx on :80 → http://ncam.localhost
 ```
 

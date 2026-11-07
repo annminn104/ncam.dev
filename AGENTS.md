@@ -33,6 +33,13 @@ apps/
                     glass villa and garden island from Blender modules (art/:
                     Blender build + KTX pipeline, run locally), cut away floor
                     by floor; boots behind a server-rendered poster.
+  cd-player/        CD Player remote (:9011). React 19 + React Three Fiber: any Spotify
+                    playlist or album on a 3D CD player, a suitcase in four colourways (the
+                    next five discs in a rack in its lid) or the see-through Clear, coloured
+                    part by part (a glass door, the discs on a stand beside it), played
+                    through Spotify's embed (iFrame API); /api/spotify reads the public embed
+                    pages; route-aware (/playlist/<id>, /album/<id>); both models generated
+                    by Blender scripts (art/).
   strapi/           Strapi 5 headless CMS for the blog (:1337): a backend
                     service, not a federation remote.
 packages/
@@ -65,7 +72,7 @@ Commands (from the root):
 
 ```bash
 pnpm install
-pnpm dev              # every dev server (host :9000, remotes :9001–:9010, strapi :1337)
+pnpm dev              # every dev server (host :9000, remotes :9001–:9011, strapi :1337)
 pnpm build            # builds every app
 pnpm typecheck
 pnpm lint             # ESLint; `pnpm format:check` for Prettier
@@ -95,9 +102,9 @@ pnpm thumbnails <id>  # regenerates a gallery thumbnail (needs `pnpm dev` runnin
   (`packages/mf-remote/src/contract.ts`: `route`, `onNavigate`, `assetBase`),
   the same object for every remote, never the remote's own data. TOONHUB once
   read it as its own config, and every one of its entries threw in production.
-- A `MountHandle` is a disposer. A **route-aware** remote (Holodex; registry
-  `routeAware: true`) also gives it `update(route)`, which the host calls on
-  in-app navigation instead of remounting.
+- A `MountHandle` is a disposer. A **route-aware** remote (Holodex, CD Player;
+  registry `routeAware: true`) also gives it `update(route)`, which the host calls
+  on in-app navigation instead of remounting.
 - Remotes own their assets. Because the host and a remote can live on different
   origins, a remote must resolve its own asset URLs against its origin (see
   `apps/toonhub/src/mount.ts`), never assume the host origin. The host hands an
