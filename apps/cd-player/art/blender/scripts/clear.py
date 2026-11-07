@@ -1576,26 +1576,33 @@ def clear_speakers(name, root):
 
 
 # ------------------------------------------------------------------ the top: keys, handle, tag
-def clear_keys(name, root):
+def clear_keys(name, root, playing=False):
     """Six keys in a frame-coloured deck on top: each key an empty (the page sinks it 1.2 mm), a
-    clear stem under a frame-coloured cap, its icon lit in the light's colour."""
+    clear stem under a frame-coloured cap, its icon lit in the light's colour. The play key's cap
+    carries ▶ and ‖ in the web build (the page shows one at a time); a render prints the one its
+    state shows, ‖ while it plays."""
     top = Z1
     F = M["clear_frame"]
     holes = [rrect(19.4, 15.4, 3.0, cx=(i - 2.5) * KEY_PITCH, cy=KEY_Y) for i in range(len(KEYS))]
     slab(name + "_key_deck", [rrect(170.0, 24.0, 6.0, cy=KEY_Y)] + holes, top + 0.05, top + 2.05, F, bevel_mm=0.6,
          parent=root)
+
+    def scaled(shapes):
+        """button_icon's outlines, mm round the cap's centre, at these caps' size."""
+        return [[(px * 1.25, py * 1.25) for px, py in shape] for shape in shapes]
     for i, kind in enumerate(KEYS):
         key = empty("%s_btn_%s" % (name, kind), L((i - 2.5) * KEY_PITCH, KEY_Y, top), parent=root)
         rbox("%s_btn_%s_stem" % (name, kind), (12.0, 8.4, 3.35), M["door_glass"], bevel_mm=0.6, parent=key,
              loc=L(0, 0, 0.15 + 3.35 / 2))
         rbox("%s_btn_%s_cap" % (name, kind), (18.0, 14.0, 5.0), F, bevel_mm=1.5, parent=key, loc=L(0, 0, 3.45 + 2.5))
         icon = button_icon(kind)
-        if icon:  # outlines in mm round the cap's centre, printed on its top
-            scaled = lambda shapes: [[(px * 1.25, py * 1.25) for px, py in shape] for shape in shapes]
-            if kind == "play":  # ▶ and ‖ on the same cap: the page shows one at a time
-                slab("%s_btn_play_icon_play" % name, scaled(icon), 8.47, 8.57, M["light"], parent=key)
-                slab("%s_btn_play_icon_pause" % name, scaled(button_icon("pause")), 8.47, 8.57, M["light"],
-                     parent=key)
+        if icon:  # printed on the cap's top
+            if kind == "play":
+                if WEB or not playing:
+                    slab("%s_btn_play_icon_play" % name, scaled(icon), 8.47, 8.57, M["light"], parent=key)
+                if WEB or playing:
+                    slab("%s_btn_play_icon_pause" % name, scaled(button_icon("pause")), 8.47, 8.57, M["light"],
+                         parent=key)
             else:
                 slab("%s_btn_%s_icon" % (name, kind), scaled(icon), 8.47, 8.57, M["light"], parent=key)
         else:
@@ -2169,7 +2176,7 @@ def make_clear_player(name, disc_label, booklet, look, rack_labels=None, playlis
     clear_board(name, root, playing)
     clear_mechanism(name, root, playing)
     clear_speakers(name, root)
-    clear_keys(name, root)
+    clear_keys(name, root, playing)
     clear_handle(name, root)
     clear_tag(name + "_tag", root, playlist)
     clear_knob(name, root)

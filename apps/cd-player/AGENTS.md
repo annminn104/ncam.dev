@@ -1149,8 +1149,8 @@ player, each slot 18 mm further back and 20 mm higher, every disc leaning back 1
 `build_clear.py` gives what the page drives the contract's names (`PIVOTS`) and adds `disc_seat`
 and `case_seat` where the disc and the case stand. The web scene is at rest: the door shut, the
 arm off the disc's rim, the rack's slots empty, the prints plain planes for the page to paint; a
-render plays (the arm over the disc, discs in the rack, the LCD and seven VU segments lit, the
-plate and the tag lettered).
+render plays (the arm over the disc, discs in the rack, the LCD and seven VU segments lit, ‖ alone
+on the play key, as on the suitcase's, the plate and the tag lettered).
 
 **The Clear's board** (`clear_board` in `clear.py`; where its main parts sit: `SOC`, `RAMS`,
 `PMIC`, `COILS`, `USB_X`, `SUN`, `WIFI`, `ANT_ZONE`, `POUR_ZONE`, `LED_X`). From the left: the PMIC

@@ -519,11 +519,12 @@ def make_player(name, disc_label, booklet, rack_labels=None, lid_open=100.0, arm
                                          (0.01, 3.66)], M["btn"], seg=64, parent=b)
         shapes = button_icon(kind)
         if shapes:
-            ic = slab(f"{name}_btn_icon_{kind}", shapes, 3.6, 3.78, M["ink_dark"], parent=b)
-            ic.scale = (1.3, 1.3, 1.0)
-            if kind == "play":  # ‖ beside ▶ on the same cap
-                ip = slab(f"{name}_btn_icon_pause", button_icon("pause"), 3.6, 3.78, M["ink_dark"], parent=b)
-                ip.scale = (1.3, 1.3, 1.0)
+            # ▶ and ‖ share the play key's cap, the page showing one at a time; a render plays, so
+            # it prints ‖ alone.
+            icons = (("play", "pause") if web else ("pause",)) if kind == "play" else (kind,)
+            for icon in icons:
+                ic = slab(f"{name}_btn_icon_{icon}", button_icon(icon), 3.6, 3.78, M["ink_dark"], parent=b)
+                ic.scale = (1.3, 1.3, 1.0)
         else:
             text(f"{name}_btn_txt_{kind}", "RPT" if kind == "rpt" else "M", 3.0, M["ink_dark"], font="avenir",
                  parent=b, loc=L(0, 0, 3.68))

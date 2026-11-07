@@ -86,8 +86,9 @@ the colour `build_materials()` gives it.
 the shell's tint, the frame (the plinth, the door's bezel, the keys, the handle, the speaker cones,
 the stand's cheeks), the board and the light (the ring round the disc, the VU strip, the keys'
 icons). The play key carries two icons, ▶ and ‖ (`button_icon("play")` and `("pause")` in
-`parts.py`), built as `icon_play` / `icon_pause` in both models and shown one at a time by the
-page. `CDP_MODEL=clear` renders it in its default look, or in the one
+`parts.py`), built as `icon_play` / `icon_pause` in both models' web scenes and shown one at a
+time by the page; a render, which plays, prints ‖ alone. `CDP_MODEL=clear` renders it in its
+default look, or in the one
 `CDP_CLEAR_LOOK=<shell>,<frame>,<board>,<light>` names (ids of that file), into
 `.out/clear/<shell>-<frame>-<board>-<light>/clear-<view>-<quality>.png` (`CDP_SKIN` is the
 suitcase's alone: with the Clear model it stops the run, as `CDP_CLEAR_LOOK` does with the
@@ -98,6 +99,7 @@ the board and the mechanism through the shell:
       CDP_HERO_QUALITY=final /Applications/Blender.app/Contents/MacOS/Blender --background \
       --factory-startup --python-exit-code 1 --python blender/scripts/hero.py
 
-A render plays: the arm over the disc, discs in the rack, the LCD and seven VU segments lit, the
-plate and the tag lettered. The web scene (`build_clear.py`) is at rest: the door shut, the arm off
-the disc's rim, the rack's slots empty, the prints as plain planes for the page to paint.
+A render plays: the arm over the disc, discs in the rack, the LCD and seven VU segments lit, ‖
+alone on the play key, the plate and the tag lettered. The web scene (`build_clear.py`) is at
+rest: the door shut, the arm off the disc's rim, the rack's slots empty, the prints as plain planes
+for the page to paint.
