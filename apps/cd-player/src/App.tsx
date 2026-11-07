@@ -16,7 +16,8 @@ import { BootStallError, describeFailure } from './failure';
 import { remoteBase } from './lib/asset-url';
 import { createLinkLoader, IDLE_LINK, type LinkState } from './link-loader';
 import { DEFAULT_LOOK_STATE, lookAccent, lookOf, type LookState } from './looks';
-import { DEFAULT_MODEL, type ModelId } from './models';
+import { createModelKeeper } from './model-keeper';
+import type { ModelId } from './models';
 import {
   LOOK_SCRIPT,
   readLast,
@@ -114,9 +115,9 @@ export default function App({ controller, initial = null, assetBase = '', initia
   // The suitcase in Blush on the server and on the first render of a hydration, so the markup
   // matches; the visitor's saved one right after it (LOOK_SCRIPT has already painted its accent on
   // the server's markup; the scene mounts later and boots in it); saved on each change, but a model
-  // chosen while the scene is live only when it comes on show (onModel, below). The scene gets the
-  // chosen look, so the next model swaps in in its own colours; the page wears the colours of the
-  // model on show (`accent`, below). A look is never in the URL.
+  // chosen once a model is on the scene's stage only when it comes on show (the keeper, below). The
+  // scene gets the chosen look, so the next model swaps in in its own colours; the page wears the
+  // colours of the model on show (`accent`, below). A look is never in the URL.
   const [lookState, setLookState] = useState<LookState>(initialLook ?? DEFAULT_LOOK_STATE);
   useEffect(() => {
     setLookState(readLookState(safeStorage()));
@@ -127,6 +128,10 @@ export default function App({ controller, initial = null, assetBase = '', initia
   useEffect(() => {
     setAskedModel(readLookState(safeStorage()).model);
   }, []);
+  // Which model is kept for the next visit, and which one a failed change goes back to: the
+  // keeper (model-keeper.ts) follows the scene's stage (onStage, below), not the phase, as the
+  // scene does when it tells the boot's load from a change's.
+  const [keeper] = useState(() => createModelKeeper((model) => writeModel(safeStorage(), model)));
   const changeLook = useCallback(
     (next: LookState) => {
       setLookState(next);
@@ -134,10 +139,10 @@ export default function App({ controller, initial = null, assetBase = '', initia
       const storage = safeStorage();
       writeSkin(storage, next.skin);
       writeClearLook(storage, next.clear);
-      // Chosen before the scene is live, the model is kept at once, and the boot loads it.
-      if (boot.phase !== 'live') writeModel(storage, next.model);
+      // Kept at once while nothing is on the stage (the boot loads it), else once it is on show.
+      keeper.choose(next.model);
     },
-    [boot.phase],
+    [keeper],
   );
   // Once per change: the scene recolours its model whenever `look` is a new object, and App renders
   // on every playback, progress and boot update.
@@ -176,17 +181,15 @@ export default function App({ controller, initial = null, assetBase = '', initia
     log.error('cd-player.scene-failed', { error: String(error) });
     dispatchBoot({ type: 'fail', failure: describeFailure(error) });
   }, []);
-  // The model on the stage, as the scene reports it (onModel, the boot's model included). What the
+  // The model on show, as the scene reports it (onModel, the boot's model included). What the
   // picker says of a change is set only when it says something new: a download's chunks once per
   // whole percent, as the loader's count is (a size still unknown as it comes). A model on show is
-  // noted, and saved when a change brought it while the scene was live; the boot's own writes
-  // nothing, as its `ready` comes with onReady, before the phase is live (a model chosen before
-  // that was saved as it was chosen). The page wears the model on show: a model chosen while the
-  // scene is live turns it in the render that its `ready` arrives. A change that fails goes back to
-  // the model still shown and never turned the page.
+  // noted, and the keeper keeps it when a change brought it (the boot's own keeps nothing: it was
+  // kept as it was chosen). The page wears the model on show: a model chosen while the scene is
+  // live turns it in the render that its `ready` arrives. A change that fails goes back to the
+  // model on the stage, which never turned the page, even when the boot's model is not drawn yet.
   const [modelLoad, setModelLoad] = useState<ModelLoad | null>(null);
   const shownLoad = useRef<ModelLoad | null>(null);
-  const shownModel = useRef<ModelId>(DEFAULT_MODEL);
   const [onShow, setOnShow] = useState<ModelId | null>(null);
   // The page's accent: the model on show's colours once the scene is live, else the chosen model's
   // (nothing is on the stage, the boot loads it, and LOOK_SCRIPT has painted the saved one). Colour
@@ -203,14 +206,15 @@ export default function App({ controller, initial = null, assetBase = '', initia
         setModelLoad(load);
       }
       if (load.status === 'ready') {
-        shownModel.current = load.model;
         setOnShow(load.model);
-        if (live) writeModel(safeStorage(), load.model);
+        keeper.drawn(load.model);
       }
-      if (load.status === 'failed')
-        setLookState((state) => ({ ...state, model: shownModel.current }));
+      if (load.status === 'failed') {
+        const back = keeper.staged;
+        if (back) setLookState((state) => ({ ...state, model: back }));
+      }
     },
-    [live],
+    [keeper],
   );
 
   // A boot that goes quiet, on the scene's code, on the model's download or on its parse and
@@ -228,11 +232,16 @@ export default function App({ controller, initial = null, assetBase = '', initia
       if (stall.current === watch) stall.current = null;
     };
   }, [booting, onFail]);
-  // The scene's stage, the moment the holder changes it: once the boot's model is on it the boot
-  // waits on its first frames alone, which a hidden page never draws, so its stall watch ends.
-  const onStage = useCallback((model: ModelId | null) => {
-    if (model !== null) stall.current?.stop();
-  }, []);
+  // The scene's stage, the moment the holder changes it: the keeper follows it, and once the
+  // boot's model is on it the boot waits on its first frames alone, which a hidden page never
+  // draws, so its stall watch ends.
+  const onStage = useCallback(
+    (model: ModelId | null) => {
+      keeper.stage(model);
+      if (model !== null) stall.current?.stop();
+    },
+    [keeper],
+  );
   const onProgress = useCallback(
     (fraction: number | null) => {
       stall.current?.progress(fraction);

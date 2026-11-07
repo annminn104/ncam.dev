@@ -206,21 +206,44 @@ describe('App and the skins', () => {
 });
 
 describe('App and the model on the stage', () => {
-  it('saves a change once it is on show, never the boot’s own model, and goes back when one fails', () => {
+  it('keeps a model through the keeper, which follows the scene’s stage, never the phase', () => {
     // The scene reports through effects and callbacks a server render never runs: the wiring is
-    // read from the source, as the loader's place is above.
+    // read from the source, as the loader's place is above (model-keeper.test.ts holds what the
+    // keeper keeps: a choice at once while nothing is on the stage, a change once it is drawn).
     const source = readFileSync(new URL('./App.tsx', import.meta.url), 'utf8');
-    // A `ready` while the scene is live is a change, saved once it is on show. The boot's own
-    // `ready` comes while it boots and writes nothing: that guarded write is the only one.
-    expect(source).toMatch(/const live = boot\.phase === 'live';/);
     expect(source).toMatch(
-      /if \(load\.status === 'ready'\) \{[^}]*\bif \(live\) writeModel\(safeStorage\(\), load\.model\);[^}]*\}/,
+      /const \[keeper\] = useState\(\(\) =>\s*createModelKeeper\(\(model\) => writeModel\(safeStorage\(\), model\)\),?\s*\);/,
     );
-    expect(source.match(/writeModel\(safeStorage\(\), load\.model\)/g)).toHaveLength(1);
-    // A change that fails goes back to the model shown.
-    expect(source).toMatch(/load\.status === 'failed'\)\s*setLookState\(/);
-    // A model chosen while the scene is not live is written at once, and the boot loads it.
-    expect(source).toMatch(/boot\.phase !== 'live'[\s\S]{0,80}writeModel\(/);
+    // The keeper's is the only write of a model.
+    expect(source.match(/writeModel\(/g)).toHaveLength(1);
+    expect(source).toMatch(
+      /writeClearLook\(storage, next\.clear\);\s*(\/\/[^\n]*\n\s*)*keeper\.choose\(next\.model\);/,
+    );
+    expect(source).toMatch(
+      /if \(load\.status === 'ready'\) \{[^}]*\bkeeper\.drawn\(load\.model\);[^}]*\}/,
+    );
+    // The stage, as the scene tells it, the boot's first swap included.
+    expect(source).toMatch(/keeper\.stage\(model\);/);
+    expect(source).toMatch(/onStage=\{onStage\}/);
+  });
+
+  it('goes back to the model on the stage when a change fails, before the boot’s model is drawn too', () => {
+    const source = readFileSync(new URL('./App.tsx', import.meta.url), 'utf8');
+    expect(source).toMatch(
+      /if \(load\.status === 'failed'\) \{\s*const back = keeper\.staged;\s*if \(back\) setLookState\(\(state\) => \(\{ \.\.\.state, model: back \}\)\);/,
+    );
+    expect(source).not.toMatch(/shownModel/);
+  });
+
+  it('ends the boot’s stall watch once its model takes the stage: its first frames are all it waits on', () => {
+    // A hidden page draws no frames, and is no stalled boot.
+    const source = readFileSync(new URL('./App.tsx', import.meta.url), 'utf8');
+    expect(source).toMatch(
+      /const onStage = useCallback\(\s*\(model: ModelId \| null\) => \{\s*keeper\.stage\(model\);\s*if \(model !== null\) stall\.current\?\.stop\(\);/,
+    );
+    expect(source).toMatch(
+      /watchStall\(\(part\) => onFail\(new BootStallError\(part\)\), PAGE_TIMERS\)/,
+    );
   });
 
   it('makes the root’s accent from the model on show once live, never the chosen one alone', () => {
@@ -230,17 +253,5 @@ describe('App and the model on the stage', () => {
     expect(source).toMatch(
       /if \(load\.status === 'ready'\) \{[^}]*\bsetOnShow\(load\.model\);[^}]*\}/,
     );
-  });
-
-  it('ends the boot’s stall watch once its model takes the stage: its first frames are all it waits on', () => {
-    // A hidden page draws no frames, and is no stalled boot.
-    const source = readFileSync(new URL('./App.tsx', import.meta.url), 'utf8');
-    expect(source).toMatch(
-      /const onStage = useCallback\(\(model: ModelId \| null\) => \{\s*if \(model !== null\) stall\.current\?\.stop\(\);/,
-    );
-    expect(source).toMatch(
-      /watchStall\(\(part\) => onFail\(new BootStallError\(part\)\), PAGE_TIMERS\)/,
-    );
-    expect(source).toMatch(/onStage=\{onStage\}/);
   });
 });
