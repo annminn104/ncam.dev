@@ -950,8 +950,9 @@ suitcase for an id it does not know. It is three-free, as are `skins.ts`, `clear
   gives each Clear part one material: `clear_shell` (the shell's plates, band and grilles) the
   shell, `clear_frame` (the plinth, the door's bezel, pull and hinge, the keys' deck and caps, the
   handle, the knob's ring, the speaker cones and the stand's cheeks) the frame, `board` (the main
-  board, the keys' and the motor's) the board, and `light` (the ring round the window and the keys'
-  icons) the light, which the page also gives the VU and the LCD (see "The scene"). The door's
+  board, the keys' and the motor's) the board, and `light` (the ring round the window, the keys'
+  icons and the board's six LEDs) the light, which the page also gives the VU and the LCD (see
+  "The scene"). The door's
   glass, the clear stand and easel, the chips, the copper and the prints keep Blender's colours in
   every look.
 - **Recolouring in place** (`applyLook` in `src/scene/materials.ts`, through
@@ -964,13 +965,15 @@ suitcase for an id it does not know. It is three-free, as are `skins.ts`, `clear
   colour, metalness and roughness, the board its colour and the light its glow, and the board's
   silkscreen (`silk`) follows the board as the render prints it: light (`SILK_LIGHT`) on a board
   whose linear Rec. 709 luma is under 0.45, dark (`SILK_DARK`) on the white one, where a white
-  logo would vanish. Three decoration materials (`src/scene/decor-colours.ts`; geometry arrives with
-  the Clear's decorations) follow the same look: `trace` (the copper traces and the antenna, a
-  `pcb` surface) is the board's colour mixed toward `#ffffff` by 0.22 when the board's linear
+  logo would vanish. Three decoration materials (`src/scene/decor-colours.ts`; the board carries
+  `trace` and `gold`, `etch` arrives with the shell's etching) follow the same look: `trace` (the
+  board's copper traces, its hexagon pour and its antenna, a `pcb` surface) is the board's colour
+  mixed toward `#ffffff` by 0.22 when the board's linear
   luma is under 0.5, else toward `#000000` by 0.12; `etch` (the frosted lines on the shell) is the
   shell's tint mixed toward `#ffffff` by 0.55, on a frosted surface (opacity 0.5, roughness 0.85,
   metalness 0, transparent, no transmission, no depth write, front faces); `gold` (the Đông Sơn
-  motifs, the test pads) is fixed `#d6ae5a`, metalness 1, roughness 0.3, and no look recolours it.
+  motifs, the test pads, the SoC's A1 mark) is fixed `#d6ae5a`, metalness 1, roughness 0.3, and no
+  look recolours it.
   `skinColours` lists `trace` and `etch`, not `gold`. `clear.py`'s `build_clear_materials` makes
   all three by the same rules (`trace_rgb`). Only uniforms change: no reload, no texture, no
   shader. `PlayerScene` applies
@@ -1106,7 +1109,7 @@ at one unit per 5 cm and the printed ones (`art_disc`, `art_booklet`, `card_prin
 (never materials: the prints start identical and would merge into one), welds, prunes (keeping
 the empty pivots, and the UVs that no texture in the file uses yet) and meshopt-compresses it into
 `public/assets/cd-player.glb` or `public/assets/cd-player-clear.glb`, both **committed** (about
-100,633 triangles and 777 KB for the suitcase, 106,246 and 802 KB for the Clear, at the time of
+100,633 triangles and 777 KB for the suitcase, 108,277 and 811 KB for the Clear, at the time of
 writing). **The budget** (`model-contract.test.ts`, for each): 4 MB, 150k triangles,
 `EXT_meshopt_compression`, and meshes only on leaf nodes, so quantisation never scales a pivot.
 Rebuild a model after any change to its scripts (`cdkit.py` and `parts.py` are both models'). The
@@ -1130,8 +1133,8 @@ the same code.
 The shell is a front plate (the window's 128 mm opening cut in it, the speakers' perforated
 grilles set in it), a back plate and one hollow band between them for the sides, the top and the
 bottom, an outline round an inner outline: never a filled block, which would refract every part
-inside it. Inside, the board runs along the bottom (its chips, the LCD, the VU strip and the
-silkscreened logo), a speaker stands either side of the window, the motor and the laser's arm
+inside it. Inside, the board runs along the bottom (see "The Clear's board" below), a speaker
+stands either side of the window, the motor and the laser's arm
 stand behind the disc, and four AA cells lie across the back under the top. The door's bezel,
 glass, pull and knuckle hang from its hinge (`door_hinge` once built), left of the window, whose
 local Y in three is the axis it swings about, a negative turn opening it toward the viewer; the
@@ -1147,6 +1150,29 @@ and `case_seat` where the disc and the case stand. The web scene is at rest: the
 arm off the disc's rim, the rack's slots empty, the prints plain planes for the page to paint; a
 render plays (the arm over the disc, discs in the rack, the LCD and seven VU segments lit, the
 plate and the tag lettered).
+
+**The Clear's board** (`clear_board` in `clear.py`; where its main parts sit: `SOC`, `RAMS`,
+`PMIC`, `COILS`, `USB_X`, `SUN`, `WIFI`, `ANT_ZONE`, `POUR_ZONE`, `LED_X`). From the left: the PMIC
+(U8, a QFN whose exposed pad's copper and thermal vias reach out past its top) and its three
+shielded inductors (L2-L4) in a column, their rails into the SoC (U1: a BGA under a stepped chrome
+heat spreader marked ncam N1, with a Data Matrix in a render); USB-C (J7) on the lower edge under
+it, a differential pair (two 0.35 mm traces 0.35 mm apart) up into the SoC and VBUS round to the
+PMIC; the two LPDDR packages (U6, U7) above the logo, a clock pair and two buses to them, the
+longer bus's inner line (its shortest) tuned by a five-meander serpentine; the debug header J5;
+the Đông Sơn sun (gold, 12 mm) left of the ncam logo; a hexagon ground pour; the DAC (U5); the
+LCD (its flex in the ZIF J8), the VU strip and, under it, six LEDs in `light` (PWR, BT, WIFI,
+PLAY, SYNC, CHG) on a bus from their driver U4; the Wi-Fi/BT module's dimpled shield can (U9)
+with its via fence and its SDIO bus, and its meander antenna (an inverted-F) in a dashed keep-out
+at the upper right; an amplifier (U2, U3) by each speaker's connector (J2, J4), and J1, J3 and J6
+where the cells' wires, the laser's flex and the keys' ribbon land; gold test pads TP1-TP6. A
+`Board` lays it out: each part gives its footprint (`keep`), which the traces, the vias and the
+labels keep off; a trace is a route of 45-degree moves (`walk`; `offset_path` gives a bus's or a
+pair's lines, `trombone` a serpentine), and one that bends any other way stops the run; the small
+repeated geometry (legs, pads, passives, vias, test pads, the LEDs, the dimples, the silk
+outlines) goes into one mesh per material (`clear_board_<key>`), as every object is a node of the
+GLB. The copper (one `trace` mesh: the traces, the pour, the antenna) stands 0.04 mm proud of the
+board's face (`TRACE_PROUD`), the silkscreen 0.05 mm over it (`SILK_PROUD`). Ground-stitching
+vias fill whatever the board leaves open, on a grid (6 mm in a render, 10 mm in the web build).
 
 **Materials, skins and looks.** `build_materials(palette)` makes every suitcase material; the
 seven the skins recolour (`SKIN_ROLES` in `parts.py`: `leather`, `trim`, `thread`, `lining`,
