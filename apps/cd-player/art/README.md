@@ -55,7 +55,7 @@ They write `public/assets/cd-player.glb` and `public/assets/cd-player-clear.glb`
 `pipeline/build.mjs` hands the model to `export.py` as `CDP_MODEL`).
 `src/scene/model-contract.test.ts` checks each one's names, materials, where things are parented
 and the budget (150k triangles, 4 MB). The committed suitcase is about 100,633 triangles and
-777 KB, the Clear model about 126,723 and 939 KB. Rebuild a model after any change to its scripts
+777 KB, the Clear model about 132,715 and 965 KB. Rebuild a model after any change to its scripts
 (`cdkit.py` and `parts.py` are both models').
 
 ## Renders

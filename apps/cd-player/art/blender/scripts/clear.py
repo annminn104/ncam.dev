@@ -1726,18 +1726,22 @@ ETCH_PROUD = 0.05                    # mm: the frosted etching off the shell's o
 ETCH_LINE, ETCH_PAD = 0.45, 0.65     # mm: its lines' width, its pads' radius
 ETCH_CLEAR = 2.0                     # mm it keeps off the deck, the handle's mounts, the knob and every bevel
 RING_PROUD = 0.25                    # mm: the Đông Sơn ring's gold off the front plate
-RING_IN, RING_OUT = 75.6, 83.0       # its edges: 0.6 mm off the bezel's rim, inside the speakers' rims
+# Its edges: 0.3 mm off the bezel's rim, and inside the right speaker's basket rim, which the hero
+# camera sees from r 82.78 on (over the plate, just right of the door's pull).
+RING_IN, RING_OUT = 75.3, 82.6
 # Where the ring opens, degrees counter-clockwise from the door's right as the viewer sees it: round
 # the hinge, and under the door, where the hero and the inside cameras see the LCD's frame.
 RING_OPEN = ((162.0, 198.0), (235.0, 287.0))
 # Its bands from the inside out, radii in mm: a line along its inner edge (RING_LINES), a chain of
-# tangent circles (CHAINS: its centre line, its circles' radius, circles to a full turn), the ladder
-# (LADDER: its inner rail's edges, its outer rail's), the birds round BIRD_R, a second chain and a
-# line along its outer edge.
-RING_LINES = ((RING_IN, RING_IN + 0.3), (RING_OUT - 0.3, RING_OUT))
-CHAINS = ((76.7, 0.6, 24), (81.9, 0.5, 32))
-LADDER = (77.52, 77.8, 78.5, 78.78)
-BIRD_R = 80.1
+# tangent circles (CHAINS: its centre line, its circles' radius, their line's width), the ladder
+# (LADDER: its inner rail's edges, its outer rail's; its rungs RUNG_W wide every RUNG_PITCH), the
+# birds round BIRD_R, a second chain a little smaller, a line along its outer edge.
+RING_LINES = ((RING_IN, RING_IN + 0.4), (RING_OUT - 0.4, RING_OUT))
+CHAINS = ((76.47, 0.65, 0.3), (81.48, 0.6, 0.28))
+CHAIN_PITCH = 2.0                    # a chain's circles two diameters apart: its links slant 30 degrees
+LADDER = (77.24, 77.64, 78.04, 78.44)
+RUNG_W, RUNG_PITCH = 0.5, 0.8
+BIRD_R = 79.64                       # the birds' band runs 78.44 to 80.84
 GROOVE_PROUD = 0.25                  # mm: the frame's lozenge relief
 
 
@@ -1939,17 +1943,17 @@ def _polar(r_ref):
     return warp
 
 
-# A Lạc bird, 16 mm long, in (u, v) mm along its band: flying toward -u (counter-clockwise round
-# the ring), its back outward. The long beak, the crest's two plumes, the slim neck, the wings
-# spread out and in with three feathers at each trailing edge, the tail's three long feathers;
-# once round, counter-clockwise, from the beak's tip along its belly.
-BIRD = ((-8.0, 0.0), (-4.9, -0.1), (-4.6, -0.2), (-3.8, -0.17), (-2.9, -0.16), (-2.0, -0.24), (-1.4, -0.28),
-        (-0.9, -0.62), (-0.2, -0.92), (0.6, -1.06), (1.3, -1.1), (0.95, -0.84), (1.55, -0.84), (1.15, -0.6),
-        (1.75, -0.56), (1.4, -0.34), (1.9, -0.24), (2.8, -0.2), (3.4, -0.15), (8.0, -0.55), (5.6, -0.07),
-        (7.3, 0.0), (5.6, 0.07), (8.0, 0.55), (3.4, 0.15), (2.8, 0.2), (1.9, 0.24), (1.4, 0.34), (1.75, 0.56),
-        (1.15, 0.6), (1.55, 0.84), (0.95, 0.84), (1.3, 1.1), (0.6, 1.06), (-0.2, 0.92), (-0.9, 0.62),
-        (-1.4, 0.28), (-2.0, 0.24), (-2.9, 0.16), (-3.7, 0.19), (-2.7, 0.66), (-3.95, 0.4), (-2.5, 1.0),
-        (-4.4, 0.4), (-4.7, 0.25), (-4.9, 0.1))
+# A Lạc bird, 16.2 mm long and 2.24 across its wings, in (u, v) mm along its band: flying toward -u
+# (counter-clockwise round the ring), its back outward. The long beak, the crest's two plumes, the
+# neck, the wings spread out and in with three feathers at each trailing edge, the tail's three
+# long feathers; once round, counter-clockwise, from the beak's tip along its belly.
+BIRD = ((-8.0, 0.0), (-4.95, -0.16), (-4.6, -0.3), (-3.8, -0.3), (-2.9, -0.3), (-2.0, -0.42), (-1.5, -0.45),
+        (-1.0, -0.76), (-0.3, -0.99), (0.5, -1.1), (1.3, -1.12), (1.0, -0.9), (1.65, -0.88), (1.3, -0.66),
+        (1.95, -0.62), (1.6, -0.45), (2.2, -0.41), (2.9, -0.36), (3.5, -0.28), (8.2, -0.74), (5.8, -0.14),
+        (7.6, 0.0), (5.8, 0.14), (8.2, 0.74), (3.5, 0.28), (2.9, 0.36), (2.2, 0.41), (1.6, 0.45), (1.95, 0.62),
+        (1.3, 0.66), (1.65, 0.88), (1.0, 0.9), (1.3, 1.12), (0.5, 1.1), (-0.3, 0.99), (-1.0, 0.76),
+        (-1.5, 0.45), (-2.0, 0.42), (-2.9, 0.3), (-3.6, 0.33), (-2.6, 0.78), (-3.9, 0.54), (-2.3, 1.1),
+        (-4.45, 0.5), (-4.8, 0.36), (-4.95, 0.16))
 
 
 def _spread(spans, n, start):
@@ -1966,28 +1970,28 @@ def _spread(spans, n, start):
     return out
 
 
-def ring_chain(R, spans, rc, rad, count, seg):
-    """A chain of tangent circles round the ring on the circle rc, `count` to a full turn: each of
-    radius `rad` mm with its centre dot, linked to the next by the slanted line tangent to both,
-    from one's outer side to the other's inner side; at a bar the chain ends in the link to the
-    circle that would stand beyond it."""
-    line, pitch = 0.25, 360.0 / count
-    rm = rad - line / 2                     # the circle's line, along its middle
+def ring_chain(R, spans, rc, rad, line, seg):
+    """A chain of tangent circles round the ring on the circle rc, after the drum's: rings of
+    radius `rad` mm in a `line` mm line, each round its centre dot, CHAIN_PITCH diameters apart (as
+    many to a full turn as fit), each linked to the next by the line tangent to both rims, from
+    one's outer side to the other's inner side, slanting 30 degrees; at a bar the chain ends in the
+    link to the circle that would stand beyond it."""
+    pitch = 360.0 / round(2 * math.pi * rc / (CHAIN_PITCH * 2 * rad))
     warp = _polar(rc)
 
     def u(deg):
         return -math.radians(deg) * rc
     for b0, b1 in spans:
-        margin = math.degrees((rad + 0.5) / rc)
+        margin = math.degrees((rad + 0.3) / rc)
         degs = [pitch * k for k in range(int(math.ceil((b0 + margin) / pitch)), int((b1 - margin) // pitch) + 1)]
         for deg in degs:
             R.ring(_on_ring(rc, deg), rad, rad - line, seg)
             R.disc(_on_ring(rc, deg), rad * 0.3, max(6, seg // 2))
         for d0, d1 in zip([degs[0] - pitch] + degs, degs + [degs[-1] + pitch]):
             u1, u2 = u(d1), u(d0)           # u runs clockwise: d1's circle comes first
-            cb = 2 * rm / (u2 - u1)
+            cb = 2 * rad / (u2 - u1)
             sb = math.sqrt(1.0 - cb * cb)
-            t1, t2 = (u1 + rm * cb, rm * sb), (u2 - rm * cb, -rm * sb)
+            t1, t2 = (u1 + rad * cb, rad * sb), (u2 - rad * cb, -rad * sb)
             lo, hi = max(t1[0], u(b1)), min(t2[0], u(b0))       # within the bars
             if hi - lo < 0.1:
                 continue
@@ -1996,19 +2000,20 @@ def ring_chain(R, spans, rc, rad, count, seg):
             for i in range(n + 1):
                 uu = lo + (hi - lo) * i / n
                 pts.append((uu, t1[1] + (t2[1] - t1[1]) * (uu - t1[0]) / (t2[0] - t1[0])))
-            R.strip(pts, line, warp=warp, caps=False)
+            R.strip(pts, line, warp=warp)
 
 
 def clear_dongson_ring(name, root):
     """A Đông Sơn ring round the door, after the Ngọc Lũ drum's face: gold relief 0.25 mm proud of
-    the front plate from RING_IN to RING_OUT, from the inside out a line, a chain of tangent circles
-    (24 to a full turn), a hatched ladder, eight Lạc birds flying counter-clockwise, a chain of 32
-    and a line. It opens round the hinge and over the LCD (RING_OPEN), each band ending at a bar
-    across the ring, and runs under the door's pull; the door swings clear of it. One mesh,
-    `<name>_dongson_ring`; the web build leaves out its walls."""
+    the front plate from RING_IN to RING_OUT, bold enough to read as a band from the page's camera.
+    From the inside out a line, a chain of tangent circles, a ladder whose rungs leave slots between
+    them, eight Lạc birds flying counter-clockwise, a smaller chain and a line. It opens round the
+    hinge and over the LCD (RING_OPEN), each band ending at a bar across the ring, and runs under the
+    door's pull; the door swings clear of it. One mesh, `<name>_dongson_ring`; the web build leaves
+    out its walls and draws its circles with fewer sides."""
     R = Relief(lambda a, b, h: (a, FRONT_Y - h, b), RING_PROUD, walls=not WEB)
     step = 2.0 if WEB else 1.0             # degrees per segment along a band
-    bar = 0.35
+    bar = 0.45
     (h0, h1), (l0, l1) = RING_OPEN
     pad = math.degrees(bar / 2 / RING_IN)
     spans = [(a0 + pad, a1 - pad) for a0, a1 in ((h1, l0), (l1, h0 + 360.0))]   # between the bars' middles
@@ -2021,13 +2026,13 @@ def clear_dongson_ring(name, root):
             n = max(2, int(math.ceil((b1 - b0) / step)))
             R.strip([(-math.radians(b0 + (b1 - b0) * i / n) * rc, 0.0) for i in range(n + 1)], r1 - r0,
                     warp=_polar(rc), caps=False)
-        # The ladder's rungs, about 0.7 mm apart, from one rail's middle to the other's.
-        n = int(math.radians(b1 - b0) * (rail_in + rail_out) / 2 / 0.7)
+        # The ladder's rungs, about RUNG_PITCH apart, from one rail's middle to the other's.
+        n = int(math.radians(b1 - b0) * (rail_in + rail_out) / 2 / RUNG_PITCH)
         for k in range(1, n):
             deg = b0 + (b1 - b0) * k / n
-            R.strip([_on_ring(rail_in, deg), _on_ring(rail_out, deg)], 0.25, caps=False)
-    for rc, rad, count in CHAINS:
-        ring_chain(R, spans, rc, rad, count, 12 if WEB else 24)
+            R.strip([_on_ring(rail_in, deg), _on_ring(rail_out, deg)], RUNG_W, caps=False)
+    for rc, rad, line in CHAINS:
+        ring_chain(R, spans, rc, rad, line, 10 if WEB else 24)
     # The birds every 34 degrees along the two spans taken end to end, the first 23 degrees in: none
     # cut by an opening, none under the door's pull (at 0 degrees, 5.4 to either side).
     half = math.degrees(max(abs(u) for u, _ in BIRD) / BIRD_R)

@@ -1110,7 +1110,7 @@ at one unit per 5 cm and the printed ones (`art_disc`, `art_booklet`, `card_prin
 (never materials: the prints start identical and would merge into one), welds, prunes (keeping
 the empty pivots, and the UVs that no texture in the file uses yet) and meshopt-compresses it into
 `public/assets/cd-player.glb` or `public/assets/cd-player-clear.glb`, both **committed** (about
-100,633 triangles and 777 KB for the suitcase, 126,723 and 939 KB for the Clear, at the time of
+100,633 triangles and 777 KB for the suitcase, 132,715 and 965 KB for the Clear, at the time of
 writing). **The budget** (`model-contract.test.ts`, for each): 4 MB, 150k triangles,
 `EXT_meshopt_compression`, and meshes only on leaf nodes, so quantisation never scales a pivot.
 Rebuild a model after any change to its scripts (`cdkit.py` and `parts.py` are both models'). The
@@ -1186,22 +1186,25 @@ cell clear of every other, until 30 % of the open cells are taken, `ETCH_CLEAR` 
 bevel and, on the top, off the keys' deck, the handle's mounts, the knob and the tag's cord
 (`TAG_CORD_X`); a line stops at its pad's rim, where a half-clear line drawn over its pad would
 show through it. The **Đông Sơn ring** (`gold`, `clear_dongson_ring`, after the Ngọc Lũ drum's
-face): relief 0.25 mm proud of the front plate (`RING_PROUD`) from r 75.6 mm, 0.6 off the bezel's
-rim, to 83.0, inside the speakers' rims. From the inside out: a line, a chain of tangent circles
-(24 to a full turn, each with its centre dot, linked to the next by a slanted tangent line), a
-hatched ladder (rungs 0.7 mm apart), eight Lạc birds flying counter-clockwise (`BIRD`, 16 mm long,
-2.2 mm across the wings), a chain of 32 and a line, its lines 0.25 to 0.35 mm wide (`RING_LINES`,
-`CHAINS`, `LADDER`, `BIRD_R`). It opens round the hinge (162 to 198 degrees counter-clockwise from
-the door's right as the viewer sees it) and under the door (235 to 287, where the hero and inside
-cameras see the LCD's frame, none of which it hides; `RING_OPEN`), each band ending at a bar
-across the ring. The birds stand every 34 degrees along the two arcs taken end to end, and the run
-stops if one is cut by an opening or flies under the door's pull, which stands in front of the
-ring; the ring starts outside the bezel, so the door swings clear of it. The web build leaves out
-its walls. The **grooves** (`clear_frame`, 0.25 mm proud, `GROOVE_PROUD`, `clear_grooves_plinth`
-and `clear_grooves_deck`): chains of lozenges tip to tip, each outlined and hatched parallel to a
-side, the next to the other side, on the plinth's front either side of the nameplate between two
-rails (four a side, 14.75 by 9 mm) and along the keys' deck's front and back rims (43 a rim, 3.6 by
-2.2 mm).
+face), bold enough to read as a band from the page's camera: relief 0.25 mm proud of the front
+plate (`RING_PROUD`) from r 75.3 mm, 0.3 off the bezel's rim, to 82.6, short of where the hero
+camera sees the right speaker's basket rim (82.78). From the inside out: a 0.4 mm line; a chain of
+tangent circles 1.3 mm across, each a ring round its centre dot, two diameters apart and linked to
+the next by the line tangent to both rims, from one's outer side to the other's inner side, which
+slants 30 degrees (`CHAINS`, `CHAIN_PITCH`); a ladder, two 0.4 mm rails and 0.5 mm rungs every 0.8
+mm, a gold band with slots (`LADDER`, `RUNG_W`, `RUNG_PITCH`); eight Lạc birds flying
+counter-clockwise in a 2.4 mm band (`BIRD`, 16.2 mm long and 2.24 across the wings, `BIRD_R`); a
+chain of 1.2 mm circles; a 0.4 mm line (`RING_LINES`). It opens round the hinge (162 to 198
+degrees counter-clockwise from the door's right as the viewer sees it) and under the door (235 to
+287, where the hero and inside cameras see the LCD's frame, none of which it hides; `RING_OPEN`),
+each band ending at a bar across the ring. The birds stand every 34 degrees along the two arcs
+taken end to end, and the run stops if one is cut by an opening or flies under the door's pull,
+which stands in front of the ring; the ring starts outside the bezel, so the door swings clear of
+it. The web build leaves out its walls and draws its circles with fewer sides. The **grooves**
+(`clear_frame`, 0.25 mm proud, `GROOVE_PROUD`, `clear_grooves_plinth` and `clear_grooves_deck`):
+chains of lozenges tip to tip, each outlined and hatched parallel to a side, the next to the other
+side, on the plinth's front either side of the nameplate between two rails (four a side, 14.75 by
+9 mm) and along the keys' deck's front and back rims (43 a rim, 3.6 by 2.2 mm).
 
 **Materials, skins and looks.** `build_materials(palette)` makes every suitcase material; the
 seven the skins recolour (`SKIN_ROLES` in `parts.py`: `leather`, `trim`, `thread`, `lining`,
