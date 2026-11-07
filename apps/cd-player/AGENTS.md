@@ -391,10 +391,11 @@ asked before any canvas mounts): "This browser can't draw the 3D player. The mus
 with no button; a chunk that would not load (`SceneChunkError`): "The 3D player couldn't start. The
 music still plays." with **Reload the page** (a browser remembers a failed dynamic import, and the
 reload stops the music, hence the label); anything else (the boot's GLB, the model contract, a
-render-time throw caught by `SceneBoundary`, a boot that stalls on the scene's code or on the GLB's
-download: `BootStallError`, see "Hand-overs"): the same message with **Try again**. Each is logged
-as `cd-player.scene-failed`. A model chosen once another is on show that will not load fails
-nothing: the model on show stays (see "Changing models").
+render-time throw caught by `SceneBoundary`, a boot that stalls on the scene's code, on the GLB's
+download or on the model's parse and compile: `BootStallError`, see "Hand-overs"): the same message
+with **Try again**. Each is logged as `cd-player.scene-failed`. A model chosen once another is on
+show that will not load, or that stalls, fails nothing: the model on show stays (see "Changing
+models").
 
 **The GLB contract** (`src/scene/contract.ts`), one for both models: `REQUIRED_NODES` are the
 pivots `lid_hinge`, `arm_pivot`, `knob` and `btn_prev`, `btn_next`, `btn_play`, `btn_stop`,
@@ -417,7 +418,13 @@ of the retired names its `GONE` list holds (the polaroids, the paper and pins, t
 budget, and meshes on leaf nodes only. The Clear's: every required node and the door, every
 printed material, a role for every material and the four materials a look colours
 (`CLEAR_ROLES`), the rack slots as empties under `lid_hinge`, the tag's and the VU segments'
-materials, the budget, and meshes on leaf nodes only.
+materials, the budget, and meshes on leaf nodes only. Both, loaded with three's GLTFLoader as the
+page loads them, are also held to every number the scene's tests pose and frame them by
+(`src/testing/model-measures.ts`): each model's box with a disc in each rack slot, rounded out to
+the millimetre, and the Clear's door hinge and shut box, its seat, its stand and slots, and its
+shell's walls (the plates' and the band's extents, the band's 3 mm, the corners' 20 mm, the
+opening's 64 mm), so a rebuild that moves one fails here instead of leaving `framing.test.ts` and
+`rig.test.ts` to check a set that is gone.
 
 **The scene profiles** (`src/scene/profiles.ts`, `SCENE_PROFILES`, three-free): one
 `SceneProfile` per model, what the scene needs of it beyond its name and GLB (`src/models.ts`).
@@ -651,9 +658,11 @@ the box stays 1 % of the canvas clear of every edge, and at the orbit's middle i
 of the canvas's middle and spans a floor or more of a side, 70 % for the suitcase and 60 % for the
 Clear. Under the shared orbit, perspective swings the near end of the Clear's wide, low set toward
 the camera on a wide canvas, so its height on screen grows about 1.6 times from the orbit's middle
-to its ends, where 70 % at the middle and 1 % clear at the ends allow only 1.4. The Clear's boxes,
-and the poses of its set that `rig.test.ts` flies through, were measured with three's GLTFLoader
-over its committed GLB: measure them again whenever it changes. The near plane (`nearFor(model)`)
+to its ends, where 70 % at the middle and 1 % clear at the ends allow only 1.4. The boxes, and the
+poses of the Clear's set that `rig.test.ts` flies through, were measured with three's GLTFLoader
+over the committed GLBs and live in `src/testing/model-measures.ts`, which `model-contract.test.ts`
+holds the GLBs to: a rebuild that moves one fails it, and the number is measured again there. The
+near plane (`nearFor(model)`)
 stands at 0.5 m for the suitcase (`NEAR`), as far out as the frame allows (the camera is never
 nearer than about 0.8 m to the player's nearest corner), and at 0.52 m for the Clear (its
 profile's `near`, a little more depth for the disc's printed layers than the suitcase needs); the
@@ -662,7 +671,8 @@ far one stands at 10 m (`FAR`). The disc's printed layers are microns apart, and
 each player between the two planes with 0.2 m to spare, and the foil six depth steps or more over
 the label on every canvas half as wide as tall or wider.
 
-**Changing models** (`src/scene/PlayerScene.tsx`, `src/scene/model-holder.ts`). The scene loads
+**Changing models** (`src/scene/PlayerScene.tsx`, `src/scene/model-holder.ts`,
+`src/scene/model-load.ts`). The scene loads
 the model the look names (`modelById(look.model)`, its `glb`), one load per wanted model, and
 never empties the stage: the model on show stays drawn until the next one can take its place. A
 loaded model is the next; `Precompile` compiles its shaders for the scene's lights and environment
@@ -680,14 +690,38 @@ within the commit that changes it: `Precompile`'s `onDone` carries the canvas's 
 which commits later, and a compile landing in between must find no next to swap in. The look goes
 to the model it names alone, the one on show or the next, so the next swaps in already in its own
 colours, while the model on show, its VU and its LCD keep the last look that named it (`worn`).
-The boot's download reports through `onProgress` (the loader and the stall watch); every model
-that comes on show, the boot's included, reports `ready` through `onModel` (`PlayerSceneProps`,
-`ModelLoad` in `src/scene-props.ts`), and a later change also reports its download (`loading`,
-which `App` keeps once per whole percent, `sameLoadPercent` in `src/view.ts`, as it keeps the
-boot's) and, when the model never comes, `failed`: the model on show stays, the failure is logged
-as `cd-player.model-failed` (with the model and the error), and `App` puts the look back on the
-model shown. A change given up before it loads (the model on show chosen again) reports nothing
-more, and its download is aborted, as is any load the scene lets go of.
+Each load runs through `startModelLoad` (`model-load.ts`, React-free): the boot's download reports
+through `onProgress` (the loader and App's stall watch) and its failure through `onFail`; every
+model that comes on show, the boot's included, reports `ready` through `onModel`
+(`PlayerSceneProps`, `ModelLoad` in `src/scene-props.ts`), and a later change also reports its
+download (`loading`, which `App` keeps once per whole percent, `sameLoadPercent` in `src/view.ts`,
+as it keeps the boot's) and, when the model never comes, `failed`: the model on show stays, the
+failure is logged as `cd-player.model-failed` (with the model and the error), and `App` puts the
+look back on the model on the stage. A change given up before it loads (the model on show chosen
+again) reports nothing more, and its download is aborted, as is any load the scene lets go of.
+
+**A change's stall watch.** A change is watched as the boot is (`watchStall`, on the page's
+timers): BOOT_STALL_MS, 20 s, without a word from its download, or from the download's end to its
+compile's end (the parse and the compile say nothing, so together they get the 20 s), fails it as
+stalled (`ModelStallError`, which names the download or the compile), so the picker never says
+"Loading" for ever: its download stops, the model it loaded, if it landed and compiles, goes
+without ever being shown (`holder.failed`), and it reports `failed`. A compile never settles when
+its programs never report themselves ready (three's `compileAsync` waits on each): a context or a
+driver that has stopped answering. Headless Chromium answers a lost context's query as ready, so
+there a lost context lets the compile land. The watch ends as the compile lands (`Precompile`
+tells the load in progress before the holder swaps its model in), never later: only the first
+frames are left then, and a hidden page draws none. On SwiftShader at 1440 × 900 the Clear's parse,
+compile and first three frames took 3.4 s after its download, so 20 s leaves a slow machine room.
+
+**The stage, for `App`.** The scene tells `App` the model on its stage the moment the holder
+changes it (`onStage`): the boot's first as it is swapped in, before its first frames, each
+change's as it swaps in, and none as the scene goes. Once a model is on the stage the scene loads a
+model chosen as a change, even while the phase still says booting (between the boot's first swap
+and its ready probe), so `App` follows the stage, not the phase: its keeper
+(`createModelKeeper`, `src/model-keeper.ts`) keeps a model chosen while nothing is on the stage at
+once (the boot loads it), keeps a change once it is drawn (its `ready`) and never one that fails,
+and gives the model on the stage for a failed change to go back to, the boot's included before it
+is drawn. The boot's stall watch ends as its model takes the stage (see "Hand-overs").
 
 **Reduced motion** (`prefers-reduced-motion: reduce`): no autostart; a disc change and a cascade
 in the rack are instant (the rig jumps to its end, the Clear's door shut, and the music still
@@ -959,7 +993,8 @@ suitcase for an id it does not know. It is three-free, as are `skins.ts`, `clear
   where the ink would vanish), the dot ringed in the accent's ink. A status line (`role="status"`,
   in the markup even while empty, so a line set while the popover is open is announced; with the
   popover closed nothing says it) speaks of a model change (`loadLine`): "Loading 63%", "Loading…"
-  while the size is unknown, "Couldn't load Clear". `App` hands it
+  while the size is unknown, "Couldn't load Clear" (a change that failed, or stalled 20 s, see
+  "Changing models"). `App` hands it
   `pickerLoad(modelLoad, askedModel)`, the report while its model is the one the visitor last
   asked for, so a change given up stays silent and a failed one says so after the look has gone
   back. Opening it shows the popover, brings it into view (`scrollIntoView({ block: 'nearest' })`:
@@ -981,9 +1016,11 @@ suitcase for an id it does not know. It is three-free, as are `skins.ts`, `clear
   **`ncam.cd-player.clear`** (`CLEAR_KEY`, `readClearLook`, `writeClearLook`: JSON of the four
   ids), read together by `readLookState` (`src/persist.ts`, all through `safeStorage`); an unknown
   value, nothing saved or blocked storage is the default, the Clear's part by part. `App` saves a
-  skin or a Clear colour as it is chosen, and a model at once while the scene is not live (the boot
-  then loads it), else only once it comes on show (`onModel`'s `ready` while live; the boot's own
-  `ready` writes nothing), so a change that fails is never saved. The server and the first render
+  skin or a Clear colour as it is chosen, and a model at once while nothing is on the scene's stage
+  (the boot then loads it), else only once it comes on show (the keeper, `src/model-keeper.ts`: a
+  model that took the stage in place of another is saved at its `ready`, and the boot's own
+  `ready` writes nothing), so a change that fails is never saved, one made between the boot's
+  first swap and its first frames included (see "Changing models"). The server and the first render
   of a hydration use the suitcase in Blush, so the markup matches, and the saved look's accent is
   on the root before the first paint all the same: the page's pastel is made from it, and Blush's
   would show for as long as the remote takes to hydrate. The root's first child is an inline script
@@ -1177,13 +1214,22 @@ for the boot. A boot that stalls fails too, so no spinner runs forever (as long 
 size, which the layout keeps: see "The look"): **the stall watch**
 (`watchStall` in `src/boot.ts`, which `App` runs while the phase is `booting`) is armed as the boot
 starts, armed again by every progress event of the GLB (with a fraction or without one), and over
-once the download is complete or the phase leaves `booting`. Complete is the 1 of the stream's
-end, never a chunk's count, so a compressed GLB counted past its length, or one served with no
-length, is watched to its last byte. 20 s with no event (`BOOT_STALL_MS`) fails the boot with
-`BootStallError` (see "Failures"), whose message names the part it waited on: the scene's code
-until the GLB's request goes out (its first event), the GLB's download after. It times silence,
-not the boot: the shaders compile after the download without an event (seconds on SwiftShader),
-and a total timeout would fail a slow machine. The scene's code sends no event as it comes, so it
+once the boot's model takes the stage (`onStage`: compiled, with only its first frames left, which
+a hidden page never draws) or the phase leaves `booting`. 20 s with no event (`BOOT_STALL_MS`)
+fails the boot with `BootStallError` (see "Failures"), whose message names the part it waited on:
+the scene's code until the GLB's request goes out (its first event), the GLB's download until its
+end, and the model's parse and compile from then on. The end is the 1 of the stream's end, never a
+chunk's count, so a compressed GLB counted past its length, or one served with no length, is
+watched to its last byte; the parse and the compile say nothing, so together they must land within
+20 s of it. A download that begins after that end is a model chosen while the boot's own parsed and
+compiled, which the boot now loads: it is watched as the first was, so a replacement that stalls
+fails the boot too. It times silence, not the boot, so a slow download is not a stalled one. A
+compile that never settles (its programs never report themselves ready: a context or a driver that
+has stopped answering) fails the boot as a stall rather than drawing anyway: drawing cannot help a
+context that is gone, and would fade in a canvas that shows nothing, with no way back, while "Try
+again" mounts a new canvas with a context of its own. On SwiftShader at
+1440 × 900 the boot's parse, compile and first three frames took 7.5 s after the download, either
+model, so 20 s leaves a slower machine room. The scene's code sends no event as it comes, so it
 alone must come whole within those 20 s: on a link of about 100 kbit/s or less it cannot, and the
 boot fails as a stall while its bytes still come. "Try again" then waits on the same request (a
 browser keeps one fetch per module URL while it is on its way), so the code still comes; a request
@@ -1207,15 +1253,22 @@ Unit tests (`src/**/*.test.ts`, node environment, run by the root `pnpm test`):
   server draws no scene layer, and the link loader stopped on unmount and opening through the
   engine (no effect runs in a server render), and renders the default skin's accent inline on the
   root with the picker closed, the root opening with `LOOK_SCRIPT`, and a look it is given as
-  `initialLook` (a Clear look's light as the accent) with no script; from `App.tsx` too, a change
-  of model saved once it is on show and never the boot's own, the look going back when one fails,
-  and the root's accent from the model on show once live), `link-loader.test.ts` (on fakes:
+  `initialLook` (a Clear look's light as the accent) with no script; from `App.tsx` too, the model
+  kept through the keeper, which follows the scene's stage, the look going back to the model on the
+  stage when a change fails, the boot's stall watch ended as its model takes the stage, and the
+  root's accent from the model on show once live), `model-keeper.test.ts` (a model chosen while
+  nothing is on the stage kept at once, the boot's own model never, a change once it is drawn and
+  never as it is chosen, one chosen between the boot's first swap and its frames counted as a
+  change and going back to the boot's model, a failed change kept never, a start from nothing once
+  the scene goes), `link-loader.test.ts` (on fakes:
   fetched, then saved, navigated and opened; one load at a time; a load landing or failing after
   the route moved on, or once stopped, dropped; the failures, Retry's collection and whose they
   are), `ssr-graph.test.ts` (the import
   graphs),
   `ssr-state.test.ts`, `boot.test.ts` (the phases from `waiting`, and the stall watch on a fake
-  clock, with the part it names), `autoplay.test.ts`, `failure.test.ts`, `webgl.test.ts`,
+  clock, `src/testing/clock.ts`, with the part it names: the scene's code, the download, the parse
+  and compile after its end, a new download after that end, a change's from its download),
+  `autoplay.test.ts`, `failure.test.ts` (with the stall errors' messages), `webgl.test.ts`,
   `shell/EnterButton.test.ts`, `shell/Loader.test.ts` (the disc and the line),
   `shell/NowPlaying.test.ts` (the card's controls in Tab order as `cdp-key` squares, the track label
   for the eye and for a screen reader, the switches' `aria-pressed`, the slider's numbers and when
@@ -1267,7 +1320,8 @@ Unit tests (`src/**/*.test.ts`, node environment, run by the root `pnpm test`):
   for again while the one before is shown), `bridge.test.ts` and `view.test.ts`
   (the view model, `loaderPercent` and `loaderLine`, the next five tracks in play order,
   `pickerLoad`, `sameLoadPercent` and `accentModelFor`);
-- the scene: `scene/model-contract.test.ts` (both committed GLBs), `model.test.ts`
+- the scene: `scene/model-contract.test.ts` (both committed GLBs, and every measure of
+  `src/testing/model-measures.ts` over them, loaded with three's GLTFLoader), `model.test.ts`
   (`downloadFraction`, and `downloadModel` on a fake fetch: its progress from the request to the
   end, a request of its own per load, the abort), `glb.test.ts`, `material-roles.test.ts` (every
   `SKIN_ROLES` entry maps a material to the role of its own name; every `CLEAR_ROLES` entry names a
@@ -1277,7 +1331,15 @@ Unit tests (`src/**/*.test.ts`, node environment, run by the root `pnpm test`):
   and driven, the Clear's door, arm and flights), `model-holder.test.ts` (`stepHeld` and the
   holder on stand-ins: a load shown once compiled, the model it replaced disposed only once the
   new one is drawn, a replaced or unwanted next disposed and never shown, a compile landing after
-  the look changed, a quick Suitcase → Clear → Suitcase, everything let go on release),
+  the look changed, a quick Suitcase → Clear → Suitcase, the next of a failed change disposed and
+  never shown, everything let go on release), `model-load.test.ts` (on a fake load and clock: a
+  change's reports and its model handed over, its stall on its download and from the download's
+  end to its compile's end, its download stopped and its model let go, a load's own failure passed
+  on once, a load let go of saying nothing more, the boot's load never watched there),
+  `PlayerScene.test.ts` (read from its source: every load through `startModelLoad`, a watch for a
+  change alone, a change's failure logged and reported and the boot's to `onFail`, a stalled
+  change's model let go through the holder, the watch ended as the compile lands, the stage told to
+  `App`),
   `stage.test.ts`, `rig.test.ts` (besides the poses: the door's hinge and turn, `modelArmAngle`,
   the seat's normal, and every way to and from the Clear's spindle through its door's opening,
   never through the shell's walls), `director.test.ts` (with the door: open while a disc leaves or
@@ -1297,11 +1359,14 @@ the default page, a pasted playlist and album, the presets (a press, the current
 and a failed one with Retry, Back while one loads), the error messages, the layout at 1440 × 900,
 1280 × 720, 1024 × 768, 834 × 1194, 844 × 390, 360 × 640 and 390 × 844, every control (the DOM
 card, the 3D keys, the knob, the keyboard), the orbit, both models (the four skins and the four
-Clear looks), a model change and its failure, a reload keeping the last look, the rack through
-every kind of change (Next, Previous, a row in the rack, a row outside it, a pasted playlist) on
-both models, the loader's hand-overs (its count over a slow network, a GLB and a scene chunk that
-never answer, each logged as its own part, "Try again" after a stall starting with no count, the
-fade), reduced motion, WebGL off and the embed blocked. Logged-in full tracks, Safari, Firefox
+Clear looks), a model change and its failure (a GLB that never answers: "Couldn't load Clear" and
+the look back on the model on show after 20 s, nothing saved; and one chosen while the boot's model
+compiles, or once it is on the stage before the canvas fades in), a reload keeping the last look,
+the rack through every kind of change (Next, Previous, a row in the rack, a row outside it, a
+pasted playlist) on both models, the loader's hand-overs (its count over a slow network, a GLB and
+a scene chunk that never answer, each logged as its own part, "Try again" after a stall starting
+with no count, the fade), reduced motion, WebGL off and the embed blocked. A GLB that never
+answers is a Playwright route that never fulfils. Logged-in full tracks, Safari, Firefox
 (the Seek slider's `::-moz-range-*` rules), real phones and a real GPU need the owner's browsers.
 In headless Chromium on SwiftShader a Playwright click waits for its element to hold still over
 two frames (seconds while the scene draws), and two touch taps reach the page 500 ms or more
