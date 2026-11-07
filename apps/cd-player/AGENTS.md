@@ -458,7 +458,8 @@ materials take the roles above (`door_glass` crystal, `light` emissive, `chip` g
 `weaveNormal` and `quiltNormal` in `textures/grain.ts`, tileable height fields turned into
 normals; `SKIN_ROLES` maps the suitcase's seven recolourable materials (`leather`, `trim`,
 `thread`, `lining`, `hardware`, `deck`, `grille`) to the skins' roles, and `CLEAR_ROLES` the
-Clear's four (`clear_shell`, `clear_frame`, `board`, `light`) to its parts. A name without a role
+Clear's four (`clear_shell`, `clear_frame`, `board`, `light`) to its parts; `trace` (pcb), `etch`
+(frosted) and `gold` (fixed metal) are the decoration roles. A name without a role
 falls back to plastic, but the contract test fails first. A look then recolours the materials
 those two name, in place (see "Looks"). The studio is in `PlayerScene.tsx`: a PMREM'd
 `RoomEnvironment` (`scene.environmentIntensity` sets
@@ -963,7 +964,16 @@ suitcase for an id it does not know. It is three-free, as are `skins.ts`, `clear
   colour, metalness and roughness, the board its colour and the light its glow, and the board's
   silkscreen (`silk`) follows the board as the render prints it: light (`SILK_LIGHT`) on a board
   whose linear Rec. 709 luma is under 0.45, dark (`SILK_DARK`) on the white one, where a white
-  logo would vanish. Only uniforms change: no reload, no texture, no shader. `PlayerScene` applies
+  logo would vanish. Three decoration materials (`src/scene/decor-colours.ts`; geometry arrives with
+  the Clear's decorations) follow the same look: `trace` (the copper traces and the antenna, a
+  `pcb` surface) is the board's colour mixed toward `#ffffff` by 0.22 when the board's linear
+  luma is under 0.5, else toward `#000000` by 0.12; `etch` (the frosted lines on the shell) is the
+  shell's tint mixed toward `#ffffff` by 0.55, on a frosted surface (opacity 0.5, roughness 0.85,
+  metalness 0, transparent, no transmission, no depth write, front faces); `gold` (the Đông Sơn
+  motifs, the test pads) is fixed `#d6ae5a`, metalness 1, roughness 0.3, and no look recolours it.
+  `skinColours` lists `trace` and `etch`, not `gold`. `clear.py`'s `build_clear_materials` makes
+  all three by the same rules (`trace_rgb`). Only uniforms change: no reload, no texture, no
+  shader. `PlayerScene` applies
   the look in a layout effect, before a model's first frame and on every change, to the model it
   names alone (see "Changing models"). A material the rig copies is not recoloured, so keep the
   roles off the discs and the cases.

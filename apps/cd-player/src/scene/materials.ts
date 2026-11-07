@@ -17,6 +17,7 @@ import {
   type Texture,
 } from 'three';
 import { clearSwatch } from '../clear-looks';
+import { etchColour, GOLD, traceColour } from './decor-colours';
 import type { Look } from '../looks';
 import { skinById, type Skin, type SkinRole } from '../skins';
 import { DYNAMIC_MATERIALS, type DynamicMaterial } from './contract';
@@ -154,6 +155,26 @@ export function makeMaterial(
       return physical(source, { roughness: source.roughness, metalness: source.metalness });
     case 'pcb':
       return physical(source, { roughness: 0.3, clearcoat: 0.6, clearcoatRoughness: 0.12 });
+    case 'etch':
+      // Frosted lines on the shell: a pale, half-opaque, rough surface (no transmission) that
+      // leaves the depth buffer alone.
+      return new MeshPhysicalMaterial({
+        name: source.name,
+        color: source.color.clone(),
+        metalness: 0,
+        roughness: 0.85,
+        opacity: 0.5,
+        transparent: true,
+        depthWrite: false,
+        side: FrontSide,
+      });
+    case 'gold':
+      return new MeshPhysicalMaterial({
+        name: source.name,
+        color: new Color(GOLD),
+        metalness: 1,
+        roughness: 0.3,
+      });
     case 'metal':
       return physical(source, {
         metalness: 1,
@@ -262,6 +283,15 @@ export function applyLook(materials: Iterable<Material>, look: Look): void {
       );
       continue;
     }
+    if (material.name === 'trace') {
+      (material as MeshPhysicalMaterial).color.set(traceColour(board));
+      continue;
+    }
+    if (material.name === 'etch') {
+      const { tint } = clearSwatch(look.clear, 'shell');
+      (material as MeshPhysicalMaterial).color.set(etchColour(tint));
+      continue;
+    }
     const part = Object.hasOwn(CLEAR_ROLES, material.name) ? CLEAR_ROLES[material.name] : undefined;
     if (!part) continue;
     const surface = material as MeshPhysicalMaterial;
@@ -292,7 +322,13 @@ export function skinColours(root: Object3D): Record<string, string> {
     if (!mesh.isMesh) return;
     const material = mesh.material as MeshStandardMaterial;
     const { name } = material;
-    if (skinRoleOf(name) || Object.hasOwn(CLEAR_ROLES, name) || name === 'silk') {
+    if (
+      skinRoleOf(name) ||
+      Object.hasOwn(CLEAR_ROLES, name) ||
+      name === 'silk' ||
+      name === 'trace' ||
+      name === 'etch'
+    ) {
       colours[name] = `#${material.color.getHexString()}`;
     }
   });

@@ -1,6 +1,7 @@
 import {
   BoxGeometry,
   Color,
+  FrontSide,
   Group,
   LinearFilter,
   LinearMipmapLinearFilter,
@@ -13,7 +14,8 @@ import {
   type Material,
 } from 'three';
 import { describe, expect, it } from 'vitest';
-import { clearSwatch, type ClearLook } from '../clear-looks';
+import { CLEAR_SWATCHES, clearSwatch, type ClearLook } from '../clear-looks';
+import { etchColour, traceColour } from './decor-colours';
 import { SKINS, skinById, type Skin } from '../skins';
 import { DYNAMIC_MATERIALS } from './contract';
 import {
@@ -63,6 +65,24 @@ describe('makeMaterial', () => {
   // the strip's glow would come out dull.
   it('draws an emissive part outside the tone mapping', () => {
     expect(makeMaterial('emissive', source, maps).toneMapped).toBe(false);
+  });
+
+  it('makes the etching a frosted, half-opaque surface with no transmission and no depth write', () => {
+    const etch = makeMaterial('etch', source, maps) as MeshPhysicalMaterial;
+    expect(etch.transparent).toBe(true);
+    expect(etch.opacity).toBe(0.5);
+    expect(etch.roughness).toBe(0.85);
+    expect(etch.metalness).toBe(0);
+    expect(etch.transmission).toBe(0);
+    expect(etch.depthWrite).toBe(false);
+    expect(etch.side).toBe(FrontSide);
+  });
+
+  it('makes the gold #d6ae5a, fully metallic, roughness 0.3', () => {
+    const gold = makeMaterial('gold', source, maps) as MeshPhysicalMaterial;
+    expect(`#${gold.color.getHexString(SRGBColorSpace)}`).toBe('#d6ae5a');
+    expect(gold.metalness).toBe(1);
+    expect(gold.roughness).toBe(0.3);
   });
 });
 
@@ -306,6 +326,47 @@ describe('applyLook', () => {
     expect(hex(m.silk.color)).toBe(SILK_LIGHT);
     applyLook(Object.values(m), { model: 'clear', clear: { ...look, board: 'white' } });
     expect(hex(m.silk.color)).toBe(SILK_DARK);
+  });
+
+  it('recolours the traces from the board and the etching from the shell, for every swatch', () => {
+    const trace = new MeshPhysicalMaterial({ name: 'trace' });
+    const etch = new MeshPhysicalMaterial({ name: 'etch' });
+    for (const board of CLEAR_SWATCHES.board) {
+      for (const shell of CLEAR_SWATCHES.shell) {
+        applyLook([trace, etch], {
+          model: 'clear',
+          clear: { ...look, board: board.id, shell: shell.id },
+        });
+        expect(hex(trace.color), board.id).toBe(traceColour(board.colour));
+        expect(hex(etch.color), shell.id).toBe(etchColour(shell.tint));
+      }
+    }
+  });
+
+  it('never recolours the gold', () => {
+    const gold = makeMaterial('gold', new MeshStandardMaterial(), {
+      grain: new Texture(),
+      quilt: new Texture(),
+      weave: new Texture(),
+    }) as MeshPhysicalMaterial;
+    for (const board of CLEAR_SWATCHES.board) {
+      applyLook([gold], { model: 'clear', clear: { ...look, board: board.id } });
+      expect(hex(gold.color)).toBe('#d6ae5a');
+      expect(gold.metalness).toBe(1);
+      expect(gold.roughness).toBe(0.3);
+    }
+    applyLook([gold], { model: 'suitcase', skin: 'cherry' });
+    expect(hex(gold.color)).toBe('#d6ae5a');
+  });
+
+  it('lists the traces and the etching, not the gold, for the live check', () => {
+    const root = new Group();
+    for (const name of ['trace', 'etch', 'gold']) root.add(meshOf(name));
+    applyLook(
+      root.children.map((c) => (c as Mesh).material as Material),
+      { model: 'clear', clear: look },
+    );
+    expect(Object.keys(skinColours(root)).sort()).toEqual(['etch', 'trace']);
   });
 
   it('leaves the silkscreen alone for a suitcase look', () => {

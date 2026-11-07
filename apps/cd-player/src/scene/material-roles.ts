@@ -23,7 +23,9 @@ export type MaterialRole =
   | 'screen'
   | 'clear-shell'
   | 'frame'
-  | 'pcb';
+  | 'pcb'
+  | 'etch'
+  | 'gold';
 
 export const MATERIAL_ROLES: Readonly<Record<string, MaterialRole>> = {
   leather: 'leather',
@@ -73,6 +75,9 @@ export const MATERIAL_ROLES: Readonly<Record<string, MaterialRole>> = {
   magnet: 'metal',
   surround: 'matte',
   wire_red: 'matte',
+  trace: 'pcb',
+  etch: 'etch',
+  gold: 'gold',
 };
 
 /**

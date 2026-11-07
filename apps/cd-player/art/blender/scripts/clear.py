@@ -127,6 +127,20 @@ def _windings(m, pitch_mm=0.32):
     return m
 
 
+def _mix_hex(h, target, amount):
+    """'#rrggbb' mixed toward target (0 or 255) by amount, each sRGB channel linearly, rounded half
+    up: src/scene/decor-colours.ts's mixHex. Returns 0..255 channels."""
+    return tuple(int((c + (target - c) * amount) + 0.5) for c in hexrgb(h))
+
+
+def trace_rgb(board_hex):
+    """The copper traces' colour: the board's, lifted toward white by 0.22 when its linear luma is
+    under 0.5, else darkened by 0.12 (decor-colours.ts's traceColour). 0..255 channels."""
+    if _luma(_hex(board_hex)) < 0.5:
+        return _mix_hex(board_hex, 255, 0.22)
+    return _mix_hex(board_hex, 0, 0.12)
+
+
 def build_clear_materials(look):
     """The Clear model's materials on top of build_materials() (the disc's and the case's): the four
     a look colours, from its swatches, and the fixed ones of the parts inside."""
@@ -143,6 +157,12 @@ def build_clear_materials(look):
                            rough=float(frame["roughness"]))
     board_rgb = _hex(board["colour"])
     M["board"] = mat("board", board_rgb, rough=0.28, coat=0.6, coat_rough=0.12)
+    # Decoration materials (the page's trace, etch and gold roles, src/scene/decor-colours.ts): the
+    # copper traces take the board's colour shifted toward its contrast, the frosted etching the
+    # shell's tint lifted toward white, and the Đông Sơn gold is fixed.
+    M["trace"] = mat("trace", lin(*trace_rgb(board["colour"])), rough=0.28, coat=0.6, coat_rough=0.12)
+    M["etch"] = mat("etch", lin(*_mix_hex(shell["tint"], 255, 0.55)), rough=0.85, alpha=0.5)
+    M["gold"] = mat("gold", lin(*hexrgb("#d6ae5a")), metal=1.0, rough=0.3)
     # The light's glow: bright enough to read as lit, not so bright that AgX bleaches it to white.
     M["light"] = mat("light", (0, 0, 0, 1), emit=glow, emit_s=3.2)
     # One emissive material for the ten VU segments: the page clones it per segment and lights
