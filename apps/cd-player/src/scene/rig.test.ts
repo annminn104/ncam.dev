@@ -1,6 +1,7 @@
 import { BoxGeometry, Group, Mesh, MeshPhysicalMaterial, Object3D, Texture, Vector3 } from 'three';
 import { describe, expect, it, vi } from 'vitest';
 import type { TrackView } from '../bridge';
+import { CLEAR_SEAT, CLEAR_SHELL, CLEAR_STAND, clearSlot } from '../testing/model-measures';
 import type { RequiredNode } from './contract';
 import {
   ARM_PLAY,
@@ -388,20 +389,22 @@ describe('the Clear model’s flights', () => {
    * The fake model posed as cd-player-clear.glb: the spindle's seat upright behind the door (its
    * normal +z), the stand's hinge right of the shell turned 18° toward it, and the five slots in it,
    * each 20 mm above and 18 mm behind the one below it and leaning back 15°. Measured with three's
-   * GLTFLoader over public/assets/cd-player-clear.glb: measure them again whenever that GLB changes.
+   * GLTFLoader over the GLB, which model-contract.test.ts holds to them
+   * (src/testing/model-measures.ts).
    */
   function clearSet() {
     const { model, slots, lid } = fakeModel();
     const { disc, disc_seat: seat } = model.nodes;
-    seat.position.set(0, 0.1501, 0.024);
-    seat.rotation.set(Math.PI / 2, 0, 0);
+    seat.position.set(...CLEAR_SEAT.position);
+    seat.rotation.set(CLEAR_SEAT.rotationX, 0, 0);
     disc.position.copy(seat.position);
     disc.quaternion.copy(seat.quaternion);
-    lid.position.set(0.252, 0, -0.012);
-    lid.rotation.set(0, (-18 * Math.PI) / 180, 0);
+    lid.position.set(...CLEAR_STAND.position);
+    lid.rotation.set(0, CLEAR_STAND.rotationY, 0);
     slots.forEach((slot, k) => {
-      slot.position.set(0, 0.0655 + 0.02 * k, 0.0194 - 0.018 * k);
-      slot.rotation.set((75 * Math.PI) / 180, 0, 0);
+      const { position, rotationX } = clearSlot(k);
+      slot.position.set(...position);
+      slot.rotation.set(rotationX, 0, 0);
     });
     const clear: PlayerModel = { ...model, id: 'clear' };
     return rigFor(clear);
@@ -409,27 +412,27 @@ describe('the Clear model’s flights', () => {
 
   /**
    * Where a point would stand inside the Clear shell's walls (cd-player-clear.glb, metres): its
-   * outline 300 × 214 mm with 20 mm corners from 30.1 mm up, the front plate from z 35 to 38 mm but
-   * for the opening the disc passes through (64 mm round the window's middle), the back plate
-   * from -38 to -35 mm, and the 3 mm band round the sides, the top and the bottom between them.
+   * outline with round corners, the front plate but for the opening the disc passes through, the
+   * back plate, and the band round the sides, the top and the bottom between them (`CLEAR_SHELL`).
    */
   function inShell(p: Vector3): string | null {
+    const { halfWidth, bottom, top, corner, band, front, back, opening } = CLEAR_SHELL;
     const outline = (inset: number) => {
-      const halfW = 0.15 - inset;
-      const bottom = 0.0301 + inset;
-      const top = 0.2441 - inset;
-      const r = 0.02 - inset;
-      if (Math.abs(p.x) > halfW || p.y < bottom || p.y > top) return false;
+      const halfW = halfWidth - inset;
+      const low = bottom + inset;
+      const high = top - inset;
+      const r = corner - inset;
+      if (Math.abs(p.x) > halfW || p.y < low || p.y > high) return false;
       const cx = Math.min(Math.max(p.x, -halfW + r), halfW - r);
-      const cy = Math.min(Math.max(p.y, bottom + r), top - r);
+      const cy = Math.min(Math.max(p.y, low + r), high - r);
       return Math.hypot(p.x - cx, p.y - cy) <= r;
     };
     if (!outline(0)) return null;
-    if (p.z >= 0.035 && p.z <= 0.038) {
-      return Math.hypot(p.x, p.y - 0.1501) > 0.064 ? 'front plate' : null;
+    if (p.z >= front[0] && p.z <= front[1]) {
+      return Math.hypot(p.x, p.y - opening.y) > opening.radius ? 'front plate' : null;
     }
-    if (p.z <= -0.035 && p.z >= -0.038) return 'back plate';
-    if (Math.abs(p.z) < 0.035 && !outline(0.003)) return 'band';
+    if (p.z <= back[1] && p.z >= back[0]) return 'back plate';
+    if (p.z > back[1] && p.z < front[0] && !outline(band)) return 'band';
     return null;
   }
 

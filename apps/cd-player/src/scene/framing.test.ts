@@ -2,24 +2,16 @@ import { PerspectiveCamera, Vector3 } from 'three';
 import { describe, expect, it } from 'vitest';
 import { FAR, FOV, frameDistance, frameFor, frameForViewport, isWide, nearFor } from './framing';
 import type { ModelId } from '../models';
+import { BOXES, CLEAR_DOOR } from '../testing/model-measures';
 import { PITCH_LIMIT, YAW_LIMIT } from './orbit';
 
 const dist = (f: ReturnType<typeof frameFor>) =>
   Math.hypot(f.position[0] - f.target[0], f.position[1] - f.target[1], f.position[2] - f.target[2]);
 
-/**
- * Each model's bounding box in three's Y-up metres. The suitcase's (cd-player.glb) is the player
- * alone, lid open, centred at x = 0. The Clear model's (cd-player-clear.glb) is the whole GLB at
- * rest (the player, its plinth, handle and knob, the stand, the jewel case and its easel) with a
- * 120 mm disc in each of the five rack slots, which the page puts there; the discs lie within the
- * stand's own extent. The Clear's door is a second box (`DOOR`), the extent it sweeps from shut to open.
- * The Clear's numbers were measured with three's GLTFLoader over public/assets/cd-player-clear.glb:
- * measure them again whenever that GLB changes.
- */
-const BOXES = {
-  suitcase: { min: [-0.152, -0.003, -0.199], max: [0.152, 0.319, 0.152] },
-  clear: { min: [-0.316, -0.001, -0.09], max: [0.333, 0.279, 0.069] },
-} as const;
+// Each model's box (`BOXES`) is the whole GLB at rest with a disc in each rack slot, rounded out to
+// the millimetre; the Clear's door is a second box (`DOOR`), the extent it sweeps from shut to
+// open. Both were measured with three's GLTFLoader over the committed GLBs, and
+// model-contract.test.ts holds the GLBs to them (src/testing/model-measures.ts).
 
 /**
  * How much of a side the model spans at the orbit's middle, at the least: 70 % for the suitcase.
@@ -47,33 +39,26 @@ function heroCamera(
 }
 
 /**
- * The Clear's door (cd-player-clear.glb's `door_hinge`, at (-0.079, 0.1501, 0.0405)): its shut
- * box, and the corners it sweeps through between shut and open (0 to -100° about the hinge's Y).
- * The hinge stands 0.1501 m up. The box was measured with three's GLTFLoader over
- * public/assets/cd-player-clear.glb, the door swept about its hinge: measure it again whenever
- * that GLB changes.
+ * The Clear's door (cd-player-clear.glb's `door_hinge`): its shut box, and the corners it sweeps
+ * through between shut and open (0 to -100° about the hinge's Y, the profile's turn).
  */
-const DOOR = {
-  hinge: [-0.079, 0.0405],
-  min: [-0.082, 0.0751, 0.0375],
-  max: [0.0798, 0.2251, 0.0435],
-  steps: [0, -25, -50, -75, -100],
-} as const;
+const DOOR = { ...CLEAR_DOOR, steps: [0, -25, -50, -75, -100] } as const;
 
 function doorCorners(): Vector3[] {
+  const [hingeX, , hingeZ] = DOOR.hinge;
   const out: Vector3[] = [];
   for (const degrees of DOOR.steps) {
     const turn = (degrees * Math.PI) / 180;
     for (const x of [DOOR.min[0], DOOR.max[0]])
       for (const y of [DOOR.min[1], DOOR.max[1]])
         for (const z of [DOOR.min[2], DOOR.max[2]]) {
-          const dx = x - DOOR.hinge[0];
-          const dz = z - DOOR.hinge[1];
+          const dx = x - hingeX;
+          const dz = z - hingeZ;
           out.push(
             new Vector3(
-              DOOR.hinge[0] + dx * Math.cos(turn) + dz * Math.sin(turn),
+              hingeX + dx * Math.cos(turn) + dz * Math.sin(turn),
               y,
-              DOOR.hinge[1] - dx * Math.sin(turn) + dz * Math.cos(turn),
+              hingeZ - dx * Math.sin(turn) + dz * Math.cos(turn),
             ),
           );
         }
