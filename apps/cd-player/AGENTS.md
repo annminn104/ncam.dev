@@ -949,7 +949,8 @@ suitcase for an id it does not know. It is three-free, as are `skins.ts`, `clear
   the speaker cloth, the strap and the prints keep Blender's colours in every skin. `CLEAR_ROLES`
   gives each Clear part one material: `clear_shell` (the shell's plates, band and grilles) the
   shell, `clear_frame` (the plinth, the door's bezel, pull and hinge, the keys' deck and caps, the
-  handle, the knob's ring, the speaker cones and the stand's cheeks) the frame, `board` (the main
+  lozenge grooves on the plinth and the deck, the handle, the knob's ring, the speaker cones and the
+  stand's cheeks) the frame, `board` (the main
   board, the keys' and the motor's) the board, and `light` (the ring round the window, the keys'
   icons and the board's six LEDs) the light, which the page also gives the VU and the LCD (see
   "The scene"). The door's
@@ -966,14 +967,14 @@ suitcase for an id it does not know. It is three-free, as are `skins.ts`, `clear
   silkscreen (`silk`) follows the board as the render prints it: light (`SILK_LIGHT`) on a board
   whose linear Rec. 709 luma is under 0.45, dark (`SILK_DARK`) on the white one, where a white
   logo would vanish. Three decoration materials (`src/scene/decor-colours.ts`; the board carries
-  `trace` and `gold`, `etch` arrives with the shell's etching) follow the same look: `trace` (the
-  board's copper traces, its hexagon pour and its antenna, a `pcb` surface) is the board's colour
-  mixed toward `#ffffff` by 0.22 when the board's linear
+  `trace` and `gold`, the shell's etching `etch`, the door's ring `gold`) follow the same look:
+  `trace` (the board's copper traces, its hexagon pour and its antenna, a `pcb` surface) is the
+  board's colour mixed toward `#ffffff` by 0.22 when the board's linear
   luma is under 0.5, else toward `#000000` by 0.12; `etch` (the frosted lines on the shell) is the
   shell's tint mixed toward `#ffffff` by 0.55, on a frosted surface (opacity 0.5, roughness 0.85,
   metalness 0, transparent, no transmission, no depth write, front faces); `gold` (the Đông Sơn
-  motifs, the test pads, the SoC's A1 mark) is fixed `#d6ae5a`, metalness 1, roughness 0.3, and no
-  look recolours it.
+  ring and sun, the test pads, the SoC's A1 mark) is fixed `#d6ae5a`, metalness 1, roughness 0.3,
+  and no look recolours it.
   `skinColours` lists `trace` and `etch`, not `gold`. `clear.py`'s `build_clear_materials` makes
   all three by the same rules (`trace_rgb`). Only uniforms change: no reload, no texture, no
   shader. `PlayerScene` applies
@@ -1109,7 +1110,7 @@ at one unit per 5 cm and the printed ones (`art_disc`, `art_booklet`, `card_prin
 (never materials: the prints start identical and would merge into one), welds, prunes (keeping
 the empty pivots, and the UVs that no texture in the file uses yet) and meshopt-compresses it into
 `public/assets/cd-player.glb` or `public/assets/cd-player-clear.glb`, both **committed** (about
-100,633 triangles and 777 KB for the suitcase, 108,277 and 811 KB for the Clear, at the time of
+100,633 triangles and 777 KB for the suitcase, 126,723 and 939 KB for the Clear, at the time of
 writing). **The budget** (`model-contract.test.ts`, for each): 4 MB, 150k triangles,
 `EXT_meshopt_compression`, and meshes only on leaf nodes, so quantisation never scales a pivot.
 Rebuild a model after any change to its scripts (`cdkit.py` and `parts.py` are both models'). The
@@ -1173,6 +1174,34 @@ outlines) goes into one mesh per material (`clear_board_<key>`), as every object
 GLB. The copper (one `trace` mesh: the traces, the pour, the antenna) stands 0.04 mm proud of the
 board's face (`TRACE_PROUD`), the silkscreen 0.05 mm over it (`SILK_PROUD`). Ground-stitching
 vias fill whatever the board leaves open, on a grid (6 mm in a render, 10 mm in the web build).
+
+**The Clear's decorations** (`clear_etch`, `clear_dongson_ring` and `clear_grooves` in `clear.py`).
+Each is a `Relief`: shapes drawn in a face's own frame, as one sees the face from outside, merged
+into one mesh, every face turned out (the page draws `etch`, `gold` and the frame's front faces
+only). The **etching** (`etch`, `clear_etch_left`, `_right` and `_top`): circuit-maze lines 0.45
+mm wide with a pad 1.3 mm across at either end, a top face each, 0.05 mm proud of the shell's band
+(`ETCH_PROUD`) on its two side faces and its top, never on the front plate, where the inside must
+stay readable. `etch_maze` walks a 1 mm grid, straight on and 45 degrees at a turn, each line a
+cell clear of every other, until 30 % of the open cells are taken, `ETCH_CLEAR` (2 mm) off every
+bevel and, on the top, off the keys' deck, the handle's mounts, the knob and the tag's cord
+(`TAG_CORD_X`); a line stops at its pad's rim, where a half-clear line drawn over its pad would
+show through it. The **Đông Sơn ring** (`gold`, `clear_dongson_ring`, after the Ngọc Lũ drum's
+face): relief 0.25 mm proud of the front plate (`RING_PROUD`) from r 75.6 mm, 0.6 off the bezel's
+rim, to 83.0, inside the speakers' rims. From the inside out: a line, a chain of tangent circles
+(24 to a full turn, each with its centre dot, linked to the next by a slanted tangent line), a
+hatched ladder (rungs 0.7 mm apart), eight Lạc birds flying counter-clockwise (`BIRD`, 16 mm long,
+2.2 mm across the wings), a chain of 32 and a line, its lines 0.25 to 0.35 mm wide (`RING_LINES`,
+`CHAINS`, `LADDER`, `BIRD_R`). It opens round the hinge (162 to 198 degrees counter-clockwise from
+the door's right as the viewer sees it) and under the door (235 to 287, where the hero and inside
+cameras see the LCD's frame, none of which it hides; `RING_OPEN`), each band ending at a bar
+across the ring. The birds stand every 34 degrees along the two arcs taken end to end, and the run
+stops if one is cut by an opening or flies under the door's pull, which stands in front of the
+ring; the ring starts outside the bezel, so the door swings clear of it. The web build leaves out
+its walls. The **grooves** (`clear_frame`, 0.25 mm proud, `GROOVE_PROUD`, `clear_grooves_plinth`
+and `clear_grooves_deck`): chains of lozenges tip to tip, each outlined and hatched parallel to a
+side, the next to the other side, on the plinth's front either side of the nameplate between two
+rails (four a side, 14.75 by 9 mm) and along the keys' deck's front and back rims (43 a rim, 3.6 by
+2.2 mm).
 
 **Materials, skins and looks.** `build_materials(palette)` makes every suitcase material; the
 seven the skins recolour (`SKIN_ROLES` in `parts.py`: `leather`, `trim`, `thread`, `lining`,

@@ -13,7 +13,9 @@ its left, the disc stands on its spindle, ringed by the light ring, the laser's 
 motor behind it; the board runs along the bottom with the LCD, the VU strip and the silkscreened
 logo; a speaker either side; four AA cells across the back under the top; six keys, the knob
 (standing upright, right of the keys) and the handle on top, the tag hanging from the handle over
-the front and the nameplate on the plinth.
+the front and the nameplate on the plinth. Frosted circuit-maze lines are etched on the shell's
+sides and top, a gold Đông Sơn ring runs round the door, and hatched lozenge chains stand out of
+the plinth's front and the keys' deck.
 
 Its colours come part by part from src/clear-looks.json (clear_look): build_clear_materials(look)
 makes the four parts' materials (clear_shell, clear_frame, board, light) and the fixed ones. The
@@ -1654,6 +1656,7 @@ def clear_handle(name, root):
 
 TAG_X, TAG_Z = 112.0, Z1 - 32.5   # between the right speaker's rim and the top
 TAG_ROT = (math.radians(90), math.radians(4.0), 0.0)
+TAG_CORD_X = KNOB_X + KNOB_RING + 4.3   # the cord's run along the top, clear of the knob's ring
 
 
 def clear_tag(name, root, playlist):
@@ -1676,7 +1679,7 @@ def clear_tag(name, root, playlist):
             rbox("%s_rule_%d" % (name, k), (24, 0.25, 0.04), M["ink"], parent=tag, loc=L(0, yy, 0.97))
     eye = Vector(world_of(loc, TAG_ROT, (0.0, 24.0, 0.0)))
     top = Z1
-    side = KNOB_X + KNOB_RING + 4.3   # the cord's run along the top, clear of the knob's ring
+    side = TAG_CORD_X
     # Up from the eyelet in front of the tag and rightward, over the top's front edge, back along the
     # top's right edge, then left behind the knob (in front of the handle's mount) and once round its
     # upright, above the mount's collar.
@@ -1709,6 +1712,372 @@ def clear_knob(name, root):
     annulus(name + "_knob_top", 8.9, 0.4, M["alu"], z_mm=14.72, seg=96, parent=knob)
     rbox(name + "_knob_mark", (1.0, 4.6, 0.12), M["ink_dark"], parent=knob, loc=L(0.0, 4.6, 14.74))
     return knob
+
+
+# ------------------------------------------------------------------ the decorations
+ETCH_PROUD = 0.05                    # mm: the frosted etching off the shell's outer face
+ETCH_LINE, ETCH_PAD = 0.45, 0.65     # mm: its lines' width, its pads' radius
+ETCH_CLEAR = 2.0                     # mm it keeps off the deck, the handle's mounts, the knob and every bevel
+RING_PROUD = 0.25                    # mm: the Đông Sơn ring's gold off the front plate
+RING_IN, RING_OUT = 75.6, 83.0       # its edges: 0.6 mm off the bezel's rim, inside the speakers' rims
+# Where the ring opens, degrees counter-clockwise from the door's right as the viewer sees it: round
+# the hinge, and under the door, where the hero and the inside cameras see the LCD's frame.
+RING_OPEN = ((162.0, 198.0), (235.0, 287.0))
+# Its bands from the inside out, radii in mm: a line along its inner edge (RING_LINES), a chain of
+# tangent circles (CHAINS: its centre line, its circles' radius, circles to a full turn), the ladder
+# (LADDER: its inner rail's edges, its outer rail's), the birds round BIRD_R, a second chain and a
+# line along its outer edge.
+RING_LINES = ((RING_IN, RING_IN + 0.3), (RING_OUT - 0.3, RING_OUT))
+CHAINS = ((76.7, 0.6, 24), (81.9, 0.5, 32))
+LADDER = (77.52, 77.8, 78.5, 78.78)
+BIRD_R = 80.1
+GROOVE_PROUD = 0.25                  # mm: the frame's lozenge relief
+
+
+class Relief:
+    """Decoration on one face (the shell's, the plinth's, the deck's), merged into one mesh: shapes
+    in the face's own frame (a, b) mm, as one sees the face from outside (a to the right, b up),
+    standing `h` mm proud of it; with `walls` their sides run down to the face, else each is its top
+    alone. `at(a, b, h)` places a point of the frame h mm off the face, in (x, y, z) mm; a `warp`
+    maps a shape drawn in other coordinates (the ring's, along its bands) onto the frame. Every
+    face is turned to face out, as the page draws these materials' front faces only."""
+
+    def __init__(self, at, h, walls=True):
+        self.at, self.h, self.walls = at, h, walls
+        self.bm = bmesh.new()
+
+    def _row(self, pts, h):
+        return [self.bm.verts.new(mmv(self.at(a, b, h))) for a, b in pts]
+
+    def _sides(self, edges):
+        """The walls down from the top's edges (p, q), each with the top on its left."""
+        if not self.walls:
+            return
+        for p, q in edges:
+            (tp, tq), (bp, bq) = self._row((p, q), self.h), self._row((p, q), 0.0)
+            self.bm.faces.new((bp, bq, tq, tp))
+
+    def _loop(self, loop, hole=False):
+        loop = _ccw(list(loop))
+        if hole:
+            loop = loop[::-1]
+        self._sides(zip(loop, loop[1:] + loop[:1]))
+
+    def poly(self, outline, warp=None):
+        """A filled outline, no holes, either winding."""
+        pts = _ccw([warp(p) for p in outline] if warp else list(outline))
+        self.bm.faces.new(self._row(pts, self.h))
+        self._loop(pts)
+
+    def disc(self, c, r, seg):
+        self.poly(circle(r, seg, cx=c[0], cy=c[1]))
+
+    def ring(self, c, ro, ri, seg):
+        outer, inner = circle(ro, seg, cx=c[0], cy=c[1]), circle(ri, seg, cx=c[0], cy=c[1])
+        ov, iv = self._row(outer, self.h), self._row(inner, self.h)
+        for i in range(seg):
+            j = (i + 1) % seg
+            self.bm.faces.new((iv[i], ov[i], ov[j], iv[j]))
+        self._loop(outer)
+        self._loop(inner, hole=True)
+
+    def strip(self, pts, width, closed=False, warp=None, caps=True):
+        """A line `width` mm wide along the points, mitred at its bends (closed: round an outline);
+        `caps` False leaves its ends' walls out, where it runs into another shape."""
+        left, right = offset_path(pts, width / 2, closed), offset_path(pts, -width / 2, closed)
+        if warp:
+            left, right = [warp(p) for p in left], [warp(p) for p in right]
+        if _area([right[0], right[1], left[1], left[0]]) < 0:    # a warp that mirrors it
+            left, right = right, left
+        lv, rv = self._row(left, self.h), self._row(right, self.h)
+        n = len(pts)
+        for i in range(n if closed else n - 1):
+            j = (i + 1) % n
+            self.bm.faces.new((rv[i], rv[j], lv[j], lv[i]))
+        if closed:
+            outer, inner = (left, right) if abs(_area(left)) > abs(_area(right)) else (right, left)
+            self._loop(outer)
+            self._loop(inner, hole=True)
+            return
+        edges = list(zip(right, right[1:])) + list(zip(left[::-1], left[-2::-1]))
+        if caps:
+            edges += [(right[-1], left[-1]), (left[0], right[0])]
+        self._sides(edges)
+
+    def done(self, name, material, root):
+        return from_bm(name, self.bm, [material], smooth=False, parent=root)
+
+
+def _area(pts):
+    """Twice an outline's signed area: positive when it runs counter-clockwise."""
+    return sum(p[0] * q[1] - q[0] * p[1] for p, q in zip(pts, pts[1:] + pts[:1]))
+
+
+# The etching: circuit-maze lines on the shell's sides and top.
+STEPS = ((1, 0), (1, 1), (0, 1), (-1, 1), (-1, 0), (-1, -1), (0, -1), (1, -1))   # 45 degrees apart
+
+
+def etch_maze(R, region, blocked, seed, pitch=1.0, fill=0.3):
+    """Circuit-maze lines over a face's frame: walks over a `pitch` mm grid inside `region` (a0, b0,
+    a1, b1), each from a random cell, going on straight and turning 45 degrees at a time, a cell
+    clear of every other line, a pad at either end; `blocked(a, b)` is what they keep off. They
+    stop once `fill` of the open cells are taken."""
+    a0, b0, a1, b1 = (region[0] + ETCH_PAD, region[1] + ETCH_PAD, region[2] - ETCH_PAD, region[3] - ETCH_PAD)
+    cells = [(i, j) for i in range(int((a1 - a0) / pitch) + 1) for j in range(int((b1 - b0) / pitch) + 1)
+             if not blocked(a0 + i * pitch, b0 + j * pitch)]
+    open_cells = set(cells)
+    owner = {}
+    rng = random.Random(seed)
+    rng.shuffle(cells)
+
+    def clear(c, head):
+        """c is open, and nothing taken stands in or round it but the walk's own head."""
+        if c not in open_cells:
+            return False
+        for di in (-1, 0, 1):
+            for dj in (-1, 0, 1):
+                n = (c[0] + di, c[1] + dj)
+                if n in owner and n != head:
+                    return False
+        return True
+
+    lines, taken = [], 0
+    for start in cells:
+        if taken >= fill * len(open_cells):
+            break
+        if not clear(start, None):
+            continue
+        k = rng.choice((0, 2, 4, 6)) if rng.random() < 0.75 else rng.choice((1, 3, 5, 7))
+        path, run, want = [start], 0, rng.randint(8, 40)
+        owner[start] = len(lines)
+        while len(path) < want:
+            turns = [(k + 1) % 8, (k + 7) % 8]
+            rng.shuffle(turns)
+            order = turns + [k] if run >= 3 and rng.random() < 0.2 else [k] + turns
+            for d in order:
+                c = (path[-1][0] + STEPS[d][0], path[-1][1] + STEPS[d][1])
+                if clear(c, path[-1]):
+                    break
+            else:
+                break                           # boxed in
+            run, k = (run + 1 if d == k else 0), d
+            path.append(c)
+            owner[c] = len(lines)
+        if len(path) < 6:
+            for c in path:
+                del owner[c]
+            continue
+        lines.append(path)
+        taken += len(path)
+    seg = 6 if WEB else 16
+    for path in lines:
+        corners = [c for i, c in enumerate(path) if i in (0, len(path) - 1) or
+                   (c[0] - path[i - 1][0], c[1] - path[i - 1][1]) != (path[i + 1][0] - c[0], path[i + 1][1] - c[1])]
+        pts = [(a0 + i * pitch, b0 + j * pitch) for i, j in corners]
+        ends = (pts[0], pts[-1])
+        # Each end stops at its pad's rim: the frosted lines are half clear, and a line drawn over
+        # its pad would show through it.
+        for at, nxt in ((0, 1), (-1, -2)):
+            (px, pz), (qx, qz) = pts[at], pts[nxt]
+            t = (ETCH_PAD - 0.04) / math.hypot(qx - px, qz - pz)
+            pts[at] = (px + (qx - px) * t, pz + (qz - pz) * t)
+        R.strip(pts, ETCH_LINE)
+        for c in ends:
+            R.disc(c, ETCH_PAD, seg)
+
+
+def clear_etch(name, root):
+    """Frosted circuit-maze lines (`etch`) on the shell's two side faces and its top, 0.05 mm proud
+    of the band, never on the front plate, where the inside must stay readable: on the flat of each
+    face, ETCH_CLEAR off its bevels, and on the top off the keys' deck, the handle's mounts, the knob
+    and the tag's cord. One mesh per face, `<name>_etch_left`, `_right` and `_top`."""
+    flat_y = IN_B - 0.5 - ETCH_CLEAR                       # the band's bevel at either plate
+    flat_z = (Z0 + BODY_R + ETCH_CLEAR, Z1 - BODY_R - ETCH_CLEAR)
+    for side, sx, seed in (("left", -1, 11), ("right", 1, 12)):
+        # The frame as one sees the face from outside: a toward the viewer's right, b up.
+        R = Relief(lambda a, b, h, sx=sx: (sx * (BODY_W / 2 + h), sx * a, b), ETCH_PROUD, walls=False)
+        etch_maze(R, (-flat_y, flat_z[0], flat_y, flat_z[1]), lambda a, b: False, seed)
+        R.done("%s_etch_%s" % (name, side), M["etch"], root)
+    m = ETCH_CLEAR + ETCH_PAD                              # off each part, from a pad's middle
+    cord = ((TAG_CORD_X, FRONT_Y), (TAG_CORD_X, KNOB_Y + 8.0), (TAG_CORD_X - 2.0, HANDLE_Y - 11.8),
+            (HANDLE_X + 6.0, HANDLE_Y - 10.4))             # clear_tag's cord where it lies on the top
+
+    def blocked(x, y):
+        if abs(x) <= 85.0 + m and abs(y - KEY_Y) <= 12.0 + m:                     # the keys' deck
+            return True
+        if abs(abs(x) - HANDLE_X) <= 8.5 + m and abs(y - HANDLE_Y) <= 7.5 + m:     # the handle's mounts
+            return True
+        if math.hypot(x - KNOB_X, y - KNOB_Y) <= KNOB_RING + m:
+            return True
+        return any(_point_segment((x, y), p, q) <= 0.9 + m for p, q in zip(cord, cord[1:]))
+    R = Relief(lambda a, b, h: (a, b, Z1 + h), ETCH_PROUD, walls=False)
+    x1 = BODY_W / 2 - BODY_R - ETCH_CLEAR
+    etch_maze(R, (-x1, -flat_y, x1, flat_y), blocked, 13)
+    R.done(name + "_etch_top", M["etch"], root)
+
+
+# The Đông Sơn ring round the door.
+def _on_ring(r, deg):
+    """The point r mm from the door's centre, deg degrees counter-clockwise from its right: (x, z)."""
+    a = math.radians(deg)
+    return (r * math.cos(a), DOOR_Z + r * math.sin(a))
+
+
+def _polar(r_ref):
+    """(u, v) mm along a band of the ring -> the front plate's (x, z): u clockwise round the circle of
+    radius r_ref from the door's right, v out from it (a shape keeps its winding)."""
+    def warp(p):
+        a, r = -p[0] / r_ref, r_ref + p[1]
+        return (r * math.cos(a), DOOR_Z + r * math.sin(a))
+    return warp
+
+
+# A Lạc bird, 16 mm long, in (u, v) mm along its band: flying toward -u (counter-clockwise round
+# the ring), its back outward. The long beak, the crest's two plumes, the slim neck, the wings
+# spread out and in with three feathers at each trailing edge, the tail's three long feathers;
+# once round, counter-clockwise, from the beak's tip along its belly.
+BIRD = ((-8.0, 0.0), (-4.9, -0.1), (-4.6, -0.2), (-3.8, -0.17), (-2.9, -0.16), (-2.0, -0.24), (-1.4, -0.28),
+        (-0.9, -0.62), (-0.2, -0.92), (0.6, -1.06), (1.3, -1.1), (0.95, -0.84), (1.55, -0.84), (1.15, -0.6),
+        (1.75, -0.56), (1.4, -0.34), (1.9, -0.24), (2.8, -0.2), (3.4, -0.15), (8.0, -0.55), (5.6, -0.07),
+        (7.3, 0.0), (5.6, 0.07), (8.0, 0.55), (3.4, 0.15), (2.8, 0.2), (1.9, 0.24), (1.4, 0.34), (1.75, 0.56),
+        (1.15, 0.6), (1.55, 0.84), (0.95, 0.84), (1.3, 1.1), (0.6, 1.06), (-0.2, 0.92), (-0.9, 0.62),
+        (-1.4, 0.28), (-2.0, 0.24), (-2.9, 0.16), (-3.7, 0.19), (-2.7, 0.66), (-3.95, 0.4), (-2.5, 1.0),
+        (-4.4, 0.4), (-4.7, 0.25), (-4.9, 0.1))
+
+
+def _spread(spans, n, start):
+    """n angles (degrees) evenly along the spans taken end to end, the first `start` degrees in."""
+    total = sum(b - a for a, b in spans)
+    out = []
+    for k in range(n):
+        s = start + total * k / n
+        for a, b in spans:
+            if s < b - a:
+                out.append(a + s)
+                break
+            s -= b - a
+    return out
+
+
+def ring_chain(R, spans, rc, rad, count, seg):
+    """A chain of tangent circles round the ring on the circle rc, `count` to a full turn: each of
+    radius `rad` mm with its centre dot, linked to the next by the slanted line tangent to both,
+    from one's outer side to the other's inner side; at a bar the chain ends in the link to the
+    circle that would stand beyond it."""
+    line, pitch = 0.25, 360.0 / count
+    rm = rad - line / 2                     # the circle's line, along its middle
+    warp = _polar(rc)
+
+    def u(deg):
+        return -math.radians(deg) * rc
+    for b0, b1 in spans:
+        margin = math.degrees((rad + 0.5) / rc)
+        degs = [pitch * k for k in range(int(math.ceil((b0 + margin) / pitch)), int((b1 - margin) // pitch) + 1)]
+        for deg in degs:
+            R.ring(_on_ring(rc, deg), rad, rad - line, seg)
+            R.disc(_on_ring(rc, deg), rad * 0.3, max(6, seg // 2))
+        for d0, d1 in zip([degs[0] - pitch] + degs, degs + [degs[-1] + pitch]):
+            u1, u2 = u(d1), u(d0)           # u runs clockwise: d1's circle comes first
+            cb = 2 * rm / (u2 - u1)
+            sb = math.sqrt(1.0 - cb * cb)
+            t1, t2 = (u1 + rm * cb, rm * sb), (u2 - rm * cb, -rm * sb)
+            lo, hi = max(t1[0], u(b1)), min(t2[0], u(b0))       # within the bars
+            if hi - lo < 0.1:
+                continue
+            n = max(1, int(math.ceil((hi - lo) / (4.0 if WEB else 2.0))))
+            pts = []
+            for i in range(n + 1):
+                uu = lo + (hi - lo) * i / n
+                pts.append((uu, t1[1] + (t2[1] - t1[1]) * (uu - t1[0]) / (t2[0] - t1[0])))
+            R.strip(pts, line, warp=warp, caps=False)
+
+
+def clear_dongson_ring(name, root):
+    """A Đông Sơn ring round the door, after the Ngọc Lũ drum's face: gold relief 0.25 mm proud of
+    the front plate from RING_IN to RING_OUT, from the inside out a line, a chain of tangent circles
+    (24 to a full turn), a hatched ladder, eight Lạc birds flying counter-clockwise, a chain of 32
+    and a line. It opens round the hinge and over the LCD (RING_OPEN), each band ending at a bar
+    across the ring, and runs under the door's pull; the door swings clear of it. One mesh,
+    `<name>_dongson_ring`; the web build leaves out its walls."""
+    R = Relief(lambda a, b, h: (a, FRONT_Y - h, b), RING_PROUD, walls=not WEB)
+    step = 2.0 if WEB else 1.0             # degrees per segment along a band
+    bar = 0.35
+    (h0, h1), (l0, l1) = RING_OPEN
+    pad = math.degrees(bar / 2 / RING_IN)
+    spans = [(a0 + pad, a1 - pad) for a0, a1 in ((h1, l0), (l1, h0 + 360.0))]   # between the bars' middles
+    rail_in, rail_out = (LADDER[0] + LADDER[1]) / 2, (LADDER[2] + LADDER[3]) / 2
+    for b0, b1 in spans:
+        for deg in (b0, b1):
+            R.strip([_on_ring(RING_IN, deg), _on_ring(RING_OUT, deg)], bar)
+        for r0, r1 in RING_LINES + (LADDER[:2], LADDER[2:]):
+            rc = (r0 + r1) / 2
+            n = max(2, int(math.ceil((b1 - b0) / step)))
+            R.strip([(-math.radians(b0 + (b1 - b0) * i / n) * rc, 0.0) for i in range(n + 1)], r1 - r0,
+                    warp=_polar(rc), caps=False)
+        # The ladder's rungs, about 0.7 mm apart, from one rail's middle to the other's.
+        n = int(math.radians(b1 - b0) * (rail_in + rail_out) / 2 / 0.7)
+        for k in range(1, n):
+            deg = b0 + (b1 - b0) * k / n
+            R.strip([_on_ring(rail_in, deg), _on_ring(rail_out, deg)], 0.25, caps=False)
+    for rc, rad, count in CHAINS:
+        ring_chain(R, spans, rc, rad, count, 12 if WEB else 24)
+    # The birds every 34 degrees along the two spans taken end to end, the first 23 degrees in: none
+    # cut by an opening, none under the door's pull (at 0 degrees, 5.4 to either side).
+    half = math.degrees(max(abs(u) for u, _ in BIRD) / BIRD_R)
+    warp = _polar(BIRD_R)
+    for deg in _spread(spans, 8, 23.0):
+        clear_of_pull = abs((deg + 180.0) % 360.0 - 180.0) - half > 5.4
+        if not clear_of_pull or not any(b0 + 1.0 <= deg - half and deg + half <= b1 - 1.0 for b0, b1 in spans):
+            raise SystemExit("clear.py: the Lạc bird at %.1f degrees is cut by an opening or under the pull" % deg)
+        uc = -math.radians(deg) * BIRD_R
+        R.poly([(uc + u, v) for u, v in BIRD], warp=warp)
+    return R.done(name + "_dongson_ring", M["gold"], root)
+
+
+# The frame's grooves.
+def lozenges(R, x0, x1, yc, h, n, line, hatch, gap):
+    """A chain of n lozenges tip to tip from x0 to x1 along b = yc, h mm tall: each outlined in `line`
+    mm and hatched with `hatch` mm lines about `gap` mm apart, parallel to the side up from its left
+    tip, the next one's to the side down from it."""
+    w = (x1 - x0) / n
+    for k in range(n):
+        cx = x0 + w * (k + 0.5)
+        quad = [(cx - w / 2, yc), (cx, yc - h / 2), (cx + w / 2, yc), (cx, yc + h / 2)]
+        R.strip(quad, line, closed=True)
+        inner = offset_path(quad, line / 2 - 0.02, closed=True)   # just under the outline's inner edge
+        left = Vector(quad[0])
+        d = Vector((w / 2, (h / 2) * (1 if k % 2 == 0 else -1))).normalized()
+        across = Vector((d.y, -d.x)) if k % 2 == 0 else Vector((-d.y, d.x))   # into the lozenge
+        span = (w * h / 2) / math.hypot(w / 2, h / 2)                  # from that side to the opposite one
+        lines = max(1, int(round((span - line) / gap)))
+        for i in range(lines):
+            o = left + across * (line / 2 + (span - line) * (i + 0.5) / lines)
+            seg = clip_segment(tuple(o - d * w), tuple(o + d * w), inner)
+            if seg and math.dist(*seg) > 2 * hatch:
+                R.strip(list(seg), hatch, caps=False)
+
+
+def clear_grooves(name, root):
+    """Lozenge chains with diagonal hatching, a Đông Sơn motif, in relief (GROOVE_PROUD) of the
+    frame's own material: on the plinth's front either side of the nameplate, between two rails,
+    and along the keys' deck's top in front of the keys and behind them, between the holes and the
+    deck's edges. `<name>_grooves_plinth` and `<name>_grooves_deck`."""
+    F = M["clear_frame"]
+    face = PLINTH_Y - PLINTH_D / 2
+    R = Relief(lambda a, b, h: (a, face - h, b), GROOVE_PROUD)
+    zc = (FOOT_H + PLINTH_H) / 2              # the nameplate's middle
+    for sx in (-1, 1):
+        x0, x1 = sorted((sx * 86.0, sx * 145.0))   # off the plate (82) and the plinth's rounded corner (147)
+        for s in (-1, 1):
+            R.strip([(x0, zc + s * 6.0), (x1, zc + s * 6.0)], 0.6)
+        lozenges(R, x0, x1, zc, 9.0, 4, 0.5, 0.35, 1.1)
+    R.done(name + "_grooves_plinth", F, root)
+    # The deck (clear_keys) is 24 mm deep round KEY_Y, its holes 15.4, every edge bevelled 0.6: each
+    # rim runs 7.7 to 12 mm off KEY_Y, its flat's middle 9.85 mm off it; its straight ends at x = +-79.
+    R = Relief(lambda a, b, h: (a, b, Z1 + 2.05 + h), GROOVE_PROUD)
+    for s in (-1, 1):
+        lozenges(R, -78.0, 78.0, KEY_Y + s * 9.85, 2.2, 43, 0.28, 0.2, 0.62)
+    R.done(name + "_grooves_deck", F, root)
 
 
 # ------------------------------------------------------------------ the stand and the case
@@ -1804,6 +2173,9 @@ def make_clear_player(name, disc_label, booklet, look, rack_labels=None, playlis
     clear_handle(name, root)
     clear_tag(name + "_tag", root, playlist)
     clear_knob(name, root)
+    clear_etch(name, root)
+    clear_dongson_ring(name, root)
+    clear_grooves(name, root)
     clear_stand(name, root, rack_labels)
     clear_case(name, root, booklet)
     return root

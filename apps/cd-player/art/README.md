@@ -23,7 +23,10 @@ by Python running inside Blender, not modelled by hand.
   and a hexagon pour, the LCD, the VU strip, the Đông Sơn sun beside the silkscreened logo; laid
   out by `clear_board`'s `Board`, which AGENTS.md describes), the speakers, four AA cells, the
   keys and their own board, the knob standing upright on the top beside them, the handle and its
-  tag, the nameplate, the stand with the rack's five slots and the standing case.
+  tag, the nameplate, the stand with the rack's five slots and the standing case; and its
+  decorations (each a `Relief`, which AGENTS.md describes): frosted circuit-maze etching on the
+  shell's sides and top, a gold Đông Sơn ring round the door (tangent circles, a hatched ladder,
+  eight Lạc birds) and hatched lozenge chains in relief on the plinth's front and the keys' deck.
   `clear_look(spec)` reads a look from `src/clear-looks.json` (and stops the run, naming what is
   wrong, on a part or a field it lacks) and `build_clear_materials(look)` makes its materials.
 - `blender/scripts/build_clear.py`: the Clear model's web scene, with the names the page drives
@@ -52,7 +55,7 @@ They write `public/assets/cd-player.glb` and `public/assets/cd-player-clear.glb`
 `pipeline/build.mjs` hands the model to `export.py` as `CDP_MODEL`).
 `src/scene/model-contract.test.ts` checks each one's names, materials, where things are parented
 and the budget (150k triangles, 4 MB). The committed suitcase is about 100,633 triangles and
-777 KB, the Clear model about 108,277 and 811 KB. Rebuild a model after any change to its scripts
+777 KB, the Clear model about 126,723 and 939 KB. Rebuild a model after any change to its scripts
 (`cdkit.py` and `parts.py` are both models').
 
 ## Renders
