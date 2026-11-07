@@ -10,7 +10,7 @@ import {
 } from 'react';
 import { createLogger } from '@ncam/logger';
 import { readAutoplaySignals, shouldAutoplay, whenSettled } from './autoplay';
-import { bootReducer, INITIAL_BOOT, watchStall, type StallClock, type StallWatch } from './boot';
+import { bootReducer, INITIAL_BOOT, PAGE_TIMERS, watchStall, type StallWatch } from './boot';
 import { createBridge } from './bridge';
 import { BootStallError, describeFailure } from './failure';
 import { remoteBase } from './lib/asset-url';
@@ -67,14 +67,6 @@ const log = createLogger({ scope: 'cd-player' });
  * transitions in styles/app.css (styles/app-css.test.ts holds the three equal).
  */
 const FADE_MS = 600;
-
-/** The boot's stall watch runs on the page's own timers. */
-const timeouts: StallClock = {
-  after: (ms, done) => {
-    const id = setTimeout(done, ms);
-    return () => clearTimeout(id);
-  },
-};
 
 export interface AppProps {
   controller: RouteController;
@@ -221,20 +213,26 @@ export default function App({ controller, initial = null, assetBase = '', initia
     [live],
   );
 
-  // A boot that goes quiet, on the scene's code or on the model's download, fails like any other,
-  // so the loader never spins for ever (boot.ts watchStall): the watch runs while the phase is
-  // `booting` and hears every progress event the scene reports.
+  // A boot that goes quiet, on the scene's code, on the model's download or on its parse and
+  // compile, fails like any other, so the loader never spins for ever (boot.ts watchStall): the
+  // watch runs while the phase is `booting`, hears every progress event the scene reports, and
+  // ends once the boot's model takes the stage (onStage).
   const stall = useRef<StallWatch | null>(null);
   const booting = boot.phase === 'booting';
   useEffect(() => {
     if (!booting) return;
-    const watch = watchStall((part) => onFail(new BootStallError(part)), timeouts);
+    const watch = watchStall((part) => onFail(new BootStallError(part)), PAGE_TIMERS);
     stall.current = watch;
     return () => {
       watch.stop();
       if (stall.current === watch) stall.current = null;
     };
   }, [booting, onFail]);
+  // The scene's stage, the moment the holder changes it: once the boot's model is on it the boot
+  // waits on its first frames alone, which a hidden page never draws, so its stall watch ends.
+  const onStage = useCallback((model: ModelId | null) => {
+    if (model !== null) stall.current?.stop();
+  }, []);
   const onProgress = useCallback(
     (fraction: number | null) => {
       stall.current?.progress(fraction);
@@ -402,6 +400,7 @@ export default function App({ controller, initial = null, assetBase = '', initia
             onFail={onFail}
             onProgress={onProgress}
             onModel={onModel}
+            onStage={onStage}
           />
         )}
         {/* After the scene layer, so it draws over the invisible canvas and fades out with it. */}

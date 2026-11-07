@@ -1,33 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
-import { BOOT_STALL_MS, bootReducer, INITIAL_BOOT, watchStall, type StallClock } from './boot';
+import { BOOT_STALL_MS, bootReducer, INITIAL_BOOT, watchStall } from './boot';
+import { fakeClock } from './testing/clock';
 
 const failure = { message: 'x', retry: true };
-
-/** A clock the test moves by hand: `advance` runs the timers that fall due. */
-function fakeClock() {
-  let now = 0;
-  let timers: { at: number; done(): void }[] = [];
-  const clock: StallClock = {
-    after: (ms, done) => {
-      const timer = { at: now + ms, done };
-      timers.push(timer);
-      return () => {
-        timers = timers.filter((other) => other !== timer);
-      };
-    },
-  };
-  return {
-    clock,
-    advance(ms: number): void {
-      now += ms;
-      const due = timers.filter((timer) => timer.at <= now);
-      timers = timers.filter((timer) => timer.at > now);
-      for (const timer of due) timer.done();
-    },
-    /** The timers still set. */
-    pending: () => timers.length,
-  };
-}
 
 describe('bootReducer', () => {
   it('starts waiting, with no failure, and only a start or an autostart leaves it', () => {
@@ -106,18 +81,53 @@ describe('watchStall', () => {
     expect(stalled).toHaveBeenCalledWith('model');
   });
 
-  it('ends once the download is complete: the shaders compile after it without a word', () => {
+  it('waits on the parse and the compile once the download is complete, naming the compile', () => {
+    // They say nothing as they go: together they must land within BOOT_STALL_MS of its end.
     const t = fakeClock();
     const stalled = vi.fn();
     const watch = watchStall(stalled, t.clock);
     watch.progress(0.5);
     watch.progress(1);
+    t.advance(BOOT_STALL_MS - 1);
+    expect(stalled).not.toHaveBeenCalled();
+    t.advance(1);
+    expect(stalled).toHaveBeenCalledTimes(1);
+    expect(stalled).toHaveBeenCalledWith('compile');
+  });
+
+  it('is over once stopped after the download: the model took the stage', () => {
+    const t = fakeClock();
+    const stalled = vi.fn();
+    const watch = watchStall(stalled, t.clock);
+    watch.progress(1);
+    t.advance(BOOT_STALL_MS - 1);
+    watch.stop();
     expect(t.pending()).toBe(0);
-    // Nothing after the end arms it again.
-    watch.progress(0.99);
     t.advance(10 * BOOT_STALL_MS);
     expect(stalled).not.toHaveBeenCalled();
-    expect(t.pending()).toBe(0);
+  });
+
+  it('watches a download that begins after the last one ended, as the model chosen meanwhile', () => {
+    // A model chosen while the boot's own parses and compiles: its download is the boot's now.
+    const t = fakeClock();
+    const stalled = vi.fn();
+    const watch = watchStall(stalled, t.clock);
+    watch.progress(1);
+    t.advance(15_000);
+    watch.progress(null);
+    t.advance(BOOT_STALL_MS - 1);
+    expect(stalled).not.toHaveBeenCalled();
+    t.advance(1);
+    expect(stalled).toHaveBeenCalledTimes(1);
+    expect(stalled).toHaveBeenCalledWith('model');
+  });
+
+  it('waits on the part it is told to start from: a change of model, on its download', () => {
+    const t = fakeClock();
+    const stalled = vi.fn();
+    watchStall(stalled, t.clock, BOOT_STALL_MS, 'model');
+    t.advance(BOOT_STALL_MS);
+    expect(stalled).toHaveBeenCalledWith('model');
   });
 
   it('ends with the boot, and hears nothing after', () => {

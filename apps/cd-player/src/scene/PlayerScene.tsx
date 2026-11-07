@@ -3,14 +3,16 @@ import { Canvas, useThree } from '@react-three/fiber';
 import { useEffect, useEffectEvent, useLayoutEffect, useRef, useState } from 'react';
 import { AgXToneMapping, PMREMGenerator } from 'three';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
+import { PAGE_TIMERS } from '../boot';
 import { assetUrl } from '../lib/asset-url';
-import { DEFAULT_MODEL, modelById } from '../models';
+import { DEFAULT_MODEL, modelById, type ModelId } from '../models';
 import type { ModelLoad, PlayerSceneProps } from '../scene-props';
 import { CameraRig } from './CameraRig';
 import { FAR, FOV, isWide, nearFor } from './framing';
 import { skinColours } from './materials';
 import { loadPlayerModel, type PlayerModel } from './model';
 import { createModelHolder, NOTHING_HELD, type Held } from './model-holder';
+import { startModelLoad, type ModelLoadRun } from './model-load';
 import { PlayerRig } from './PlayerRig';
 
 const log = createLogger({ scope: 'cd-player' });
@@ -89,12 +91,27 @@ function Precompile({ model, onDone }: { model: PlayerModel; onDone(model: Playe
 }
 
 export function PlayerScene(props: PlayerSceneProps) {
-  const { assetBase, bridge, look, onReady, onFail, onProgress, onModel } = props;
+  const { assetBase, bridge, look, onReady, onFail, onProgress, onModel, onStage } = props;
   const wanted = modelById(look.model);
+  // The model on the stage, for App: told the moment the holder changes it (the boot's first
+  // included, before its first frames), and none as the scene goes. The holder outlives every
+  // render, so it calls the latest callback.
+  const stage = useRef<(model: ModelId | null) => void>(onStage);
+  useLayoutEffect(() => {
+    stage.current = onStage;
+  });
   // The model on show and the next one, loaded and compiling, as the holder (model-holder.ts)
   // holds them: it disposes every model it lets go of, so none is drawn stale or left behind.
   const [{ shown, next }, setHeld] = useState<Held<PlayerModel>>(NOTHING_HELD);
-  const [holder] = useState(() => createModelHolder<PlayerModel>(setHeld));
+  const [holder] = useState(() => {
+    let staged: PlayerModel | null = null;
+    return createModelHolder<PlayerModel>((held) => {
+      setHeld(held);
+      if (held.shown === staged) return;
+      staged = held.shown;
+      stage.current(staged?.id ?? null);
+    });
+  });
   const booted = shown !== null;
   const [narrow] = useState(() => !isWide(window.innerWidth));
   // Read when the download reports or ends, so a new callback never starts the download again.
@@ -104,40 +121,39 @@ export function PlayerScene(props: PlayerSceneProps) {
   // Read as a load lands: it is held against the look of that moment, not of its start.
   const arrive = useEffectEvent((model: PlayerModel) => holder.loaded(model, wanted.id));
 
-  // One load per wanted model: the boot's reports go to onProgress (the loader and the stall
-  // watch), a later change's to onModel (the picker).
+  // One load per wanted model (model-load.ts): the boot's reports go to onProgress (the loader and
+  // App's stall watch) and its failure to onFail; a later change's go to onModel (the picker), and
+  // its own stall watch fails it after BOOT_STALL_MS without a word, over its download and its
+  // compile, so the picker never says "Loading" for ever: the model on show stays. A load the
+  // effect lets go of (another model chosen, a failed boot, StrictMode's first run, a remount)
+  // stops downloading, so the next one asks for the GLB anew instead of waiting on a stalled
+  // request. `loading` is the one in progress, which Precompile tells when its compile lands.
+  const loading = useRef<ModelLoadRun<PlayerModel> | null>(null);
   useEffect(() => {
     if (shown?.id === wanted.id) return;
-    let cancelled = false;
-    // A load this effect lets go of (another model chosen, a failed boot, StrictMode's first run,
-    // a remount) stops downloading, so the next one asks for the GLB anew instead of waiting on a
-    // stalled request.
-    const download = new AbortController();
-    const reportLoad = (fraction: number | null) => {
-      // A load this effect has let go of says nothing.
-      if (cancelled) return;
-      if (booted) reportModel({ model: wanted.id, status: 'loading', fraction });
-      else report(fraction);
-    };
-    loadPlayerModel(wanted, assetUrl(wanted.glb, assetBase), reportLoad, download.signal).then(
-      (model) => {
-        // A model it has let go of is never drawn.
-        if (cancelled) model.dispose();
-        else arrive(model);
-      },
-      (error: unknown) => {
-        if (cancelled) return;
-        if (booted) {
+    const run = startModelLoad<PlayerModel>(
+      (onLoad, signal) => loadPlayerModel(wanted, assetUrl(wanted.glb, assetBase), onLoad, signal),
+      {
+        progress: (fraction) => {
+          if (booted) reportModel({ model: wanted.id, status: 'loading', fraction });
+          else report(fraction);
+        },
+        landed: (model) => arrive(model),
+        failed: (error) => {
+          if (!booted) return fail(error);
           log.warn('cd-player.model-failed', { model: wanted.id, error: String(error) });
           reportModel({ model: wanted.id, status: 'failed' });
-        } else fail(error instanceof Error ? error : new Error(String(error)));
+        },
+        abandon: (model) => holder.failed(model),
       },
+      booted ? PAGE_TIMERS : null,
     );
+    loading.current = run;
     return () => {
-      cancelled = true;
-      download.abort();
+      run.cancel();
+      if (loading.current === run) loading.current = null;
     };
-  }, [assetBase, wanted, shown, booted]);
+  }, [assetBase, wanted, shown, booted, holder]);
 
   // A model loaded for a look the visitor has since changed goes before it is ever shown. A layout
   // effect, so the holder knows the look's model within the commit that changes it: Precompile's
@@ -215,7 +231,16 @@ export function PlayerScene(props: PlayerSceneProps) {
           onReady={() => announce(shown)}
         />
       )}
-      {next && <Precompile model={next} onDone={(model) => holder.compiled(model, wanted.id)} />}
+      {next && (
+        <Precompile
+          model={next}
+          onDone={(model) => {
+            // Its load's watch ends first: the model takes the stage now, and nothing fails it after.
+            loading.current?.compiled(model);
+            holder.compiled(model, wanted.id);
+          }}
+        />
+      )}
     </Canvas>
   );
 }

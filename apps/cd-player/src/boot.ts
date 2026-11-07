@@ -45,8 +45,9 @@ export function bootReducer(state: BootState, event: BootEvent): BootState {
 }
 
 /**
- * How long a boot may go without a word, waiting on the scene's code and then on the model's
- * download, before it fails as stalled.
+ * How long a boot may go without a word, waiting on the scene's code, on the model's download and
+ * then on its parse and compile, before it fails as stalled; a change of model once one is on show
+ * gets as long (src/scene/model-load.ts).
  */
 export const BOOT_STALL_MS = 20_000;
 
@@ -55,11 +56,20 @@ export interface StallClock {
   after(ms: number, done: () => void): () => void;
 }
 
+/** The page's own timers, which the watches run on outside the tests. */
+export const PAGE_TIMERS: StallClock = {
+  after: (ms, done) => {
+    const id = setTimeout(done, ms);
+    return () => clearTimeout(id);
+  },
+};
+
 /**
- * What a boot that went quiet was waiting on: the scene's code until the model's download first
- * reports (the download begins once the code has come), the download from then on.
+ * What a load that went quiet was waiting on: the scene's code until the model's download first
+ * reports (the download begins once the code has come), the download while it comes, and the
+ * model's parse and its shaders' compile once it has ended.
  */
-export type StallPart = 'scene' | 'model';
+export type StallPart = 'scene' | 'model' | 'compile';
 
 export interface StallWatch {
   /**
@@ -67,27 +77,32 @@ export interface StallWatch {
    * request goes out and while its size is unknown, a fraction as it comes, 1 at its end.
    */
   progress(fraction: number | null): void;
-  /** The boot has left `booting` (live, failed or let go): the watch ends. */
+  /**
+   * The watch ends: the model has taken the stage (its first frames are all that is left, and a
+   * hidden page draws none), or the load is over otherwise (failed, let go, the phase left).
+   */
   stop(): void;
 }
 
 /**
- * The boot's stall watch, so the loader never spins for ever: `onStall` runs once when the boot
- * goes `ms` without a word, with the part it was waiting on. Armed as the boot starts, armed again
- * by every progress event (a fraction or null alike), and over once the download is complete (the
- * 1 that only the end of its stream reports) or with `stop`. It times silence, never the boot as a
- * whole: the shaders compile after the download without a word (seconds on a software
- * rasteriser), and a slow machine is not a stalled one. The scene's code says nothing as it comes,
- * so it alone must come whole within `ms`.
+ * A stall watch, so no spinner runs for ever: `onStall` runs once when a load goes `ms` without a
+ * word, with the part it was waiting on. Armed as the load starts (waiting on `from`: the boot's
+ * on the scene's code, a change's on its download), armed again by every progress event (a
+ * fraction or null alike), and over only with `stop`. It times silence, never the load as a whole,
+ * so a slow download is not a stalled one; but the parse and the compile after the download's end
+ * (the 1 that only the end of its stream reports) say nothing, so together they must land within
+ * `ms` of it. An event after that end is a new download's (a model chosen while the one before
+ * parsed and compiled), watched as the first was. The scene's code says nothing as it comes, so it
+ * alone must come whole within `ms`.
  */
 export function watchStall(
   onStall: (part: StallPart) => void,
   clock: StallClock,
   ms: number = BOOT_STALL_MS,
+  from: StallPart = 'scene',
 ): StallWatch {
   let cancel: (() => void) | null = null;
-  // Nothing has reported yet: the boot waits on the scene's code.
-  let part: StallPart = 'scene';
+  let part = from;
   const arm = () => {
     cancel?.();
     cancel = clock.after(ms, () => {
@@ -102,11 +117,10 @@ export function watchStall(
   arm();
   return {
     progress(fraction) {
-      // Stopped, complete or stalled already: nothing arms it again.
+      // Stopped or stalled already: nothing arms it again.
       if (!cancel) return;
-      part = 'model';
-      if (fraction !== null && fraction >= 1) stop();
-      else arm();
+      part = fraction !== null && fraction >= 1 ? 'compile' : 'model';
+      arm();
     },
     stop,
   };

@@ -93,6 +93,30 @@ describe('stepHeld', () => {
     expect(step).toEqual({ held: { shown: suitcase, next: null }, drop: clear, retire: null });
   });
 
+  it('drops the next whose change failed, and keeps the model on show', () => {
+    const suitcase = model('suitcase');
+    const clear = model('clear');
+    expect(
+      stepHeld({ shown: suitcase, next: clear }, { type: 'failed', model: clear }, 'clear'),
+    ).toEqual({ held: { shown: suitcase, next: null }, drop: clear, retire: null });
+  });
+
+  it('lets nothing go for a failed model that is not the next (shown already, or gone)', () => {
+    const suitcase = model('suitcase');
+    const held = { shown: suitcase, next: model('clear') };
+    expect(stepHeld(held, { type: 'failed', model: model('clear') }, 'clear')).toEqual({
+      held,
+      drop: null,
+      retire: null,
+    });
+    // A change whose compile landed as it failed: it is on show, and stays.
+    expect(stepHeld(held, { type: 'failed', model: suitcase }, 'clear')).toEqual({
+      held,
+      drop: null,
+      retire: null,
+    });
+  });
+
   it('ignores the compile of a model that is no longer the next (it went when it was let go)', () => {
     const suitcase = model('suitcase');
     const gone = model('clear');
@@ -203,6 +227,24 @@ describe('createModelHolder', () => {
     expect(renders.map((each) => each.shown)).not.toContain(clear);
     expect(renders.at(-1)).toEqual({ shown: suitcase, next: null });
     expect(clear.dispose).toHaveBeenCalledOnce();
+  });
+
+  it('disposes the next of a change that failed while it compiled, and shows it never', () => {
+    const { held, renders } = holder();
+    const suitcase = model('suitcase');
+    held.loaded(suitcase, 'suitcase');
+    held.compiled(suitcase, 'suitcase');
+    const clear = model('clear');
+    held.loaded(clear, 'clear');
+    held.failed(clear);
+    expect(clear.dispose).toHaveBeenCalledOnce();
+    expect(renders.at(-1)).toEqual({ shown: suitcase, next: null });
+    // Its compile landing late changes nothing, and disposes nothing twice.
+    held.compiled(clear, 'clear');
+    held.failed(clear);
+    expect(renders.map((each) => each.shown)).not.toContain(clear);
+    expect(clear.dispose).toHaveBeenCalledOnce();
+    expect(suitcase.dispose).not.toHaveBeenCalled();
   });
 
   it('never renders the Clear model for a quick Suitcase → Clear → Suitcase', () => {

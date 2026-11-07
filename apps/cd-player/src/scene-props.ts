@@ -33,8 +33,15 @@ export interface PlayerSceneProps {
   /**
    * Each model as it comes on show: `ready` once its first frames are drawn, the boot's model
    * included. A change after the boot also reports its download (`loading`, its fraction as
-   * `onProgress` would have it) and, when it never comes, `failed`: the model before it stays. A
-   * change given up before it loads reports nothing more (see ModelLoad).
+   * `onProgress` would have it) and, when it never comes or goes BOOT_STALL_MS without a word over
+   * its download and its compile, `failed`: the model before it stays. A change given up before it
+   * loads reports nothing more (see ModelLoad).
    */
   onModel(load: ModelLoad): void;
+  /**
+   * The model on the scene's stage, as it takes it (compiled, before its first frames): the boot's,
+   * then each change's as it swaps in, and null as the scene goes. Once a model is on it, a model
+   * chosen is a change (`onModel`), which goes back to this one if it fails.
+   */
+  onStage(model: ModelId | null): void;
 }

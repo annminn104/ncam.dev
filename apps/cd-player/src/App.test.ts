@@ -231,4 +231,16 @@ describe('App and the model on the stage', () => {
       /if \(load\.status === 'ready'\) \{[^}]*\bsetOnShow\(load\.model\);[^}]*\}/,
     );
   });
+
+  it('ends the boot’s stall watch once its model takes the stage: its first frames are all it waits on', () => {
+    // A hidden page draws no frames, and is no stalled boot.
+    const source = readFileSync(new URL('./App.tsx', import.meta.url), 'utf8');
+    expect(source).toMatch(
+      /const onStage = useCallback\(\(model: ModelId \| null\) => \{\s*if \(model !== null\) stall\.current\?\.stop\(\);/,
+    );
+    expect(source).toMatch(
+      /watchStall\(\(part\) => onFail\(new BootStallError\(part\)\), PAGE_TIMERS\)/,
+    );
+    expect(source).toMatch(/onStage=\{onStage\}/);
+  });
 });

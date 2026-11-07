@@ -28,7 +28,9 @@ export type HeldEvent<M extends HeldModel> =
   /** The look has changed, and may name another model. */
   | { type: 'wanted' }
   /** `model`'s shaders are compiled. */
-  | { type: 'compiled'; model: M };
+  | { type: 'compiled'; model: M }
+  /** `model`'s change failed as it compiled (it stalled, src/scene/model-load.ts). */
+  | { type: 'failed'; model: M };
 
 export interface HeldStep<M extends HeldModel> {
   held: Held<M>;
@@ -65,6 +67,10 @@ export function stepHeld<M extends HeldModel>(
       if (event.model !== next) return keep;
       if (next.id !== wanted) return { held: { shown, next: null }, drop: next, retire: null };
       return { held: { shown: next, next: null }, drop: null, retire: shown };
+    case 'failed':
+      // Only a next goes: a model already on show stays, and one let go of went then.
+      if (event.model !== next) return keep;
+      return { held: { shown, next: null }, drop: next, retire: null };
   }
 }
 
@@ -73,6 +79,8 @@ export interface ModelHolder<M extends HeldModel> {
   loaded(model: M, wanted: ModelId): void;
   want(wanted: ModelId): void;
   compiled(model: M, wanted: ModelId): void;
+  /** `model`'s change failed: if it is the next, it goes, never shown. */
+  failed(model: M): void;
   /**
    * `model` has drawn its first frames: if it is the one on show, its swap is drawn and the models
    * taken off show go. A replaced model's own late frames let nothing go (the canvas may still be
@@ -101,6 +109,8 @@ export function createModelHolder<M extends HeldModel>(
     loaded: (model, wanted) => apply(stepHeld(held, { type: 'loaded', model }, wanted)),
     want: (wanted) => apply(stepHeld(held, { type: 'wanted' }, wanted)),
     compiled: (model, wanted) => apply(stepHeld(held, { type: 'compiled', model }, wanted)),
+    // The look plays no part: a failed next goes whatever it names.
+    failed: (model) => apply(stepHeld(held, { type: 'failed', model }, model.id)),
     settle(model) {
       if (model !== held.shown) return;
       for (const each of retired) each.dispose();

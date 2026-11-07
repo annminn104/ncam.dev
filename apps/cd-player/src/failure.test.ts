@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { BootStallError, describeFailure, NoWebGLError, SceneChunkError } from './failure';
+import {
+  BootStallError,
+  describeFailure,
+  ModelStallError,
+  NoWebGLError,
+  SceneChunkError,
+} from './failure';
 
 describe('describeFailure', () => {
   it('offers a retry unless WebGL is missing', () => {
@@ -10,7 +16,7 @@ describe('describeFailure', () => {
 
   it('words a stalled boot as any boot that could not start, with Try again in place', () => {
     // The scene's code too: a second import joins the request still on its way.
-    for (const part of ['scene', 'model'] as const) {
+    for (const part of ['scene', 'model', 'compile'] as const) {
       expect(describeFailure(new BootStallError(part))).toEqual({
         message: "The 3D player couldn't start. The music still plays.",
         retry: true,
@@ -25,6 +31,18 @@ describe('describeFailure', () => {
     expect(new BootStallError('model').message).toBe(
       "the model's download sent nothing for 20000 ms",
     );
+    expect(new BootStallError('compile').message).toBe(
+      'the model did not compile within 20000 ms of its download',
+    );
+  });
+
+  it('names a stalled change of model, and the part it waited on, as a stalled boot does', () => {
+    for (const part of ['model', 'compile'] as const) {
+      const error = new ModelStallError(part);
+      expect(error.name).toBe('ModelStallError');
+      expect(error.part).toBe(part);
+      expect(error.message).toBe(new BootStallError(part).message);
+    }
   });
 
   it('reloads the page for a scene chunk that would not load, and only then', () => {
