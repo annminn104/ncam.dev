@@ -11,6 +11,7 @@ import {
   readModel,
   readSkin,
   restoreTarget,
+  scriptLiteral,
   SKIN_KEY,
   STORAGE_KEY,
   writeClearLook,
@@ -208,7 +209,23 @@ describe('LOOK_SCRIPT', () => {
         },
       }),
     ).toEqual({});
-    expect(LOOK_SCRIPT).not.toMatch(/<\/script|<!--/i);
+    expect(LOOK_SCRIPT).not.toMatch(/[<>\u2028\u2029]/);
+  });
+});
+
+describe('scriptLiteral', () => {
+  it('writes a value a script reads back as it was, with nothing that could end the element', () => {
+    const values = [
+      '</script><!-- -->',
+      'a\u2028b\u2029c',
+      { k: '</SCRIPT>', n: [1, '/'] },
+      'blush',
+    ];
+    for (const value of values) {
+      const literal = scriptLiteral(value);
+      expect(literal, JSON.stringify(value)).not.toMatch(/[<>/\u2028\u2029]/);
+      expect(runInNewContext(`(${literal})`), JSON.stringify(value)).toEqual(value);
+    }
   });
 });
 

@@ -109,6 +109,23 @@ const LIGHT_PAIRS = Object.fromEntries(
   CLEAR_SWATCHES.light.map((light) => [light.id, [light.accent, light.onAccent]]),
 );
 
+// What JSON.stringify leaves as it is but an inline script must not hold: `<`, `>` and `/` (a string
+// holding `</script>` or `<!--` would end the element or change how it parses) and U+2028 and
+// U+2029 (line terminators to scripts older than ES2019). Each becomes its \u escape, which the
+// script reads back as the same character, and JSON puts them only inside strings.
+const SCRIPT_UNSAFE: Record<string, string> = {
+  '<': '\\u003C',
+  '>': '\\u003E',
+  '/': '\\u002F',
+  '\u2028': '\\u2028',
+  '\u2029': '\\u2029',
+};
+
+/** `value` as a literal for an inline script: its JSON, with the characters above escaped. */
+export function scriptLiteral(value: unknown): string {
+  return JSON.stringify(value).replace(/[<>/\u2028\u2029]/g, (char) => SCRIPT_UNSAFE[char]);
+}
+
 /**
  * The accent pair of the saved look on `.cdp-root` before the first paint: the text of the inline
  * script App renders as the root's first child, which the browser runs as it parses the server's
@@ -120,15 +137,16 @@ const LIGHT_PAIRS = Object.fromEntries(
  * patches a server attribute) and then applies the same saved look. A copy React renders on the
  * client never runs, so `mount()` starts App in the saved look instead. It reads only own keys of
  * its tables, so no saved value can pick a prototype's, and it never throws: what `readLookState`
- * refuses, or storage that throws, changes nothing.
+ * refuses, or storage that throws, changes nothing. Its tables and keys go in through
+ * `scriptLiteral`, so none of them can end the element it is written into.
  */
-export const LOOK_SCRIPT = `(function(){try{var s=${JSON.stringify(SKIN_PAIRS)},l=${JSON.stringify(
+export const LOOK_SCRIPT = `(function(){try{var s=${scriptLiteral(SKIN_PAIRS)},l=${scriptLiteral(
   LIGHT_PAIRS,
-)},t=localStorage,h=Object.prototype.hasOwnProperty,a=0,k;if(t.getItem(${JSON.stringify(
+)},t=localStorage,h=Object.prototype.hasOwnProperty,a=0,k;if(t.getItem(${scriptLiteral(
   MODEL_KEY,
-)})==='clear'){try{k=JSON.parse(t.getItem(${JSON.stringify(CLEAR_KEY)})).light}catch(e){}a=typeof k==='string'&&h.call(l,k)?l[k]:l[${JSON.stringify(
+)})==='clear'){try{k=JSON.parse(t.getItem(${scriptLiteral(CLEAR_KEY)})).light}catch(e){}a=typeof k==='string'&&h.call(l,k)?l[k]:l[${scriptLiteral(
   DEFAULT_CLEAR_LOOK.light,
-)}]}else{k=t.getItem(${JSON.stringify(SKIN_KEY)});a=k&&h.call(s,k)?s[k]:0}if(a){var r=document.currentScript.parentNode.style;r.setProperty('--cdp-accent',a[0]);r.setProperty('--cdp-on-accent',a[1])}}catch(e){}})();`;
+)}]}else{k=t.getItem(${scriptLiteral(SKIN_KEY)});a=k&&h.call(s,k)?s[k]:0}if(a){var r=document.currentScript.parentNode.style;r.setProperty('--cdp-accent',a[0]);r.setProperty('--cdp-on-accent',a[1])}}catch(e){}})();`;
 
 /**
  * Where `/` should send the visitor: the collection they last loaded. Only the first time the caller

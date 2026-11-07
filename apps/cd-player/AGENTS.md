@@ -1028,9 +1028,11 @@ suitcase for an id it does not know. It is three-free, as are `skins.ts`, `clear
   the server's markup: the saved light's when the saved model is the Clear (its default light's
   when the saved colours name none it knows), else the saved skin's, and nothing for a skin it does
   not know. It reads only its tables' own keys, so no saved value picks a prototype's, and it never
-  throws. React leaves that attribute as it is when it hydrates (it never patches a server
-  attribute), then applies the same look. A script React renders on the client never runs (and
-  React warns of one), so `mount()` starts `App` in the saved look (`initialLook`, from
+  throws. Its tables and keys go in through `scriptLiteral`, their JSON with `<`, `>`, `/`, U+2028
+  and U+2029 written as `\u` escapes, so none of them can end the element. React leaves that
+  attribute as it is when it hydrates (it never patches a server attribute), then applies the same
+  look. A script React renders on the client never runs (and React warns of one), so `mount()`
+  starts `App` in the saved look (`initialLook`, from
   `readLookState`), which renders no script. A host that inserts the server's markup with
   `innerHTML` runs no script: there the page turns to the saved look as it hydrates. The scene,
   which mounts later, boots in the saved look and downloads that model's GLB alone. A look is never
