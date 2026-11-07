@@ -6,6 +6,7 @@ import { CLEAR_SWATCHES, DEFAULT_CLEAR_LOOK } from '../clear-looks';
 import { DEFAULT_LOOK_STATE, lookLabel, lookOf, lookSwatch, type LookState } from '../looks';
 import type { ModelLoad } from '../scene-props';
 import { SKINS } from '../skins';
+import { textOf as text } from '../testing/markup';
 import {
   LookMenu,
   LookPicker,
@@ -25,7 +26,6 @@ const groups = (html: string) =>
 const CLEAR: LookState = { ...DEFAULT_LOOK_STATE, model: 'clear' };
 const RADIO =
   /<button type="button" role="radio" aria-checked="(true|false)" tabindex="(0|-1)"[^>]*>(.*?)<\/button>/g;
-const text = (html: string) => html.replace(/<[^>]+>/g, '');
 
 describe('LookPicker (server markup)', () => {
   it('renders Player closed, named for the look, with its swatch', () => {

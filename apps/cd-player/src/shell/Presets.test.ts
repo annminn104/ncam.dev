@@ -2,6 +2,7 @@ import { createElement } from 'react';
 import { renderToString } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { PRESETS } from '../presets';
+import { textOf } from '../testing/markup';
 import { Presets } from './Presets';
 
 type Props = Parameters<typeof Presets>[0];
@@ -9,11 +10,9 @@ type Props = Parameters<typeof Presets>[0];
 const render = (over: Partial<Props> = {}) =>
   renderToString(createElement(Presets, { current: null, busy: null, onPick: () => {}, ...over }));
 
-/** The text a button holds, tags stripped: what a screen reader names it by. */
+/** The text a button holds, tags left out: what a screen reader names it by. */
 const buttonTexts = (html: string) =>
-  [...html.matchAll(/<button[^>]*>([\s\S]*?)<\/button>/g)].map(([, inside]) =>
-    inside.replace(/<[^>]+>/g, ''),
-  );
+  [...html.matchAll(/<button[^>]*>([\s\S]*?)<\/button>/g)].map(([, inside]) => textOf(inside));
 
 describe('Presets', () => {
   it('lists every preset as a button, under its labelled heading', () => {
