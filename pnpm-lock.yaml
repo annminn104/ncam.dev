@@ -652,8 +652,8 @@ importers:
         version: 19.3.1(react@19.3.1)
     devDependencies:
       '@module-federation/vite':
-        specifier: 1.23.7
-        version: 1.23.7(typescript@5.9.3)(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.1)(yaml@2.9.1))
+        specifier: 1.23.9
+        version: 1.23.9(typescript@5.9.3)(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.1)(yaml@2.9.1))
       '@ncam/mf-remote':
         specifier: workspace:*
         version: link:../../packages/mf-remote
@@ -898,8 +898,8 @@ importers:
   packages/mf-remote:
     dependencies:
       '@module-federation/vite':
-        specifier: 1.23.7
-        version: 1.23.7(typescript@5.9.3)(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.1)(yaml@2.9.1))
+        specifier: 1.23.9
+        version: 1.23.9(typescript@5.9.3)(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.1)(yaml@2.9.1))
       dotenv:
         specifier: ^18.0.7
         version: 18.0.9
@@ -2245,8 +2245,8 @@ packages:
     resolution: {integrity: sha512-e59MfWuSssj6DoQ96JCTqdW1AXT5/XtnTl0WWd6MU1Ka434fFUGGosCLJbGNySDhHGvxQWoRWK137FXYFkYNWw==}
     engines: {node: '>=20'}
 
-  '@module-federation/dts-plugin@2.9.2':
-    resolution: {integrity: sha512-J84cRrewtUFnFdMeD/91mHtW+Toh3mAWvGnhsFAc9oEbGwqfzJEfgPJri65xdtzWcNhs1d6FImPMTvnjzOnYvA==}
+  '@module-federation/dts-plugin@2.9.3':
+    resolution: {integrity: sha512-U5H8D36rLuCTS7ZPEAfvqIp6b5OZms3PComHPzFQcg12xlUr31PPi1gd3FbjKVFFvlqyDpEiDZ355fKi9ba5zA==}
     peerDependencies:
       typescript: ^4.9.0 || ^5.0.0 || ^6.0.0 || ^7.0.0
       vue-tsc: '>=1.0.24'
@@ -2257,23 +2257,35 @@ packages:
   '@module-federation/error-codes@2.9.2':
     resolution: {integrity: sha512-MTpKubqsJSBgnuw+2Pli1kHL4INeHD5cGnHL84oRANwQAWK7b6lN3ZZTmL3FL6lYn65ImineqZNqGWBv5GQVLQ==}
 
-  '@module-federation/managers@2.9.2':
-    resolution: {integrity: sha512-VtSKLkT2EA1wqCMFXNiklC+XF+5bZPYY3sUQ9LCFHqKS7v7NOJDrwMV6Qtw3fxH4Y6Pe6P28MiU8D9dlzknCKQ==}
+  '@module-federation/error-codes@2.9.3':
+    resolution: {integrity: sha512-sXWo6XHOFKC1Dcu9DcSA1okZjtIz2y3uM+NJrAoSpeZ9QSPXielkMWT5PtG7MqGE3OQ+/HDawiLK53IOi3NHcQ==}
+
+  '@module-federation/managers@2.9.3':
+    resolution: {integrity: sha512-C9yyp/edzCYs7+yvvQv2cBRd9A5/n9RPkGhn6KMBbchMuKWyn5qbC6pbl70TAkFh3wHRqcyUCIHrMf+Fek0u4A==}
 
   '@module-federation/runtime-core@2.9.2':
     resolution: {integrity: sha512-S9roTDqLtAWaaDBuug69ZnXXGEx0pUq/yG06J759bjRgfAg2P9+dWEv1q7rB2eMIp7HH4L6s3ColDRYdL6tJ9w==}
 
+  '@module-federation/runtime-core@2.9.3':
+    resolution: {integrity: sha512-E6AjfIWFgZOEATxf+GzBIg54Ejp7QFNTxtVzwnnhEEu01dErBo7qLjJvEPXGiN5sJTNf2a4HIW/wZTM23skouQ==}
+
   '@module-federation/runtime@2.9.2':
     resolution: {integrity: sha512-1lPZVy7TkMTTBMkkjgQt7jA+9FAx226yQqEz+X0lFAIbpxIWfpzNQLD+7IydEe83ZhDJpK3cv/9bn3jjQBZeqQ==}
+
+  '@module-federation/runtime@2.9.3':
+    resolution: {integrity: sha512-VCJV1VzKk+jvt+1CcTrslbl3LAKScHFpPxKSviafpMIqeHDWIDEY7ZEbVVJl/GuUjA36R7j0QhOPEjihPcz9/A==}
 
   '@module-federation/sdk@2.9.2':
     resolution: {integrity: sha512-ILtBFPuYpVcRA/Qay1lJ2hMtZI8fDE/v1n7xiN17e5qx5rSBR3FaamTsmRpN1hIt+gVnoa76CzOP/Y73d8hHNg==}
 
-  '@module-federation/third-party-dts-extractor@2.9.2':
-    resolution: {integrity: sha512-FKJVGx+/jIe16RfmwoyIDVMPAttIFJv6AJCLkKf05IRNvI3RJFqQ1tLP1YjcfGuumCbYuWGa4QKnMla7YjVpqg==}
+  '@module-federation/sdk@2.9.3':
+    resolution: {integrity: sha512-cT5ko/JDzGrKe8N+MFPgwb07G8fzmpnZbKZjGjXvT9phagQpiOfV6WQZhu1j+HtO152Frv1vjv/1Hhg2wMUL8g==}
 
-  '@module-federation/vite@1.23.7':
-    resolution: {integrity: sha512-b60aujpV0uleW7uOqtx+jXxZk1cdydidb7ixPof/PwaL0r17mQCA1V11p48vyiP+FB94azOZRNu+LiflPpAy8w==}
+  '@module-federation/third-party-dts-extractor@2.9.3':
+    resolution: {integrity: sha512-jUWFWa5l7j2jb3JU9bfGHZ5luv6XAogMsvJ/yG59AZmhpliPozkyxYRjnbtik85IipZF4Cb06PW9qv5qRRf6OQ==}
+
+  '@module-federation/vite@1.23.9':
+    resolution: {integrity: sha512-fNAIE6z2fe/+QW2znXoJvviYXZPcPau5qqXfQ1VfV/BkdJVlyxSlOCPz5GvRiwcpa4oC/n9LlbuXNoDOajDgDQ==}
     engines: {node: ^20.19.0 || >=22.12.0}
     peerDependencies:
       vite: ^5.1.0 || ^6.0.0 || ^7.0.0 || ^8.0.0
@@ -10890,12 +10902,12 @@ snapshots:
       '@modelcontextprotocol/core': 2.3.1
       zod: 4.6.7
 
-  '@module-federation/dts-plugin@2.9.2(typescript@5.9.3)':
+  '@module-federation/dts-plugin@2.9.3(typescript@5.9.3)':
     dependencies:
-      '@module-federation/error-codes': 2.9.2
-      '@module-federation/managers': 2.9.2
-      '@module-federation/sdk': 2.9.2
-      '@module-federation/third-party-dts-extractor': 2.9.2
+      '@module-federation/error-codes': 2.9.3
+      '@module-federation/managers': 2.9.3
+      '@module-federation/sdk': 2.9.3
+      '@module-federation/third-party-dts-extractor': 2.9.3
       adm-zip: 0.6.1
       isomorphic-ws: 5.0.0(ws@8.21.3)
       typescript: 5.9.3
@@ -10907,14 +10919,21 @@ snapshots:
 
   '@module-federation/error-codes@2.9.2': {}
 
-  '@module-federation/managers@2.9.2':
+  '@module-federation/error-codes@2.9.3': {}
+
+  '@module-federation/managers@2.9.3':
     dependencies:
-      '@module-federation/sdk': 2.9.2
+      '@module-federation/sdk': 2.9.3
 
   '@module-federation/runtime-core@2.9.2':
     dependencies:
       '@module-federation/error-codes': 2.9.2
       '@module-federation/sdk': 2.9.2
+
+  '@module-federation/runtime-core@2.9.3':
+    dependencies:
+      '@module-federation/error-codes': 2.9.3
+      '@module-federation/sdk': 2.9.3
 
   '@module-federation/runtime@2.9.2':
     dependencies:
@@ -10922,15 +10941,23 @@ snapshots:
       '@module-federation/runtime-core': 2.9.2
       '@module-federation/sdk': 2.9.2
 
+  '@module-federation/runtime@2.9.3':
+    dependencies:
+      '@module-federation/error-codes': 2.9.3
+      '@module-federation/runtime-core': 2.9.3
+      '@module-federation/sdk': 2.9.3
+
   '@module-federation/sdk@2.9.2': {}
 
-  '@module-federation/third-party-dts-extractor@2.9.2': {}
+  '@module-federation/sdk@2.9.3': {}
 
-  '@module-federation/vite@1.23.7(typescript@5.9.3)(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.1)(yaml@2.9.1))':
+  '@module-federation/third-party-dts-extractor@2.9.3': {}
+
+  '@module-federation/vite@1.23.9(typescript@5.9.3)(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.1)(yaml@2.9.1))':
     dependencies:
-      '@module-federation/dts-plugin': 2.9.2(typescript@5.9.3)
-      '@module-federation/runtime': 2.9.2
-      '@module-federation/sdk': 2.9.2
+      '@module-federation/dts-plugin': 2.9.3(typescript@5.9.3)
+      '@module-federation/runtime': 2.9.3
+      '@module-federation/sdk': 2.9.3
       vite: 8.3.5(@types/node@26.6.6)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.1)(yaml@2.9.1)
     transitivePeerDependencies:
       - bufferutil
