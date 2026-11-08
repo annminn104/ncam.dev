@@ -860,7 +860,9 @@
 }
 
 /* ── help line and the way in, at the stage's foot and its middle ────────── */
-/* One line where the stage has room for it (about 520 px), else two balanced lines within it. */
+/* One line where the stage has room for it (about 520 px), else two balanced lines within it.
+   Plain from the first paint; it fades out over FADE_MS while the view is zoomed in, where its
+   words would lie over the magnified player, and back at 1×. */
 .cdp-hud {
   position: absolute;
   z-index: 3;
@@ -876,6 +878,10 @@
   text-wrap: balance;
   /* The full ink, as the loader's line: it stands on the page. */
   color: var(--cdp-ink);
+  transition: opacity 600ms ease;
+}
+.cdp-hud.is-zoomed {
+  opacity: 0;
 }
 .cdp-hud kbd {
   display: inline-block;
@@ -1227,7 +1233,8 @@
   }
   .cdp-scene,
   .cdp-loader,
-  .cdp-tracks {
+  .cdp-tracks,
+  .cdp-hud {
     transition: none;
   }
   .cdp-now__seek::-webkit-slider-thumb {

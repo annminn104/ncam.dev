@@ -344,6 +344,16 @@ describe('app.css: the view’s buttons and the help line', () => {
     expect(reduced).toMatch(/\.cdp-zoom\s*\{\s*animation:\s*none;/);
   });
 
+  it('fades the help line out while the view is zoomed in, plain from the first paint as ever', () => {
+    // Over the magnified player its words would lie on the model (the suitcase's grille at 3×).
+    const hud = rule('.cdp-hud');
+    expect(hud).not.toMatch(/opacity\s*:/);
+    expect(hud).not.toMatch(/animation\s*:/);
+    expect(hud).toMatch(new RegExp(`transition:\\s*opacity ${fadeMs}ms ease;`));
+    expect(rule('.cdp-hud.is-zoomed')).toMatch(/^\s*opacity:\s*0;\s*$/);
+    expect(reduced).toMatch(/\.cdp-hud\s*[,{][^}]*transition:\s*none/);
+  });
+
   it('dims a key at its end, which keeps its focus, and keeps it still under the pointer', () => {
     const spent =
       /\.cdp-key\[aria-disabled='true'\],\s*\.cdp-key\[aria-disabled='true'\]:hover,\s*\.cdp-key\[aria-disabled='true'\]:active\s*\{([^}]*)\}/.exec(

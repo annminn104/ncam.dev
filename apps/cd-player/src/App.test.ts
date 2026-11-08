@@ -132,15 +132,18 @@ describe('App and the view (zoom)', () => {
     // In the stage, after the help line, and only once live (read from the JSX: the server renders
     // the waiting phase).
     const stage = source.indexOf('<div className="cdp-stage">');
+    const hud = source.indexOf('<Hud camera={camera} />');
     const buttons = source.indexOf('{live && <ZoomControls camera={camera} />}');
-    expect(buttons).toBeGreaterThan(source.indexOf('<Hud />'));
-    expect(buttons).toBeGreaterThan(stage);
+    expect(hud).toBeGreaterThan(stage);
+    expect(buttons).toBeGreaterThan(hud);
     expect(buttons).toBeLessThan(source.indexOf('<div className="cdp-side">'));
   });
 
   it('hands the scene the camera’s channel, made once per mount, as it hands it the bridge', () => {
     expect(source).toMatch(/const \[camera\] = useState\(createCameraChannel\);/);
     expect(source).toMatch(/<SceneHost[^>]*\bcamera=\{camera\}/);
+    // The help line hears it too: it fades out while the view is zoomed in.
+    expect(source).toContain('<Hud camera={camera} />');
   });
 
   it('sends +, - and 0 to the camera from the page’s key handler, behind its guards', () => {

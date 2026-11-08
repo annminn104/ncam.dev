@@ -427,7 +427,7 @@ export default function App({ controller, initial = null, assetBase = '', initia
         )}
         {/* After the scene layer, so it draws over the invisible canvas and fades out with it. */}
         {showLoader && <Loader percent={percent} />}
-        <Hud />
+        <Hud camera={camera} />
         {/* Only once the scene is live, so never in the server's markup or the first paint. */}
         {live && <ZoomControls camera={camera} />}
         {!showLoader && <EnterButton phase={boot.phase} failure={boot.failure} onStart={start} />}
