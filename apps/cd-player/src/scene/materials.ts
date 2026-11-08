@@ -363,9 +363,10 @@ export function upgradeMaterials(root: Object3D): UpgradedMaterials {
     const mesh = object as Mesh;
     if (!mesh.isMesh) return;
     const source = mesh.material as MeshStandardMaterial;
+    const role = MATERIAL_ROLES[source.name] ?? 'plastic';
     let material = made.get(source.name);
     if (!material) {
-      material = makeMaterial(MATERIAL_ROLES[source.name] ?? 'plastic', source, maps);
+      material = makeMaterial(role, source, maps);
       made.set(source.name, material);
       if ((DYNAMIC_MATERIALS as readonly string[]).includes(source.name)) {
         slots[source.name as DynamicMaterial] = material as
@@ -374,8 +375,11 @@ export function upgradeMaterials(root: Object3D): UpgradedMaterials {
     }
     source.dispose();
     mesh.material = material;
-    // Glass casts no hard shadow.
-    if ((material as MeshPhysicalMaterial).transmission > 0) mesh.castShadow = false;
+    // Glass casts no hard shadow, and neither do the etched lines: three's shadow map ignores
+    // opacity, so half-opaque lines would shade the inside of the shell at full strength.
+    if ((material as MeshPhysicalMaterial).transmission > 0 || role === 'etch') {
+      mesh.castShadow = false;
+    }
   });
   return {
     slots: slots as Slots,

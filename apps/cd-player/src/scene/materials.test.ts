@@ -122,6 +122,21 @@ describe('upgradeMaterials', () => {
     upgraded.dispose();
   });
 
+  it('keeps glass and the etching out of the shadow map, and casts the rest', () => {
+    const root = new Group();
+    const [glass, etch, board] = ['door_glass', 'etch', 'board'].map((name) => {
+      const mesh = meshOf(name);
+      mesh.castShadow = true;
+      root.add(mesh);
+      return mesh;
+    });
+    const upgraded = upgradeMaterials(root);
+    expect(glass.castShadow).toBe(false);
+    expect(etch.castShadow).toBe(false);
+    expect(board.castShadow).toBe(true);
+    upgraded.dispose();
+  });
+
   it('hands each of the five printed materials to the page as a slot, and puts it on its mesh', () => {
     const root = new Group();
     const meshes = DYNAMIC_MATERIALS.map((name) => {
