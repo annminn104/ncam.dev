@@ -12,15 +12,15 @@ import { defineRemote, env } from '@ncam/mf-remote';
 import type { MountConfig, MountHandle } from '@ncam/mf-remote';
 
 export default defineRemote({
-  name: 'viktor', // federation name; env keys VIKTOR_PORT, VIKTOR_BASE
-  port: 9004, // default dev/preview port, overridden by <NAME>_PORT
+  name: 'holodex', // federation name; env keys HOLODEX_PORT, HOLODEX_BASE
+  port: 9007, // default dev/preview port, overridden by <NAME>_PORT
   exposes: {
     './mount': './src/mount.tsx',
     './ssr': './src/ssr.tsx',
     './hydrate': './src/hydrate.tsx',
   },
   plugins: [react(), tailwindcss()], // prepended before the federation plugin
-  // baseEnv: 'VIKTOR_BASE', // env var for `base`; defaults to <NAME>_BASE
+  // baseEnv: 'HOLODEX_BASE', // env var for `base`; defaults to <NAME>_BASE
 });
 
 env('HOLODEX_REMOTE_URL', 'http://localhost:9007/remoteEntry.js');
@@ -90,7 +90,7 @@ link's head; a remote that sends none keeps the host's own.
   the id then, and don't drop the environment.
 - **A remote's standalone page canonicalises to the host.** Every remote is
   also deployed on its own, and its `index.html` duplicates the host's
-  `/projects/<id>` (the registry id: `immersive-ocean`, not the federation
+  `/projects/<id>` (the registry id: `mini-store`, not the federation
   name). So its canonical, `og:url` and JSON-LD `url` are
   `%SITE_URL%/projects/<id>`, and `og:image` / `twitter:image` the host's
   `%SITE_URL%/thumbnails/<id>.jpg` (1200×630): never the remote's own domain.

@@ -14,7 +14,7 @@
  *   - Node ≥ 22.18 (imports the TypeScript registry via built-in type stripping)
  *
  *   pnpm thumbnails                      # every live project
- *   pnpm thumbnails viktor mindloop      # a subset, by registry id
+ *   pnpm thumbnails holodex chess        # a subset, by registry id
  *
  * Env:
  *   PORTFOLIO_URL        host origin (default http://localhost:9000)

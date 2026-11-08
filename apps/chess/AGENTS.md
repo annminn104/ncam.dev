@@ -4,7 +4,7 @@ Cultivation Chess — international (FIDE) chess where the pieces are floating
 cultivation treasures or, side by side, Blender-built piece sets (Holy Order, the Dark Overlord
 Court), played in one of three 3D arenas. Hot-seat or vs Stockfish. React 19 + Vite 8 + React Three
 Fiber 9 + drei 10 + chess.js, packaged as a **self-contained** React Module Federation remote
-(same model as `apps/viktor`). Port **9008**.
+(same model as `apps/holodex`). Port **9008**.
 
 ## What it exposes
 

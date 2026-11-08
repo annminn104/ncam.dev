@@ -13,7 +13,7 @@ A tiny, dependency-free, **isomorphic** logger shared by all apps.
 import { createLogger } from '@ncam/logger';
 
 const log = createLogger({ scope: 'portfolio' /*, level, console, events, eventName, prefix, sink */ });
-log.info('project.open', { id: 'toonhub' });   // → console + CustomEvent('ncam:log')
+log.info('project.open', { id: 'holodex' });   // → console + CustomEvent('ncam:log')
 log.debug(...); log.warn(...); log.error(...);
 const child = log.child('router');              // scope 'portfolio:router'
 ```
@@ -32,4 +32,4 @@ Each call emits a `LogRecord` `{ scope, level, message, data?, time }` to:
 - Level order: `debug < info < warn < error`; records below the configured
   `level` are dropped before any sink runs.
 - Apps may pass a custom `sink` (e.g. to forward to an external service) or set
-  `eventName` (toonhub uses `'toonhub:action'` to keep its action-event name).
+  `eventName` (to dispatch under a name of their own instead of `'ncam:log'`).

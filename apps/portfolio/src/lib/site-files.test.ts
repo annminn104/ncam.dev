@@ -87,11 +87,6 @@ describe('sitemapXml', () => {
     expect(locs(xml)).toEqual([
       'https://ncam.dev/',
       'https://ncam.dev/blog',
-      'https://ncam.dev/projects/toonhub',
-      'https://ncam.dev/projects/mindloop',
-      'https://ncam.dev/projects/immersive-ocean',
-      'https://ncam.dev/projects/viktor',
-      'https://ncam.dev/projects/bali',
       'https://ncam.dev/projects/holodex',
       'https://ncam.dev/projects/holodex/sets',
       'https://ncam.dev/projects/chess',
@@ -201,7 +196,6 @@ describe('llmsTxt', () => {
     expect(text).toContain('## Pages');
     expect(text).toMatch(/^- \[Home\]\(https:\/\/ncam\.dev\/\): Minh Nguyen's stacks/m);
     expect(text).toMatch(/^- \[Blog\]\(https:\/\/ncam\.dev\/blog\): Long-form write-ups/m);
-    expect(text).toContain('- [TOONHUB](https://ncam.dev/projects/toonhub): Collectible figurines');
     expect(text).toContain('- [Holodex](https://ncam.dev/projects/holodex): Pokémon TCG explorer');
     expect(text).toContain(
       '- [Cultivation Chess](https://ncam.dev/projects/chess): 3D xianxia chess',
@@ -215,7 +209,7 @@ describe('llmsTxt', () => {
     expect(text).toContain(
       '- [CD Player](https://ncam.dev/projects/cd-player): Any Spotify playlist on a suitcase CD player',
     );
-    expect(text.match(/^- \[.+\]\(https:\/\/ncam\.dev\/projects\//gm)).toHaveLength(10);
+    expect(text.match(/^- \[.+\]\(https:\/\/ncam\.dev\/projects\//gm)).toHaveLength(5);
   });
 
   it('lists the newest indexable posts on one line each, and omits the section with none', () => {

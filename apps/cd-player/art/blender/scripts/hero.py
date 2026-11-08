@@ -118,10 +118,10 @@ def suitcase_scene():
     new_scene("cd_player_suitcase", res=(1600, 1200), samples=128)
     build_materials(skin_palette(SKIN) if SKIN is not None else None)
 
-    artist = image_mat("art_disc", THUMBS + "viktor.jpg", 117, 117, coat=0.6, rough=0.3)
-    album = image_mat("art_booklet", THUMBS + "mindloop.jpg", 120, 120, coat=0.3)
+    artist = image_mat("art_disc", THUMBS + "holodex.jpg", 117, 117, coat=0.6, rough=0.3)
+    album = image_mat("art_booklet", THUMBS + "garden-home.jpg", 120, 120, coat=0.3)
     rack_art = [image_mat("art_rack_%d" % i, THUMBS + f, 117, 117, coat=0.6, rough=0.3) for i, f in enumerate(
-        ("holodex.jpg", "bali.jpg", "garden-home.jpg", "immersive-ocean.jpg", "toonhub.jpg"))]
+        ("chess.jpg", "mini-store.jpg", "garden-home.jpg", "cd-player.jpg", "holodex.jpg"))]
     covers = [image_mat("art_cover_%d" % i, THUMBS + f, 120, 120, coat=0.3) for i, f in enumerate(
         ("chess.jpg", "mini-store.jpg", "cd-player.jpg"))]
 
@@ -152,10 +152,10 @@ def clear_scene():
     new_scene("cd_player_clear", res=(1600, 1200), samples=128)
     build_clear_materials(look)
     see_through_backdrop(SC.world)
-    artist = image_mat("art_disc", THUMBS + "viktor.jpg", 117, 117, coat=0.6, rough=0.3)
-    album = image_mat("art_booklet", THUMBS + "mindloop.jpg", 120, 120, coat=0.3)
+    artist = image_mat("art_disc", THUMBS + "holodex.jpg", 117, 117, coat=0.6, rough=0.3)
+    album = image_mat("art_booklet", THUMBS + "garden-home.jpg", 120, 120, coat=0.3)
     rack_art = [image_mat("art_rack_%d" % i, THUMBS + f, 117, 117, coat=0.6, rough=0.3) for i, f in enumerate(
-        ("holodex.jpg", "bali.jpg", "garden-home.jpg", "immersive-ocean.jpg", "toonhub.jpg"))]
+        ("chess.jpg", "mini-store.jpg", "garden-home.jpg", "cd-player.jpg", "holodex.jpg"))]
     M["card_print"] = mat("card_print", (0.92, 0.9, 0.88, 1), rough=0.4)
     M["tag_print"] = mat("tag_print", (0.92, 0.9, 0.88, 1), rough=0.55)
     M["lcd_screen"] = mat("lcd_screen", lin(14, 22, 26), rough=0.2, emit=lin(*hexrgb(look["light"]["glow"])),

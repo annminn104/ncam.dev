@@ -32,7 +32,7 @@ function tcgdexAssetProxy(): Plugin {
 }
 
 // Self-contained React remote — bundles its own React (shared: {} in
-// defineRemote), same model as bali / viktor / mindloop / immersive-ocean.
+// defineRemote), same model as chess / mini-store / garden-home / cd-player.
 export default defineRemote({
   name: 'holodex',
   port: 9007,

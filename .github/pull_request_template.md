@@ -12,7 +12,7 @@
 
 ## Affected packages
 
-<!-- e.g. apps/portfolio, apps/mindloop, packages/mf-remote -->
+<!-- e.g. apps/portfolio, apps/holodex, packages/mf-remote -->
 
 ## Checklist
 

@@ -43,7 +43,7 @@ rules re-point the live token (`--bg`, `--text`, …) at one of the pair:
   own via the media query.
 - Literal `#000` inside `mask-image` / `-webkit-mask-image` is a mask, not a
   colour. Leave it.
-- The **project remotes on `.stage`** (bali, toonhub, …) keep their own art
+- The **project remotes on `.stage`** (holodex, chess, …) keep their own art
   direction and are deliberately not themed; `.stage__back` stays hard-coded dark
   because it floats over their artwork. The blog pages reuse `.stage` but are
   host chrome, so `blog.css` re-themes that button there.

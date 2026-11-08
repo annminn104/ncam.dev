@@ -31,19 +31,17 @@ const canonical = (head: ReturnType<typeof projectHead>) =>
 
 describe('isRealProjectPath', () => {
   it('treats the bare project path as real for every project', () => {
-    expect(isRealProjectPath('bali')).toBe(true);
+    expect(isRealProjectPath('chess')).toBe(true);
     expect(isRealProjectPath('holodex')).toBe(true);
-    expect(isRealProjectPath('bali', '')).toBe(true);
+    expect(isRealProjectPath('chess', '')).toBe(true);
   });
 
   it('accepts a deep link only into a route-aware remote', () => {
     expect(isRealProjectPath('holodex', 'sets/swsh3')).toBe(true);
-    // The other five render one page; the splat route answers 200 regardless.
-    expect(isRealProjectPath('bali', 'anything/at/all')).toBe(false);
-    expect(isRealProjectPath('toonhub', 'x')).toBe(false);
-    expect(isRealProjectPath('mindloop', 'x')).toBe(false);
-    expect(isRealProjectPath('immersive-ocean', 'x')).toBe(false);
-    expect(isRealProjectPath('viktor', 'x')).toBe(false);
+    // The others render one page; the splat route answers 200 regardless.
+    expect(isRealProjectPath('chess', 'anything/at/all')).toBe(false);
+    expect(isRealProjectPath('mini-store', 'x')).toBe(false);
+    expect(isRealProjectPath('garden-home', 'x')).toBe(false);
   });
 
   it('defaults to not-route-aware for an unknown project', () => {
@@ -75,9 +73,9 @@ describe('remoteHead', () => {
 
 describe('projectHead', () => {
   it('indexes the bare project page with a self canonical', () => {
-    const head = projectHead('bali');
+    const head = projectHead('chess');
     expect(metaValue(head, 'robots')?.content).toBe('index,follow');
-    expect(canonical(head)).toBe(`${SITE}/projects/bali`);
+    expect(canonical(head)).toBe(`${SITE}/projects/chess`);
   });
 
   it('gives a route-aware remote its deep link its own canonical', () => {
@@ -87,18 +85,18 @@ describe('projectHead', () => {
   });
 
   it('noindexes an invented path under a remote with no internal routes', () => {
-    // Without this every typo below /projects/bali was a distinct indexable
+    // Without this every typo below /projects/chess was a distinct indexable
     // duplicate carrying a self-referential canonical.
-    const head = projectHead('bali', 'anything/at/all');
+    const head = projectHead('chess', 'anything/at/all');
     expect(metaValue(head, 'robots')?.content).toBe('noindex');
-    expect(canonical(head)).toBe(`${SITE}/projects/bali`);
+    expect(canonical(head)).toBe(`${SITE}/projects/chess`);
   });
 
   it('points og:url at the canonical it chose, not at the requested path', () => {
-    const head = projectHead('bali', 'anything/at/all');
+    const head = projectHead('chess', 'anything/at/all');
     const og = head.meta.find((entry) => 'property' in entry && entry.property === 'og:url') as
       { property: string; content: string } | undefined;
-    expect(og?.content).toBe(`${SITE}/projects/bali`);
+    expect(og?.content).toBe(`${SITE}/projects/chess`);
   });
 
   it('still noindexes an unknown project, under the 404 title', () => {
@@ -147,39 +145,39 @@ describe('projectHead', () => {
       expect(title(projectHead('holodex', undefined, SETS))).toBe(
         'Holodex — Pokémon TCG explorer · ncam.dev',
       );
-      const bali = projectHead('bali', 'anything', SETS);
-      expect(title(bali)).toBe('Bali Adventure — Luxury travel landing page · ncam.dev');
-      expect(metaValue(bali, 'robots')?.content).toBe('noindex');
+      const chess = projectHead('chess', 'anything', SETS);
+      expect(title(chess)).toBe('Cultivation Chess — 3D xianxia chess · ncam.dev');
+      expect(metaValue(chess, 'robots')?.content).toBe('noindex');
     });
   });
 
   it('describes its own thumbnail, absolutely, rather than inherit the site image alt', () => {
     // The root route sends og.png with its own alt text; tags merge by name.
-    const head = projectHead('viktor');
-    expect(propertyValue(head, 'og:image')?.content).toBe(`${SITE}/thumbnails/viktor.jpg`);
+    const head = projectHead('chess');
+    expect(propertyValue(head, 'og:image')?.content).toBe(`${SITE}/thumbnails/chess.jpg`);
     expect(propertyValue(head, 'og:image:alt')?.content).toBe(
-      'Screenshot of Viktor. — Creative portfolio hero',
+      'Screenshot of Cultivation Chess — 3D xianxia chess',
     );
     expect(metaValue(head, 'twitter:image:alt')?.content).toBe(
-      'Screenshot of Viktor. — Creative portfolio hero',
+      'Screenshot of Cultivation Chess — 3D xianxia chess',
     );
   });
 });
 
 describe('withStageExpect', () => {
   it('holds the first paint for the end of a server-rendered stage', () => {
-    const head = withStageExpect(projectHead('viktor'), true);
+    const head = withStageExpect(projectHead('chess'), true);
     expect(head.links?.at(-1)).toEqual({
       rel: 'expect',
       href: `#${STAGE_END_ID}`,
       blocking: 'render',
     });
     // The canonical keeps its place.
-    expect(canonical(head)).toBe(`${SITE}/projects/viktor`);
+    expect(canonical(head)).toBe(`${SITE}/projects/chess`);
   });
 
   it('leaves the head alone when the stage has no server markup to wait for', () => {
-    const head = projectHead('viktor');
+    const head = projectHead('chess');
     expect(withStageExpect(head, false)).toBe(head);
   });
 });

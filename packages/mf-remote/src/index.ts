@@ -123,7 +123,7 @@ export function siteUrlPlugin(siteUrl: string): Plugin {
 }
 
 export interface RemoteOptions {
-  /** Module Federation remote name, e.g. 'mindloop'. Must be a valid identifier. */
+  /** Module Federation remote name, e.g. 'holodex'. Must be a valid identifier. */
   name: string;
   /** Default dev + preview port; overridable via the `<NAME>_PORT` env var. */
   port: number;
@@ -142,8 +142,7 @@ export interface RemoteOptions {
  * (including React, if it uses it) and exposes a `mount(el) => dispose` black
  * box. Nothing is shared across the host boundary, so there are no shared
  * singleton version/init races (e.g. React 19's "reading 'S'"): the remote runs
- * identically standalone and when mounted by the host — the same model that
- * makes `toonhub` robust.
+ * identically standalone and when mounted by the host.
  *
  * Port and base come from the root `.env` (`<NAME>_PORT`, `<NAME>_BASE`), so
  * hosts/ports are configured in one place; `SITE_URL` fills in the standalone
@@ -156,7 +155,7 @@ export function defineRemote({
   plugins = [],
   baseEnv,
 }: RemoteOptions): UserConfig {
-  const key = name.toUpperCase(); // mindloop → MINDLOOP, immersive_ocean → IMMERSIVE_OCEAN
+  const key = name.toUpperCase(); // holodex → HOLODEX, mini_store → MINI_STORE
   const resolvedPort = Number(env(`${key}_PORT`, String(port)));
   const base = env(baseEnv ?? `${key}_BASE`, '/') || '/';
   const siteUrl = resolveSiteUrl();

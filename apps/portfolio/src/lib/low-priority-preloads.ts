@@ -10,7 +10,7 @@
  * priority keeps it: a second attribute would only be a duplicate.
  *
  * A project page drops them instead. Its largest content is the remote's
- * (TOONHUB's figurine, a hero's poster), and on a slow phone every request in
+ * (a scene's poster, a hero image), and on a slow phone every request in
  * flight takes its share of the link whatever its priority: ten host chunks,
  * ~120 KB, held the remote's LCP image back by most of a second. Unpreloaded,
  * the entry script still loads them all, one import wave later, and the host

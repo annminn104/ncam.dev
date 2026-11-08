@@ -7,8 +7,8 @@ import { SITE_URL } from './site';
  * Whether a deep link below a project path is a real page of that project.
  *
  * The splat route answers 200 for any depth, so for a remote that renders a
- * single page every typo — `/projects/bali/anything/at/all` — is served as the
- * full bali stage. Left alone it would carry a self-referential canonical and
+ * single page every typo — `/projects/chess/anything/at/all` — is served as the
+ * full chess stage. Left alone it would carry a self-referential canonical and
  * become another indexable duplicate, an unbounded URL space per project.
  * Only a route-aware remote (one that implements `MountConfig.route` /
  * `MountHandle.update`) actually owns URLs down there.
@@ -108,7 +108,7 @@ export function projectHead(projectId: string, splat?: string, remote?: SsrHead)
  * {@link withStageExpect}'s `<link rel="expect" blocking="render">` names: the
  * browser paints nothing until the parser has read past the remote's whole
  * markup. A remote's first screen is often laid out from the bottom or the
- * middle (Viktor's stacks up from the bottom), so a paint of it half-streamed,
+ * middle (a hero stacked up from the bottom), so a paint of it half-streamed,
  * then another once whole, moved everything already on screen: a 0.17 layout
  * shift, on the runs a slow network split the markup. Chromium only; other
  * browsers ignore the link.

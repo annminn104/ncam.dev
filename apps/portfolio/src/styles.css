@@ -39,8 +39,8 @@ body {
   min-height: 100vh;
   overflow-x: hidden;
   background: var(--bg);
-  /* Contract with remotes: a fixed top-of-page element (e.g. bali's centred
-     navbar pill) offsets itself by `var(--stage-top-inset, <standalone value>)`
+  /* Contract with remotes: a fixed top-of-page element (e.g. Garden Home's
+     top bar) offsets itself by `var(--stage-top-inset, <standalone value>)`
      so it clears the host's fixed "← Projects" button below. */
   --stage-top-inset: 4.25rem;
 }
@@ -94,7 +94,7 @@ body {
     sans-serif;
 }
 /* Over a remote, on a phone: the pill sits on the remote's own header, whose
-   right-hand controls reach past the middle (it covered Mindloop's first social
+   right-hand controls reach past the middle (it covered a remote's own header
    link). There it keeps only the arrow, as a 40px circle, and the label is
    left to assistive tech, still the link's name. */
 @media (max-width: 767px) {

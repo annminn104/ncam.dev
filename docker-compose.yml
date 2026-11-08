@@ -10,7 +10,7 @@ name: ncam
 # portfolio service publishes. That is what lets the host fetch a remote's
 # `remoteEntry.ssr.js` and server-render it: @module-federation/vite fetches SSR
 # entries over plain http only from a loopback host, so per-container hostnames
-# (`toonhub.localhost` and the like) would leave every remote client-only.
+# (`holodex.localhost` and the like) would leave every remote client-only.
 # The host bakes these entry URLs at BUILD time: the Dockerfile's defaults.
 #
 # Opt-in gateway (nginx reverse proxy):
@@ -18,7 +18,7 @@ name: ncam
 # It fronts the SSR host on port 80 (http://localhost, http://ncam.localhost) and
 # proxies each remote on its *.localhost subdomain (see nginx/nginx.conf). A host
 # rebuilt with those port-80 remote URLs, e.g.
-# TOONHUB_REMOTE_URL=http://toonhub.localhost/remoteEntry.js, loads the remotes
+# HOLODEX_REMOTE_URL=http://holodex.localhost/remoteEntry.js, loads the remotes
 # through the gateway, but on the client only, for the reason above.
 
 services:
@@ -48,53 +48,12 @@ services:
     # a remote still booting is mounted on the client until it answers.
     ports:
       - '9000:9000'
-      - '9001:9001'
-      - '9002:9002'
-      - '9003:9003'
-      - '9004:9004'
-      - '9005:9005'
       - '9006:9006'
       - '9007:9007'
       - '9008:9008'
       - '9009:9009'
       - '9010:9010'
       - '9011:9011'
-
-  toonhub:
-    image: ncam-monorepo:latest
-    command: ['pnpm', '--filter', '@ncam/toonhub', 'preview', '--host', '0.0.0.0', '--port', '9001']
-    network_mode: service:portfolio
-
-  mindloop:
-    image: ncam-monorepo:latest
-    command:
-      ['pnpm', '--filter', '@ncam/mindloop', 'preview', '--host', '0.0.0.0', '--port', '9002']
-    network_mode: service:portfolio
-
-  immersive-ocean:
-    image: ncam-monorepo:latest
-    command:
-      [
-        'pnpm',
-        '--filter',
-        '@ncam/immersive-ocean',
-        'preview',
-        '--host',
-        '0.0.0.0',
-        '--port',
-        '9003',
-      ]
-    network_mode: service:portfolio
-
-  viktor:
-    image: ncam-monorepo:latest
-    command: ['pnpm', '--filter', '@ncam/viktor', 'preview', '--host', '0.0.0.0', '--port', '9004']
-    network_mode: service:portfolio
-
-  bali:
-    image: ncam-monorepo:latest
-    command: ['pnpm', '--filter', '@ncam/bali', 'preview', '--host', '0.0.0.0', '--port', '9005']
-    network_mode: service:portfolio
 
   profile:
     image: ncam-monorepo:latest
@@ -192,11 +151,6 @@ services:
       - '80:80'
     depends_on:
       - portfolio
-      - toonhub
-      - mindloop
-      - immersive-ocean
-      - viktor
-      - bali
       - profile
       - holodex
       - chess
