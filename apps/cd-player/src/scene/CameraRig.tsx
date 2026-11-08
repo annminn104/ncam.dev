@@ -137,10 +137,6 @@ export function CameraRig({ model, channel }: { model: ModelId; channel: CameraC
     const reset = () => {
       if (!interaction.controlActive) recentre();
     };
-    // A plain wheel scrolls the page where it can that way (a phone's, a narrow window's); Ctrl or
-    // ⌘ with the wheel, and a trackpad's pinch (a wheel with ctrlKey), always zoom. A stream of
-    // events keeps its first choice (wheel.ts wheelStep), and a sideways one is the page's.
-    let stream: WheelStream | null = null;
     // Safari's trackpad pinch is a run of gesture events (GestureEvent), which no other browser
     // sends: its scale's steps zoom about the fingers. An iPhone's touch pinch sends them beside
     // its touches, which already pinch, so they then only keep the page from zooming. Not tried in
@@ -163,6 +159,10 @@ export function CameraRig({ model, channel }: { model: ModelId; channel: CameraC
       event.preventDefault();
       gestureScale = null;
     };
+    // A plain wheel scrolls the page where it can that way (a phone's, a narrow window's); Ctrl or
+    // ⌘ with the wheel, and a trackpad's pinch (a wheel with ctrlKey), always zoom. A stream of
+    // events keeps its first choice (wheel.ts wheelStep), and a sideways one is the page's.
+    let stream: WheelStream | null = null;
     const wheel = (event: WheelEvent) => {
       // A pinch Safari is already sending as gesture events never zooms twice.
       if (gestureScale !== null && event.ctrlKey) {
