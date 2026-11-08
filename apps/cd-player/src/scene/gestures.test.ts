@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createGestures } from './gestures';
+import { createGestures, gestureFactor } from './gestures';
 import { DOUBLE_TAP_MS } from './orbit';
 
 const touch = (id: number, x: number, y: number) => ({ id, type: 'touch', x, y });
@@ -173,5 +173,22 @@ describe('gestures: a pinch', () => {
     expect(gestures.down(touch(2, 300, 300), 0, true)).toBe('press');
     expect(gestures.pinching).toBe(false);
     expect(gestures.move(touch(2, 320, 300), false)).toEqual({ kind: 'orbit', dx: 20, dy: 0 });
+  });
+});
+
+describe('gestureFactor: Safari’s trackpad pinch', () => {
+  it('zooms by the ratio of successive scales, which start from 1 at gesturestart', () => {
+    expect(gestureFactor(1, 1.2)).toBeCloseTo(1.2, 12);
+    expect(gestureFactor(1.2, 1.5)).toBeCloseTo(1.25, 12);
+    expect(gestureFactor(1.5, 0.75)).toBeCloseTo(0.5, 12);
+    // The steps multiply to the gesture's whole scale, as the fingers spread.
+    expect(gestureFactor(1, 1.2) * gestureFactor(1.2, 1.5)).toBeCloseTo(1.5, 12);
+  });
+
+  it('zooms nowhere for a scale that is not a positive number', () => {
+    expect(gestureFactor(1, 0)).toBe(1);
+    expect(gestureFactor(0, 1.2)).toBe(1);
+    expect(gestureFactor(1, Number.NaN)).toBe(1);
+    expect(gestureFactor(1, -2)).toBe(1);
   });
 });

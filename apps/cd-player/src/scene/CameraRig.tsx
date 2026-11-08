@@ -3,7 +3,7 @@ import { useEffect, useRef } from 'react';
 import type { CameraChannel, CameraCommand } from '../camera-channel';
 import type { ModelId } from '../models';
 import { frameForViewport, nearFor, panKeeping, type CanvasPoint } from './framing';
-import { createGestures, type Gesture, type PointerAt } from './gestures';
+import { createGestures, gestureFactor, type Gesture, type PointerAt } from './gestures';
 import { interaction, releaseLost } from './interaction';
 import { dragOrbit, INITIAL_ORBIT, resetOrbit, stepOrbit, type Orbit } from './orbit';
 import { SCENE_PROFILES } from './profiles';
@@ -17,6 +17,14 @@ import {
   zoomLimits,
   type Zoom,
 } from './zoom';
+
+/** What the camera reads of Safari's GestureEvent, which TypeScript's DOM types do not have. */
+interface SafariGesture {
+  /** The fingers' spread since gesturestart, which is 1. */
+  scale: number;
+  clientX: number;
+  clientY: number;
+}
 
 /** A pointer event as the gestures read it. */
 const pointerAt = (event: PointerEvent): PointerAt => ({
@@ -133,7 +141,34 @@ export function CameraRig({ model, channel }: { model: ModelId; channel: CameraC
     // ⌘ with the wheel, and a trackpad's pinch (a wheel with ctrlKey), always zoom. A stream of
     // events keeps its first choice (wheel.ts wheelStep), and a sideways one is the page's.
     let stream: WheelStream | null = null;
+    // Safari's trackpad pinch is a run of gesture events (GestureEvent), which no other browser
+    // sends: its scale's steps zoom about the fingers. An iPhone's touch pinch sends them beside
+    // its touches, which already pinch, so they then only keep the page from zooming. Not tried in
+    // a real Safari here.
+    let gestureScale: number | null = null;
+    const gestureStart = (event: Event) => {
+      event.preventDefault();
+      gestureScale = 1;
+    };
+    const gestureChange = (event: Event) => {
+      event.preventDefault();
+      const { scale, clientX, clientY } = event as Event & SafariGesture;
+      if (gestureScale !== null && !gestures.touching) {
+        const point = pointAt(clientX, clientY);
+        zoomAt(gestureFactor(gestureScale, scale), point, point);
+      }
+      gestureScale = scale;
+    };
+    const gestureEnd = (event: Event) => {
+      event.preventDefault();
+      gestureScale = null;
+    };
     const wheel = (event: WheelEvent) => {
+      // A pinch Safari is already sending as gesture events never zooms twice.
+      if (gestureScale !== null && event.ctrlKey) {
+        event.preventDefault();
+        return;
+      }
       const { deltaX, deltaY, timeStamp: at } = event;
       const zoomKey = event.ctrlKey || event.metaKey;
       const step = wheelStep(stream, { deltaX, deltaY, zoomKey, at }, () =>
@@ -154,6 +189,12 @@ export function CameraRig({ model, channel }: { model: ModelId; channel: CameraC
     element.addEventListener('dblclick', reset);
     // Not passive: a wheel that zooms keeps the page from scrolling or zooming with it.
     element.addEventListener('wheel', wheel, { passive: false });
+    const safari = 'GestureEvent' in window;
+    if (safari) {
+      element.addEventListener('gesturestart', gestureStart);
+      element.addEventListener('gesturechange', gestureChange);
+      element.addEventListener('gestureend', gestureEnd);
+    }
     return () => {
       offCommand();
       element.removeEventListener('pointerdown', down);
@@ -162,6 +203,11 @@ export function CameraRig({ model, channel }: { model: ModelId; channel: CameraC
       window.removeEventListener('pointercancel', cancel);
       element.removeEventListener('dblclick', reset);
       element.removeEventListener('wheel', wheel);
+      if (safari) {
+        element.removeEventListener('gesturestart', gestureStart);
+        element.removeEventListener('gesturechange', gestureChange);
+        element.removeEventListener('gestureend', gestureEnd);
+      }
       interaction.pinching = false;
       // The next scene starts at 1×.
       channel.setLimits(zoomLimits(INITIAL_ZOOM));

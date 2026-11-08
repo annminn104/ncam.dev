@@ -67,6 +67,15 @@ interface Pinch {
 
 const NONE: Gesture = { kind: 'none' };
 
+/**
+ * The zoom factor between two of Safari's trackpad-pinch events (GestureEvent's `scale`, which
+ * starts at 1 at gesturestart and follows the fingers' spread): their ratio, or 1 for a scale that
+ * is not a positive number.
+ */
+export function gestureFactor(previous: number, scale: number): number {
+  return previous > 0 && scale > 0 ? scale / previous : 1;
+}
+
 export function createGestures(): Gestures {
   let press: Press | null = null;
   // The last touch that ended as a tap, for the next one to make a double tap with.
