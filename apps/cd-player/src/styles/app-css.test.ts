@@ -99,6 +99,12 @@ describe('app.css: the glass panel', () => {
     expect(glass).toMatch(/background:\s*var\(--cdp-panel\);/);
     expect(glass).toMatch(frost);
     expect(rule(".cdp-gate[role='alert']")).toMatch(frost);
+    // The view's buttons stand on a small panel of the same glass.
+    const zoom = rule('.cdp-zoom');
+    expect(zoom).toMatch(frost);
+    expect(zoom).toMatch(
+      /background:\s*var\(--cdp-panel\);\s*border:\s*1px solid var\(--cdp-edge\);/,
+    );
   });
 
   it('frosts the picker’s popover too, whiter, so the presets under it never show through', () => {
@@ -115,7 +121,7 @@ describe('app.css: the glass panel', () => {
   it('makes the glass all but opaque where the visitor asks for less transparency', () => {
     const opaque = block('(prefers-reduced-transparency: reduce)');
     expect(opaque).toMatch(
-      /\.cdp-bar::before,\s*\.cdp-tracks::before,\s*\.cdp-now::before,\s*\.cdp-gate\[role='alert'\]\s*\{\s*background:\s*rgb\(255 255 255 \/ 0\.94\);/,
+      /\.cdp-bar::before,\s*\.cdp-tracks::before,\s*\.cdp-now::before,\s*\.cdp-gate\[role='alert'\],\s*\.cdp-zoom\s*\{\s*background:\s*rgb\(255 255 255 \/ 0\.94\);/,
     );
   });
 
@@ -311,6 +317,40 @@ describe('app.css: the layout', () => {
     // `rule` would find the panels' shared rule, whose selector list ends with `.cdp-now {`.
     expect(css).toMatch(/\n\.cdp-now \{\s*flex:\s*none;/);
     expect(rule('.cdp-tracks')).toMatch(/flex:\s*1;\s*min-height:\s*0;/);
+  });
+});
+
+describe('app.css: the view’s buttons and the help line', () => {
+  it('wraps the help line to two balanced lines within the stage, never past it', () => {
+    // 521 px on one line: the three columns' stage is 321 to 500 px wide below 1281 px.
+    const hud = rule('.cdp-hud');
+    expect(hud).toMatch(/width:\s*max-content;\s*max-width:\s*100%;/);
+    expect(hud).toMatch(/text-align:\s*center;\s*text-wrap:\s*balance;/);
+    expect(hud).not.toMatch(/white-space:\s*nowrap/);
+  });
+
+  it('stands them at the stage’s bottom-right, above the help line’s two lines where it shows', () => {
+    // Two lines of 19 px (the keys' chips set the line) and a gap.
+    expect(rule('.cdp-zoom')).toMatch(
+      /position:\s*absolute;\s*z-index:\s*3;\s*right:\s*0;\s*bottom:\s*48px;/,
+    );
+    // Where the help line is hidden, in the corner itself.
+    expect(inner(medium, '.cdp-hud')).toMatch(/display:\s*none;/);
+    expect(inner(medium, '.cdp-zoom')).toMatch(/bottom:\s*0;/);
+  });
+
+  it('fades them in with the canvas, over FADE_MS, and not under reduced motion', () => {
+    expect(rule('.cdp-zoom')).toMatch(new RegExp(`animation:\\s*cdp-fade ${fadeMs}ms ease both;`));
+    expect(reduced).toMatch(/\.cdp-zoom\s*\{\s*animation:\s*none;/);
+  });
+
+  it('dims a key at its end, which keeps its focus, and keeps it still under the pointer', () => {
+    const spent =
+      /\.cdp-key\[aria-disabled='true'\],\s*\.cdp-key\[aria-disabled='true'\]:hover,\s*\.cdp-key\[aria-disabled='true'\]:active\s*\{([^}]*)\}/.exec(
+        css,
+      )?.[1];
+    expect(spent).toMatch(/background:\s*var\(--cdp-control\);/);
+    expect(spent).toMatch(/cursor:\s*default;\s*opacity:\s*0\.55;/);
   });
 });
 

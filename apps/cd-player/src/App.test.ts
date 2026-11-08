@@ -9,6 +9,7 @@ import { LOOK_SCRIPT } from './persist';
 import type { InitialData } from './playback/engine';
 import { createRouteController } from './route-controller';
 import { DEFAULT_SKIN, skinById } from './skins';
+import { textOf } from './testing/markup';
 
 const initial: InitialData = {
   ref: { type: 'playlist', id: '37i9dQZEVXbMDoHDwVN2tF' },
@@ -112,6 +113,30 @@ describe('App (the layout)', () => {
 
 describe('App and the view (zoom)', () => {
   const source = readFileSync(new URL('./App.tsx', import.meta.url), 'utf8');
+
+  it('says how to zoom on the help line', () => {
+    const html = renderToString(
+      createElement(App, { controller: createRouteController({ route: '/' }), initial }),
+    );
+    expect(textOf(/<p class="cdp-hud">[\s\S]*?<\/p>/.exec(html)?.[0] ?? '')).toBe(
+      'Space play or pause · N next · P previous · drag to look around · scroll or pinch to zoom',
+    );
+  });
+
+  it('leaves the view’s buttons out of the server’s markup: they come once the scene is live', () => {
+    const html = renderToString(
+      createElement(App, { controller: createRouteController({ route: '/' }), initial }),
+    );
+    expect(html).not.toContain('cdp-zoom');
+    expect(html).not.toContain('Zoom in');
+    // In the stage, after the help line, and only once live (read from the JSX: the server renders
+    // the waiting phase).
+    const stage = source.indexOf('<div className="cdp-stage">');
+    const buttons = source.indexOf('{live && <ZoomControls camera={camera} />}');
+    expect(buttons).toBeGreaterThan(source.indexOf('<Hud />'));
+    expect(buttons).toBeGreaterThan(stage);
+    expect(buttons).toBeLessThan(source.indexOf('<div className="cdp-side">'));
+  });
 
   it('hands the scene the camera’s channel, made once per mount, as it hands it the bridge', () => {
     expect(source).toMatch(/const \[camera\] = useState\(createCameraChannel\);/);

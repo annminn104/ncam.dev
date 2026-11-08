@@ -52,6 +52,7 @@ import { Loader } from './shell/Loader';
 import { NowPlaying } from './shell/NowPlaying';
 import { SceneHost } from './shell/SceneHost';
 import { Tracklist } from './shell/Tracklist';
+import { ZoomControls } from './shell/ZoomControls';
 import { createSpotifyClient } from './spotify/client';
 import { linkErrorMessage, parseSpotifyLink } from './spotify/link';
 import {
@@ -426,6 +427,8 @@ export default function App({ controller, initial = null, assetBase = '', initia
         {/* After the scene layer, so it draws over the invisible canvas and fades out with it. */}
         {showLoader && <Loader percent={percent} />}
         <Hud />
+        {/* Only once the scene is live, so never in the server's markup or the first paint. */}
+        {live && <ZoomControls camera={camera} />}
         {!showLoader && <EnterButton phase={boot.phase} failure={boot.failure} onStart={start} />}
       </div>
       {/* What plays over the tracklist: a column beside the stage, the phone's foot. */}

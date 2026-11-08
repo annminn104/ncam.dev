@@ -860,18 +860,22 @@
 }
 
 /* ── help line and the way in, at the stage's foot and its middle ────────── */
+/* One line where the stage has room for it (about 520 px), else two balanced lines within it. */
 .cdp-hud {
   position: absolute;
   z-index: 3;
   left: 50%;
   bottom: 0;
+  width: max-content;
+  max-width: 100%;
   margin: 0;
   transform: translateX(-50%);
   font-size: 12px;
   line-height: 18px;
+  text-align: center;
+  text-wrap: balance;
   /* The full ink, as the loader's line: it stands on the page. */
   color: var(--cdp-ink);
-  white-space: nowrap;
 }
 .cdp-hud kbd {
   display: inline-block;
@@ -885,6 +889,36 @@
   background: var(--cdp-panel);
   border: 1px solid var(--cdp-line);
   border-radius: var(--cdp-radius-control);
+}
+/* The view's buttons, Zoom out, Zoom in and Reset view, at the stage's bottom-right corner once the
+   scene is live: the card's square keys on a small glass panel, fading in with the canvas. Where
+   the help line shows (the three columns), above its two lines (19 px each); in the corner where it
+   is hidden (below). */
+.cdp-zoom {
+  position: absolute;
+  z-index: 3;
+  right: 0;
+  bottom: 48px;
+  display: flex;
+  gap: 6px;
+  padding: 5px;
+  background: var(--cdp-panel);
+  border: 1px solid var(--cdp-edge);
+  border-radius: var(--cdp-radius);
+  box-shadow: 0 12px 36px var(--cdp-shadow);
+  -webkit-backdrop-filter: blur(24px) saturate(1.8);
+  backdrop-filter: blur(24px) saturate(1.8);
+  animation: cdp-fade 600ms ease both;
+}
+/* A key at its end says so (aria-disabled, so it keeps the keyboard's focus) and does not answer
+   the pointer. */
+.cdp-key[aria-disabled='true'],
+.cdp-key[aria-disabled='true']:hover,
+.cdp-key[aria-disabled='true']:active {
+  background: var(--cdp-control);
+  border-color: var(--cdp-line);
+  cursor: default;
+  opacity: 0.55;
 }
 .cdp-gate {
   position: absolute;
@@ -981,6 +1015,10 @@
   }
   .cdp-hud {
     display: none;
+  }
+  /* With no help line, the view's buttons take the stage's very corner. */
+  .cdp-zoom {
+    bottom: 0;
   }
   /* The presets as one row of cards that scrolls sideways, fading out at its right edge, with a thin
      scrollbar for a mouse's wheel to lack; the end padding is the fade's width, so the last card
@@ -1174,7 +1212,8 @@
   .cdp-bar::before,
   .cdp-tracks::before,
   .cdp-now::before,
-  .cdp-gate[role='alert'] {
+  .cdp-gate[role='alert'],
+  .cdp-zoom {
     background: rgb(255 255 255 / 0.94);
   }
 }
@@ -1182,7 +1221,8 @@
 @media (prefers-reduced-motion: reduce) {
   .cdp-backdrop__layer.is-entering,
   .cdp-eq span,
-  .cdp-loader__disc {
+  .cdp-loader__disc,
+  .cdp-zoom {
     animation: none;
   }
   .cdp-scene,
