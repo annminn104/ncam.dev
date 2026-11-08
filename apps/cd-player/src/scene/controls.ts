@@ -1,5 +1,6 @@
 import type { PlayerAction } from '../actions';
 import type { RequiredNode } from './contract';
+import { TAP_SLOP_PX } from './orbit';
 
 /** The deck's keys: the `btn_` nodes of the model contract (src/scene/contract.ts). */
 export type ButtonNode = Extract<RequiredNode, `btn_${string}`>;
@@ -34,6 +35,33 @@ export function hitFor(object: Named | null): Hit | null {
     if (name === 'knob') return { kind: 'knob' };
   }
   return null;
+}
+
+/**
+ * Whether a press fires a key as it goes down: a mouse's or a pen's does. A touch's fires only as
+ * it lifts, if it stayed a tap (`stillTap`), since a pinch's first finger may land on a key.
+ */
+export function pressesOnDown(pointerType: string): boolean {
+  return pointerType !== 'touch';
+}
+
+/** A touch on a key, waiting to lift. */
+export interface KeyTouch {
+  id: number;
+  node: ButtonNode;
+  /** Where it went down (CSS px). */
+  x: number;
+  y: number;
+  /** interaction.pinches as it went down: a pinch begun since lets go of it. */
+  pinches: number;
+}
+
+/**
+ * Whether `touch`, seen at (x, y) with `pinches` pinches begun so far, is still a tap: within the
+ * slop of where it went down (a drag presses nothing) and no pinch begun since.
+ */
+export function stillTap(touch: KeyTouch, x: number, y: number, pinches: number): boolean {
+  return pinches === touch.pinches && Math.hypot(x - touch.x, y - touch.y) <= TAP_SLOP_PX;
 }
 
 /** The iFrame API has no volume, so the knob scrubs: one full turn is this much time. */
