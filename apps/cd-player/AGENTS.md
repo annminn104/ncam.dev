@@ -305,10 +305,12 @@ at its first second, since a restart would play it.
 
 Keyboard (`App.tsx`, the keys mapped by `keyCommand` in `src/keys.ts`): Space plays or pauses, N
 and P change tracks, + or = zooms in, - or _ zooms out and 0 resets the view (the zoom and the
-orbit, through the camera channel: see "The scene"), never with a modifier (Ctrl and + is the
-browser's own zoom) or while focus is in a field or on a button (so Space on a button, or on the
-slider, is the browser's own), and a held key is one press. Every music action from the DOM also
-starts the scene while it waits; the view's keys do nothing while no scene runs.
+orbit, through the camera channel: see "The scene"), never with Ctrl, ⌘ or Alt (Ctrl and + is the
+browser's own zoom; Shift is how + and _ are typed) or while focus is in a field or on a button (so
+Space on a button, or on the slider, is the browser's own), and a held key is one press. Every
+music action from the DOM also starts the scene while it waits; the view's keys, like its buttons,
+do nothing until the scene is live (the camera listens while the scene still boots unseen, which
+would come live zoomed).
 
 **The card's controls** (`src/shell/NowPlaying.tsx`) give every 3D control a DOM equivalent, for the
 keyboard, a screen reader and a phone. The head has Previous, Play or Pause and Next (32 px square
@@ -640,8 +642,10 @@ The engine fetches the art of the current track and the next five (`PREFETCH` in
 every slot prints its track's art once it arrives.
 
 **Controls, the orbit and the zoom** (`src/scene/controls.ts`, `useControls.ts`, `interaction.ts`,
-`orbit.ts`, `zoom.ts`, `wheel.ts`, `CameraRig.tsx`, and `src/camera-channel.ts` on the shell's
-side):
+`orbit.ts`, `zoom.ts`, `wheel.ts`, `gestures.ts`, `CameraRig.tsx`, and `src/camera-channel.ts` on
+the shell's side). The canvas's pointer gestures (the drag, the double tap, the pinch) are
+`gestures.ts`'s, a pure tracker that `CameraRig` feeds its pointer events and whose answers (an
+orbit step, a pinch's factor and midpoints, a recentre) it carries out:
 
 - **The deck keys** press on the **primary button** (or a touch), and only the nearest mesh under
   the pointer counts: `btn_prev`, `btn_next`, `btn_play` (play or pause), `btn_stop`, `btn_rpt`
@@ -658,12 +662,13 @@ side):
   down (a native menu took the release), or a touch's turn that becomes a pinch puts the knob back
   where the turn began and seeks nothing. The card's Seek slider is its DOM equivalent.
 - **A drag elsewhere orbits the view** (the primary button or a touch), within ±25° of yaw and ±10°
-  of pitch, eased (`orbit.ts`). It **recentres, the zoom too, on a mouse double-click, or a touch
-  double tap** (two taps within 350 ms and 30 px, neither moving more than 10 px), unless that lands
-  on a control. `interaction.controlActive` tells the camera that the latest pointerdown went to a
-  key or the knob (R3F's handler runs after the camera's), so that press neither orbits nor
-  recentres, a touch's as much as a mouse's; a mouse release that was lost (`releaseLost`) disarms
-  both drags.
+  of pitch, eased (`orbit.ts`); the turn is divided by the zoom on screen (`dragOrbit`), so a
+  zoomed view swings at 1×'s rate for the same drag. It **recentres, the zoom too, on a mouse
+  double-click, or a touch double tap** (two taps within 350 ms and 30 px, neither moving more
+  than 10 px), unless that lands on a control. `interaction.controlActive` tells the camera that
+  the latest pointerdown went to a key or the knob (R3F's handler runs after the camera's), so
+  that press neither orbits nor recentres, a touch's as much as a mouse's; a mouse release that
+  was lost (`releaseLost`) disarms both drags.
 - **The zoom** (`zoom.ts`, pure): from 1× (the hero framing, which never gets smaller) to 3×
   (`ZOOM_MIN`, `ZOOM_MAX`), a step being ×1.25 (`ZOOM_STEP`). **The lens magnifies** (the camera's
   `zoom`): the camera keeps the fitted distance, so the near and far planes and the depth buffer's
@@ -683,20 +688,32 @@ side):
   where the view is going (the targets, the orbit's included), so wheel notches in a row add up as
   if each were instant.
 - **The wheel** over the canvas zooms (`wheel.ts`). One event goes one step at most, so a mouse
-  wheel's notch (100 or 120 px, three lines, or macOS's 4.000244140625 px) is a step; smaller deltas
-  zoom by exp(−px · 0.01), which follows a trackpad pinch's fingers exactly (Chrome sends a pinch as
-  a ctrl-wheel of −100·ln(scale)). Where the page can scroll the wheel's way (an `auto`, `scroll` or
-  `overlay` ancestor of the canvas with a pixel of room that way, or the page itself unless the root
-  or the body hides or clips its overflow: the phone layout's page, the sideways layout's root), a
-  plain wheel scrolls it, and only Ctrl or ⌘ with the wheel, or a trackpad pinch, zooms
-  (`scrollsFirst`, `scrollersOf`). The listener is not passive, and calls `preventDefault` only when
-  it zooms.
+  wheel's notch (100 or 120 px, three lines, or macOS's 4.000244140625 px) is a step; smaller
+  deltas zoom by exp(−px · 0.01), which follows a trackpad pinch's fingers exactly (Chrome sends a
+  pinch as a ctrl-wheel of −100·ln(scale)). Where the page can scroll the wheel's way (an `auto`,
+  `scroll` or `overlay` ancestor of the canvas with a pixel of room that way, or the page itself
+  unless the root or the body hides or clips its overflow: the phone layout's page, the sideways
+  layout's root), a plain wheel scrolls it, and only Ctrl or ⌘ with the wheel, or a trackpad pinch,
+  zooms (`scrollsFirst`, `scrollersOf`). **A stream keeps its first choice** (`wheelStep`): events
+  less than 250 ms apart (`WHEEL_STREAM_MS`) are one stream, and one that yielded to the page keeps
+  yielding, so a flick's momentum that carries on after the page has reached its end never turns
+  into a zoom; one that zoomed keeps zooming; a fresh stream asks the page anew. Ctrl, ⌘ or a
+  pinch always zooms, and the stream zooms on. A plain wheel that goes more sideways than up or
+  down (a diagonal or sideways swipe) is the page's: it never zooms. The listener is not passive,
+  and calls `preventDefault` only when it zooms.
 - **A two-finger pinch** on the canvas zooms round the fingers' midpoint, and moving the midpoint
   pans the view with it. A second touch on the canvas makes a pinch (a third does nothing): it ends
   a one-finger drag, is never a tap and never counts toward a double tap, and the touches still down
-  when it ends neither orbit nor tap. The camera says so through `interaction` (`pinching` while it
-  lasts, `pinches` counting those begun), which the controls read: a touch that lands during one
-  presses nothing, and a key's touch or a knob's turn that saw one begin lets go.
+  when it ends neither orbit nor tap; a gesture's first touch (`isPrimary`) starts afresh, whatever
+  a lost end left listed. The camera says so through `interaction` (`pinching` while it lasts,
+  `pinches` counting those begun), which the controls read: a touch that lands during one presses
+  nothing, and a key's touch or a knob's turn that saw one begin lets go (`pinchedSince`).
+- **Safari's trackpad pinch** is a run of gesture events (`gesturestart`, `gesturechange`,
+  `gestureend`, which no other browser sends), not a wheel: where the browser has `GestureEvent`,
+  the canvas keeps them from the page and zooms by the ratio of successive scales
+  (`gestureFactor`) about the fingers, and a ctrl wheel during a gesture never zooms twice. An
+  iPhone's touch pinch sends them beside its touches, which already pinch, so there they only keep
+  the page still. This has not been tried in a real Safari (only the factor is tested).
 - **The camera channel** (`src/camera-channel.ts`, three-free and outside `scene/`; App makes one
   per mount, as it makes the bridge, and hands it to the scene as `PlayerSceneProps.camera`) carries
   the view's buttons and keys to the camera: `zoom-in` and `zoom-out` (a step toward the view's
@@ -712,9 +729,9 @@ side):
 - `.cdp-canvas` sets `touch-action: none` and `user-select: none`.
 
 **The one framing rule** (`src/scene/framing.ts`):
-`frameForViewport(width, height, yaw, pitch, model, pan)` and `isWide(width)` (above 820 px the scene
-draws as on a desktop; the layout's own breakpoints are the stylesheet's). The canvas fills the
-stage alone (`.cdp-stage`, see "The look"), which no panel covers, so the frame aims at the
+`frameForViewport(width, height, yaw, pitch, model, pan)` and `isWide(width)` (above 820 px the
+scene draws as on a desktop; the layout's own breakpoints are the stylesheet's). The canvas fills
+the stage alone (`.cdp-stage`, see "The look"), which no panel covers, so the frame aims at the
 profile's `target` from its `direction` and stands as far back (`frameDistance`) as a box of the
 profile's half-width `across` and half-height `up` round that aim asks for the canvas's shape: the
 player sits in the middle of whatever the layout leaves it. The suitcase's two are equal, 0.285 m,
@@ -817,8 +834,9 @@ is drawn. The boot's stall watch ends as its model takes the stage (see "Hand-ov
 in the rack are instant (the rig jumps to its end, the Clear's door shut, and the music still
 waits a 300 ms beat, `REDUCED_MOTION_MS`); the backdrop's cross-fade, the tracklist's equaliser,
 the loader's spin, the canvas's fade-in (and the loader's fade-out, and the view's buttons'
-fade-in) and the phone sheet's slide are off (`src/styles/app.css`). The disc still spins while a
-track plays, and the orbit and the zoom still ease.
+fade-in), the help line's fade as the view zooms and the phone sheet's slide are off
+(`src/styles/app.css`). The disc still spins while a track plays, and the orbit and the zoom still
+ease.
 
 ## Personalisation
 
@@ -958,7 +976,10 @@ The help line (`src/shell/Hud.tsx`) ends "drag to look around · scroll or pinch
 line it is 521 px, wider than the three columns' stage below 1281 px wide (321 to 500 px). There it
 wraps to two balanced lines within the stage (`text-wrap: balance`), and the buttons stand above
 those two lines (48 px up). In every other layout the help line is hidden, and the buttons take the
-corner itself.
+corner itself. While the view is zoomed in (the camera channel's zoom above 1×, its `is-zoomed`),
+the help line fades out over `FADE_MS`, since its words would lie over the magnified player (at
+1440 × 900 and 3× they crossed the suitcase's grille), and it comes back at 1×. The server and a
+hydration's first render stand at 1×, so its first paint is plain, never entering at opacity 0.
 
 **The layout** is a grid on `.cdp-root`, `100dvh` high with its padding inside it (`box-sizing:
 border-box`, or the columns would run under the bottom edge). `App` renders the link bar, then
@@ -1438,8 +1459,10 @@ Unit tests (`src/**/*.test.ts`, node environment, run by the root `pnpm test`):
   stage when a change fails, the boot's stall watch ended as its model takes the stage, and the
   root's accent from the model on show once live; and the help line's words, the view's buttons
   left out of the server's markup and rendered in the stage after the help line once live, the
-  camera channel made once and handed to the scene, and the view's keys sent to it behind the key
-  handler's guards), `model-keeper.test.ts` (a model chosen while
+  camera channel made once and handed to the scene and the help line, and the view's keys sent to
+  it behind the key handler's guards and only once the scene is live), `shell/Hud.test.ts` (the
+  help line's words, plain at 1× as the server draws it and `is-zoomed` once the view is zoomed
+  in), `model-keeper.test.ts` (a model chosen while
   nothing is on the stage kept at once, the boot's own model never, a change once it is drawn and
   never as it is chosen, one chosen between the boot's first swap and its frames counted as a
   change and going back to the boot's model, a failed change kept never, a start from nothing once
@@ -1483,7 +1506,8 @@ Unit tests (`src/**/*.test.ts`, node environment, run by the root `pnpm test`):
   over the panels while it is open, the Clear's 28 px dots and the chosen one's ring; the view's
   buttons on their glass, above the help line's two lines or in the corner, fading in over
   `FADE_MS` but not under reduced motion, a key at its end dimmed; the help line wrapped within the
-  stage);
+  stage, plain from the first paint and fading out over `FADE_MS` while the view is zoomed in, not
+  under reduced motion);
 - routes and personalisation: `routes.test.ts`, `route-controller.test.ts`, `persist.test.ts`
   (the saved collection, skin, model and Clear colours, junk and blocked storage, `readLookState`,
   and `LOOK_SCRIPT` run in a VM: every skin's pair on the suitcase and on any saved model but the
@@ -1542,13 +1566,21 @@ Unit tests (`src/**/*.test.ts`, node environment, run by the root `pnpm test`):
   step against the disc's layers, and the zoom: the lens, the pan, `panKeeping`, and the boxes'
   clearance, the canvas and the foil at 3× with the pan at its extremes; see "The scene"),
   `controls.test.ts` (besides the keys and the knob: a mouse or a pen pressing on its way down, a
-  touch on its way up within the slop and with no pinch begun since), `vu.test.ts` (the Clear's
-  `vuColours` too), `vu-materials.test.ts`, `interaction.test.ts`, `orbit.test.ts`, `zoom.test.ts`
+  touch on its way up within the slop and with no pinch begun since, `pinchedSince` letting a key's
+  touch or a knob's turn go though the second finger lifted first), `vu.test.ts` (the Clear's
+  `vuColours` too), `vu-materials.test.ts`, `interaction.test.ts`, `orbit.test.ts` (with a drag's
+  turn divided by the zoom), `zoom.test.ts`
   (1× to 3× by ×1.25 steps, the point under the pointer kept, the pan's clamp and its slide back,
   the easing at 6 per second keeping that point on its way and settling, the reset, the limits by
   the target), `wheel.test.ts` (a notch a step, macOS's included, a pinch's deltas followed, one
   step at most; a plain wheel left to a box with room that way, never to one that hides or clips
-  its overflow), and `textures/`
+  its overflow; a stream keeping its first choice: momentum past the page's end still yielding, a
+  new stream after a gap deciding anew, a zoom staying a zoom, Ctrl or a pinch always zooming, a
+  sideways wheel the page's), `gestures.test.ts` (a drag's orbit steps, a double tap, a press a
+  control took, a mouse's primary button alone; a pinch begun by a second finger ending the first
+  one's orbit, its factor and midpoints, either finger lifting first, a third finger, a re-pinch
+  beside a finger left from the last, a pointercancel, never a step toward a double tap, a fresh
+  start at a gesture's first touch; Safari's `gestureFactor`), and `textures/`
   (`grain`, `images`, `layout`, `paint` with `lcdColour`, `painter`, and `disc-printer` on fake
   canvases and textures: a blank then the print, a new size's texture, a stale print, a print made
   again once the fonts are in; `useSceneTextures`, read from its source: the defaults printed once
@@ -1560,24 +1592,26 @@ and a failed one with Retry, Back while one loads), the error messages, the layo
 1280 × 720, 1024 × 768, 834 × 1194, 844 × 390, 360 × 640 and 390 × 844, every control (the DOM
 card, the 3D keys, the knob, the keyboard), the orbit, the zoom (a mouse wheel's notch a step, a
 trackpad's pinch and two-finger scroll, Ctrl or ⌘ with the wheel, a plain wheel scrolling the page
-where it can, on a phone and in a narrow window; a two-finger pinch and its pan; a pinch whose
-first finger lands on a key or the knob; the buttons, their states and their focus; the +, - and 0
-keys; a double-click and a double tap resetting; a model change back at 1×), both models (the four
-skins and the four
-Clear looks), a model change and its failure (a GLB that never answers: "Couldn't load Clear" and
-the look back on the model on show after 20 s, nothing saved; and one chosen while the boot's model
-compiles, or once it is on the stage before the canvas fades in), a reload keeping the last look,
-the rack through every kind of change (Next, Previous, a row in the rack, a row outside it, a
-pasted playlist) on both models, the loader's hand-overs (its count over a slow network, a GLB and
-a scene chunk that never answer, each logged as its own part, "Try again" after a stall starting
-with no count, the fade), reduced motion, WebGL off and the embed blocked. A GLB that never
-answers is a Playwright route that never fulfils. Logged-in full tracks, Safari, Firefox
-(the Seek slider's `::-moz-range-*` rules), real phones and a real GPU need the owner's browsers.
-In headless Chromium on SwiftShader a Playwright click waits for its element to hold still over
-two frames (seconds while the scene draws), and two touch taps reach the page 500 ms or more
-apart, so a timed press (Previous within 3 s) or a double tap needs input sent straight to the
-page. A preview lasts under 30 s: a check that seeks, with the scene drawing slowly, pauses the
-track while it looks around.
+where it can, on a phone and in a narrow window, and a flick that scrolls the page to its end
+never zooming after it; a sideways swipe left to the page; a two-finger pinch and its pan; a pinch
+whose first finger lands on a key or the knob; the buttons, their states and their focus;
+the +, - and 0 keys, which wait for the live scene; a drag at 3× swinging as at 1×; the help line
+fading out while zoomed in; a double-click and a double tap resetting; a model change back at 1×;
+and Safari's trackpad pinch, which only a real Safari can try), both models (the four skins and
+the four Clear looks), a model change and its failure (a GLB that never answers: "Couldn't load
+Clear" and the look back on the model on show after 20 s, nothing saved; and one chosen while the
+boot's model compiles, or once it is on the stage before the canvas fades in), a reload keeping
+the last look, the rack through every kind of change (Next, Previous, a row in the rack, a row
+outside it, a pasted playlist) on both models, the loader's hand-overs (its count over a slow
+network, a GLB and a scene chunk that never answer, each logged as its own part, "Try again" after
+a stall starting with no count, the fade), reduced motion, WebGL off and the embed blocked. A GLB
+that never answers is a Playwright route that never fulfils. Logged-in full tracks, Safari,
+Firefox (the Seek slider's `::-moz-range-*` rules), real phones and a real GPU need the owner's
+browsers. In headless Chromium on SwiftShader a Playwright click waits for its element to hold
+still over two frames (seconds while the scene draws), and two touch taps reach the page 500 ms or
+more apart, so a timed press (Previous within 3 s) or a double tap needs input sent straight to
+the page. A preview lasts under 30 s: a check that seeks, with the scene drawing slowly, pauses
+the track while it looks around.
 
 **The gallery thumbnail** (`apps/portfolio/public/thumbnails/cd-player.jpg`) comes from
 `pnpm thumbnails cd-player` with the host and this remote running, but under a software renderer
