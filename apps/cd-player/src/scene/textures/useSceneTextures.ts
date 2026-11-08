@@ -2,6 +2,7 @@ import { useFrame } from '@react-three/fiber';
 import { useEffect, useRef, useState } from 'react';
 import type { SceneBridge } from '../../bridge';
 import type { Status } from '../../playback/sequencer';
+import { scrubTargetMs } from '../controls';
 import type { Rig } from '../rig';
 import {
   canvasTexture,
@@ -49,7 +50,8 @@ const nothingShown = (): Shown => ({
 
 /**
  * Prints the bridge's view on the player's other prints: the plate with the collection's name,
- * the luggage tag, and the display, at most once a second and whenever its colour changes. The
+ * the luggage tag, and the display, at most once a second and whenever its colour changes. While
+ * the knob is turning, the display shows the turn's target time. The
  * discs and the booklet are useDiscPrints'.
  */
 export function useSceneTextures(rig: Rig, bridge: SceneBridge, lcdColour: string): void {
@@ -114,7 +116,8 @@ export function useSceneTextures(rig: Rig, bridge: SceneBridge, lcdColour: strin
   useFrame(() => {
     const view = bridge.getView();
     const lcd = shown.current.lcd;
-    const second = Math.floor(view.positionMs / 1000);
+    const target = scrubTargetMs(view.positionMs, view.durationMs, rig.scrubMs);
+    const second = Math.floor(target / 1000);
     if (
       lcd.track === view.trackNo &&
       lcd.second === second &&
@@ -127,7 +130,7 @@ export function useSceneTextures(rig: Rig, bridge: SceneBridge, lcdColour: strin
     lcd.second = second;
     lcd.status = view.status;
     lcd.colour = lcdColour;
-    paintLcd(surfaces.canvases.lcd, view.trackNo, view.positionMs, view.status, lcdColour);
+    paintLcd(surfaces.canvases.lcd, view.trackNo, target, view.status, lcdColour);
     surfaces.textures.lcd.needsUpdate = true;
   });
 }

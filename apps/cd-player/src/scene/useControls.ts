@@ -7,7 +7,9 @@ import {
   BUTTON_ACTIONS,
   BUTTON_NODES,
   hitFor,
+  foldTurn,
   knobSeekMs,
+  knobTakesTurn,
   pinchedSince,
   PRESS_MS,
   pressDepth,
@@ -17,6 +19,7 @@ import {
   type KeyTouch,
 } from './controls';
 import { interaction, releaseLost } from './interaction';
+import { SCENE_PROFILES } from './profiles';
 import type { Rig } from './rig';
 
 /** The turn of the knob that one pointer is making. */
@@ -53,6 +56,7 @@ export function useControls(rig: Rig, bridge: SceneBridge) {
     [rig],
   );
   const knob = rig.model.nodes.knob;
+  const follows = SCENE_PROFILES[rig.model.id].knobTurnsDisc === true;
   // The key sinks and comes back, and its action goes to the app.
   const pressKey = (node: ButtonNode) => {
     presses.current.set(node, performance.now());
@@ -95,6 +99,8 @@ export function useControls(rig: Rig, bridge: SceneBridge) {
     // seeks nothing.
     const abandon = (turn: Turn) => {
       knob.rotation.y = turn.from;
+      rig.knobTurn = 0;
+      rig.scrubMs = null;
       turning.current = null;
     };
     const move = (event: PointerEvent) => {
@@ -117,6 +123,8 @@ export function useControls(rig: Rig, bridge: SceneBridge) {
       turn.last = angle;
       turn.total += delta;
       knob.rotation.y -= delta;
+      rig.scrubMs = knobSeekMs(turn.total);
+      if (follows) rig.knobTurn = knob.rotation.y - turn.from;
     };
     const up = (event: PointerEvent) => {
       const touch = touching.current;
@@ -133,6 +141,9 @@ export function useControls(rig: Rig, bridge: SceneBridge) {
         return;
       }
       turning.current = null;
+      rig.spin = foldTurn(rig.spin, rig.knobTurn);
+      rig.knobTurn = 0;
+      rig.scrubMs = null;
       const deltaMs = knobSeekMs(turn.total);
       if (deltaMs !== 0) bridge.emit({ type: 'seek', deltaMs });
     };
@@ -149,7 +160,7 @@ export function useControls(rig: Rig, bridge: SceneBridge) {
       window.removeEventListener('pointerup', up);
       window.removeEventListener('pointercancel', cancel);
     };
-  }, [bridge, knob]);
+  }, [bridge, knob, rig, follows]);
 
   return {
     onPointerDown: (event: ThreeEvent<PointerEvent>) => {
@@ -178,6 +189,9 @@ export function useControls(rig: Rig, bridge: SceneBridge) {
         };
         return;
       }
+      // The deck's jog is its door: lifted for a swap, it turns nothing (and still neither
+      // orbits nor recentres, since controlActive is set).
+      if (!knobTakesTurn(rig.doorOpen)) return;
       turning.current = {
         id: event.pointerId,
         last: angleAt(clientX, clientY),

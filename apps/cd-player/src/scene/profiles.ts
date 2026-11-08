@@ -18,6 +18,13 @@ export interface SceneProfile {
    * (the deck's jog plate lifts about its back edge). null: no door.
    */
   door: { angle: number; axis?: 'x' | 'y' } | null;
+  /** The disc turns with the knob while a turn lasts: the deck's jog lies over it. */
+  knobTurnsDisc?: boolean;
+  /**
+   * The disc plays clockwise seen from above (vinyl's way), so a forward turn of the deck's jog,
+   * which is clockwise, turns it the way it plays. Absent: counter-clockwise, as a CD player's.
+   */
+  clockwise?: boolean;
   /**
    * A disc's way to and from the spindle (metres, world axes). It leaves a place and reaches the
    * next along each one's normal (the spindle's is its seat's own), the Bézier's handles reaching

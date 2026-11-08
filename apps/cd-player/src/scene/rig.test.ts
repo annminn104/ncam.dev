@@ -1,4 +1,13 @@
-import { BoxGeometry, Group, Mesh, MeshPhysicalMaterial, Object3D, Texture, Vector3 } from 'three';
+import {
+  BoxGeometry,
+  Group,
+  Mesh,
+  MeshPhysicalMaterial,
+  Object3D,
+  Quaternion,
+  Texture,
+  Vector3,
+} from 'three';
 import { describe, expect, it, vi } from 'vitest';
 import type { TrackView } from '../bridge';
 import { CLEAR_SEAT, CLEAR_SHELL, CLEAR_STAND, clearSlot } from '../testing/model-measures';
@@ -17,7 +26,7 @@ import {
 import type { Slots } from './materials';
 import type { PlayerModel } from './model';
 import { SCENE_PROFILES } from './profiles';
-import { applyPose, doorAxis, modelArmAngle, rigFor, turnDoor } from './rig';
+import { applyPose, doorAxis, modelArmAngle, rigFor, spinSense, turnDoor } from './rig';
 import {
   DISC_COPIES,
   RACK_SLOTS,
@@ -271,6 +280,24 @@ describe('the door', () => {
 });
 
 describe('applyPose', () => {
+  it('turns the disc on the spindle by the knob’s turn on top of its spin', () => {
+    const { model } = fakeModel();
+    const rig = rigFor(model);
+    const shelf = fillShelf(targetOf(lineup('a', 'b', 'c', 'd', 'e', 'f')));
+    rig.knobTurn = 0.3;
+    applyPose(rig, restingPose(shelf, true, false), 0);
+    const expected = rig.seat.quaternion
+      .clone()
+      .multiply(new Quaternion().setFromAxisAngle(new Vector3(0, 1, 0), rig.spin + 0.3));
+    expect(rig.discs[0].object.quaternion.angleTo(expected)).toBeLessThan(1e-6);
+  });
+
+  it('starts with no turn and no preview', () => {
+    const rig = rigFor(fakeModel().model);
+    expect(rig.knobTurn).toBe(0);
+    expect(rig.scrubMs).toBeNull();
+  });
+
   it('rests each copy where the shelf puts it, and hides the spare', () => {
     const { model } = fakeModel();
     const rig = rigFor(model);
@@ -522,5 +549,13 @@ describe('the Clear model’s flights', () => {
     expect(offset.z).toBeGreaterThan(0.04);
     expect(offset.x).toBeGreaterThan(0);
     expect(offset.y).toBeGreaterThan(0);
+  });
+});
+
+describe('spinSense', () => {
+  it('spins counter-clockwise seen from above unless the profile plays clockwise', () => {
+    expect(spinSense({})).toBe(1);
+    expect(spinSense({ clockwise: false })).toBe(1);
+    expect(spinSense({ clockwise: true })).toBe(-1);
   });
 });

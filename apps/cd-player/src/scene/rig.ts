@@ -65,6 +65,12 @@ export interface Rig extends StageState {
   /** The booklet's two prints (the print hook sets them): `bookletFront` shows. */
   bookletMaps: [Texture | null, Texture | null];
   spin: number;
+  /** The knob's turn as a seek (ms) while one is going on, for the display's preview; else null. */
+  scrubMs: number | null;
+  /** How far the disc follows the knob's turn going on (radians); 0 between turns. */
+  knobTurn: number;
+  /** 1, or -1 for a profile that plays clockwise. */
+  spinSense: 1 | -1;
   arm: { node: Object3D; baseRotationY: number; baseY: number };
   /** The door's hinge, for a model with one: where it is shut, and the turn that opens it. */
   door: { node: Object3D; base: number; angle: number; axis: 'x' | 'y' } | null;
@@ -142,6 +148,11 @@ export function turnDoor(door: NonNullable<Rig['door']>, open: number): void {
 
 const rigs = new WeakMap<PlayerModel, Rig>();
 
+/** Which way a model's disc plays about its seat's up: 1 counter-clockwise, -1 clockwise. */
+export function spinSense(profile: { clockwise?: boolean }): 1 | -1 {
+  return profile.clockwise ? -1 : 1;
+}
+
 /** One rig per model (StrictMode renders twice; building it twice would clone twice). */
 export function rigFor(model: PlayerModel): Rig {
   const existing = rigs.get(model);
@@ -183,6 +194,9 @@ export function rigFor(model: PlayerModel): Rig {
     swapping: false,
     last: { armAngle: ARM_REST, spin: 0 },
     spin: 0,
+    scrubMs: null,
+    knobTurn: 0,
+    spinSense: spinSense(profile),
     arm: {
       node: nodes.arm_pivot,
       baseRotationY: nodes.arm_pivot.rotation.y,
@@ -241,7 +255,7 @@ function placeAt(rig: Rig, place: Place, into: PlaceFrame): PlaceFrame {
     into.position.copy(rig.seat.position);
     into.quaternion
       .copy(rig.seat.quaternion)
-      .multiply(spinQuaternion.setFromAxisAngle(UP, rig.spin));
+      .multiply(spinQuaternion.setFromAxisAngle(UP, rig.spin + rig.knobTurn));
     into.out.copy(rig.seat.out);
     return into;
   }
@@ -351,7 +365,7 @@ export function modelArmAngle(model: ModelId, angle: number): number {
 export function applyPose(rig: Rig, pose: Pose, dt: number): void {
   rig.arm.node.rotation.y = rig.arm.baseRotationY + modelArmAngle(rig.model.id, pose.armAngle);
   rig.arm.node.position.y = rig.arm.baseY + pose.armLift * ARM_LIFT_M;
-  rig.spin = (rig.spin + dt * SPIN_RAD_S * pose.spin) % (2 * Math.PI);
+  rig.spin = (rig.spin + dt * SPIN_RAD_S * pose.spin * rig.spinSense) % (2 * Math.PI);
   rig.last.armAngle = pose.armAngle;
   rig.last.spin = pose.spin;
   rig.discs.forEach((copy, index) => placeDisc(rig, copy, pose.discs[index] ?? null));

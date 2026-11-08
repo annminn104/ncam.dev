@@ -4,11 +4,14 @@ import {
   BUTTON_ACTIONS,
   BUTTON_NODES,
   hitFor,
+  foldTurn,
   knobSeekMs,
+  knobTakesTurn,
   PRESS_MS,
   pinchedSince,
   pressDepth,
   pressesOnDown,
+  scrubTargetMs,
   stillTap,
   type KeyTouch,
 } from './controls';
@@ -99,5 +102,36 @@ describe('a touch on a key', () => {
     expect(pinchedSince(4, 5)).toBe(true);
     expect(pinchedSince(4, 6)).toBe(true);
     expect(stillTap(touch, 200, 300, 6)).toBe(false);
+  });
+});
+
+describe('scrubTargetMs', () => {
+  it('is the position with no turn going on', () => {
+    expect(scrubTargetMs(10_000, 30_000, null)).toBe(10_000);
+  });
+  it('adds the turn, held between 0 and the duration', () => {
+    expect(scrubTargetMs(10_000, 30_000, 5_000)).toBe(15_000);
+    expect(scrubTargetMs(10_000, 30_000, -20_000)).toBe(0);
+    expect(scrubTargetMs(25_000, 30_000, 10_000)).toBe(30_000);
+  });
+  it('holds only the floor while the duration is unknown', () => {
+    expect(scrubTargetMs(10_000, 0, 5_000)).toBe(15_000);
+    expect(scrubTargetMs(1_000, 0, -5_000)).toBe(0);
+  });
+});
+
+describe('knobTakesTurn', () => {
+  it('turns only while the door is shut', () => {
+    expect(knobTakesTurn(0)).toBe(true);
+    expect(knobTakesTurn(0.01)).toBe(false);
+    expect(knobTakesTurn(1)).toBe(false);
+  });
+});
+
+describe('foldTurn', () => {
+  it('adds a finished turn to the spin, within one revolution', () => {
+    expect(foldTurn(1, 0.5)).toBeCloseTo(1.5, 12);
+    expect(foldTurn(6, 1)).toBeCloseTo(7 - 2 * Math.PI, 12);
+    expect(foldTurn(0.5, -1)).toBeCloseTo(2 * Math.PI - 0.5, 12);
   });
 });
