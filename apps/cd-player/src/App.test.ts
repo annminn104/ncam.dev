@@ -154,10 +154,16 @@ describe('App and the view (zoom)', () => {
       'if (target?.closest?.(\'input, textarea, select, button, [contenteditable="true"]\')) return;',
       'const command = keyCommand(event);',
       'if (event.repeat) return;',
-      'else camera.send(command);',
+      'else if (live) camera.send(command);',
     ].map((line) => handler?.indexOf(line) ?? -1);
     expect(order.every((at) => at > -1)).toBe(true);
     expect([...order].sort((a, b) => a - b)).toEqual(order);
+  });
+
+  it('keeps the view’s keys, like its buttons, for a live scene, so it never comes live zoomed', () => {
+    // The camera listens from the moment the scene mounts, while it still boots unseen.
+    expect(source).toMatch(/\}, \[act, camera, live\]\);/);
+    expect(source.match(/camera\.send\(/g)).toHaveLength(1);
   });
 });
 

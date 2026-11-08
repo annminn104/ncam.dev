@@ -333,7 +333,8 @@ export default function App({ controller, initial = null, assetBase = '', initia
 
   // Space plays or pauses, N and P change tracks, + and - zoom and 0 resets the view (src/keys.ts);
   // never with Ctrl, ⌘ or Alt (Ctrl and + is the browser's zoom), never while typing or on a
-  // focused control, and a held key is one press.
+  // focused control, and a held key is one press. The view's keys, like its buttons, wait for the
+  // live scene: the camera listens while the scene still boots unseen, which would come live zoomed.
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.metaKey || event.ctrlKey || event.altKey) return;
@@ -347,11 +348,11 @@ export default function App({ controller, initial = null, assetBase = '', initia
       if (command === 'toggle') act({ type: 'TOGGLE' });
       else if (command === 'next') act({ type: 'NEXT' });
       else if (command === 'prev') act({ type: 'PREV' });
-      else camera.send(command);
+      else if (live) camera.send(command);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [act, camera]);
+  }, [act, camera, live]);
 
   const backdrop = backdropFor(snapshot);
   // A first load that failed leaves nothing to show: the tracklist's empty shelf says why, with
