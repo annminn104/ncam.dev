@@ -79,6 +79,10 @@ export const MATERIAL_ROLES: Readonly<Record<string, MaterialRole>> = {
   trace: 'pcb',
   etch: 'etch',
   gold: 'gold',
+  deck_body: 'frame',
+  deck_light: 'emissive',
+  jog_acrylic: 'crystal',
+  foam: 'matte',
 };
 
 /**

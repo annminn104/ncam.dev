@@ -1,7 +1,7 @@
-// Builds public/assets/cd-player.glb (or, given `clear`, cd-player-clear.glb) from the Blender
-// scripts: Blender, in the background, writes art/.out/<name>.raw.glb
-// (art/blender/scripts/export.py); gltf-transform then dedups, welds, prunes (keeping the empty
-// pivots) and meshopt-compresses it. Run by hand; the output is committed.
+// Builds public/assets/cd-player.glb (or, given `clear`, cd-player-clear.glb, or, given `deck`,
+// cd-player-deck.glb) from the Blender scripts: Blender, in the background, writes
+// art/.out/<name>.raw.glb (art/blender/scripts/export.py); gltf-transform then dedups, welds,
+// prunes (keeping the empty pivots) and meshopt-compresses it. Run by hand; the output is committed.
 import { spawnSync } from 'node:child_process';
 import { mkdirSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -13,8 +13,9 @@ import { MeshoptDecoder, MeshoptEncoder } from 'meshoptimizer';
 const APP = fileURLToPath(new URL('../../', import.meta.url));
 const BLENDER = process.env.BLENDER_BIN ?? '/Applications/Blender.app/Contents/MacOS/Blender';
 const MODEL = process.argv[2] ?? 'suitcase';
-if (!['suitcase', 'clear'].includes(MODEL)) throw new Error(`build.mjs: unknown model ${MODEL}`);
-const NAME = MODEL === 'suitcase' ? 'cd-player' : 'cd-player-clear';
+const NAMES = { suitcase: 'cd-player', clear: 'cd-player-clear', deck: 'cd-player-deck' };
+if (!Object.hasOwn(NAMES, MODEL)) throw new Error(`build.mjs: unknown model ${MODEL}`);
+const NAME = NAMES[MODEL];
 const RAW = `${APP}art/.out/${NAME}.raw.glb`;
 const OUT = `${APP}public/assets/${NAME}.glb`;
 

@@ -1,25 +1,29 @@
 """Cycles stills of the CD players, headless:
 
-    CDP_MODEL=suitcase|clear CDP_HERO_VIEW=hero|lid|inside CDP_HERO_QUALITY=preview|final \\
+    CDP_MODEL=suitcase|clear|deck CDP_HERO_VIEW=hero|lid|inside|top CDP_HERO_QUALITY=preview|final \\
       /Applications/Blender.app/Contents/MacOS/Blender --background --factory-startup \\
       --python-exit-code 1 --python apps/cd-player/art/blender/scripts/hero.py
 
-CDP_MODEL picks the player: `suitcase` (the default) or `clear` (clear.py, with its board in
-clear_board.py and its decorations in clear_decor.py). The suitcase's views: `hero` is the
-three-quarter product still the design was approved from (the lid open, a disc spinning, five more
-in the rack, a stack of cases beside it); `lid` looks straight into the open lid (the case, the
-rack and its discs, the strap and the plate). The Clear model's: `hero`, the
-three-quarter still of the player between its stand and its case, and `inside`, a close-up of the
-board, the LCD and the mechanism through the shell. `preview` is 800 x 600 at 24 samples, `final`
-1600 x 1200 at 160; any other value of the model, the view or the quality stops the run with exit
-1, naming the valid ones. The art it prints is the gallery's thumbnails
-(apps/portfolio/public/thumbnails), so anyone can rerun it. The suitcase's PNG lands in
+CDP_MODEL picks the player: `suitcase` (the default), `clear` (clear.py, with its board in
+clear_board.py and its decorations in clear_decor.py) or `deck` (deck.py, with its flight case in
+deck_case.py). The suitcase's views: `hero` is the three-quarter product still the design was
+approved from (the lid open, a disc spinning, five more in the rack, a stack of cases beside it);
+`lid` looks straight into the open lid (the case, the rack and its discs, the strap and the plate).
+The Clear model's: `hero`, the three-quarter still of the player between its stand and its case,
+and `inside`, a close-up of the board, the LCD and the mechanism through the shell. The Deck's:
+`hero`, the three-quarter still of the deck and its flight case from the front left, and `top`,
+over the jog (the disc through the acrylic, the LED ring, the LCD, the keys). `preview` is
+800 x 600 at 24 samples, `final` 1600 x 1200 at 160; any other value of the model, the view or the
+quality stops the run with exit 1, naming the valid ones. The art it prints is the gallery's
+thumbnails (apps/portfolio/public/thumbnails), so anyone can rerun it. The suitcase's PNG lands in
 art/.out/v2-<view>-<quality>.png, or art/.out/v2-<view>-grid-<quality>.png when parts.py builds
 the grid layout. CDP_SKIN=<id> (an id of src/skins.json) renders that skin instead of Blush, into
 art/.out/skins/<id>/. The Clear model renders its default look, or CDP_CLEAR_LOOK=<shell>,<frame>,
-<board>,<light> (ids of src/clear-looks.json), into art/.out/clear/<look>/clear-<view>-<quality>.png;
-CDP_SKIN with the Clear model, or CDP_CLEAR_LOOK with the suitcase, stops the run too. Also runs in
-a live Blender through tools/bl.py.
+<board>,<light> (ids of src/clear-looks.json), into art/.out/clear/<look>/clear-<view>-<quality>.png.
+The Deck renders its default look, or CDP_DECK_LOOK=<body>,<light> (ids of src/deck-looks.json),
+into art/.out/deck/<body>-<light>/deck-<view>-<quality>.png. Each model takes its own colours only:
+CDP_SKIN with another model, CDP_CLEAR_LOOK with another, or CDP_DECK_LOOK with another stops the
+run too. Also runs in a live Blender through tools/bl.py.
 """
 import math
 import os
@@ -43,18 +47,30 @@ def setting(name, default, valid):
     return value
 
 
-MODEL = setting("CDP_MODEL", "suitcase", ("suitcase", "clear"))
-VIEW = setting("CDP_HERO_VIEW", "hero", ("hero", "lid") if MODEL == "suitcase" else ("hero", "inside"))
+VIEWS = {"suitcase": ("hero", "lid"), "clear": ("hero", "inside"), "deck": ("hero", "top")}
+MODEL = setting("CDP_MODEL", "suitcase", tuple(VIEWS))
+VIEW = setting("CDP_HERO_VIEW", "hero", VIEWS[MODEL])
 QUALITY = setting("CDP_HERO_QUALITY", "preview", ("preview", "final"))
 SKIN = os.environ.get("CDP_SKIN")  # an id of src/skins.json; unset renders Blush, empty is an error
 CLEAR_LOOK = os.environ.get("CDP_CLEAR_LOOK")  # shell,frame,board,light ids of src/clear-looks.json
-# Each model takes its own colours: the other's setting would be ignored unannounced.
+DECK_LOOK = os.environ.get("CDP_DECK_LOOK")  # body,light ids of src/deck-looks.json
+# Each model takes its own colours: another's setting would be ignored unannounced.
 if MODEL == "clear" and SKIN is not None:
     raise SystemExit("hero.py: CDP_SKIN colours the suitcase; the Clear model takes "
                      "CDP_CLEAR_LOOK=<shell>,<frame>,<board>,<light>, not CDP_SKIN=%r" % SKIN)
 if MODEL == "suitcase" and CLEAR_LOOK is not None:
     raise SystemExit("hero.py: CDP_CLEAR_LOOK colours the Clear model (CDP_MODEL=clear); the suitcase "
                      "takes CDP_SKIN=<id>, not CDP_CLEAR_LOOK=%r" % CLEAR_LOOK)
+if MODEL == "deck" and SKIN is not None:
+    raise SystemExit("hero.py: CDP_SKIN colours the suitcase; the Deck takes CDP_DECK_LOOK=<body>,<light>, "
+                     "not CDP_SKIN=%r" % SKIN)
+if MODEL == "deck" and CLEAR_LOOK is not None:
+    raise SystemExit("hero.py: CDP_CLEAR_LOOK colours the Clear model; the Deck takes "
+                     "CDP_DECK_LOOK=<body>,<light>, not CDP_CLEAR_LOOK=%r" % CLEAR_LOOK)
+if MODEL != "deck" and DECK_LOOK is not None:
+    raise SystemExit("hero.py: CDP_DECK_LOOK colours the Deck (CDP_MODEL=deck); the %s takes %s, not "
+                     "CDP_DECK_LOOK=%r" % ("suitcase" if MODEL == "suitcase" else "Clear model",
+                                           "CDP_SKIN=<id>" if MODEL == "suitcase" else "CDP_CLEAR_LOOK", DECK_LOOK))
 os.makedirs(OUT, exist_ok=True)
 
 
@@ -111,6 +127,21 @@ def clear_flags():
         for attr in ("visible_camera", "visible_diffuse", "visible_transmission", "visible_volume_scatter",
                      "visible_shadow"):
             setattr(ob, attr, False)
+    return m
+
+
+def deck_flags():
+    """The Deck's flag: a dark card behind and above the deck that glossy rays alone see (out of
+    the camera's sight, casting no shadow, lighting nothing), as a photographer flags a glossy
+    product: the display bay's black glass, tilted toward the hero camera, would otherwise mirror
+    the rim light and the bright studio and read white, and the acrylic plate's back half too."""
+    m = mat("flag", (0.012, 0.012, 0.014, 1), rough=0.9)
+    loc, target = L(190, 640, 580), L(0, 143, 93)
+    ob = rbox("flag_deck", (1000.0, 700.0, 1.0), m, loc=loc)
+    ob.rotation_euler = (Vector(target) - Vector(loc)).to_track_quat("Z", "Y").to_euler()
+    for attr in ("visible_camera", "visible_diffuse", "visible_transmission", "visible_volume_scatter",
+                 "visible_shadow"):
+        setattr(ob, attr, False)
     return m
 
 
@@ -174,7 +205,36 @@ def clear_scene():
     return OUT + "clear/%s/clear-%s-%s.png" % ("-".join(ids[p] for p in CLEAR_PARTS), VIEW, QUALITY)
 
 
-PNG = clear_scene() if MODEL == "clear" else suitcase_scene()
+def deck_scene():
+    for f in ("deck.py", "deck_case.py"):
+        exec(compile(open(BASE + "/" + f).read(), f, "exec"), globals())
+    look, ids = deck_look(DECK_LOOK)
+    new_scene("cd_player_deck", res=(1600, 1200), samples=128)
+    build_deck_materials(look)
+    artist = image_mat("art_disc", THUMBS + "holodex.jpg", 117, 117, coat=0.6, rough=0.3)
+    album = image_mat("art_booklet", THUMBS + "garden-home.jpg", 120, 120, coat=0.3)
+    rack_art = [image_mat("art_rack_%d" % i, THUMBS + f, 117, 117, coat=0.6, rough=0.3) for i, f in enumerate(
+        ("chess.jpg", "mini-store.jpg", "garden-home.jpg", "cd-player.jpg", "holodex.jpg"))]
+    M["card_print"] = mat("card_print", (0.92, 0.9, 0.88, 1), rough=0.4)
+    M["tag_print"] = mat("tag_print", (0.92, 0.9, 0.88, 1), rough=0.55)
+    # Matte, without the Clear's gloss: the screen lies on the bay's glass, facing up, and any
+    # specular smears the studio's lights over its digits.
+    M["lcd_screen"] = mat("lcd_screen", lin(14, 22, 26), rough=1.0, spec=0.0,
+                          emit=lin(*hexrgb(look["light"]["glow"])), emit_s=0.06)
+    floor = rbox("floor", (5000, 5000, 10), M["floor"], loc=L(0, 0, -5))
+    floor.is_shadow_catcher = True
+    make_deck_player("deck", artist, album, look, rack_art)
+    studio()
+    deck_flags()
+    if VIEW == "top":
+        # Over the jog from a little in front: the disc through the plate, the ring, the LCD, the keys.
+        camera("cam", L(30, -260, 720), L(30, -10, 75), lens=50, fstop=8.0, focus=L(30, -10, 84))
+    else:
+        camera("cam", L(-320, -900, 480), L(60, 0, 80), lens=50, fstop=7.1, focus=L(40, -30, 90))
+    return OUT + "deck/%s/deck-%s-%s.png" % ("-".join(ids[p] for p in DECK_PARTS), VIEW, QUALITY)
+
+
+PNG = {"clear": clear_scene, "deck": deck_scene}.get(MODEL, suitcase_scene)()
 os.makedirs(os.path.dirname(PNG), exist_ok=True)
 if QUALITY == "final":
     render(PNG, res=(1600, 1200), samples=160)
