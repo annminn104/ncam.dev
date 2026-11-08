@@ -9,12 +9,12 @@ import { defineConfig } from 'vite';
 
 // Config resolved from the root .env / .env.local (overridable by real env).
 // The home page's own sections live in the `profile` remote (one module each).
-const PROFILE_REMOTE = env('PROFILE_REMOTE_URL', 'http://localhost:9006/remoteEntry.js');
-const HOLODEX_REMOTE = env('HOLODEX_REMOTE_URL', 'http://localhost:9007/remoteEntry.js');
-const CHESS_REMOTE = env('CHESS_REMOTE_URL', 'http://localhost:9008/remoteEntry.js');
-const MINI_STORE_REMOTE = env('MINI_STORE_REMOTE_URL', 'http://localhost:9009/remoteEntry.js');
-const GARDEN_HOME_REMOTE = env('GARDEN_HOME_REMOTE_URL', 'http://localhost:9010/remoteEntry.js');
-const CD_PLAYER_REMOTE = env('CD_PLAYER_REMOTE_URL', 'http://localhost:9011/remoteEntry.js');
+const PROFILE_REMOTE = env('PROFILE_REMOTE_URL', 'http://localhost:9001/remoteEntry.js');
+const HOLODEX_REMOTE = env('HOLODEX_REMOTE_URL', 'http://localhost:9002/remoteEntry.js');
+const CHESS_REMOTE = env('CHESS_REMOTE_URL', 'http://localhost:9003/remoteEntry.js');
+const MINI_STORE_REMOTE = env('MINI_STORE_REMOTE_URL', 'http://localhost:9004/remoteEntry.js');
+const GARDEN_HOME_REMOTE = env('GARDEN_HOME_REMOTE_URL', 'http://localhost:9005/remoteEntry.js');
+const CD_PLAYER_REMOTE = env('CD_PLAYER_REMOTE_URL', 'http://localhost:9006/remoteEntry.js');
 const PORTFOLIO_PORT = Number(env('PORTFOLIO_PORT', '9000'));
 
 /**

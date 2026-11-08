@@ -5,7 +5,7 @@ import { defineRemote } from '@ncam/mf-remote';
 // defineRemote), same model as holodex / mini-store / garden-home.
 export default defineRemote({
   name: 'chess',
-  port: 9008,
+  port: 9003,
   baseEnv: 'CHESS_BASE',
   exposes: {
     './mount': './src/mount.tsx',

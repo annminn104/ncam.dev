@@ -5,7 +5,7 @@
 **Garden Home**: a glass villa and its garden island, built from Blender modules and drawn with
 React Three Fiber, that the visitor orbits, zooms into and cuts away floor by floor like a
 dollhouse, switching its lights, screens, water and doors on and off. A self-contained Module
-Federation remote (`garden_home`, :9010) that the host mounts at `/projects/garden-home`. Ported on
+Federation remote (`garden_home`, :9005) that the host mounts at `/projects/garden-home`. Ported on
 2026-10-25 from a standalone project (React 19, three 0.186, Vite, a Blender → glTF pipeline); this
 copy is the source of truth now.
 
@@ -17,7 +17,7 @@ into `public/assets/scene.json` plus `public/assets/modules/<id>.{high,medium}.g
 ## Commands
 
 ```bash
-pnpm --filter @ncam/garden-home dev             # standalone on :9010 (/, /wallpaper, /?capture=<shape>)
+pnpm --filter @ncam/garden-home dev             # standalone on :9005 (/, /wallpaper, /?capture=<shape>)
 pnpm --filter @ncam/garden-home build           # vite build --app (client + SSR graph)
 pnpm --filter @ncam/garden-home typecheck
 pnpm --filter @ncam/garden-home art:models [--force] [--only <id>…]  # Blender: regenerate modules
@@ -270,14 +270,14 @@ of `scene/release-scene.ts`** (and be covered in `release-scene.test.ts`).
 ## Standalone routes
 
 Only the federated entries run in the host; `index.html` (`src/standalone.tsx`) serves three views
-on :9010 (`src/routes.ts`, `standaloneView`):
+on :9005 (`src/routes.ts`, `standaloneView`):
 
 - `/`: the site, behind the same poster gate as in the host.
 - `/wallpaper`: no poster, no gate, no HUD, no input: the scene boots at once, the island on the
   right, 30 fps, the sky following the clock (`src/wallpaper.tsx`). It is for **Plash** (a macOS
   wallpaper app): build the app and leave its preview running (the `build` script, then the
-  `preview` script, which serves on :9010 like the dev server: `defineRemote` takes the port from
-  `GARDEN_HOME_PORT`), then Plash → Add Website → `http://localhost:9010/wallpaper`; or, once
+  `preview` script, which serves on :9005 like the dev server: `defineRemote` takes the port from
+  `GARDEN_HOME_PORT`), then Plash → Add Website → `http://localhost:9005/wallpaper`; or, once
   it is deployed, point Plash at `https://ncam-garden-home.vercel.app/wallpaper`. (:4173 is only
   the e2e's own preview, which `playwright.config.ts` starts with `--port 4173`.) Add `?fps=20`
   (or `&fps=20`) to save battery, `&align=left` to move the island, and `?bg=<file>` for a photo
@@ -296,7 +296,7 @@ that lines up with it. It is a **daytime** capture: at night the live scene fade
 picture (a night poster is a possible follow-up).
 
 Rerun the capture after any change to the scene, camera, lights or post-processing: start the dev
-server (`GARDEN_HOME_PORT` or `GARDEN_HOME_URL` if it is not on :9010), then
+server (`GARDEN_HOME_PORT` or `GARDEN_HOME_URL` if it is not on :9005), then
 `pnpm --filter @ncam/garden-home capture:poster`. It loads `?capture=<shape>`
 (`src/capture-view.tsx`: the site route's scene alone, no UI, at `POSTER_SEARCH` =
 `?t=10:00&quality=high&align=center` from `src/capture.ts`, a query only the standalone page reads)
@@ -419,7 +419,7 @@ the throttled run cannot finish; to measure what the runner measures, add `--dis
   `· ncam.dev`), not from the remote's `head` (`projectHead()` uses a remote's own title only for a
   route-aware deep link). The remote's `head.title` still reaches the dehydrated loader data.
 - Rebuilding the host after a build that overrode a `*_REMOTE_URL` (the production SSR smoke on
-  9110, the Lighthouse build with `LH_PORT_OFFSET`) needs `pnpm build --force` (or a changed
+  9105, the Lighthouse build with `LH_PORT_OFFSET`) needs `pnpm build --force` (or a changed
   input): without it Turbo replays the cached output with the overridden ports baked in.
 
 ## Deploying

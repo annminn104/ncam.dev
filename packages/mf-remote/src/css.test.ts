@@ -6,7 +6,7 @@ describe('originOf()', () => {
     expect(originOf('https://ncam-chess.vercel.app/assets/ssr-Ab12.js')).toBe(
       'https://ncam-chess.vercel.app',
     );
-    expect(originOf('http://localhost:9008/assets/ssr.js')).toBe('http://localhost:9008');
+    expect(originOf('http://localhost:9003/assets/ssr.js')).toBe('http://localhost:9003');
   });
 
   it('has none for a file on disk or a string that is no URL', () => {

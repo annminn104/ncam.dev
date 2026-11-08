@@ -13,7 +13,7 @@ import { chromium } from 'playwright';
 import sharp from 'sharp';
 
 const BASE =
-  process.env.MINI_STORE_URL ?? `http://localhost:${process.env.MINI_STORE_PORT ?? 9009}/`;
+  process.env.MINI_STORE_URL ?? `http://localhost:${process.env.MINI_STORE_PORT ?? 9004}/`;
 const OUT = fileURLToPath(new URL('../src/assets/poster/', import.meta.url));
 /**
  * Each shape's capture size, the AVIF widths and the WebP fallback width

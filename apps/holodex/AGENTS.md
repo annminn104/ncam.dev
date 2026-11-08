@@ -9,7 +9,7 @@ packaged as a **self-contained** React Module Federation remote (same model as
 
 **Current state: implemented.** Mounted by the portfolio host at
 `/projects/holodex/...` via the host-owned, route-aware remote contract (see
-"What it exposes" below); also runs fully standalone on `:9007`.
+"What it exposes" below); also runs fully standalone on `:9002`.
 
 ## What it exposes
 
@@ -22,7 +22,7 @@ fourth entry used only for standalone dev — **the four entries**:
 //                (renderToString inside a HydrationBoundary + dehydrated query cache;
 //                head = the page's own title + description, see src/head.ts)
 // ./hydrate    — hydrateRoot(target, <App/>) onto the SSR markup; returns a MountHandle
-// standalone.tsx — not federation-exposed. Drives #app in index.html on :9007,
+// standalone.tsx — not federation-exposed. Drives #app in index.html on :9002,
 //                  wires window.history / popstate so the app behaves like a
 //                  real site when nobody is hosting it.
 ```
@@ -252,7 +252,7 @@ Base `https://api.tcgdex.net/v2/en`, no key, CORS-open. Verified live 2026-09-21
   what TCGdex sends has changed under us before:
 
   ```bash
-  node -e "fetch(process.argv[1],{headers:{Origin:'http://x'}}).then(r=>console.log(r.status,r.headers.get('access-control-allow-origin')))" 'http://localhost:9007/api/tcgdex-asset?path=en/swsh/swsh1/14/high.webp'
+  node -e "fetch(process.argv[1],{headers:{Origin:'http://x'}}).then(r=>console.log(r.status,r.headers.get('access-control-allow-origin')))" 'http://localhost:9002/api/tcgdex-asset?path=en/swsh/swsh1/14/high.webp'
   ```
 
 ## Grid tiles are CSS; the card detail is WebGL
@@ -1211,7 +1211,7 @@ the bottom (Shell's `min-h-screen`).
 ## Run standalone
 
 ```bash
-pnpm --filter @ncam/holodex dev        # http://localhost:9007, mounts #app
+pnpm --filter @ncam/holodex dev        # http://localhost:9002, mounts #app
 pnpm --filter @ncam/holodex typecheck
 pnpm --filter @ncam/holodex build      # dist/remoteEntry.js + dist-ssr/remoteEntry.ssr.js
 pnpm --filter @ncam/holodex preview
@@ -1241,6 +1241,6 @@ server of `dist` alone has no route, and falls back to TCGdex's own URL.
 ```bash
 pnpm --filter @ncam/holodex typecheck
 pnpm --filter @ncam/holodex build   # emits dist/remoteEntry.js and dist-ssr/remoteEntry.ssr.js
-pnpm --filter @ncam/holodex dev     # standalone on http://localhost:9007
+pnpm --filter @ncam/holodex dev     # standalone on http://localhost:9002
 pnpm run ci                         # lint, format:check, typecheck, test, build — whole workspace
 ```

@@ -2,7 +2,7 @@
 
 The ncam.dev **home-page sections as federated modules**. One self-contained
 React 19 + Vite 8 + GSAP remote (`defineRemote` from `@ncam/mf-remote`, MF name
-`profile`, port 9006) that exposes **one module per section** instead of one
+`profile`, port 9001) that exposes **one module per section** instead of one
 `./mount` for a whole app:
 
 ```
@@ -53,7 +53,7 @@ manifest rail on the host shows the real lifecycle of each module.
   `@ncam/design-tokens/tokens.css`; reads `--page-bg` (set/tweened by the host,
   falls back to `--bg`) and `--rail-w` (the host's manifest rail width, so the
   section grid lines up with the shell).
-- `src/standalone.tsx` + `index.html` — dev page on :9006 mounting all six
+- `src/standalone.tsx` + `index.html` — dev page on :9001 mounting all six
   sections in order (no host shell). Fonts are imported **here only**
   (`src/fonts.ts`): inside the host the fonts come from the host's stylesheet,
   so the exposed modules never double-download them.
@@ -97,7 +97,7 @@ them in, and on a fine pointer each card tilts with `gsap.quickTo` on
 ```bash
 pnpm --filter @ncam/profile typecheck
 pnpm --filter @ncam/profile build     # emits dist/remoteEntry.js (+ remoteEntry.ssr.js)
-pnpm --filter @ncam/profile dev       # standalone on http://localhost:9006
+pnpm --filter @ncam/profile dev       # standalone on http://localhost:9001
 ```
 
 With the host running (`pnpm dev`), open http://localhost:9000 — in `vite dev`

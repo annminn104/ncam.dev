@@ -5,7 +5,7 @@ import { defineRemote } from '@ncam/mf-remote';
 // the same model as chess and mini-store.
 export default defineRemote({
   name: 'garden_home',
-  port: 9010,
+  port: 9005,
   baseEnv: 'GARDEN_HOME_BASE',
   exposes: {
     './mount': './src/mount.tsx',

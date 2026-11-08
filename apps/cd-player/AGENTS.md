@@ -14,7 +14,7 @@ collection, and the page behind the player is a pastel of its accent (the skin's
 light's) with the album art blurred into it. The server renders that page with a loader where the
 player will stand, never a picture of it, and the scene fades in over the loader once it is
 drawn. Beside it, "Popular on Spotify" offers twelve of Spotify's own playlists a press away. A
-self-contained Module Federation remote (`cd_player`, :9011) that the host mounts at
+self-contained Module Federation remote (`cd_player`, :9006) that the host mounts at
 `/projects/cd-player`. The default collection is the playlist `37i9dQZEVXbMDoHDwVN2tF`,
 "Top 50 - Global" (`DEFAULT_COLLECTION` in `src/routes.ts`).
 
@@ -154,7 +154,7 @@ be on another origin.
 ## Commands
 
 ```bash
-pnpm --filter @ncam/cd-player dev             # standalone on :9011 (/, /playlist/<id>, /album/<id>)
+pnpm --filter @ncam/cd-player dev             # standalone on :9006 (/, /playlist/<id>, /album/<id>)
 pnpm --filter @ncam/cd-player build           # vite build --app (client + SSR graph)
 pnpm --filter @ncam/cd-player typecheck
 pnpm --filter @ncam/cd-player art:build       # Blender, then gltf-transform: the suitcase's GLB
@@ -165,17 +165,17 @@ CI runs the unit tests (through the root `pnpm test`), the typecheck, lint and t
 `art:build` and `art:build:clear` run **by hand** and their output is committed (see
 "Art pipeline"). The dev and preview servers also answer `/api/spotify` (see "Data").
 
-Smoke runs beside the owner's own stack (1337, 9000, 9006, and :9011 itself while `pnpm dev`
-runs) use **9111**, with `CD_PLAYER_PORT` set as well as `--port`:
+Smoke runs beside the owner's own stack (1337, 9000, 9001, and :9006 itself while `pnpm dev`
+runs) use **9106**, with `CD_PLAYER_PORT` set as well as `--port`:
 
 ```bash
-env CD_PLAYER_PORT=9111 pnpm --filter @ncam/cd-player exec vite \
-  --port 9111 --strictPort --host 127.0.0.1
+env CD_PLAYER_PORT=9106 pnpm --filter @ncam/cd-player exec vite \
+  --port 9106 --strictPort --host 127.0.0.1
 ```
 
 `defineRemote` takes the dev server's origin from `CD_PLAYER_PORT`, so `--port` alone still names
-:9011 in the asset URLs. A host smoke points `CD_PLAYER_REMOTE_URL` at
-`http://localhost:9111/remoteEntry.js`. Never build while a dev server of this app is watching.
+:9006 in the asset URLs. A host smoke points `CD_PLAYER_REMOTE_URL` at
+`http://localhost:9106/remoteEntry.js`. Never build while a dev server of this app is watching.
 Playwright (a devDependency) drives a smoke run's headless checks.
 
 ## Data
@@ -1648,7 +1648,7 @@ The Vercel project **`ncam-cd-player`** (Root Directory `apps/cd-player`, the Vi
 (`public, max-age=0, must-revalidate`: their names never change), rewrites `/playlist/<id>` and
 `/album/<id>` to `index.html` for the standalone page, and keeps Dependabot's branches from
 deploying. Docker: the compose service `cd-player` shares the host container's network
-(`network_mode: service:portfolio`, 9011 published on `portfolio`), the `Dockerfile` takes
+(`network_mode: service:portfolio`, 9006 published on `portfolio`), the `Dockerfile` takes
 `CD_PLAYER_REMOTE_URL` as an `ARG`, and nginx has the `cd_player` upstream and a
 `cd-player.localhost` server block.
 
@@ -1663,7 +1663,7 @@ site"), in this order:
 3. On the host project, set
    `CD_PLAYER_REMOTE_URL=https://ncam-cd-player.vercel.app/remoteEntry.js` (**with**
    `/remoteEntry.js`) and redeploy the host.
-4. Merge. Merged first, the host bakes in `localhost:9011` and the gallery lists a page that cannot
+4. Merge. Merged first, the host bakes in `localhost:9006` and the gallery lists a page that cannot
    load.
 
 ## Known facts and gotchas
@@ -1735,7 +1735,7 @@ site"), in this order:
   R3F 9.8.2 itself, and `Allow attribute will take precedence over 'allowfullscreen'` from
   Spotify's iframe.
 - Rebuilding after a build that overrode `CD_PLAYER_REMOTE_URL` (the Lighthouse build with
-  `LH_PORT_OFFSET`, a host smoke against :9111) needs `pnpm build --force`: a Turbo cache hit
+  `LH_PORT_OFFSET`, a host smoke against :9106) needs `pnpm build --force`: a Turbo cache hit
   writes the cached outputs back but leaves the overridden build's extra chunks in
   `apps/portfolio/.output`.
 - `curl` and `wget` are blocked in the agents' environment: probe `/api/spotify` with a small

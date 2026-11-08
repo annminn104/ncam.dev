@@ -4,14 +4,14 @@
 
 **Mini Store**: a Saigon street corner on a rainy night and its convenience store, built as a
 miniature diorama. A hand-written WebGL2 renderer (no three.js) inside a small React 19 shell,
-packaged as a self-contained Module Federation remote (`mini_store`, :9009) that the host mounts
+packaged as a self-contained Module Federation remote (`mini_store`, :9004) that the host mounts
 at `/projects/mini-store`. Ported on 2026-10-25 from a standalone project (React 18 + Vite 5,
 single-file build); this copy is the source of truth now.
 
 ## Commands
 
 ```bash
-pnpm --filter @ncam/mini-store dev             # standalone on :9009
+pnpm --filter @ncam/mini-store dev             # standalone on :9004
 pnpm --filter @ncam/mini-store build           # vite build --app (client + SSR graph)
 pnpm --filter @ncam/mini-store typecheck
 pnpm --filter @ncam/mini-store capture:poster  # needs the dev server; rewrites src/assets/poster
