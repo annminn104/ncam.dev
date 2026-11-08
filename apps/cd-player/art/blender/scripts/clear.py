@@ -224,7 +224,12 @@ SCREWS = [(sx * (BODY_W / 2 - 14.0), z) for sx in (-1, 1) for z in (Z0 + 14.0, Z
 KEYS = ("prev", "play", "next", "stop", "rpt", "mode")
 WORDS = {"rpt": "RPT", "mode": "MODE"}  # button_icon draws the other four
 KEY_Y, KEY_PITCH = -14.0, 25.0
+DECK_W, DECK_D, DECK_R = 170.0, 24.0, 6.0   # the keys' deck: its width, its depth round KEY_Y, its corners
+KEY_HOLE_W, KEY_HOLE_D, KEY_HOLE_R = 19.4, 15.4, 3.0   # a key's hole in it
+DECK_RIM_Y = (DECK_D / 2 + KEY_HOLE_D / 2) / 2  # off KEY_Y, the middle of the flat between a hole and the deck's edge
+DECK_GROOVE_X = DECK_W / 2 - DECK_R - 1.0   # the grooves' ends, clear of the deck's rounded corners
 HANDLE_X, HANDLE_Y, HANDLE_H = 104.0, 14.0, 30.0
+HANDLE_MOUNT = (17.0, 15.0, 7.0)             # each upright's mount: width, depth, height
 KNOB_X, KNOB_Y, KNOB_RING = 107.0, KEY_Y, 15.2   # the knob on top, in the keys' row; its ring's rim
 STAND_X, STAND_Y, STAND_TURN = 252.0, 12.0, math.radians(-18.0)
 SLOT_DY, SLOT_DZ, TREAD0 = 18.0, 20.0, 12.0   # each slot further back and higher than the last
@@ -729,7 +734,7 @@ class Board:
         self.sheets = {}
         self.parts = []    # (designator, x0, z0, x1, z1)
         self.traces = []   # (points, width, net)
-        self.vias = []     # (x, z, outer radius, the zone or part it belongs to)
+        self.vias = []     # (x, z, outer radius)
         self.zones = []    # (what, x0, z0, x1, z1): nothing inside but their own copper
         self.words = []    # (x0, z0, x1, z1): the silkscreen's lettering, roughly
 
@@ -817,10 +822,10 @@ class Board:
         self.traces.append((pts, width, net))
         self.strip(pts, width)
 
-    def via(self, x, z, ro=0.45, host=None):
+    def via(self, x, z, ro=0.45):
         """A via: its tinned ring over the copper, its dark drill."""
         seg = 8 if WEB else 12
-        self.vias.append((x, z, ro, host))
+        self.vias.append((x, z, ro))
         self.ring("solder", M["solder"], x, z, ro, 0.2, FACE_Y - 0.06, seg)
         self.disc("drill", M["hub_black"], x, z, 0.2, FACE_Y - 0.05, seg)
 
@@ -1375,7 +1380,7 @@ def board_stitching(B, pitch):
             return False
         if any(_point_segment((x, z), a, b) < w / 2 + 1.1 for pts, w, _ in B.traces for a, b in zip(pts, pts[1:])):
             return False
-        if any(math.hypot(vx - x, vz - z) < ro + 1.6 for vx, vz, ro, _ in B.vias):
+        if any(math.hypot(vx - x, vz - z) < ro + 1.6 for vx, vz, ro in B.vias):
             return False
         return all(math.hypot(hx - x, hz - z) > 7.5 for hx, hz in holes)
     n = int((BOARD_W / 2 - 2.0) // pitch)
@@ -1383,7 +1388,7 @@ def board_stitching(B, pitch):
     while z < BOARD_Z1 - 2.0:
         for x in [i * pitch for i in range(-n, n + 1)]:
             if open_at(x, z):
-                B.via(x, z, ro=0.4, host="stitch")
+                B.via(x, z, ro=0.4)
         z += pitch
 
 
@@ -1583,8 +1588,8 @@ def clear_keys(name, root, playing=False):
     state shows, ‖ while it plays."""
     top = Z1
     F = M["clear_frame"]
-    holes = [rrect(19.4, 15.4, 3.0, cx=(i - 2.5) * KEY_PITCH, cy=KEY_Y) for i in range(len(KEYS))]
-    slab(name + "_key_deck", [rrect(170.0, 24.0, 6.0, cy=KEY_Y)] + holes, top + 0.05, top + 2.05, F, bevel_mm=0.6,
+    holes = [rrect(KEY_HOLE_W, KEY_HOLE_D, KEY_HOLE_R, cx=(i - 2.5) * KEY_PITCH, cy=KEY_Y) for i in range(len(KEYS))]
+    slab(name + "_key_deck", [rrect(DECK_W, DECK_D, DECK_R, cy=KEY_Y)] + holes, top + 0.05, top + 2.05, F, bevel_mm=0.6,
          parent=root)
 
     def scaled(shapes):
@@ -1655,7 +1660,7 @@ def clear_handle(name, root):
     tube(name + "_handle", pts, 4.6, F, res=4, parent=root)
     for k, sx in enumerate((-1, 1)):
         x = sx * HANDLE_X
-        rbox("%s_handle_mount_%d" % (name, k), (17.0, 15.0, 7.0), F, bevel_mm=2.4, parent=root,
+        rbox("%s_handle_mount_%d" % (name, k), HANDLE_MOUNT, F, bevel_mm=2.4, parent=root,
              loc=L(x, HANDLE_Y, top + 3.55))
         lathe("%s_handle_collar_%d" % (name, k), [(4.4, 0), (6.0, 0), (6.0, 1.6), (5.4, 2.2), (4.4, 2.2)],
               M["chrome"], seg=32, parent=root, loc=L(x, HANDLE_Y, top + 7.0))
@@ -1664,6 +1669,10 @@ def clear_handle(name, root):
 TAG_X, TAG_Z = 112.0, Z1 - 32.5   # between the right speaker's rim and the top
 TAG_ROT = (math.radians(90), math.radians(4.0), 0.0)
 TAG_CORD_X = KNOB_X + KNOB_RING + 4.3   # the cord's run along the top, clear of the knob's ring
+# The cord's two waypoints on the top in (x, y), behind the knob and toward the handle's right upright,
+# which clear_etch keeps its lines off, and the y at which it passes that upright's front.
+CORD_ON_TOP = ((TAG_CORD_X, KNOB_Y + 8.0), (TAG_CORD_X - 2.0, HANDLE_Y - 11.8))
+CORD_UPRIGHT_Y = HANDLE_Y - 10.4
 
 
 def clear_tag(name, root, playlist):
@@ -1692,9 +1701,9 @@ def clear_tag(name, root, playlist):
     # upright, above the mount's collar.
     cord = smooth_path([tuple(eye), (eye.x + 1.4, FRONT_Y - 3.7, eye.z + 3.0), (eye.x + 7.0, FRONT_Y - 3.9, top - 3.8),
                         (side - 1.3, FRONT_Y - 3.0, top - 1.2), (side - 0.3, FRONT_Y - 0.7, top + 1.5),
-                        (side, FRONT_Y + 5.0, top + 1.05), (side, KNOB_Y + 8.0, top + 1.05),
-                        (side - 2.0, HANDLE_Y - 11.8, top + 1.05), (HANDLE_X + 13.0, HANDLE_Y - 10.4, top + 1.05),
-                        (HANDLE_X + 7.2, HANDLE_Y - 10.4, top + 3.5),
+                        (side, FRONT_Y + 5.0, top + 1.05), (*CORD_ON_TOP[0], top + 1.05),
+                        (*CORD_ON_TOP[1], top + 1.05), (HANDLE_X + 13.0, CORD_UPRIGHT_Y, top + 1.05),
+                        (HANDLE_X + 7.2, CORD_UPRIGHT_Y, top + 3.5),
                         (HANDLE_X + 6.5, HANDLE_Y - 10.0, top + 9.4), (HANDLE_X + 6.4, HANDLE_Y - 2.5, top + 11.4),
                         (HANDLE_X + 2.5, HANDLE_Y + 6.2, top + 12.2), (HANDLE_X - 5.6, HANDLE_Y + 2.4, top + 12.8),
                         (HANDLE_X - 4.4, HANDLE_Y - 5.6, top + 12.4), (HANDLE_X + 3.4, HANDLE_Y - 6.8, top + 11.6)], 6)
@@ -1910,13 +1919,13 @@ def clear_etch(name, root):
         etch_maze(R, (-flat_y, flat_z[0], flat_y, flat_z[1]), lambda a, b: False, seed)
         R.done("%s_etch_%s" % (name, side), M["etch"], root)
     m = ETCH_CLEAR + ETCH_PAD                              # off each part, from a pad's middle
-    cord = ((TAG_CORD_X, FRONT_Y), (TAG_CORD_X, KNOB_Y + 8.0), (TAG_CORD_X - 2.0, HANDLE_Y - 11.8),
-            (HANDLE_X + 6.0, HANDLE_Y - 10.4))             # clear_tag's cord where it lies on the top
+    cord = ((TAG_CORD_X, FRONT_Y), *CORD_ON_TOP,
+            (HANDLE_X + 6.0, CORD_UPRIGHT_Y))              # clear_tag's cord where it lies on the top
 
     def blocked(x, y):
-        if abs(x) <= 85.0 + m and abs(y - KEY_Y) <= 12.0 + m:                     # the keys' deck
+        if abs(x) <= DECK_W / 2 + m and abs(y - KEY_Y) <= DECK_D / 2 + m:         # the keys' deck
             return True
-        if abs(abs(x) - HANDLE_X) <= 8.5 + m and abs(y - HANDLE_Y) <= 7.5 + m:     # the handle's mounts
+        if abs(abs(x) - HANDLE_X) <= HANDLE_MOUNT[0] / 2 + m and abs(y - HANDLE_Y) <= HANDLE_MOUNT[1] / 2 + m:   # the handle's mounts
             return True
         if math.hypot(x - KNOB_X, y - KNOB_Y) <= KNOB_RING + m:
             return True
@@ -2035,11 +2044,15 @@ def clear_dongson_ring(name, root):
         ring_chain(R, spans, rc, rad, line, 10 if WEB else 24)
     # The birds every 34 degrees along the two spans taken end to end, the first 23 degrees in: none
     # cut by an opening, none under the door's pull (at 0 degrees, 5.4 to either side).
-    half = math.degrees(max(abs(u) for u, _ in BIRD) / BIRD_R)
+    # The bird spans BIRD's own extent in u (beak at the least, tail at the greatest), and u grows
+    # clockwise: in degrees it covers `behind` below its position and `ahead` above it.
+    behind = math.degrees(max(u for u, _ in BIRD) / BIRD_R)
+    ahead = math.degrees(-min(u for u, _ in BIRD) / BIRD_R)
     warp = _polar(BIRD_R)
     for deg in _spread(spans, 8, 23.0):
-        clear_of_pull = abs((deg + 180.0) % 360.0 - 180.0) - half > 5.4
-        if not clear_of_pull or not any(b0 + 1.0 <= deg - half and deg + half <= b1 - 1.0 for b0, b1 in spans):
+        at = (deg + 180.0) % 360.0 - 180.0
+        clear_of_pull = at - behind > 5.4 or at + ahead < -5.4
+        if not clear_of_pull or not any(b0 + 1.0 <= deg - behind and deg + ahead <= b1 - 1.0 for b0, b1 in spans):
             raise SystemExit("clear.py: the Lạc bird at %.1f degrees is cut by an opening or under the pull" % deg)
         uc = -math.radians(deg) * BIRD_R
         R.poly([(uc + u, v) for u, v in BIRD], warp=warp)
@@ -2084,11 +2097,12 @@ def clear_grooves(name, root):
             R.strip([(x0, zc + s * 6.0), (x1, zc + s * 6.0)], 0.6)
         lozenges(R, x0, x1, zc, 9.0, 4, 0.5, 0.35, 1.1)
     R.done(name + "_grooves_plinth", F, root)
-    # The deck (clear_keys) is 24 mm deep round KEY_Y, its holes 15.4, every edge bevelled 0.6: each
-    # rim runs 7.7 to 12 mm off KEY_Y, its flat's middle 9.85 mm off it; its straight ends at x = +-79.
+    # The deck (clear_keys) is DECK_D deep round KEY_Y, its holes KEY_HOLE_D, every edge bevelled 0.6: each
+    # rim runs 7.7 to 12 mm off KEY_Y, its flat's middle DECK_RIM_Y (9.85) mm off it; its straight ends
+    # at x = +-79.
     R = Relief(lambda a, b, h: (a, b, Z1 + 2.05 + h), GROOVE_PROUD)
     for s in (-1, 1):
-        lozenges(R, -78.0, 78.0, KEY_Y + s * 9.85, 2.2, 43, 0.28, 0.2, 0.62)
+        lozenges(R, -DECK_GROOVE_X, DECK_GROOVE_X, KEY_Y + s * DECK_RIM_Y, 2.2, 43, 0.28, 0.2, 0.62)
     R.done(name + "_grooves_deck", F, root)
 
 
