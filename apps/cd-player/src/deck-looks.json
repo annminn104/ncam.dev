@@ -1,0 +1,33 @@
+{
+  "body": [
+    {
+      "id": "black",
+      "name": "Matte black",
+      "colour": "#26262a",
+      "metalness": 0,
+      "roughness": 0.62
+    },
+    { "id": "silver", "name": "Silver", "colour": "#c9ccd1", "metalness": 1, "roughness": 0.32 },
+    { "id": "white", "name": "White", "colour": "#f1f0ec", "metalness": 0, "roughness": 0.45 }
+  ],
+  "light": [
+    { "id": "ice", "name": "Ice", "glow": "#7fd8ff", "accent": "#9fd3ea", "onAccent": "#0e2430" },
+    {
+      "id": "amber",
+      "name": "Amber",
+      "glow": "#ffb347",
+      "accent": "#f0c27e",
+      "onAccent": "#2b1d08"
+    },
+    { "id": "pink", "name": "Pink", "glow": "#ff79b0", "accent": "#efa3c0", "onAccent": "#2c111d" },
+    { "id": "lime", "name": "Lime", "glow": "#a8ff4f", "accent": "#bfe39a", "onAccent": "#16250a" },
+    { "id": "red", "name": "Red", "glow": "#ff5a52", "accent": "#f2aaa5", "onAccent": "#2c0f0d" },
+    {
+      "id": "violet",
+      "name": "Violet",
+      "glow": "#b48cff",
+      "accent": "#c8b4f2",
+      "onAccent": "#1e1430"
+    }
+  ]
+}
