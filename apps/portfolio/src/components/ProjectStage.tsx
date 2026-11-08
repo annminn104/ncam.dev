@@ -30,11 +30,6 @@ type MountModule = { mount: (el: HTMLElement, config?: MountConfig) => MountHand
 // carries the wrapper's own exports — never `renderHeroSSR`. Treat the result
 // as opaque; `loadSsrExports()` reads the module from the runtime instead.
 export const ssrLoaders: Record<string, () => Promise<unknown>> = {
-  toonhub: () => import('toonhub/ssr'),
-  mindloop: () => import('mindloop/ssr'),
-  immersive_ocean: () => import('immersive_ocean/ssr'),
-  viktor: () => import('viktor/ssr'),
-  bali: () => import('bali/ssr'),
   holodex: () => import('holodex/ssr'),
   chess: () => import('chess/ssr'),
   mini_store: () => import('mini_store/ssr'),
@@ -42,11 +37,6 @@ export const ssrLoaders: Record<string, () => Promise<unknown>> = {
   cd_player: () => import('cd_player/ssr'),
 };
 const hydrateLoaders: Record<string, () => Promise<HydrateModule>> = {
-  toonhub: () => import('toonhub/hydrate'),
-  mindloop: () => import('mindloop/hydrate'),
-  immersive_ocean: () => import('immersive_ocean/hydrate'),
-  viktor: () => import('viktor/hydrate'),
-  bali: () => import('bali/hydrate'),
   holodex: () => import('holodex/hydrate'),
   chess: () => import('chess/hydrate'),
   mini_store: () => import('mini_store/hydrate'),
@@ -54,11 +44,6 @@ const hydrateLoaders: Record<string, () => Promise<HydrateModule>> = {
   cd_player: () => import('cd_player/hydrate'),
 };
 const mountLoaders: Record<string, () => Promise<MountModule>> = {
-  toonhub: () => import('toonhub/mount'),
-  mindloop: () => import('mindloop/mount'),
-  immersive_ocean: () => import('immersive_ocean/mount'),
-  viktor: () => import('viktor/mount'),
-  bali: () => import('bali/mount'),
   holodex: () => import('holodex/mount'),
   chess: () => import('chess/mount'),
   mini_store: () => import('mini_store/mount'),

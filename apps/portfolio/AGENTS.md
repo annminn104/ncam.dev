@@ -37,10 +37,9 @@ own six sections (the `profile` remote) on `/`. React 19.
     `/projects/holodex/...`). A remote with no internal routes just ignores
     `config.route` and keeps working under `$projectId.tsx` alone. Both
     loaders resolve `import('<remote>/ssr')` through `lib/federation.ts`
-    (`loadRemoteModuleSSR`) → `renderHeroSSR({ config: { route }, assetBase })`,
-    where `assetBase` is TOONHUB's origin for TOONHUB and nothing for every
-    other remote, which names its own (`lib/ssr-asset-base.ts`); failures
-    log `project.ssr-fallback` at warn level and fall back to a client
+    (`loadRemoteModuleSSR`) → `renderHeroSSR({ config: { route } })`, with
+    no `assetBase`: every remote names its own origin from its module URL;
+    failures log `project.ssr-fallback` at warn level and fall back to a client
     mount. The splat loader also keeps the render's optional `head`
     (the contract's `SsrHead`, checked by `remoteHead()`), and its head()
     hands it to `projectHead()`, which titles and describes a route-aware
@@ -297,7 +296,7 @@ is the page's og:image. Regenerate after a remote's hero changes:
 
 ```bash
 pnpm dev                    # host + remotes must be up
-pnpm thumbnails             # all live projects; or `pnpm thumbnails viktor`
+pnpm thumbnails             # all live projects; or `pnpm thumbnails holodex`
 ```
 
 Needs a Playwright Chromium once: `pnpm --filter @ncam/portfolio exec playwright install chromium`.
@@ -334,7 +333,7 @@ pnpm --filter @ncam/portfolio build   # client + SSR + Nitro server; generates r
 ```
 
 End-to-end needs the dev servers: `pnpm dev` at the repo root (portfolio :9000,
-remotes :9001–:9011), then open http://localhost:9000 — the home sections mount
+remotes :9006–:9011), then open http://localhost:9000 — the home sections mount
 from the `profile` remote; open a project to mount its remote.
 
 > Note: the Nitro server-bundle step can be slow; the config force-exits the

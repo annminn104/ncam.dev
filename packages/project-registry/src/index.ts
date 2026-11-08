@@ -18,7 +18,7 @@ export interface ProjectEntry {
    * A 1200×630 capture of the project page — regenerate with `pnpm thumbnails`.
    */
   thumbnail?: string;
-  /** Module Federation remote name, e.g. 'toonhub'. */
+  /** Module Federation remote name, e.g. 'holodex'. */
   remote: string;
   /** Exposed module on that remote, e.g. './mount'. */
   module: string;
@@ -45,69 +45,6 @@ export interface ProjectEntry {
 }
 
 export const projects: ProjectEntry[] = [
-  {
-    id: 'toonhub',
-    name: 'TOONHUB',
-    tagline: 'Collectible figurines',
-    description:
-      'A premium interactive collectible-figurine carousel hero — bold, playful, cinematic, with autoplay, swipe, ambient effects and music.',
-    accent: '#F4845F',
-    thumbnail: '/thumbnails/toonhub.jpg',
-    remote: 'toonhub',
-    module: './mount',
-    status: 'live',
-  },
-  {
-    id: 'mindloop',
-    name: 'Mindloop',
-    tagline: 'Newsletter / content platform',
-    description:
-      'A dark monochrome landing page for a newsletter & content platform — React, Framer Motion, liquid-glass UI, scroll-driven reveals and video + HLS backgrounds.',
-    accent: '#62837C',
-    thumbnail: '/thumbnails/mindloop.jpg',
-    remote: 'mindloop',
-    module: './mount',
-    status: 'live',
-  },
-  {
-    id: 'immersive-ocean',
-    name: 'Immersive Ocean',
-    tagline: 'Creative studio hero',
-    description:
-      'A fullscreen creative-studio landing page — looping ocean video background, responsive navbar with an animated mobile menu, and staggered CSS entrance animations. React + Tailwind + Geist.',
-    accent: '#2C7DA0',
-    thumbnail: '/thumbnails/immersive-ocean.jpg',
-    // MF remote name must be a valid identifier → underscore (route id stays kebab).
-    remote: 'immersive_ocean',
-    module: './mount',
-    status: 'live',
-  },
-  {
-    id: 'viktor',
-    name: 'Viktor.',
-    tagline: 'Creative portfolio hero',
-    description:
-      'A full-screen portfolio hero with crossfade video switcher, Figtree font, animated "Viktor." name reveal, availability dot with pink glow accent, and a fill-up CTA button.',
-    accent: '#F598F2',
-    thumbnail: '/thumbnails/viktor.jpg',
-    // Single-word name → already a valid identifier (no underscore/kebab split).
-    remote: 'viktor',
-    module: './mount',
-    status: 'live',
-  },
-  {
-    id: 'bali',
-    name: 'Bali Adventure',
-    tagline: 'Luxury travel landing page',
-    description:
-      'A cinematic dark-mode travel agency site for private Bali journeys — GSAP pinned 3-layer parallax hero, horizontal-scroll itinerary, clip-path reveals, framer-motion modals and glassmorphic UI. React + Tailwind v4 + GSAP.',
-    accent: '#C4D52A',
-    thumbnail: '/thumbnails/bali.jpg',
-    // Single-word name → already a valid identifier.
-    remote: 'bali',
-    module: './mount',
-    status: 'live',
-  },
   {
     id: 'holodex',
     name: 'Holodex',

@@ -24,8 +24,8 @@ describe('StageLoading', () => {
   });
 
   it("lets the ellipsis replace a name's own full stop", () => {
-    const html = render({ project: { name: 'Viktor.' }, done: false });
-    expect(html).toContain('Loading Viktor…');
-    expect(html).not.toContain('Viktor.…');
+    const html = render({ project: { name: 'Acme.' }, done: false });
+    expect(html).toContain('Loading Acme…');
+    expect(html).not.toContain('Acme.…');
   });
 });

@@ -78,7 +78,7 @@ manifest rail on the host shows the real lifecycle of each module.
 
 ## GSAP rules
 
-Same as `apps/bali`: everything through `useGsap()`, `fromTo` with the markup as
+Everything through `useGsap()`, `fromTo` with the markup as
 the end state, stagger `wrapper.children` (never ref arrays).
 
 The hero's entrance is the exception: CSS keyframes that start with the first

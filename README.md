@@ -14,33 +14,9 @@ deployed on its own.
 <table>
   <tr>
     <td align="center" width="33%">
-      <a href="https://ncam-profile.vercel.app/projects/toonhub"><img src="apps/portfolio/public/thumbnails/toonhub.jpg" alt="TOONHUB"></a>
-      <br><sub><b>TOONHUB</b> · Collectible figurines</sub>
-    </td>
-    <td align="center" width="33%">
-      <a href="https://ncam-profile.vercel.app/projects/mindloop"><img src="apps/portfolio/public/thumbnails/mindloop.jpg" alt="Mindloop"></a>
-      <br><sub><b>Mindloop</b> · Newsletter / content platform</sub>
-    </td>
-    <td align="center" width="33%">
-      <a href="https://ncam-profile.vercel.app/projects/immersive-ocean"><img src="apps/portfolio/public/thumbnails/immersive-ocean.jpg" alt="Immersive Ocean"></a>
-      <br><sub><b>Immersive Ocean</b> · Creative studio hero</sub>
-    </td>
-  </tr>
-  <tr>
-    <td align="center" width="33%">
-      <a href="https://ncam-profile.vercel.app/projects/viktor"><img src="apps/portfolio/public/thumbnails/viktor.jpg" alt="Viktor."></a>
-      <br><sub><b>Viktor.</b> · Creative portfolio hero</sub>
-    </td>
-    <td align="center" width="33%">
-      <a href="https://ncam-profile.vercel.app/projects/bali"><img src="apps/portfolio/public/thumbnails/bali.jpg" alt="Bali Adventure"></a>
-      <br><sub><b>Bali Adventure</b> · Luxury travel landing page</sub>
-    </td>
-    <td align="center" width="33%">
       <a href="https://ncam-profile.vercel.app/projects/holodex"><img src="apps/portfolio/public/thumbnails/holodex.jpg" alt="Holodex"></a>
       <br><sub><b>Holodex</b> · Pokémon TCG explorer</sub>
     </td>
-  </tr>
-  <tr>
     <td align="center" width="33%">
       <a href="https://ncam-profile.vercel.app/projects/chess"><img src="apps/portfolio/public/thumbnails/chess.jpg" alt="Cultivation Chess"></a>
       <br><sub><b>Cultivation Chess</b> · 3D xianxia chess</sub>
@@ -49,12 +25,12 @@ deployed on its own.
       <a href="https://ncam-profile.vercel.app/projects/mini-store"><img src="apps/portfolio/public/thumbnails/mini-store.jpg" alt="Mini Store"></a>
       <br><sub><b>Mini Store</b> · Rainy-night corner store diorama</sub>
     </td>
+  </tr>
+  <tr>
     <td align="center" width="33%">
       <a href="https://ncam-profile.vercel.app/projects/garden-home"><img src="apps/portfolio/public/thumbnails/garden-home.jpg" alt="Garden Home"></a>
       <br><sub><b>Garden Home</b> · A glass villa and its garden island, cut away floor by floor</sub>
     </td>
-  </tr>
-  <tr>
     <td align="center" width="33%">
       <a href="https://ncam-profile.vercel.app/projects/cd-player"><img src="apps/portfolio/public/thumbnails/cd-player.jpg" alt="CD Player"></a>
       <br><sub><b>CD Player</b> · Any Spotify playlist on a suitcase CD player</sub>
@@ -80,21 +56,16 @@ deployed on its own.
 
 A Turborepo monorepo on pnpm workspaces, TypeScript everywhere.
 
-| Path                   | What it is                                                                                                                                                                 | Dev port |
-| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
-| `apps/portfolio`       | **Host.** TanStack Start (SSR on Nitro) and TanStack Router, React 19: the home page, the project gallery, the `/projects/<id>` stage and the blog.                        | 9000     |
-| `apps/toonhub`         | TOONHUB: a collectible-figurine carousel hero. Framework-free TypeScript.                                                                                                  | 9001     |
-| `apps/mindloop`        | Mindloop: a dark newsletter landing page. React 19, Tailwind v4, framer-motion, hls.js.                                                                                    | 9002     |
-| `apps/immersive-ocean` | Immersive Ocean: a creative-studio hero over a looping video. React 19, Tailwind v4.                                                                                       | 9003     |
-| `apps/viktor`          | Viktor.: a portfolio hero with a crossfading video switcher. React 19, Tailwind v4.                                                                                        | 9004     |
-| `apps/bali`            | Bali Adventure: a cinematic luxury-travel landing page. React 19, Tailwind v4, GSAP ScrollTrigger, framer-motion.                                                          | 9005     |
-| `apps/profile`         | The home page's six sections (hero, stacks, experience, projects, blog, contact), one federated module each.                                                               | 9006     |
-| `apps/holodex`         | Holodex: a Pokémon TCG explorer on the TCGdex API, with nested URLs of its own and three.js holo foil cards. React 19, Tailwind v4, TanStack Query.                        | 9007     |
-| `apps/chess`           | Cultivation Chess: chess with cultivation-treasure pieces in three 3D arenas, vs a friend or Stockfish. React 19, React Three Fiber, chess.js.                             | 9008     |
-| `apps/mini-store`      | Mini Store: a rainy-night corner store diorama with a hand-written WebGL2 renderer (no three.js), booted on the first interaction. React 19.                               | 9009     |
-| `apps/garden-home`     | Garden Home: a glass villa and its garden island from Blender modules, cut away floor by floor, behind a server-rendered poster. React 19, React Three Fiber.              | 9010     |
-| `apps/cd-player`       | CD Player: any Spotify playlist or album on a 3D suitcase or a see-through CD player, played in Spotify's embed; route-aware; Blender models. React 19, React Three Fiber. | 9011     |
-| `apps/strapi`          | Strapi 5 headless CMS for the blog, with a public read-only REST API. A backend service, not a remote.                                                                     | 1337     |
+| Path               | What it is                                                                                                                                                                 | Dev port |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| `apps/portfolio`   | **Host.** TanStack Start (SSR on Nitro) and TanStack Router, React 19: the home page, the project gallery, the `/projects/<id>` stage and the blog.                        | 9000     |
+| `apps/profile`     | The home page's six sections (hero, stacks, experience, projects, blog, contact), one federated module each.                                                               | 9006     |
+| `apps/holodex`     | Holodex: a Pokémon TCG explorer on the TCGdex API, with nested URLs of its own and three.js holo foil cards. React 19, Tailwind v4, TanStack Query.                        | 9007     |
+| `apps/chess`       | Cultivation Chess: chess with cultivation-treasure pieces in three 3D arenas, vs a friend or Stockfish. React 19, React Three Fiber, chess.js.                             | 9008     |
+| `apps/mini-store`  | Mini Store: a rainy-night corner store diorama with a hand-written WebGL2 renderer (no three.js), booted on the first interaction. React 19.                               | 9009     |
+| `apps/garden-home` | Garden Home: a glass villa and its garden island from Blender modules, cut away floor by floor, behind a server-rendered poster. React 19, React Three Fiber.              | 9010     |
+| `apps/cd-player`   | CD Player: any Spotify playlist or album on a 3D suitcase or a see-through CD player, played in Spotify's embed; route-aware; Blender models. React 19, React Three Fiber. | 9011     |
+| `apps/strapi`      | Strapi 5 headless CMS for the blog, with a public read-only REST API. A backend service, not a remote.                                                                     | 1337     |
 
 | Package                  | What it is                                                                                                   |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
@@ -115,7 +86,7 @@ flowchart LR
   browser([Browser])
   subgraph vercel [Vercel]
     host["Host · apps/portfolio<br/>TanStack Start SSR on Nitro"]
-    remotes["11 remotes · apps/*<br/>static Vite builds"]
+    remotes["6 remotes · apps/*<br/>static Vite builds"]
   end
   cms[("Strapi · apps/strapi<br/>Render + Postgres")]
   tcgdex[("TCGdex API")]
@@ -157,14 +128,14 @@ flowchart LR
 
 ## Tech stack
 
-| Area       | Tools                                                                                                                                                                                           |
-| ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Host       | TanStack Start and TanStack Router, React 19, Nitro                                                                                                                                             |
-| Federation | `@module-federation/vite`, with server-side remote entries                                                                                                                                      |
-| Remotes    | Vite 8, React 19 or plain TypeScript, Tailwind CSS v4, GSAP, framer-motion, hls.js, three.js, React Three Fiber, drei, TanStack Query, chess.js, Stockfish (WebAssembly), WebGL2 (hand-written) |
-| CMS        | Strapi 5: SQLite in development, Postgres in Docker and on Render                                                                                                                               |
-| Tooling    | pnpm workspaces, Turborepo, TypeScript, Vitest, ESLint (flat config), Prettier, Husky, lint-staged, commitlint                                                                                  |
-| Hosting    | Vercel (the host and the remotes), Render (the CMS), Docker Compose (the whole stack)                                                                                                           |
+| Area       | Tools                                                                                                                                                |
+| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Host       | TanStack Start and TanStack Router, React 19, Nitro                                                                                                  |
+| Federation | `@module-federation/vite`, with server-side remote entries                                                                                           |
+| Remotes    | Vite 8, React 19, Tailwind CSS v4, GSAP, three.js, React Three Fiber, drei, TanStack Query, chess.js, Stockfish (WebAssembly), WebGL2 (hand-written) |
+| CMS        | Strapi 5: SQLite in development, Postgres in Docker and on Render                                                                                    |
+| Tooling    | pnpm workspaces, Turborepo, TypeScript, Vitest, ESLint (flat config), Prettier, Husky, lint-staged, commitlint                                       |
+| Hosting    | Vercel (the host and the remotes), Render (the CMS), Docker Compose (the whole stack)                                                                |
 
 ## Getting started
 
@@ -175,7 +146,7 @@ later) and pnpm, which `corepack enable` installs at the version pinned in
 ```bash
 corepack enable
 pnpm install
-pnpm dev        # host :9000, remotes :9001–:9011, Strapi :1337
+pnpm dev        # host :9000, remotes :9006–:9011, Strapi :1337
 ```
 
 Open http://localhost:9000 and pick a project. The host loads that remote at
@@ -205,7 +176,7 @@ Run from the repo root.
 | `pnpm format` / `format:check` | Prettier.                                                                                                                                |
 | `pnpm test` / `test:watch`     | Vitest over the shared packages, Strapi, Holodex, Chess, Mini Store, Garden Home, CD Player, the host's `src/lib` and the apps' scripts. |
 | `pnpm run ci`                  | Lint, format check, typecheck, test and build, as CI runs them. (`pnpm ci` is pnpm's own clean install.)                                 |
-| `pnpm assets`                  | Fetches and derives self-hosted assets where an app defines them (TOONHUB's figurines).                                                  |
+| `pnpm assets`                  | Fetches and copies self-hosted assets where an app defines them (Holodex's gallery art, Stockfish, Basis).                               |
 | `pnpm thumbnails [id...]`      | Regenerates gallery thumbnails; see [Adding a project](#adding-a-project).                                                               |
 | `pnpm lighthouse`              | Lighthouse CI over every page type against the production build (`pnpm build` first); CI's own check.                                    |
 | `pnpm skills:add`              | Installs the agent skills listed in `scripts/add-agent-skills.sh`.                                                                       |
@@ -218,8 +189,8 @@ overrides go in `.env.local` (gitignored). The real environment wins over
 exception: the built server reads them from the real environment only. Never
 put secrets in `.env`.
 
-Below, `<NAME>` stands for `TOONHUB`, `MINDLOOP`, `IMMERSIVE_OCEAN`, `VIKTOR`,
-`BALI`, `PROFILE`, `HOLODEX`, `CHESS`, `MINI_STORE`, `GARDEN_HOME` or `CD_PLAYER`.
+Below, `<NAME>` stands for `PROFILE`, `HOLODEX`, `CHESS`, `MINI_STORE`,
+`GARDEN_HOME` or `CD_PLAYER`.
 
 | Variable                          | Purpose                                                                                                                                                                                           |
 | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -238,10 +209,11 @@ set `SITE_URL` on every remote's project as well.
 
 1. Create `apps/<id>/`, a Vite app whose `vite.config.ts` calls
    `defineRemote()` from `@ncam/mf-remote` and exposes `./mount`, `./ssr` and
-   `./hydrate` (copy `apps/viktor`). Its `build` script is `vite build --app`,
-   which also emits the server entry. Its `index.html` builds its canonical,
-   `og:url`, `og:image` and JSON-LD `url` on `%SITE_URL%`: change `viktor` in
-   those to the new id.
+   `./hydrate` (copy the wiring of `apps/mini-store`: `vite.config.ts`,
+   `src/mount.tsx`, `src/ssr.tsx`, `src/hydrate.tsx`, `index.html`). Its `build`
+   script is `vite build --app`, which also emits the server entry. Its
+   `index.html` builds its canonical, `og:url`, `og:image` and JSON-LD `url` on
+   `%SITE_URL%`: change `mini-store` in those to the new id.
 2. Give it an `AGENTS.md` and a `vercel.json` (copy any remote's), and add its
    `<NAME>_PORT` and `<NAME>_REMOTE_URL` to `.env`.
 3. In the host, add the remote to `remotes` in `apps/portfolio/vite.config.ts`;
@@ -290,7 +262,7 @@ Re-run it whenever a remote's first screen changes rather than editing an image.
 
 ## Deployment
 
-- **Vercel** serves the host (a Nitro server) and the eleven remotes (static
+- **Vercel** serves the host (a Nitro server) and the six remotes (static
   builds), one project per app, each configured by its own `vercel.json`. The
   host bakes each `<NAME>_REMOTE_URL` in at build time.
 - **Render** runs Strapi and its Postgres from [`render.yaml`](render.yaml),

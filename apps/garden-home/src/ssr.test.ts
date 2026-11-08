@@ -31,7 +31,7 @@ describe('renderHeroSSR', () => {
 
   it('ships its css and names the page', async () => {
     const { html, css, head } = await renderHeroSSR({ assetBase: 'https://ignored.example.test/' });
-    // the host's assetBase is TOONHUB's alone: this remote names its own origin
+    // an assetBase is ignored: this remote names its own origin
     expect(html).not.toContain('ignored.example.test');
     expect(css).toContain('.garden-home-root');
     expect(css).not.toMatch(/(^|[\s,}])(html|body|:root)\s*[,{]/);

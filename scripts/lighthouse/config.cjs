@@ -13,11 +13,6 @@ const AUDITED_PATHS = [
   '/blog',
   // scripts/lighthouse/fixtures/articles.json
   '/blog/micro-frontends-without-the-framework-tax',
-  '/projects/toonhub',
-  '/projects/mindloop',
-  '/projects/immersive-ocean',
-  '/projects/viktor',
-  '/projects/bali',
   '/projects/holodex',
   '/projects/chess',
   '/projects/mini-store',
@@ -41,7 +36,7 @@ function auditedPaths() {
   return AUDITED_PATHS.filter((_, index) => index % of === n - 1);
 }
 
-/** The .env defaults (host 9000, remotes 9001-9011, CMS 1337), shifted by LH_PORT_OFFSET. */
+/** The .env defaults (host 9000, remotes 9006-9011, CMS 1337), shifted by LH_PORT_OFFSET. */
 function ports() {
   const offset = Number(process.env.LH_PORT_OFFSET ?? '0');
   if (!Number.isInteger(offset) || offset < 0)
@@ -53,11 +48,6 @@ function ports() {
 function remotes() {
   const { offset } = ports();
   return [
-    { name: 'toonhub', pkg: '@ncam/toonhub', key: 'TOONHUB', port: 9001 },
-    { name: 'mindloop', pkg: '@ncam/mindloop', key: 'MINDLOOP', port: 9002 },
-    { name: 'immersive-ocean', pkg: '@ncam/immersive-ocean', key: 'IMMERSIVE_OCEAN', port: 9003 },
-    { name: 'viktor', pkg: '@ncam/viktor', key: 'VIKTOR', port: 9004 },
-    { name: 'bali', pkg: '@ncam/bali', key: 'BALI', port: 9005 },
     { name: 'profile', pkg: '@ncam/profile', key: 'PROFILE', port: 9006 },
     { name: 'holodex', pkg: '@ncam/holodex', key: 'HOLODEX', port: 9007 },
     { name: 'chess', pkg: '@ncam/chess', key: 'CHESS', port: 9008 },

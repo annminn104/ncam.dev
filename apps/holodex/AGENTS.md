@@ -5,7 +5,7 @@ series, set and card, filter by type and rarity, search globally, track a
 collection, and inspect a card rendered with a three.js WebGL holo foil keyed
 to its rarity. React 19 + Vite 8 + Tailwind CSS v4 + TanStack Query + three.js,
 packaged as a **self-contained** React Module Federation remote (same model as
-`apps/bali` / `apps/viktor` / `apps/mindloop` / `apps/immersive-ocean`).
+`apps/chess` / `apps/mini-store` / `apps/garden-home` / `apps/cd-player`).
 
 **Current state: implemented.** Mounted by the portfolio host at
 `/projects/holodex/...` via the host-owned, route-aware remote contract (see

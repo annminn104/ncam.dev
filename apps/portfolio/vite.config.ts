@@ -8,16 +8,6 @@ import { nitro } from 'nitro/vite';
 import { defineConfig } from 'vite';
 
 // Config resolved from the root .env / .env.local (overridable by real env).
-const TOONHUB_REMOTE = env('TOONHUB_REMOTE_URL', 'http://localhost:9001/remoteEntry.js');
-// The remote's browser origin — used to resolve its asset URLs during SSR.
-const TOONHUB_ORIGIN = new URL(TOONHUB_REMOTE).origin;
-const MINDLOOP_REMOTE = env('MINDLOOP_REMOTE_URL', 'http://localhost:9002/remoteEntry.js');
-const IMMERSIVE_OCEAN_REMOTE = env(
-  'IMMERSIVE_OCEAN_REMOTE_URL',
-  'http://localhost:9003/remoteEntry.js',
-);
-const VIKTOR_REMOTE = env('VIKTOR_REMOTE_URL', 'http://localhost:9004/remoteEntry.js');
-const BALI_REMOTE = env('BALI_REMOTE_URL', 'http://localhost:9005/remoteEntry.js');
 // The home page's own sections live in the `profile` remote (one module each).
 const PROFILE_REMOTE = env('PROFILE_REMOTE_URL', 'http://localhost:9006/remoteEntry.js');
 const HOLODEX_REMOTE = env('HOLODEX_REMOTE_URL', 'http://localhost:9007/remoteEntry.js');
@@ -149,31 +139,6 @@ export default defineConfig({
       // TanStack Start has no index.html — inject host init into the entry.
       hostInitInjectLocation: 'entry',
       remotes: {
-        toonhub: {
-          type: 'module',
-          name: 'toonhub',
-          entry: TOONHUB_REMOTE,
-        },
-        mindloop: {
-          type: 'module',
-          name: 'mindloop',
-          entry: MINDLOOP_REMOTE,
-        },
-        immersive_ocean: {
-          type: 'module',
-          name: 'immersive_ocean',
-          entry: IMMERSIVE_OCEAN_REMOTE,
-        },
-        viktor: {
-          type: 'module',
-          name: 'viktor',
-          entry: VIKTOR_REMOTE,
-        },
-        bali: {
-          type: 'module',
-          name: 'bali',
-          entry: BALI_REMOTE,
-        },
         profile: {
           type: 'module',
           name: 'profile',
@@ -252,7 +217,6 @@ export default defineConfig({
     },
   },
   define: {
-    'import.meta.env.VITE_TOONHUB_ORIGIN': JSON.stringify(TOONHUB_ORIGIN),
     // Read through src/lib/site.ts — never import.meta.env directly in a route.
     'import.meta.env.VITE_SITE_URL': JSON.stringify(SITE_URL),
   },

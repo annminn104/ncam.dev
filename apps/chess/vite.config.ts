@@ -2,7 +2,7 @@ import react from '@vitejs/plugin-react';
 import { defineRemote } from '@ncam/mf-remote';
 
 // Self-contained React remote — bundles its own React and three (shared: {} in
-// defineRemote), same model as viktor / bali / holodex.
+// defineRemote), same model as holodex / mini-store / garden-home.
 export default defineRemote({
   name: 'chess',
   port: 9008,

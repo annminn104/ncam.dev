@@ -17,7 +17,7 @@ export interface StageLoadingProps {
  * so the remote fades in underneath rather than popping in.
  */
 export function StageLoading({ project, done }: StageLoadingProps) {
-  // "Viktor." would read "Loading Viktor.…": the ellipsis replaces its stop.
+  // A name such as "Acme." would read "Loading Acme.…": the ellipsis replaces its stop.
   const name = project.name.endsWith('.') ? project.name.slice(0, -1) : project.name;
   return (
     <div

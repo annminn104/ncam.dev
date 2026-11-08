@@ -23,20 +23,15 @@ app's `vercel.json` needs it too. Create **one Vercel project per app** from thi
 repo, each with the matching **Root Directory**. The live ones, and Chess, Mini Store, Garden Home
 and CD Player, whose projects are yet to be created ([the order](#adding-a-remote-to-the-live-site) matters):
 
-| App                     | Root Directory         | Production URL                                |
-| ----------------------- | ---------------------- | --------------------------------------------- |
-| Host                    | `apps/portfolio`       | https://ncam-profile.vercel.app               |
-| TOONHUB                 | `apps/toonhub`         | https://ncam-toonhub.vercel.app               |
-| Mindloop                | `apps/mindloop`        | https://ncam-mindloop.vercel.app              |
-| Immersive Ocean         | `apps/immersive-ocean` | https://ncam-immersive-ocean.vercel.app       |
-| Viktor.                 | `apps/viktor`          | https://ncam-viktor.vercel.app                |
-| Bali Adventure          | `apps/bali`            | https://ncam-bali.vercel.app                  |
-| Profile (home sections) | `apps/profile`         | https://ncam-sections.vercel.app              |
-| Holodex                 | `apps/holodex`         | https://ncam-holodex.vercel.app               |
-| Cultivation Chess       | `apps/chess`           | https://ncam-chess.vercel.app (planned)       |
-| Mini Store              | `apps/mini-store`      | https://ncam-mini-store.vercel.app (planned)  |
-| Garden Home             | `apps/garden-home`     | https://ncam-garden-home.vercel.app (planned) |
-| CD Player               | `apps/cd-player`       | https://ncam-cd-player.vercel.app (planned)   |
+| App                     | Root Directory     | Production URL                                |
+| ----------------------- | ------------------ | --------------------------------------------- |
+| Host                    | `apps/portfolio`   | https://ncam-profile.vercel.app               |
+| Profile (home sections) | `apps/profile`     | https://ncam-sections.vercel.app              |
+| Holodex                 | `apps/holodex`     | https://ncam-holodex.vercel.app               |
+| Cultivation Chess       | `apps/chess`       | https://ncam-chess.vercel.app (planned)       |
+| Mini Store              | `apps/mini-store`  | https://ncam-mini-store.vercel.app (planned)  |
+| Garden Home             | `apps/garden-home` | https://ncam-garden-home.vercel.app (planned) |
+| CD Player               | `apps/cd-player`   | https://ncam-cd-player.vercel.app (planned)   |
 
 1. **Remotes first.** Pick the Vite framework preset; everything else comes
    from `vercel.json`. Deploy each remote and note its production URL.
@@ -53,11 +48,6 @@ and CD Player, whose projects are yet to be created ([the order](#adding-a-remot
    redeploy the host after changing one.
 
    ```
-   TOONHUB_REMOTE_URL=https://ncam-toonhub.vercel.app/remoteEntry.js
-   MINDLOOP_REMOTE_URL=https://ncam-mindloop.vercel.app/remoteEntry.js
-   IMMERSIVE_OCEAN_REMOTE_URL=https://ncam-immersive-ocean.vercel.app/remoteEntry.js
-   VIKTOR_REMOTE_URL=https://ncam-viktor.vercel.app/remoteEntry.js
-   BALI_REMOTE_URL=https://ncam-bali.vercel.app/remoteEntry.js
    PROFILE_REMOTE_URL=https://ncam-sections.vercel.app/remoteEntry.js
    HOLODEX_REMOTE_URL=https://ncam-holodex.vercel.app/remoteEntry.js
    CHESS_REMOTE_URL=https://ncam-chess.vercel.app/remoteEntry.js
@@ -92,7 +82,7 @@ and CD Player, whose projects are yet to be created ([the order](#adding-a-remot
    them too, or their canonicals keep naming the old origin.
 
 Hobby plan notes: one build runs at a time, so a push that touches everything
-builds the twelve projects one after another (`turbo-ignore` skips the untouched
+builds the seven projects one after another (`turbo-ignore` skips the untouched
 ones); the plan is for non-commercial use only. Share the Turbo cache with
 `npx turbo login && npx turbo link`.
 
@@ -123,7 +113,7 @@ One multi-stage image builds the whole monorepo, and `docker-compose.yml` runs
 the SSR host and each remote (as a static preview) from that same image:
 
 ```bash
-docker compose up --build                     # host http://localhost:9000, remotes :9001–:9011
+docker compose up --build                     # host http://localhost:9000, remotes :9006–:9011
 docker compose --profile gateway up --build   # + nginx on :80 → http://ncam.localhost
 ```
 

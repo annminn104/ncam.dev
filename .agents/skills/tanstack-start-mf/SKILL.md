@@ -6,8 +6,8 @@ description: Work on the ncam.dev portfolio host — TanStack Start (SSR) + TanS
 # TanStack Start (SSR) + TanStack Router + Module Federation
 
 The `apps/portfolio` host is React 19 + TanStack Start (SSR via Nitro) and acts
-as the Module Federation host. Remotes (e.g. `apps/toonhub`) are framework-free
-and expose `mount(el) => dispose`; the host mounts them into a `<div>`.
+as the Module Federation host. Remotes (e.g. `apps/holodex`) bundle their own
+runtime and expose `mount(el) => dispose`; the host mounts them into a `<div>`.
 
 ## vite.config.ts (order matters)
 
@@ -39,7 +39,7 @@ plugin. Key options:
 
 - Load remotes **client-only**, inside `useEffect` — never in SSR or a route
   `loader` (they use `window`/DOM). Keep import specifiers static
-  (`() => import('toonhub/mount')`) so the MF plugin can transform them.
+  (`() => import('holodex/mount')`) so the MF plugin can transform them.
 - The mount `<div>` must have **no React children** (the remote owns its
   innerHTML). Call the returned disposer on cleanup.
 
@@ -70,7 +70,7 @@ The remote can render server-side without shipping browser code to the server:
   server-side by the MF SSR runtime — and returns `{ html, css }`. The component
   inlines `<style>` + `dangerouslySetInnerHTML`, then `useEffect` runs
   `import('<remote>/hydrate')` → `hydrate(el)`.
-- Host injects the remote origin via `define` (`VITE_TOONHUB_ORIGIN`) so SSR can
-  resolve the remote's asset URLs (the server can't infer the browser origin).
+- Each remote names its asset origin from its own module URL, on the server as
+  in the browser, so the host hands its server render no `assetBase`.
 - Only the static first paint is SSR'd; all interactivity/audio/detection is
   client-side. Never import `./hydrate` or `./mount` during SSR.

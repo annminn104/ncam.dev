@@ -717,8 +717,8 @@
 }
 .pcard {
   --accent-p: var(--accent);
-  /* The accent as text: several brand accents (TOONHUB's orange, Viktor's pink,
-     Bali's lime) read at under 2.3:1 on a light card, so text takes it 45%
+  /* The accent as text: a light brand accent (an orange, a pink, a lime) can
+     read at under 2.3:1 on a light card, so text takes it 45%
      into the text colour, which clears 4.5:1 for every project in both themes.
      Shapes (the status dot, borders, glows) keep the pure accent. */
   --accent-p-text: color-mix(in srgb, var(--accent-p) 45%, var(--text));

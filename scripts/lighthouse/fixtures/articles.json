@@ -87,7 +87,7 @@
         "children": [
           {
             "type": "text",
-            "text": "const { mount } = await import('viktor/mount');\nconst dispose = mount(element, { route: '/' });"
+            "text": "const { mount } = await import('chess/mount');\nconst dispose = mount(element, { route: '/' });"
           }
         ]
       },

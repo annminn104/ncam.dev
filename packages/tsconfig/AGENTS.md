@@ -19,8 +19,8 @@ It is for type-checking only (`noEmit`): Vite and Nitro transpile the apps, and
 
 ## Who extends it
 
-Every app but `apps/strapi` (bali, holodex, immersive-ocean, mindloop,
-portfolio, profile, toonhub, viktor) and every package with TypeScript (cms,
+Every app but `apps/strapi` (cd-player, chess, garden-home, holodex,
+mini-store, portfolio, profile) and every package with TypeScript (cms,
 logger, mf-remote, project-registry) extends it through
 `"extends": "@ncam/tsconfig/base.json"`, with a `workspace:*` dependency on this
 package. Each adds its own `include` and `types` (`vite/client` and `node` in

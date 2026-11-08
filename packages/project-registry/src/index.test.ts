@@ -4,11 +4,6 @@ import { getProject, projects } from './index';
 describe('project-registry', () => {
   it('exposes the live projects in gallery order', () => {
     expect(projects.map((p) => p.id)).toEqual([
-      'toonhub',
-      'mindloop',
-      'immersive-ocean',
-      'viktor',
-      'bali',
       'holodex',
       'chess',
       'mini-store',
@@ -18,9 +13,9 @@ describe('project-registry', () => {
   });
 
   it('getProject() finds by id and returns undefined for unknown ids', () => {
-    expect(getProject('mindloop')?.remote).toBe('mindloop');
+    expect(getProject('holodex')?.remote).toBe('holodex');
     // route id is kebab-case, but the MF remote name must be a valid identifier
-    expect(getProject('immersive-ocean')?.remote).toBe('immersive_ocean');
+    expect(getProject('mini-store')?.remote).toBe('mini_store');
     expect(getProject('does-not-exist')).toBeUndefined();
   });
 

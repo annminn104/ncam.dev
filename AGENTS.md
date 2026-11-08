@@ -13,11 +13,6 @@ Vite app, built and deployable on its own, and mounted into the host on demand.
 apps/
   portfolio/        Host (:9000). TanStack Start (SSR on Nitro) + TanStack Router,
                     React 19: home page, gallery, /projects/<id> stage, blog.
-  toonhub/          TOONHUB hero remote (:9001). Framework-free TypeScript.
-  mindloop/         Mindloop landing-page remote (:9002). React 19.
-  immersive-ocean/  Immersive Ocean hero remote (:9003). React 19.
-  viktor/           Viktor. hero remote (:9004). React 19.
-  bali/             Bali Adventure landing-page remote (:9005). React 19.
   profile/          The home page's six sections as federated modules (:9006),
                     profile/hero … profile/contact. React 19.
   holodex/          Pokémon TCG explorer remote (:9007). React 19, route-aware
@@ -63,16 +58,16 @@ root file only covers cross-cutting monorepo concerns.
 - **Turborepo** orchestrates tasks (`turbo.json`, v2 `tasks` schema).
 - **Vite** builds every frontend app; **Module Federation** via `@module-federation/vite`.
   `apps/strapi` is the exception: a Strapi (Node) service with its own build.
-- **TypeScript** everywhere. React 19 in the host and most remotes; TOONHUB is
-  framework-free. No framework runtime is shared across the federation
-  boundary (see `shared` below).
+- **TypeScript** everywhere. React 19 in the host and every remote. No
+  framework runtime is shared across the federation boundary (see `shared`
+  below).
 - Node 22 (`.nvmrc`).
 
 Commands (from the root):
 
 ```bash
 pnpm install
-pnpm dev              # every dev server (host :9000, remotes :9001–:9011, strapi :1337)
+pnpm dev              # every dev server (host :9000, remotes :9006–:9011, strapi :1337)
 pnpm build            # builds every app
 pnpm typecheck
 pnpm lint             # ESLint; `pnpm format:check` for Prettier
@@ -100,18 +95,17 @@ pnpm thumbnails <id>  # regenerates a gallery thumbnail (needs `pnpm dev` runnin
 
 - `config` is always the host's **`MountConfig`**
   (`packages/mf-remote/src/contract.ts`: `route`, `onNavigate`, `assetBase`),
-  the same object for every remote, never the remote's own data. TOONHUB once
-  read it as its own config, and every one of its entries threw in production.
+  the same object for every remote, never the remote's own data (a remote that
+  once read it as its own config threw from every entry in production).
 - A `MountHandle` is a disposer. A **route-aware** remote (Holodex, CD Player;
   registry `routeAware: true`) also gives it `update(route)`, which the host calls
   on in-app navigation instead of remounting.
 - Remotes own their assets. Because the host and a remote can live on different
   origins, a remote must resolve its own asset URLs against its origin (see
-  `apps/toonhub/src/mount.ts`), never assume the host origin. The host hands an
-  `assetBase` to TOONHUB's server render only
-  (`apps/portfolio/src/lib/ssr-asset-base.ts`): every other remote names its
-  origin from its own module URL, on the server as in the browser, so its
-  server markup and its hydrate agree.
+  `apps/chess/src/lib/asset-url.ts`), never assume the host origin. The host
+  hands no `assetBase` to a server render: every remote names its origin from
+  its own module URL, on the server as in the browser, so its server markup
+  and its hydrate agree.
 - `shared: {}` on every remote: each one bundles its own runtime, React
   included, so it behaves the same standalone and mounted, whatever the host's
   own `shared` block declares. Keep it that way unless a genuine shared runtime
@@ -144,8 +138,9 @@ pnpm thumbnails <id>  # regenerates a gallery thumbnail (needs `pnpm dev` runnin
 `README.md` → "Adding a project" has the full checklist. In short:
 
 1. Create `apps/<id>/` with `defineRemote()` exposing `./mount`, `./ssr` and
-   `./hydrate` (copy `apps/viktor`); its build script is `vite build --app`.
-   Change `viktor` to the new id in its `index.html`'s `%SITE_URL%/…` URLs.
+   `./hydrate` (copy the wiring of `apps/mini-store`); its build script is
+   `vite build --app`. Change `mini-store` to the new id in its `index.html`'s
+   `%SITE_URL%/…` URLs.
 2. Give it its own `AGENTS.md`, a `vercel.json`, and its `<NAME>_PORT` and
    `<NAME>_REMOTE_URL` in `.env`.
 3. Host: `remotes` in `apps/portfolio/vite.config.ts`, the three loader maps in

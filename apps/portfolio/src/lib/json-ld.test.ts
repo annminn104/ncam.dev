@@ -51,7 +51,7 @@ describe('homeJsonLd', () => {
 describe('projectJsonLd', () => {
   it('credits the home page Person and WebSite by @id', () => {
     const home = jsonLd.homeJsonLd();
-    const work = ofType(jsonLd.projectJsonLd(getProject('viktor')!), 'CreativeWork');
+    const work = ofType(jsonLd.projectJsonLd(getProject('chess')!), 'CreativeWork');
     const author = work?.author as Record<string, unknown>;
     // The same entity as `/` declares, so crawlers merge the two.
     expect(author['@id']).toBe(ofType(home, 'Person')?.['@id']);

@@ -3,7 +3,6 @@ import { getProject } from '@ncam/project-registry';
 import { createLogger } from '@ncam/logger';
 import { ProjectStagePage, loadSsrExports, ssrLoaders } from '../../components/ProjectStage';
 import { projectHead, withStageExpect } from '../../lib/project-head';
-import { ssrAssetBase } from '../../lib/ssr-asset-base';
 
 const log = createLogger({ scope: 'portfolio' });
 
@@ -32,11 +31,7 @@ export const Route = createFileRoute('/projects/$projectId')({
     if (!load || !import.meta.env.PROD || !import.meta.env.SSR) return NO_SSR;
     try {
       const { renderHeroSSR } = await loadSsrExports(project, load);
-      const { html, css } = await renderHeroSSR({
-        config: { route: '/' },
-        // TOONHUB's origin, for TOONHUB only: every other remote names its own.
-        assetBase: ssrAssetBase(project.remote),
-      });
+      const { html, css } = await renderHeroSSR({ config: { route: '/' } });
       log.debug('project.ssr', { id: project.id });
       return { html, css };
     } catch (error) {

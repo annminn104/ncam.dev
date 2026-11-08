@@ -3,10 +3,10 @@ import { originOf, rebaseCssUrls } from './css';
 
 describe('originOf()', () => {
   it('names the origin a module was fetched from', () => {
-    expect(originOf('https://ncam-viktor.vercel.app/assets/ssr-Ab12.js')).toBe(
-      'https://ncam-viktor.vercel.app',
+    expect(originOf('https://ncam-chess.vercel.app/assets/ssr-Ab12.js')).toBe(
+      'https://ncam-chess.vercel.app',
     );
-    expect(originOf('http://localhost:9004/assets/ssr.js')).toBe('http://localhost:9004');
+    expect(originOf('http://localhost:9008/assets/ssr.js')).toBe('http://localhost:9008');
   });
 
   it('has none for a file on disk or a string that is no URL', () => {
@@ -16,7 +16,7 @@ describe('originOf()', () => {
 });
 
 describe('rebaseCssUrls()', () => {
-  const origin = 'https://ncam-bali.vercel.app';
+  const origin = 'https://ncam-holodex.vercel.app';
 
   it('points root-relative urls at the origin, quoted or not', () => {
     const css =

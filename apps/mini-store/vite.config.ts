@@ -2,7 +2,7 @@ import react from '@vitejs/plugin-react';
 import { defineRemote } from '@ncam/mf-remote';
 
 // Self-contained React remote — bundles its own React (shared: {} in
-// defineRemote), same model as viktor / bali / chess. The WebGL engine is a
+// defineRemote), same model as holodex / chess / garden-home. The WebGL engine is a
 // lazy chunk of its own: nothing of it loads before the visitor's first
 // interaction (src/App.tsx).
 export default defineRemote({
