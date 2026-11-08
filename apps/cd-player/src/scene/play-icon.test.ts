@@ -42,6 +42,30 @@ describe('syncPlayIcon', () => {
     expect(pause.node.visible).toBe(false);
   });
 
+  it('writes both nodes once from the unset start, and nothing for a repeat', () => {
+    const play = probe(true);
+    const pause = probe(true);
+    const first = syncPlayIcon(play.node, pause.node, null, 'playing');
+    expect(first).toBe('pause');
+    expect(play.writes()).toBe(1);
+    expect(pause.writes()).toBe(1);
+    expect(play.node.visible).toBe(false);
+    expect(pause.node.visible).toBe(true);
+    expect(syncPlayIcon(play.node, pause.node, first, 'swapping')).toBe('pause');
+    expect(play.writes()).toBe(1);
+    expect(pause.writes()).toBe(1);
+  });
+
+  it('writes the play answer too from the unset start', () => {
+    const play = probe(true);
+    const pause = probe(true);
+    expect(syncPlayIcon(play.node, pause.node, null, 'idle')).toBe('play');
+    expect(play.writes()).toBe(1);
+    expect(pause.writes()).toBe(1);
+    expect(play.node.visible).toBe(true);
+    expect(pause.node.visible).toBe(false);
+  });
+
   it('touches the nodes only when the answer changes', () => {
     const play = probe(true);
     const pause = probe(false);
