@@ -459,14 +459,13 @@ materials take the roles above (`door_glass` crystal, `light` emissive, `chip` g
 normals; `SKIN_ROLES` maps the suitcase's seven recolourable materials (`leather`, `trim`,
 `thread`, `lining`, `hardware`, `deck`, `grille`) to the skins' roles, and `CLEAR_ROLES` the
 Clear's four (`clear_shell`, `clear_frame`, `board`, `light`) to its parts; `trace` (pcb), `etch`
-(frosted) and `gold` (fixed metal) are the decoration roles. A name without a role
-falls back to plastic, but the contract test fails first. A look then recolours the materials
-those two name, in place (see "Looks"). The studio is in `PlayerScene.tsx`: a PMREM'd
-`RoomEnvironment` (`scene.environmentIntensity` sets
-every material's reflections), a key light that casts (2048 px shadow map, 1024 on a narrow
-screen), a rim and a hemisphere light, AgX tone mapping, a device pixel ratio of at most 2 (1.5 on
-a narrow screen), a transparent canvas and a shadow-only floor, so the page's backdrop shows round
-the player.
+(frosted) and `gold` (fixed metal) are the decoration roles. A name without a role falls back to
+plastic, but the contract test fails first. A look then recolours the materials those two name, in
+place (see "Looks"). The studio is in `PlayerScene.tsx`: a PMREM'd `RoomEnvironment`
+(`scene.environmentIntensity` sets every material's reflections), a key light that casts (2048 px
+shadow map, 1024 on a narrow screen), a rim and a hemisphere light, AgX tone mapping, a device pixel
+ratio of at most 2 (1.5 on a narrow screen), a transparent canvas and a shadow-only floor, so the
+page's backdrop shows round the player.
 
 **The rig** (`src/scene/rig.ts`, `rigFor`, one per model, from its profile): **seven disc copies**
 (one on the spindle, five in the rack, one leaving), each with its own `art_disc` material so each
@@ -950,12 +949,10 @@ suitcase for an id it does not know. It is three-free, as are `skins.ts`, `clear
   gives each Clear part one material: `clear_shell` (the shell's plates, band and grilles) the
   shell, `clear_frame` (the plinth, the door's bezel, pull and hinge, the keys' deck and caps, the
   lozenge grooves on the plinth and the deck, the handle, the knob's ring, the speaker cones and the
-  stand's cheeks) the frame, `board` (the main
-  board, the keys' and the motor's) the board, and `light` (the ring round the window, the keys'
-  icons and the board's six LEDs) the light, which the page also gives the VU and the LCD (see
-  "The scene"). The door's
-  glass, the clear stand and easel, the chips, the copper and the prints keep Blender's colours in
-  every look.
+  stand's cheeks) the frame, `board` (the main board, the keys' and the motor's) the board, and
+  `light` (the ring round the window, the keys' icons and the board's six LEDs) the light, which the
+  page also gives the VU and the LCD (see "The scene"). The door's glass, the clear stand and easel,
+  the chips, the copper and the prints keep Blender's colours in every look.
 - **Recolouring in place** (`applyLook` in `src/scene/materials.ts`, through
   `PlayerModel.applyLook`). A suitcase look goes to `applySkin`: each of the skin's materials takes
   its role's hex through `Color.set`, which reads a hex string as sRGB and stores three's linear
@@ -1058,7 +1055,7 @@ suitcase for an id it does not know. It is three-free, as are `skins.ts`, `clear
   storage: `App` hands it `look` (`PlayerSceneProps.look`).
 - **The live check's probe**: in dev builds only, `window.__cdpSkinColours()` returns the live
   model's recoloured materials as sRGB hex (`skinColours` in `materials.ts`): a skin's roles on
-  the suitcase; the four parts' materials and the silkscreen on the Clear.
+  the suitcase; the four parts' materials, the silkscreen, `trace` and `etch` on the Clear.
 - **The Cycles renders read the same files.** `parts.py` takes Blush from `src/skins.json` as
   `BLUSH`, the default palette of `build_materials`, and `hero.py` renders the skin `CDP_SKIN`
   names (an id of that file) into `art/.out/skins/<id>/`; `clear.py` reads the Clear's swatches

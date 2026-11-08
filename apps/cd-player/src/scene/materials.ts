@@ -266,7 +266,7 @@ const SILK_LUMA_SWITCH = 0.45;
 /**
  * Recolours `materials` in place for `look`: the suitcase's skin roles from its skin (as
  * `applySkin` did), or the Clear model's parts from their swatches, its silkscreen following the
- * board. Uniforms only.
+ * board and its `trace` and `etch` the board and the shell. Uniforms only.
  */
 export function applyLook(materials: Iterable<Material>, look: Look): void {
   if (look.model === 'suitcase') {
@@ -313,7 +313,7 @@ export function applyLook(materials: Iterable<Material>, look: Look): void {
 
 /**
  * The materials under `root` a look recolours, by name, as sRGB hex (for the live check): a skin's
- * roles on the suitcase, the Clear model's parts and its silkscreen.
+ * roles on the suitcase, the Clear model's parts, its silkscreen and its `trace` and `etch`.
  */
 export function skinColours(root: Object3D): Record<string, string> {
   const colours: Record<string, string> = {};
