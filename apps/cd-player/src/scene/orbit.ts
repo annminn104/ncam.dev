@@ -12,9 +12,12 @@ export const INITIAL_ORBIT: Orbit = { yaw: 0, pitch: 0, targetYaw: 0, targetPitc
 
 const clamp = (value: number, limit: number) => Math.min(limit, Math.max(-limit, value));
 
-/** A drag of the canvas's full width turns half a turn (then the limits apply). */
-export function dragOrbit(orbit: Orbit, dx: number, dy: number, width: number): Orbit {
-  const k = Math.PI / Math.max(width, 1);
+/**
+ * A drag of the canvas's full width turns half a turn (then the limits apply), divided by the
+ * zoom (zoom.ts), so a zoomed view swings on screen at 1×'s rate for the same drag.
+ */
+export function dragOrbit(orbit: Orbit, dx: number, dy: number, width: number, zoom = 1): Orbit {
+  const k = Math.PI / (Math.max(width, 1) * zoom);
   return {
     ...orbit,
     targetYaw: clamp(orbit.targetYaw - dx * k, YAW_LIMIT),

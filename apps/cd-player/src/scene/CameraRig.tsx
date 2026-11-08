@@ -97,7 +97,9 @@ export function CameraRig({ model, channel }: { model: ModelId; channel: CameraC
     const gestures = createGestures();
     const apply = (gesture: Gesture) => {
       if (gesture.kind === 'orbit') {
-        orbit.current = dragOrbit(orbit.current, gesture.dx, gesture.dy, element.clientWidth);
+        const { dx, dy } = gesture;
+        // By the lens on screen now, so a zoomed view swings at 1×'s rate.
+        orbit.current = dragOrbit(orbit.current, dx, dy, element.clientWidth, zoom.current.zoom);
       } else if (gesture.kind === 'pinch') {
         const { from, to } = gesture;
         zoomAt(gesture.factor, pointAt(from.x, from.y), pointAt(to.x, to.y));

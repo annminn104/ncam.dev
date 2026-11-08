@@ -18,6 +18,17 @@ describe('orbit', () => {
     expect(far.targetPitch).toBe(PITCH_LIMIT);
   });
 
+  it('turns a canvas’s width of drag half a turn at 1×, and that divided by the zoom', () => {
+    // Zoomed in 3×, the view swings on screen at 1×'s rate for the same drag.
+    const one = dragOrbit(INITIAL_ORBIT, -50, 20, 1000);
+    expect(one.targetYaw).toBeCloseTo((50 * Math.PI) / 1000, 12);
+    expect(one.targetPitch).toBeCloseTo((20 * Math.PI) / 1000, 12);
+    const three = dragOrbit(INITIAL_ORBIT, -50, 20, 1000, 3);
+    expect(three.targetYaw).toBeCloseTo(one.targetYaw / 3, 12);
+    expect(three.targetPitch).toBeCloseTo(one.targetPitch / 3, 12);
+    expect(dragOrbit(INITIAL_ORBIT, -50, 20, 1000, 1)).toEqual(one);
+  });
+
   it('eases toward the target and back after a reset', () => {
     let orbit = dragOrbit(INITIAL_ORBIT, -200, 0, 1000);
     for (let i = 0; i < 120; i++) orbit = stepOrbit(orbit, 1 / 60);
