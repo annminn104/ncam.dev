@@ -6,6 +6,7 @@ import {
   hitFor,
   knobSeekMs,
   PRESS_MS,
+  pinchedSince,
   pressDepth,
   pressesOnDown,
   stillTap,
@@ -89,5 +90,14 @@ describe('a touch on a key', () => {
 
   it('presses nothing once a pinch has begun since it went down, wherever it lifts', () => {
     expect(stillTap(touch, 200, 300, 5)).toBe(false);
+  });
+
+  it('is let go, as a knob’s turn is, once a second finger lands, though it lifts again first', () => {
+    // The camera counts the pinches begun (interaction.pinches): a second finger that lands and
+    // lifts before this one still began one, and the count never goes back.
+    expect(pinchedSince(4, 4)).toBe(false);
+    expect(pinchedSince(4, 5)).toBe(true);
+    expect(pinchedSince(4, 6)).toBe(true);
+    expect(stillTap(touch, 200, 300, 6)).toBe(false);
   });
 });

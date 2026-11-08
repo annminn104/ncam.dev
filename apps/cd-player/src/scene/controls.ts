@@ -57,11 +57,22 @@ export interface KeyTouch {
 }
 
 /**
+ * Whether a pinch has begun since a touch went down, `since` being interaction.pinches then and
+ * `pinches` now: the count only grows, so a second finger that has already lifted still counts.
+ * A key's touch and a knob's turn that saw one begin let go.
+ */
+export function pinchedSince(since: number, pinches: number): boolean {
+  return pinches !== since;
+}
+
+/**
  * Whether `touch`, seen at (x, y) with `pinches` pinches begun so far, is still a tap: within the
  * slop of where it went down (a drag presses nothing) and no pinch begun since.
  */
 export function stillTap(touch: KeyTouch, x: number, y: number, pinches: number): boolean {
-  return pinches === touch.pinches && Math.hypot(x - touch.x, y - touch.y) <= TAP_SLOP_PX;
+  return (
+    !pinchedSince(touch.pinches, pinches) && Math.hypot(x - touch.x, y - touch.y) <= TAP_SLOP_PX
+  );
 }
 
 /** The iFrame API has no volume, so the knob scrubs: one full turn is this much time. */

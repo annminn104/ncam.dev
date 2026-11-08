@@ -8,6 +8,7 @@ import {
   BUTTON_NODES,
   hitFor,
   knobSeekMs,
+  pinchedSince,
   PRESS_MS,
   pressDepth,
   pressesOnDown,
@@ -107,7 +108,7 @@ export function useControls(rig: Rig, bridge: SceneBridge) {
       const turn = turning.current;
       if (!turn || event.pointerId !== turn.id) return;
       // A mouse that moves with no button down has lost its release (a native menu took it, say).
-      if (releaseLost(event) || interaction.pinches !== turn.pinches) {
+      if (releaseLost(event) || pinchedSince(turn.pinches, interaction.pinches)) {
         abandon(turn);
         return;
       }
@@ -127,7 +128,7 @@ export function useControls(rig: Rig, bridge: SceneBridge) {
       }
       const turn = turning.current;
       if (!turn || event.pointerId !== turn.id) return;
-      if (interaction.pinches !== turn.pinches) {
+      if (pinchedSince(turn.pinches, interaction.pinches)) {
         abandon(turn);
         return;
       }
