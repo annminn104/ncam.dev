@@ -23,7 +23,7 @@ describe('forgetFailedRemote', () => {
     const holodex = {
       name: '__mfe_internal__portfolio__mf_owner__90967736505204__holodex',
       alias: 'holodex',
-      entry: 'http://localhost:9007/remoteEntry.js',
+      entry: 'http://localhost:9002/remoteEntry.js',
     };
     const { runtime, registerRemotes } = fakeRuntime([holodex]);
 
@@ -34,7 +34,7 @@ describe('forgetFailedRemote', () => {
   });
 
   it('still finds a remote registered under its plain name', async () => {
-    const profile = { name: 'profile', entry: 'http://localhost:9006/remoteEntry.js' };
+    const profile = { name: 'profile', entry: 'http://localhost:9001/remoteEntry.js' };
     const { runtime, registerRemotes } = fakeRuntime([profile]);
 
     await forgetFailedRemote(runtime, 'profile');
@@ -45,7 +45,7 @@ describe('forgetFailedRemote', () => {
 
   it('leaves the runtime alone when no remote matches', async () => {
     const { runtime, registerRemotes } = fakeRuntime([
-      { name: 'profile', entry: 'http://localhost:9006/remoteEntry.js' },
+      { name: 'profile', entry: 'http://localhost:9001/remoteEntry.js' },
     ]);
 
     await forgetFailedRemote(runtime, 'holodex');

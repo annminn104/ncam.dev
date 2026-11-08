@@ -13,7 +13,7 @@ import type { MountConfig, MountHandle } from '@ncam/mf-remote';
 
 export default defineRemote({
   name: 'holodex', // federation name; env keys HOLODEX_PORT, HOLODEX_BASE
-  port: 9007, // default dev/preview port, overridden by <NAME>_PORT
+  port: 9002, // default dev/preview port, overridden by <NAME>_PORT
   exposes: {
     './mount': './src/mount.tsx',
     './ssr': './src/ssr.tsx',
@@ -23,7 +23,7 @@ export default defineRemote({
   // baseEnv: 'HOLODEX_BASE', // env var for `base`; defaults to <NAME>_BASE
 });
 
-env('HOLODEX_REMOTE_URL', 'http://localhost:9007/remoteEntry.js');
+env('HOLODEX_REMOTE_URL', 'http://localhost:9002/remoteEntry.js');
 // real environment > .env.local > .env > fallback (files read from the monorepo root)
 ```
 

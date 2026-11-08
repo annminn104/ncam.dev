@@ -13,7 +13,7 @@ import { chromium } from 'playwright';
 import sharp from 'sharp';
 
 const BASE =
-  process.env.GARDEN_HOME_URL ?? `http://localhost:${process.env.GARDEN_HOME_PORT ?? 9010}/`;
+  process.env.GARDEN_HOME_URL ?? `http://localhost:${process.env.GARDEN_HOME_PORT ?? 9005}/`;
 const OUT = fileURLToPath(new URL('../src/assets/poster/', import.meta.url));
 /** Each shape's capture size, the AVIF widths and the WebP fallback width (src/assets/poster/index.ts). */
 const SHAPES = {

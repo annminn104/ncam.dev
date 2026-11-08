@@ -13,7 +13,7 @@ import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 import sharp from 'sharp';
 
-const BASE = process.env.CHESS_URL ?? `http://localhost:${process.env.CHESS_PORT ?? 9008}/`;
+const BASE = process.env.CHESS_URL ?? `http://localhost:${process.env.CHESS_PORT ?? 9003}/`;
 const OUT = fileURLToPath(new URL('../public/arenas/', import.meta.url));
 const IDS = ['cloud-peak', 'blood-moon', 'lotus-lake'];
 

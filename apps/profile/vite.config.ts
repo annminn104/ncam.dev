@@ -11,7 +11,7 @@ import { defineRemote } from '@ncam/mf-remote';
 // `import('react-dom/server')` in the entry files — see src/lib/section-module.tsx.
 export default defineRemote({
   name: 'profile',
-  port: 9006,
+  port: 9001,
   baseEnv: 'PROFILE_BASE',
   exposes: {
     './hero': './src/modules/hero.tsx',

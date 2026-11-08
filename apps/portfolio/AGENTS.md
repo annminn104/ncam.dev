@@ -80,7 +80,7 @@ own six sections (the `profile` remote) on `/`. React 19.
     `fromRemoteRoute(to)` (`lib/remote-route.ts`) turned back into splat params
     — the remote never sees `/projects/<id>`, only its own path, so it can be
     developed and deployed standalone on its own origin (see
-    `apps/holodex/AGENTS.md`, standalone on `:9007`).
+    `apps/holodex/AGENTS.md`, standalone on `:9002`).
     **A future remote that wants its own nested URLs** needs, on the host
     side, only: an entry in `ssrLoaders` / `hydrateLoaders` / `mountLoaders`
     (already required for any remote) — the splat route and `ProjectStage`
@@ -333,7 +333,7 @@ pnpm --filter @ncam/portfolio build   # client + SSR + Nitro server; generates r
 ```
 
 End-to-end needs the dev servers: `pnpm dev` at the repo root (portfolio :9000,
-remotes :9006–:9011), then open http://localhost:9000 — the home sections mount
+remotes :9001–:9006), then open http://localhost:9000 — the home sections mount
 from the `profile` remote; open a project to mount its remote.
 
 > Note: the Nitro server-bundle step can be slow; the config force-exits the

@@ -7,8 +7,8 @@ describe('assetUrl', () => {
       'https://garden.example/assets/scene.json',
     );
     expect(assetUrl('/basis/', 'https://garden.example')).toBe('https://garden.example/basis/');
-    expect(assetUrl('assets/scene.json', 'http://localhost:9010/garden/')).toBe(
-      'http://localhost:9010/garden/assets/scene.json',
+    expect(assetUrl('assets/scene.json', 'http://localhost:9005/garden/')).toBe(
+      'http://localhost:9005/garden/assets/scene.json',
     );
   });
 

@@ -35,7 +35,7 @@ function spotifyProxy(): Plugin {
 // the same model as chess and garden-home.
 export default defineRemote({
   name: 'cd_player',
-  port: 9011,
+  port: 9006,
   baseEnv: 'CD_PLAYER_BASE',
   exposes: {
     './mount': './src/mount.tsx',

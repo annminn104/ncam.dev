@@ -13,22 +13,22 @@ Vite app, built and deployable on its own, and mounted into the host on demand.
 apps/
   portfolio/        Host (:9000). TanStack Start (SSR on Nitro) + TanStack Router,
                     React 19: home page, gallery, /projects/<id> stage, blog.
-  profile/          The home page's six sections as federated modules (:9006),
+  profile/          The home page's six sections as federated modules (:9001),
                     profile/hero … profile/contact. React 19.
-  holodex/          Pokémon TCG explorer remote (:9007). React 19, route-aware
+  holodex/          Pokémon TCG explorer remote (:9002). React 19, route-aware
                     (host-owned nested URLs, no remount on in-app navigation),
                     with a lazily-chunked three.js holo card renderer.
-  chess/            Cultivation Chess remote (:9008). React 19 + React Three
+  chess/            Cultivation Chess remote (:9003). React 19 + React Three
                     Fiber; chess.js rules, Stockfish WASM opponent (GPLv3);
                     piece sets as Blender-built GLBs (art/, built locally).
-  mini-store/       Mini Store diorama remote (:9009). React 19 shell around a
+  mini-store/       Mini Store diorama remote (:9004). React 19 shell around a
                     hand-written WebGL2 renderer (no three.js) that boots on
                     the first interaction; art/blender + legacy are reference.
-  garden-home/      Garden Home remote (:9010). React 19 + React Three Fiber
+  garden-home/      Garden Home remote (:9005). React 19 + React Three Fiber
                     glass villa and garden island from Blender modules (art/:
                     Blender build + KTX pipeline, run locally), cut away floor
                     by floor; boots behind a server-rendered poster.
-  cd-player/        CD Player remote (:9011). React 19 + React Three Fiber: any Spotify
+  cd-player/        CD Player remote (:9006). React 19 + React Three Fiber: any Spotify
                     playlist or album on a 3D CD player, a suitcase in four colourways (the
                     next five discs in a rack in its lid) or the see-through Clear, coloured
                     part by part (a glass door, the discs on a stand beside it), played
@@ -67,7 +67,7 @@ Commands (from the root):
 
 ```bash
 pnpm install
-pnpm dev              # every dev server (host :9000, remotes :9006–:9011, strapi :1337)
+pnpm dev              # every dev server (host :9000, remotes :9001–:9006, strapi :1337)
 pnpm build            # builds every app
 pnpm typecheck
 pnpm lint             # ESLint; `pnpm format:check` for Prettier

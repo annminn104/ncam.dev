@@ -59,12 +59,12 @@ A Turborepo monorepo on pnpm workspaces, TypeScript everywhere.
 | Path               | What it is                                                                                                                                                                 | Dev port |
 | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
 | `apps/portfolio`   | **Host.** TanStack Start (SSR on Nitro) and TanStack Router, React 19: the home page, the project gallery, the `/projects/<id>` stage and the blog.                        | 9000     |
-| `apps/profile`     | The home page's six sections (hero, stacks, experience, projects, blog, contact), one federated module each.                                                               | 9006     |
-| `apps/holodex`     | Holodex: a Pokémon TCG explorer on the TCGdex API, with nested URLs of its own and three.js holo foil cards. React 19, Tailwind v4, TanStack Query.                        | 9007     |
-| `apps/chess`       | Cultivation Chess: chess with cultivation-treasure pieces in three 3D arenas, vs a friend or Stockfish. React 19, React Three Fiber, chess.js.                             | 9008     |
-| `apps/mini-store`  | Mini Store: a rainy-night corner store diorama with a hand-written WebGL2 renderer (no three.js), booted on the first interaction. React 19.                               | 9009     |
-| `apps/garden-home` | Garden Home: a glass villa and its garden island from Blender modules, cut away floor by floor, behind a server-rendered poster. React 19, React Three Fiber.              | 9010     |
-| `apps/cd-player`   | CD Player: any Spotify playlist or album on a 3D suitcase or a see-through CD player, played in Spotify's embed; route-aware; Blender models. React 19, React Three Fiber. | 9011     |
+| `apps/profile`     | The home page's six sections (hero, stacks, experience, projects, blog, contact), one federated module each.                                                               | 9001     |
+| `apps/holodex`     | Holodex: a Pokémon TCG explorer on the TCGdex API, with nested URLs of its own and three.js holo foil cards. React 19, Tailwind v4, TanStack Query.                        | 9002     |
+| `apps/chess`       | Cultivation Chess: chess with cultivation-treasure pieces in three 3D arenas, vs a friend or Stockfish. React 19, React Three Fiber, chess.js.                             | 9003     |
+| `apps/mini-store`  | Mini Store: a rainy-night corner store diorama with a hand-written WebGL2 renderer (no three.js), booted on the first interaction. React 19.                               | 9004     |
+| `apps/garden-home` | Garden Home: a glass villa and its garden island from Blender modules, cut away floor by floor, behind a server-rendered poster. React 19, React Three Fiber.              | 9005     |
+| `apps/cd-player`   | CD Player: any Spotify playlist or album on a 3D suitcase or a see-through CD player, played in Spotify's embed; route-aware; Blender models. React 19, React Three Fiber. | 9006     |
 | `apps/strapi`      | Strapi 5 headless CMS for the blog, with a public read-only REST API. A backend service, not a remote.                                                                     | 1337     |
 
 | Package                  | What it is                                                                                                   |
@@ -146,7 +146,7 @@ later) and pnpm, which `corepack enable` installs at the version pinned in
 ```bash
 corepack enable
 pnpm install
-pnpm dev        # host :9000, remotes :9006–:9011, Strapi :1337
+pnpm dev        # host :9000, remotes :9001–:9006, Strapi :1337
 ```
 
 Open http://localhost:9000 and pick a project. The host loads that remote at
@@ -158,7 +158,7 @@ register the first admin user at http://localhost:1337/admin
 To work on one app:
 
 ```bash
-pnpm --filter @ncam/holodex dev     # a remote alone, on its standalone page at :9007
+pnpm --filter @ncam/holodex dev     # a remote alone, on its standalone page at :9002
 pnpm --filter @ncam/portfolio dev   # the host alone; projects fail to load until their remote runs
 ```
 

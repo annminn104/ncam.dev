@@ -13,7 +13,7 @@ describe('assetUrl', () => {
     );
   });
   it('adds the missing trailing slash on the base', () => {
-    expect(assetUrl('a.avif', 'http://localhost:9008')).toBe('http://localhost:9008/a.avif');
+    expect(assetUrl('a.avif', 'http://localhost:9003')).toBe('http://localhost:9003/a.avif');
   });
   it('returns a root-relative path when there is no base', () => {
     expect(assetUrl('a.avif', '')).toBe('/a.avif');

@@ -35,7 +35,7 @@ function tcgdexAssetProxy(): Plugin {
 // defineRemote), same model as chess / mini-store / garden-home / cd-player.
 export default defineRemote({
   name: 'holodex',
-  port: 9007,
+  port: 9002,
   baseEnv: 'HOLODEX_BASE',
   exposes: {
     './mount': './src/mount.tsx',

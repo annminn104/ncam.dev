@@ -1,5 +1,5 @@
 // Captures the piece sets from the real scene, with this app's dev server running (CHESS_URL,
-// else http://localhost:$CHESS_PORT, else :9008). The page is the standalone one in capture mode
+// else http://localhost:$CHESS_PORT, else :9003). The page is the standalone one in capture mode
 // (src/capture.ts): the battle alone, no HUD or engine, no quality decline.
 //   node scripts/capture-presets.mjs            the lobby previews: each set's lineup on Cloud
 //                                               Peak, drawn by SwiftShader (the same on any
@@ -22,7 +22,7 @@ import { chromium } from 'playwright';
 import sharp from 'sharp';
 import { USAGE, parseCaptureArgs } from './capture-args.mjs';
 
-const BASE = process.env.CHESS_URL ?? `http://localhost:${process.env.CHESS_PORT ?? 9008}/`;
+const BASE = process.env.CHESS_URL ?? `http://localhost:${process.env.CHESS_PORT ?? 9003}/`;
 const local = (rel) => fileURLToPath(new URL(`../${rel}`, import.meta.url));
 // The sets with lobby previews (presets-meta.ts, `preview: true`).
 const PREVIEWS = ['treasures', 'holy-order', 'dark-court'];

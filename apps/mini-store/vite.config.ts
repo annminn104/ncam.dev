@@ -7,7 +7,7 @@ import { defineRemote } from '@ncam/mf-remote';
 // interaction (src/App.tsx).
 export default defineRemote({
   name: 'mini_store',
-  port: 9009,
+  port: 9004,
   baseEnv: 'MINI_STORE_BASE',
   exposes: {
     './mount': './src/mount.tsx',
