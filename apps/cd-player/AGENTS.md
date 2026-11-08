@@ -99,6 +99,25 @@ assumes too:
   part by part), then an engraved name, stickers on the shell and a look shared through the link,
   none of which exists yet.
 
+The owner's decisions on zooming the player (see "Controls, the orbit and the zoom"), which the
+guide assumes too. While it was built, the lens was chosen over bringing the camera nearer: a camera
+3× nearer cut the model's front.
+
+- **From 1× to 3×**: 1× is the hero framing, which never gets smaller. The zoom goes in ×1.25 steps,
+  eased like the orbit, toward the point under the pointer or the fingers, and zooming back out
+  slides the frame back to the centred framing.
+- **Its inputs**:
+  - the wheel over the canvas; where the page can scroll that way, only Ctrl or ⌘ with the wheel,
+    or a trackpad pinch;
+  - a two-finger pinch, which also pans;
+  - three buttons at the stage's bottom-right corner (Zoom out, Zoom in, Reset view);
+  - the +, - and 0 keys.
+
+  A double-click or a double tap resets the zoom with the orbit, and a model change returns it to
+  1×.
+
+- **A touch presses a 3D key as it lifts**, so a pinch never presses one.
+
 ## What it exposes
 
 `vite.config.ts` (`defineRemote`, which sets `shared: {}` and `dts: false`) exposes three entries:
@@ -284,9 +303,12 @@ drops Shuffle. The embed ignores a seek to under a second, so `seek` in `createE
 the start its own way: a playing track restarts (the controller's `restart()`), a paused one waits
 at its first second, since a restart would play it.
 
-Keyboard (`App.tsx`): Space plays or pauses, N and P change tracks, never with a modifier or while
-focus is in a field or on a button (so Space on a button, or on the slider, is the browser's own),
-and a held key is one press. Every music action from the DOM also starts the scene while it waits.
+Keyboard (`App.tsx`, the keys mapped by `keyCommand` in `src/keys.ts`): Space plays or pauses, N
+and P change tracks, + or = zooms in, - or _ zooms out and 0 resets the view (the zoom and the
+orbit, through the camera channel: see "The scene"), never with a modifier (Ctrl and + is the
+browser's own zoom) or while focus is in a field or on a button (so Space on a button, or on the
+slider, is the browser's own), and a held key is one press. Every music action from the DOM also
+starts the scene while it waits; the view's keys do nothing while no scene runs.
 
 **The card's controls** (`src/shell/NowPlaying.tsx`) give every 3D control a DOM equivalent, for the
 keyboard, a screen reader and a phone. The head has Previous, Play or Pause and Next (32 px square
@@ -364,9 +386,10 @@ card while it plays: never hide it, and never play the audio any other way.
 `import.meta.env.SSR`, so the server build drops it, and only once the boot starts. Nothing `App`
 imports reaches three, `@react-three/*` or `src/scene/` statically; `src/ssr-graph.test.ts` walks
 the three entries' graphs and pins it. The files the scene shares with the shell (`src/bridge.ts`,
-`actions.ts`, `scene-props.ts`, `models.ts`, `looks.ts`, `skins.ts`, `clear-looks.ts`, `view.ts`,
-`playback/sequencer.ts`, `lib/asset-url.ts`, `fonts.ts`) stay three-free for that reason, and so
-do `boot.ts`, `failure.ts`, `webgl.ts` and `autoplay.ts`, which ask about WebGL without three.
+`camera-channel.ts`, `actions.ts`, `scene-props.ts`, `models.ts`, `looks.ts`, `skins.ts`,
+`clear-looks.ts`, `view.ts`, `playback/sequencer.ts`, `lib/asset-url.ts`, `fonts.ts`) stay
+three-free for that reason, and so do `boot.ts`, `failure.ts`, `webgl.ts` and `autoplay.ts`, which
+ask about WebGL without three.
 
 **The phases** (`src/boot.ts`, a pure reducer, garden-home's shape): `waiting` → `booting` →
 `live`, or `error` over the backdrop. Events: `start` ("Open the player", and "Try again" for a
@@ -616,26 +639,71 @@ art arrives after its change began.
 The engine fetches the art of the current track and the next five (`PREFETCH` in `engine.ts`), so
 every slot prints its track's art once it arrives.
 
-**Controls and the orbit** (`src/scene/controls.ts`, `useControls.ts`, `interaction.ts`,
-`orbit.ts`, `CameraRig.tsx`):
+**Controls, the orbit and the zoom** (`src/scene/controls.ts`, `useControls.ts`, `interaction.ts`,
+`orbit.ts`, `zoom.ts`, `wheel.ts`, `CameraRig.tsx`, and `src/camera-channel.ts` on the shell's
+side):
 
 - **The deck keys** press on the **primary button** (or a touch), and only the nearest mesh under
-  the pointer counts. On pointerdown `btn_prev`, `btn_next`, `btn_play` (play or pause), `btn_stop`,
-  `btn_rpt` (Repeat) and `btn_mode` (Shuffle) emit their `PlayerAction` through the bridge
-  (`BUTTON_ACTIONS`), and the key sinks 1.2 mm and comes back over 160 ms (`PRESS_MS`). The cursor
-  turns to a hand over a key or the knob. Every key has a DOM equivalent in the now-playing card
-  (see "Playback").
+  the pointer counts: `btn_prev`, `btn_next`, `btn_play` (play or pause), `btn_stop`, `btn_rpt`
+  (Repeat) and `btn_mode` (Shuffle) emit their `PlayerAction` through the bridge
+  (`BUTTON_ACTIONS`), and the key sinks 1.2 mm and comes back over 160 ms (`PRESS_MS`). A mouse or
+  a pen presses as it goes down; **a touch presses as it lifts**, if it stayed a tap
+  (`pressesOnDown`, `stillTap`): within `TAP_SLOP_PX` of where it went down and with no pinch begun
+  meanwhile, so a pinch whose first finger lands on a key presses nothing, nor does a drag that
+  starts on one. The cursor turns to a hand over a key or the knob. Every key has a DOM equivalent
+  in the now-playing card (see "Playback").
 - **The knob scrubs the track.** A turn is followed on the window, read around the middle of the
   knob's top (its pivot sits at its base), and one full turn is 30 s (`KNOB_MS_PER_TURN`). It emits
-  one `seek {deltaMs}` only on a real release; a cancelled turn, or a mouse that moves with no
-  button down (a native menu took the release), puts the knob back where the turn began and seeks
-  nothing. The card's Seek slider is its DOM equivalent.
+  one `seek {deltaMs}` only on a real release; a cancelled turn, a mouse that moves with no button
+  down (a native menu took the release), or a touch's turn that becomes a pinch puts the knob back
+  where the turn began and seeks nothing. The card's Seek slider is its DOM equivalent.
 - **A drag elsewhere orbits the view** (the primary button or a touch), within ±25° of yaw and ±10°
-  of pitch, eased (`orbit.ts`). It **recentres on a mouse double-click, or a touch double tap**
-  (two taps within 350 ms and 30 px, neither moving more than 10 px), unless that lands on a
-  control. `interaction.controlActive` tells the camera that the latest pointerdown went to a key
-  or the knob (R3F's handler runs after the camera's), so that press neither orbits nor recentres;
-  a mouse release that was lost (`releaseLost`) disarms both drags.
+  of pitch, eased (`orbit.ts`). It **recentres, the zoom too, on a mouse double-click, or a touch
+  double tap** (two taps within 350 ms and 30 px, neither moving more than 10 px), unless that lands
+  on a control. `interaction.controlActive` tells the camera that the latest pointerdown went to a
+  key or the knob (R3F's handler runs after the camera's), so that press neither orbits nor
+  recentres, a touch's as much as a mouse's; a mouse release that was lost (`releaseLost`) disarms
+  both drags.
+- **The zoom** (`zoom.ts`, pure): from 1× (the hero framing, which never gets smaller) to 3×
+  (`ZOOM_MIN`, `ZOOM_MAX`), a step being ×1.25 (`ZOOM_STEP`). **The lens magnifies** (the camera's
+  `zoom`): the camera keeps the fitted distance, so the near and far planes and the depth buffer's
+  steps stay as at 1× (a camera brought 3× nearer would cut the Clear's near end with its near
+  plane). The view **pans** in the aim's plane (through the profile's aim, square to its
+  direction), along the hero camera's right and up axes, in metres, held within (1 − 1/zoom) of
+  the frame's `across` and `up` (`clampPan`): none at 1×, so the model is never lost, and a zoom
+  out slides the frame back to the centred framing. The aim moves by the pan and the camera with
+  it, so the orbit turns about the panned aim: zoomed into the Đông Sơn ring, a drag looks at the
+  ring from the side. An input moves the targets and frames ease toward them at the orbit's 6 per
+  second (`stepZoom`: the lens's reach, 1/zoom, eases with the pan by the same share, so the point
+  under the pointer stays put on the way, exactly with the orbit at its middle).
+- **Toward the pointer.** A zoom keeps the point of the aim's plane under the pointer where it is
+  (`panKeeping` in `framing.ts`; with the orbit at its middle the pan moves by the point's share of
+  the view times (1/zoom − 1/next), and turned, a pan also moves the camera along the view, which
+  the solve allows for), unless the pan's clamp stops it and the point slides. It reckons from
+  where the view is going (the targets, the orbit's included), so wheel notches in a row add up as
+  if each were instant.
+- **The wheel** over the canvas zooms (`wheel.ts`). One event goes one step at most, so a mouse
+  wheel's notch (100 or 120 px, three lines, or macOS's 4.000244140625 px) is a step; smaller deltas
+  zoom by exp(−px · 0.01), which follows a trackpad pinch's fingers exactly (Chrome sends a pinch as
+  a ctrl-wheel of −100·ln(scale)). Where the page can scroll the wheel's way (an `auto`, `scroll` or
+  `overlay` ancestor of the canvas with a pixel of room that way, or the page itself unless the root
+  or the body hides or clips its overflow: the phone layout's page, the sideways layout's root), a
+  plain wheel scrolls it, and only Ctrl or ⌘ with the wheel, or a trackpad pinch, zooms
+  (`scrollsFirst`, `scrollersOf`). The listener is not passive, and calls `preventDefault` only when
+  it zooms.
+- **A two-finger pinch** on the canvas zooms round the fingers' midpoint, and moving the midpoint
+  pans the view with it. A second touch on the canvas makes a pinch (a third does nothing): it ends
+  a one-finger drag, is never a tap and never counts toward a double tap, and the touches still down
+  when it ends neither orbit nor tap. The camera says so through `interaction` (`pinching` while it
+  lasts, `pinches` counting those begun), which the controls read: a touch that lands during one
+  presses nothing, and a key's touch or a knob's turn that saw one begin lets go.
+- **The camera channel** (`src/camera-channel.ts`, three-free and outside `scene/`; App makes one
+  per mount, as it makes the bridge, and hands it to the scene as `PlayerSceneProps.camera`) carries
+  the view's buttons and keys to the camera: `zoom-in` and `zoom-out` (a step toward the view's
+  centre, the pan kept) and `reset` (1× and the orbit recentred). The scene says where the zoom is
+  going (`ZoomLimits`: `atMin`, `atMax`), only when either changes, so the shell never renders per
+  frame, and 1× again as it goes. Another model comes on show at 1× at once (the orbit carries
+  over).
 - The suitcase's printed marks (each key's dark ring `player_btn_gap_*` and label
   `player_btn_lbl_*`, the dial's ticks `player_tick_*` and its `player_vol`) are the deck's
   children in the model, so only the key or the knob itself moves and the page has no mark to
@@ -644,7 +712,7 @@ every slot prints its track's art once it arrives.
 - `.cdp-canvas` sets `touch-action: none` and `user-select: none`.
 
 **The one framing rule** (`src/scene/framing.ts`):
-`frameForViewport(width, height, yaw, pitch, model)` and `isWide(width)` (above 820 px the scene
+`frameForViewport(width, height, yaw, pitch, model, pan)` and `isWide(width)` (above 820 px the scene
 draws as on a desktop; the layout's own breakpoints are the stylesheet's). The canvas fills the
 stage alone (`.cdp-stage`, see "The look"), which no panel covers, so the frame aims at the
 profile's `target` from its `direction` and stands as far back (`frameDistance`) as a box of the
@@ -674,6 +742,24 @@ far one stands at 10 m (`FAR`). The disc's printed layers are microns apart, and
 0.02 m left the depth buffer too coarse to tell them apart (see "Known facts"). The test holds
 each player between the two planes with 0.2 m to spare, and the foil six depth steps or more over
 the label on every canvas half as wide as tall or wider.
+
+The zoom (see "Controls, the orbit and the zoom") keeps this rule: `frameFor` aims at the panned
+aim and stands the fitted distance from it, the way the orbit turns it; the lens's `zoom`
+magnifies; the near plane is the model's own at every zoom. `framing.test.ts` holds it at 3×:
+
+- the lens magnifies every point by the zoom, the camera unmoved;
+- the pan moves the aim in its plane along the hero camera's axes, and the camera with it, at
+  every turn;
+- `panKeeping` keeps the point under the pointer, projected through three's camera with the
+  orbit turned or not, and moves the pan by the point's share at the orbit's middle;
+- at the pan's four extremes across the orbit, every box keeps its clearance beyond the near
+  plane (`PAN_CLEARANCE`). The suitcase keeps its 0.2 m. The Clear keeps 0.12 m: a turned orbit
+  carries a share of the pan along the view, and at the Clear's worst (4:3, yaw −25°, pitch +10°,
+  the pan at the right and down) the near end of its set comes 0.13 m nearer than at 1×. That
+  corner is far out of the 3× view;
+- part of each box stays on the canvas;
+- the foil keeps its six depth steps with the pan at its extremes at the orbit's middle, where a
+  pan moves no depth.
 
 **Changing models** (`src/scene/PlayerScene.tsx`, `src/scene/model-holder.ts`,
 `src/scene/model-load.ts`). The scene loads
@@ -730,9 +816,9 @@ is drawn. The boot's stall watch ends as its model takes the stage (see "Hand-ov
 **Reduced motion** (`prefers-reduced-motion: reduce`): no autostart; a disc change and a cascade
 in the rack are instant (the rig jumps to its end, the Clear's door shut, and the music still
 waits a 300 ms beat, `REDUCED_MOTION_MS`); the backdrop's cross-fade, the tracklist's equaliser,
-the loader's spin, the canvas's fade-in (and the loader's fade-out) and the phone sheet's slide
-are off (`src/styles/app.css`). The disc still spins while a track plays, and the orbit still
-eases.
+the loader's spin, the canvas's fade-in (and the loader's fade-out, and the view's buttons'
+fade-in) and the phone sheet's slide are off (`src/styles/app.css`). The disc still spins while a
+track plays, and the orbit and the zoom still ease.
 
 ## Personalisation
 
@@ -857,6 +943,23 @@ and the presets 44 px, so every target is 24 px or more. The card's track label 
 `cdp-sr` twin), and the tracks toggle's middle dot is generated content with empty alternative
 text.
 
+**The view's buttons** (`src/shell/ZoomControls.tsx`, a group named "View") are Zoom out, Zoom in
+and Reset view: 32 px `cdp-key` squares on a small glass panel (`.cdp-zoom`) at the stage's
+bottom-right corner.
+
+- The panel has the panels' white, edge, shadow and 24 px frost, 94 % white under reduced
+  transparency. Their focus ring stands on that glass.
+- They render only once the scene is live, so they are never in the server's markup nor on the
+  first paint, and they fade in with the canvas over `FADE_MS`.
+- Zoom out at 1× and Zoom in at 3× are `aria-disabled` (announced, dimmed, and a press does
+  nothing), not `disabled`, so a keyboard that presses Zoom out down to 1× keeps its focus there.
+
+The help line (`src/shell/Hud.tsx`) ends "drag to look around · scroll or pinch to zoom". On one
+line it is 521 px, wider than the three columns' stage below 1281 px wide (321 to 500 px). There it
+wraps to two balanced lines within the stage (`text-wrap: balance`), and the buttons stand above
+those two lines (48 px up). In every other layout the help line is hidden, and the buttons take the
+corner itself.
+
 **The layout** is a grid on `.cdp-root`, `100dvh` high with its padding inside it (`box-sizing:
 border-box`, or the columns would run under the bottom edge). `App` renders the link bar, then
 **`.cdp-stage`** (the scene layer, the loader, the help line and the way in, in that order) and
@@ -901,7 +1004,8 @@ the player and a panel growing only leaves it a smaller canvas (see "The scene")
 size: R3F draws nothing into a container of none, and the boot, its download over, would wait for
 a first frame for ever. `.cdp-root` is `overflow: clip` elsewhere (`hidden` where `clip` is
 unknown), so it is never scrolled, not by find-in-page nor by a text fragment. The loader and the
-way in stand in the stage's middle and the help line at its foot. The host's fixed "← Projects"
+way in stand in the stage's middle, the help line at its foot and the view's buttons at its
+bottom-right corner (see "The controls"). The host's fixed "← Projects"
 button stands at the top centre: over the stage on a wide screen, clear of every panel; on a phone
 and an upright tablet it would stand on the bar's title row, so there the root's top padding is
 the host's `--stage-top-inset` (its contract for a remote's top edge; 12 px standalone) and the bar
@@ -1332,7 +1436,10 @@ Unit tests (`src/**/*.test.ts`, node environment, run by the root `pnpm test`):
   `initialLook` (a Clear look's light as the accent) with no script; from `App.tsx` too, the model
   kept through the keeper, which follows the scene's stage, the look going back to the model on the
   stage when a change fails, the boot's stall watch ended as its model takes the stage, and the
-  root's accent from the model on show once live), `model-keeper.test.ts` (a model chosen while
+  root's accent from the model on show once live; and the help line's words, the view's buttons
+  left out of the server's markup and rendered in the stage after the help line once live, the
+  camera channel made once and handed to the scene, and the view's keys sent to it behind the key
+  handler's guards), `model-keeper.test.ts` (a model chosen while
   nothing is on the stage kept at once, the boot's own model never, a change once it is drawn and
   never as it is chosen, one chosen between the boot's first swap and its frames counted as a
   change and going back to the boot's model, a failed change kept never, a start from nothing once
@@ -1355,7 +1462,13 @@ Unit tests (`src/**/*.test.ts`, node environment, run by the root `pnpm test`):
   `shell/Presets.test.ts` (the labelled list, each button's name, the covers' attributes, the
   current one marked and none for a collection that is not a preset, the busy one's tag and
   `aria-busy`), `shell/Tracklist.test.ts` (the empty shelf, the
-  playing row's equaliser, the explicit badge) and `styles/app-css.test.ts` (the loader plain from
+  playing row's equaliser, the explicit badge), `shell/ZoomControls.test.ts` (the group and its
+  three buttons named in Tab order, `cdp-key` squares whose icons a screen reader skips, Zoom out
+  `aria-disabled` at 1× and Zoom in at 3× but never Reset view, and, read from its source, a press
+  at its end sending nothing), `keys.test.ts` (`keyCommand`: Space, N and P, + and =, - and _, 0,
+  and nothing else), `camera-channel.test.ts` (commands to the scene's listener and to none once it
+  has gone, 1× at the start, only a change of the limits heard, one snapshot until they change) and
+  `styles/app-css.test.ts` (the loader plain from
   the first paint, its spin and its fade, `FADE_MS` equal to both transitions, reduced motion; the
   glass panel's tokens and its frost on `::before`, the popover's frost, the glass under reduced
   transparency, the full ink of the page's own text and of the gate's ring, the pastel page from
@@ -1367,7 +1480,10 @@ Unit tests (`src/**/*.test.ts`, node environment, run by the root `pnpm test`):
   root, fixed backdrop, notch-clear sides and 16 px rail form, the root clipped, the stage and the
   side column; the presets as rows, cards and chips, their positioned chips, the busy cover, their
   focus ring; the picker cut down to its swatch at 920 px and under, its popover's width, the bar
-  over the panels while it is open, the Clear's 28 px dots and the chosen one's ring);
+  over the panels while it is open, the Clear's 28 px dots and the chosen one's ring; the view's
+  buttons on their glass, above the help line's two lines or in the corner, fading in over
+  `FADE_MS` but not under reduced motion, a key at its end dimmed; the help line wrapped within the
+  stage);
 - routes and personalisation: `routes.test.ts`, `route-controller.test.ts`, `persist.test.ts`
   (the saved collection, skin, model and Clear colours, junk and blocked storage, `readLookState`,
   and `LOOK_SCRIPT` run in a VM: every skin's pair on the suitcase and on any saved model but the
@@ -1423,8 +1539,16 @@ Unit tests (`src/**/*.test.ts`, node environment, run by the root `pnpm test`):
   (besides every kind of change: a swap into another collection, a list of one track, two tracks
   on Repeat, a first play that waits for a door), `framing.test.ts` (each model's box over every
   canvas shape across the orbit, the near and far planes round the player and the depth buffer's
-  step against the disc's layers, see "The scene"), `controls.test.ts`, `vu.test.ts` (the Clear's
-  `vuColours` too), `vu-materials.test.ts`, `interaction.test.ts`, `orbit.test.ts`, and `textures/`
+  step against the disc's layers, and the zoom: the lens, the pan, `panKeeping`, and the boxes'
+  clearance, the canvas and the foil at 3× with the pan at its extremes; see "The scene"),
+  `controls.test.ts` (besides the keys and the knob: a mouse or a pen pressing on its way down, a
+  touch on its way up within the slop and with no pinch begun since), `vu.test.ts` (the Clear's
+  `vuColours` too), `vu-materials.test.ts`, `interaction.test.ts`, `orbit.test.ts`, `zoom.test.ts`
+  (1× to 3× by ×1.25 steps, the point under the pointer kept, the pan's clamp and its slide back,
+  the easing at 6 per second keeping that point on its way and settling, the reset, the limits by
+  the target), `wheel.test.ts` (a notch a step, macOS's included, a pinch's deltas followed, one
+  step at most; a plain wheel left to a box with room that way, never to one that hides or clips
+  its overflow), and `textures/`
   (`grain`, `images`, `layout`, `paint` with `lcdColour`, `painter`, and `disc-printer` on fake
   canvases and textures: a blank then the print, a new size's texture, a stale print, a print made
   again once the fonts are in; `useSceneTextures`, read from its source: the defaults printed once
@@ -1434,7 +1558,12 @@ Unit tests (`src/**/*.test.ts`, node environment, run by the root `pnpm test`):
 the default page, a pasted playlist and album, the presets (a press, the current one, a slow one
 and a failed one with Retry, Back while one loads), the error messages, the layout at 1440 × 900,
 1280 × 720, 1024 × 768, 834 × 1194, 844 × 390, 360 × 640 and 390 × 844, every control (the DOM
-card, the 3D keys, the knob, the keyboard), the orbit, both models (the four skins and the four
+card, the 3D keys, the knob, the keyboard), the orbit, the zoom (a mouse wheel's notch a step, a
+trackpad's pinch and two-finger scroll, Ctrl or ⌘ with the wheel, a plain wheel scrolling the page
+where it can, on a phone and in a narrow window; a two-finger pinch and its pan; a pinch whose
+first finger lands on a key or the knob; the buttons, their states and their focus; the +, - and 0
+keys; a double-click and a double tap resetting; a model change back at 1×), both models (the four
+skins and the four
 Clear looks), a model change and its failure (a GLB that never answers: "Couldn't load Clear" and
 the look back on the model on show after 20 s, nothing saved; and one chosen while the boot's model
 compiles, or once it is on the stage before the canvas fades in), a reload keeping the last look,
