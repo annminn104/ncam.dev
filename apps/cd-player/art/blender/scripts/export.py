@@ -15,7 +15,7 @@ OUT = ARGS[ARGS.index("--out") + 1]
 
 MODEL = os.environ.get("CDP_MODEL", "suitcase")
 SCRIPTS = {"suitcase": ("cdkit.py", "parts.py", "build_player.py"),
-           "clear": ("cdkit.py", "parts.py", "clear.py", "build_clear.py")}
+           "clear": ("cdkit.py", "parts.py", "clear.py", "clear_board.py", "clear_decor.py", "build_clear.py")}
 if MODEL not in SCRIPTS:
     raise SystemExit("export.py: CDP_MODEL must be suitcase or clear, not %r" % MODEL)
 for _file in SCRIPTS[MODEL]:

@@ -1082,10 +1082,11 @@ art/blender/scripts/  cdkit.py (geometry helpers, Principled materials, millimet
                       tonearm, quilted lid, strap, rack and plate; build_materials(palette)),
                       build_player.py (the suitcase's web scene, with the names the page drives),
                       clear.py (the Clear model, on parts.py's disc and case;
-                      build_clear_materials(look)), build_clear.py (its web scene: the same names
-                      and the door's), export.py (the background entry: CDP_MODEL picks the
-                      build), hero.py (the Cycles stills: the suitcase's hero and lid views, the
-                      Clear's hero and inside)
+                      build_clear_materials(look)), clear_board.py (its board), clear_decor.py
+                      (its decorations), build_clear.py (its web scene: the same names and the
+                      door's), export.py (the background entry: CDP_MODEL picks the build),
+                      hero.py (the Cycles stills: the suitcase's hero and lid views, the Clear's
+                      hero and inside)
 art/blender/tools/    bl.py: a client for a running Blender's add-on socket (design sessions only)
 art/pipeline/         build.mjs: Blender headless, then gltf-transform (given clear, the Clear's)
 art/.out/             scratch: the raw exports, the renders and one-off scripts (gitignored)
@@ -1096,7 +1097,8 @@ art/.out/             scratch: the raw exports, the renders and one-off scripts 
 5.2.2 LTS** (`/Applications/Blender.app`, or `BLENDER_BIN`) and run it with `--background
 --factory-startup --python-exit-code 1` (Blender exits 0 when a script raises) on `export.py`,
 which execs `cdkit.py`, `parts.py` and `build_player.py` for the suitcase, or `cdkit.py`,
-`parts.py`, `clear.py` and `build_clear.py` for the Clear (any other `CDP_MODEL` stops it), sets
+`parts.py`, `clear.py`, `clear_board.py`, `clear_decor.py` and `build_clear.py` for the Clear, in
+that order and into one namespace (any other `CDP_MODEL` stops it), sets
 **`WEB = True`** (cdkit's web quality: about half the segments, bevels at a resolution of 2 at
 most, none of the Cycles-only shader tricks: the leather grain, the lining's quilt and the cloth's
 weave are normal maps the page makes at runtime), turns curves and text into meshes, gives the
@@ -1127,11 +1129,14 @@ left D-ring over the grille. `model-contract.test.ts` holds the parenting. The l
 cascade (`RACK_LAYOUT` in `parts.py`); the grid without the crystal case is the other branch of
 the same code.
 
-**The Clear model** (`clear.py`, in `parts.py`'s axes and millimetres, with its disc and case).
-The shell is a front plate (the window's 128 mm opening cut in it, the speakers' perforated
-grilles set in it), a back plate and one hollow band between them for the sides, the top and the
-bottom, an outline round an inner outline: never a filled block, which would refract every part
-inside it. Inside, the board runs along the bottom (see "The Clear's board" below), a speaker
+**The Clear model** (`clear.py`, in `parts.py`'s axes and millimetres, with its disc and case; its
+board and its decorations are scripts of their own, `clear_board.py` and `clear_decor.py`, which
+read its dimensions, its helpers and its materials, so `export.py` and `hero.py` exec them after
+it into the same namespace, and `make_clear_player` calls into both). The shell is a front plate
+(the window's 128 mm opening cut in it, the speakers' perforated grilles set in it), a back plate
+and one hollow band between them for the sides, the top and the bottom, an outline round an inner
+outline: never a filled block, which would refract every part inside it. Inside, the board runs
+along the bottom (see "The Clear's board" below), a speaker
 stands either side of the window, the motor and the laser's arm
 stand behind the disc, and four AA cells lie across the back under the top. The door's bezel,
 glass, pull and knuckle hang from its hinge (`door_hinge` once built), left of the window, whose
@@ -1149,7 +1154,7 @@ arm off the disc's rim, the rack's slots empty, the prints plain planes for the 
 render plays (the arm over the disc, discs in the rack, the LCD and seven VU segments lit, ‖ alone
 on the play key, as on the suitcase's, the plate and the tag lettered).
 
-**The Clear's board** (`clear_board` in `clear.py`; where its main parts sit: `SOC`, `RAMS`,
+**The Clear's board** (`clear_board` in `clear_board.py`; where its main parts sit: `SOC`, `RAMS`,
 `PMIC`, `COILS`, `USB_X`, `SUN`, `WIFI`, `ANT_ZONE`, `POUR_ZONE`, `LED_X`). From the left: the PMIC
 (U8, a QFN whose exposed pad's copper and thermal vias reach out past its top) and its three
 shielded inductors (L2-L4) in a column, their rails into the SoC (U1: a BGA under a stepped chrome
@@ -1172,10 +1177,10 @@ GLB. The copper (one `trace` mesh: the traces, the pour, the antenna) stands 0.0
 board's face (`TRACE_PROUD`), the silkscreen 0.05 mm over it (`SILK_PROUD`). Ground-stitching
 vias fill whatever the board leaves open, on a grid (6 mm in a render, 10 mm in the web build).
 
-**The Clear's decorations** (`clear_etch`, `clear_dongson_ring` and `clear_grooves` in `clear.py`).
-Each is a `Relief`: shapes drawn in a face's own frame, as one sees the face from outside, merged
-into one mesh, every face turned out (the page draws `etch`, `gold` and the frame's front faces
-only). The **etching** (`etch`, `clear_etch_left`, `_right` and `_top`): circuit-maze lines 0.45
+**The Clear's decorations** (`clear_etch`, `clear_dongson_ring` and `clear_grooves` in
+`clear_decor.py`). Each is a `Relief`: shapes drawn in a face's own frame, as one sees the face
+from outside, merged into one mesh, every face turned out (the page draws `etch`, `gold` and the
+frame's front faces only). The **etching** (`etch`, `clear_etch_left`, `_right` and `_top`): circuit-maze lines 0.45
 mm wide with a pad 1.3 mm across at either end, a top face each, 0.05 mm proud of the shell's band
 (`ETCH_PROUD`) on its two side faces and its top, never on the front plate, where the inside must
 stay readable. `etch_maze` walks a 1 mm grid, straight on and 45 degrees at a turn, each line a

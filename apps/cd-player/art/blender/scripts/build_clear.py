@@ -1,9 +1,10 @@
 """The web scene of the Clear model: the names the page drives (src/scene/contract.ts), and its
 door (`door_hinge`).
 
-Exec'd by export.py (CDP_MODEL=clear) after cdkit.py, parts.py and clear.py, into the same
-namespace. The door is shut, the arm at rest off the disc's rim, the disc on its spindle, the five
-rack slots on the stand empty (the page puts discs in them): the page moves all of it at runtime.
+Exec'd by export.py (CDP_MODEL=clear) after cdkit.py, parts.py, clear.py, clear_board.py and
+clear_decor.py, into the same namespace. The door is shut, the arm at rest off the disc's rim, the
+disc on its spindle, the five rack slots on the stand empty (the page puts discs in them): the page
+moves all of it at runtime.
 """
 import bpy
 

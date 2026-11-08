@@ -17,18 +17,25 @@ by Python running inside Blender, not modelled by hand.
 - `blender/scripts/clear.py`: the Clear model, on `parts.py`'s disc and case: a clear
   polycarbonate shell (front and back plates and one hollow band, never a filled block) on a
   plinth, the round glass door hinged on its left, the disc on its spindle ringed by the light
-  ring, the swing arm with its voice coil, the spindle motor's copper coils, the board (the SoC
-  under its heat spreader, two LPDDR packages, the PMIC and its inductors, USB-C, the Wi-Fi
-  module and its meander antenna, six LEDs, test pads, 45-degree copper traces with a serpentine
-  and a hexagon pour, the LCD, the VU strip, the Đông Sơn sun beside the silkscreened logo; laid
-  out by `clear_board`'s `Board`, which AGENTS.md describes), the speakers, four AA cells, the
-  keys and their own board, the knob standing upright on the top beside them, the handle and its
-  tag, the nameplate, the stand with the rack's five slots and the standing case; and its
-  decorations (each a `Relief`, which AGENTS.md describes): frosted circuit-maze etching on the
-  shell's sides and top, a gold Đông Sơn ring round the door (tangent circles, a hatched ladder,
-  eight Lạc birds) and hatched lozenge chains in relief on the plinth's front and the keys' deck.
-  `clear_look(spec)` reads a look from `src/clear-looks.json` (and stops the run, naming what is
-  wrong, on a part or a field it lacks) and `build_clear_materials(look)` makes its materials.
+  ring, the swing arm with its voice coil, the spindle motor's copper coils, the speakers, four AA
+  cells, the keys and their own board, the knob standing upright on the top beside them, the
+  handle and its tag, the nameplate, the stand with the rack's five slots and the standing case,
+  put together by `make_clear_player`, with the board and the decorations below. It holds the
+  model's dimensions and helpers (the paths on a face that the board and the decorations share
+  among them); `clear_look(spec)` reads a look from `src/clear-looks.json` (and stops the run,
+  naming what is wrong, on a part or a field it lacks) and `build_clear_materials(look)` makes
+  its materials.
+- `blender/scripts/clear_board.py`: the Clear model's board (the SoC under its heat spreader, two
+  LPDDR packages, the PMIC and its inductors, USB-C, the Wi-Fi module and its meander antenna, six
+  LEDs, test pads, 45-degree copper traces with a serpentine and a hexagon pour, the LCD, the VU
+  strip, the Đông Sơn sun beside the silkscreened logo), built by `clear_board` and laid out by
+  its `Board`, which AGENTS.md describes.
+- `blender/scripts/clear_decor.py`: the Clear model's decorations, each a `Relief` (AGENTS.md
+  describes it): frosted circuit-maze etching on the shell's sides and top (`clear_etch`), a gold
+  Đông Sơn ring round the door (`clear_dongson_ring`: tangent circles, a hatched ladder, eight Lạc
+  birds) and hatched lozenge chains in relief on the plinth's front and the keys' deck
+  (`clear_grooves`). It and `clear_board.py` read `clear.py`'s names, so `export.py` and `hero.py`
+  exec both after it, into the same namespace.
 - `blender/scripts/build_clear.py`: the Clear model's web scene, with the names the page drives
   (`src/scene/contract.ts`) and the door's `door_hinge`.
 - `blender/scripts/export.py`: the background entry. It builds the model `CDP_MODEL` names
