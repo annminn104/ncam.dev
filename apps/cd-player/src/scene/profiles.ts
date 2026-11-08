@@ -13,8 +13,11 @@ export interface SceneProfile {
   near?: number;
   /** The arm's angles about its pivot's Y: at rest and over the disc. */
   arm: { rest: number; play: number };
-  /** How far the door swings open about its hinge's Y (radians); null: no door. */
-  door: { angle: number } | null;
+  /**
+   * How far the door swings open about its hinge's own axis (radians): Y, unless `axis` says X
+   * (the deck's jog plate lifts about its back edge). null: no door.
+   */
+  door: { angle: number; axis?: 'x' | 'y' } | null;
   /**
    * A disc's way to and from the spindle (metres, world axes). It leaves a place and reaches the
    * next along each one's normal (the spindle's is its seat's own), the Bézier's handles reaching

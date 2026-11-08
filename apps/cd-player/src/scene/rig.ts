@@ -67,7 +67,9 @@ export interface Rig extends StageState {
   spin: number;
   arm: { node: Object3D; baseRotationY: number; baseY: number };
   /** The door's hinge, for a model with one: where it is shut, and the turn that opens it. */
-  door: { node: Object3D; base: number; angle: number } | null;
+  door: { node: Object3D; base: number; angle: number; axis: 'x' | 'y' } | null;
+  /** How far the door stood open at the last pose: 0 shut … 1 open; 0 for a model without one. */
+  doorOpen: number;
   /**
    * The spindle's seat, in world space (the discs live at the root), and its normal: the way a disc
    * leaves and reaches it, as a slot's is (up out of the suitcase's deck, out of the Clear's door).
@@ -128,6 +130,16 @@ function flipLift(object: Object3D): number {
   return Math.hypot(across, deep) + CASE_FLIP_MARGIN_M;
 }
 
+/** The axis a profile's door turns about: Y unless it says X. */
+export function doorAxis(door: { axis?: 'x' | 'y' }): 'x' | 'y' {
+  return door.axis ?? 'y';
+}
+
+/** Turns `door`'s hinge to `open` (0 shut … 1 open) about its own axis. */
+export function turnDoor(door: NonNullable<Rig['door']>, open: number): void {
+  door.node.rotation[door.axis] = door.base + door.angle * open;
+}
+
 const rigs = new WeakMap<PlayerModel, Rig>();
 
 /** One rig per model (StrictMode renders twice; building it twice would clone twice). */
@@ -159,7 +171,7 @@ export function rigFor(model: PlayerModel): Rig {
     booklet: ownMaterial(nodes.case, 'art_booklet'),
   };
   const profile = SCENE_PROFILES[model.id];
-  const doorAngle = profile.door?.angle;
+  const door = profile.door;
   const rig: Rig = {
     model,
     discs,
@@ -177,9 +189,15 @@ export function rigFor(model: PlayerModel): Rig {
       baseY: nodes.arm_pivot.position.y,
     },
     door:
-      nodes.door_hinge && doorAngle !== undefined
-        ? { node: nodes.door_hinge, base: nodes.door_hinge.rotation.y, angle: doorAngle }
+      nodes.door_hinge && door
+        ? {
+            node: nodes.door_hinge,
+            base: nodes.door_hinge.rotation[doorAxis(door)],
+            angle: door.angle,
+            axis: doorAxis(door),
+          }
         : null,
+    doorOpen: 0,
     seat: {
       position: seatPosition,
       quaternion: seatQuaternion,
@@ -339,5 +357,6 @@ export function applyPose(rig: Rig, pose: Pose, dt: number): void {
   rig.discs.forEach((copy, index) => placeDisc(rig, copy, pose.discs[index] ?? null));
   placeCase(rig, pose.caseLift, pose.caseTurn);
   showBooklet(rig, pose.bookletNew);
-  if (rig.door) rig.door.node.rotation.y = rig.door.base + rig.door.angle * pose.door;
+  rig.doorOpen = rig.door ? pose.door : 0;
+  if (rig.door) turnDoor(rig.door, pose.door);
 }

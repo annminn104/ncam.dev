@@ -17,7 +17,7 @@ import {
 import type { Slots } from './materials';
 import type { PlayerModel } from './model';
 import { SCENE_PROFILES } from './profiles';
-import { applyPose, modelArmAngle, rigFor } from './rig';
+import { applyPose, doorAxis, modelArmAngle, rigFor, turnDoor } from './rig';
 import {
   DISC_COPIES,
   RACK_SLOTS,
@@ -217,7 +217,12 @@ describe('the door', () => {
 
   it('is the hinge of a model whose profile has a door, with the turn that opens it', () => {
     const { model, hinge } = clearModel();
-    expect(rigFor(model).door).toEqual({ node: hinge, base: 0.1, angle: -(100 * Math.PI) / 180 });
+    expect(rigFor(model).door).toEqual({
+      node: hinge,
+      base: 0.1,
+      angle: -(100 * Math.PI) / 180,
+      axis: 'y',
+    });
   });
 
   it('is none for a model without one, hinge or no hinge', () => {
@@ -236,6 +241,32 @@ describe('the door', () => {
     expect(hinge.rotation.y).toBeCloseTo(0.1 - (100 * Math.PI) / 180, 12);
     applyPose(rig, { ...rest, door: 0.5 }, 0);
     expect(hinge.rotation.y).toBeCloseTo(0.1 - (50 * Math.PI) / 180, 12);
+  });
+
+  it('turns about Y unless the profile names X', () => {
+    expect(doorAxis({})).toBe('y');
+    expect(doorAxis({ axis: 'y' })).toBe('y');
+    expect(doorAxis({ axis: 'x' })).toBe('x');
+  });
+
+  it('turns a hinge about X from its shut angle, leaving its Y alone', () => {
+    const node = new Object3D();
+    node.rotation.set(0.2, 0.3, 0);
+    turnDoor({ node, base: 0.2, angle: 1.2, axis: 'x' }, 0.5);
+    expect(node.rotation.x).toBeCloseTo(0.8, 12);
+    expect(node.rotation.y).toBeCloseTo(0.3, 12);
+  });
+
+  it('notes how far the door stands open after each pose, 0 for a model without one', () => {
+    const { model } = clearModel();
+    const rig = rigFor(model);
+    const rest = restingPose(emptyShelf(), false, false);
+    expect(rig.doorOpen).toBe(0);
+    applyPose(rig, { ...rest, door: 0.5 }, 0);
+    expect(rig.doorOpen).toBe(0.5);
+    const plain = rigFor(fakeModel().model);
+    applyPose(plain, { ...rest, door: 0.5 }, 0);
+    expect(plain.doorOpen).toBe(0);
   });
 });
 
