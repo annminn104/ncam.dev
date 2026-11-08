@@ -15,9 +15,10 @@ import {
 } from 'three';
 import { describe, expect, it } from 'vitest';
 import { CLEAR_SWATCHES, clearSwatch, type ClearLook } from '../clear-looks';
-import { etchColour, traceColour } from './decor-colours';
 import { SKINS, skinById, type Skin } from '../skins';
 import { DYNAMIC_MATERIALS } from './contract';
+import { etchColour, traceColour } from './decor-colours';
+import { SKIN_ROLES } from './material-roles';
 import {
   applyLook,
   applySkin,
@@ -28,7 +29,6 @@ import {
   skinColours,
   upgradeMaterials,
 } from './materials';
-import { SKIN_ROLES } from './material-roles';
 
 const meshOf = (name: string, color = '#ffffff') =>
   new Mesh(new BoxGeometry(), new MeshStandardMaterial({ name, color }));
@@ -356,6 +356,14 @@ describe('applyLook', () => {
         expect(hex(etch.color), shell.id).toBe(etchColour(shell.tint));
       }
     }
+  });
+
+  // By hand: the green board #1e6b3b is dark, so each channel goes 22 % of the way to 255:
+  // 30 + 49.5 -> 80 (0x50), 107 + 32.56 -> 140 (0x8c), 59 + 43.12 -> 102 (0x66).
+  it('gives the default green board the traces #508c66', () => {
+    const trace = new MeshPhysicalMaterial({ name: 'trace' });
+    applyLook([trace], { model: 'clear', clear: { ...look, board: 'green' } });
+    expect(hex(trace.color)).toBe('#508c66');
   });
 
   it('never recolours the gold', () => {

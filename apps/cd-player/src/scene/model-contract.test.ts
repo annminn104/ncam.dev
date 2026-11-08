@@ -327,6 +327,44 @@ describe('the GLBs as the scene tests measure them (src/testing/model-measures.t
     });
   }
 
+  // The play key's two icons, told apart by their meshes: ▶ is one triangle, whose faces cross the
+  // key's centre line (x = 0 in the key's own frame), and ‖ is two bars, one on each side of it.
+  for (const id of ['suitcase', 'clear'] as const) {
+    it(`draws the ${id}’s icon_play as a triangle across the key and icon_pause as two bars apart`, () => {
+      const set = scene(id);
+      const toKey = node(set, 'btn_play').matrixWorld.clone().invert();
+      const trianglesX = (icon: string): number[][] => {
+        const found = node(set, icon);
+        const out: number[][] = [];
+        found.traverse((child) => {
+          const mesh = child as Mesh;
+          if (!mesh.isMesh) return;
+          const position = mesh.geometry.getAttribute('position');
+          const matrix = toKey.clone().multiply(mesh.matrixWorld);
+          const index = mesh.geometry.getIndex();
+          const corner = (i: number) =>
+            new Vector3()
+              .fromBufferAttribute(position, index ? index.getX(i) : i)
+              .applyMatrix4(matrix).x;
+          const count = index ? index.count : position.count;
+          for (let i = 0; i < count; i += 3) out.push([corner(i), corner(i + 1), corner(i + 2)]);
+        });
+        return out;
+      };
+      /** Clear of the centre line by 0.3 mm: the bars' inner edges stand 0.75 mm off it. */
+      const MARGIN = 0.0003;
+      const play = trianglesX('icon_play');
+      const pause = trianglesX('icon_pause');
+      // Some face of the triangle has corners on both sides of the centre line.
+      expect(play.some((x) => Math.min(...x) < -MARGIN && Math.max(...x) > MARGIN)).toBe(true);
+      // No vertex of the bars is on or near it, and each side holds one.
+      const xs = pause.flat();
+      expect(xs.every((x) => Math.abs(x) > MARGIN)).toBe(true);
+      expect(xs.some((x) => x < 0)).toBe(true);
+      expect(xs.some((x) => x > 0)).toBe(true);
+    });
+  }
+
   it('hangs the Clear’s door on its hinge, turning about the world’s Y, with its shut box', () => {
     const hinge = node(scene('clear'), 'door_hinge');
     expectPosition(hinge, CLEAR_DOOR.hinge, 'door_hinge');
