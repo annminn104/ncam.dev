@@ -7,9 +7,11 @@ import type { Rig } from '../rig';
 import {
   canvasTexture,
   FACES_WAIT_MS,
+  jogRingLit,
   loadFaces,
   newCanvas,
   paintCard,
+  paintJogRing,
   paintLcd,
   paintTag,
   setMap,
@@ -20,12 +22,14 @@ function makeSurfaces() {
   const card = newCanvas(1024, 182);
   const tag = newCanvas(512, 768);
   const lcd = newCanvas(256, 112);
+  const ring = newCanvas(480, 8);
   return {
-    canvases: { card, tag, lcd },
+    canvases: { card, tag, lcd, ring },
     textures: {
       card: canvasTexture(card),
       tag: canvasTexture(tag),
       lcd: canvasTexture(lcd),
+      ring: canvasTexture(ring),
     },
   };
 }
@@ -39,6 +43,8 @@ interface Shown {
    * would be an allocation per frame), its colour (the Clear model's light) among them.
    */
   lcd: { track: number; second: number; status: Status | null; colour: string | null };
+  /** The deck's LED ring: how many segments are lit, and in what colour. */
+  ring: { lit: number; colour: string | null };
 }
 
 const NONE = '\u0000';
@@ -46,6 +52,7 @@ const NONE = '\u0000';
 const nothingShown = (): Shown => ({
   card: NONE,
   lcd: { track: -1, second: -1, status: null, colour: null },
+  ring: { lit: -1, colour: null },
 });
 
 /**
@@ -65,10 +72,12 @@ export function useSceneTextures(rig: Rig, bridge: SceneBridge, lcdColour: strin
     setMap(rig.model.slots.tag_print, textures.tag);
     setMap(rig.model.slots.card_print, textures.card);
     setMap(rig.model.slots.lcd_screen, textures.lcd);
+    const ring = rig.model.optionalSlots.jog_ring;
+    if (ring) setMap(ring, textures.ring);
     shown.current = nothingShown();
     paintCard(canvases.card, null);
     paintTag(canvases.tag, null);
-    const all = [textures.tag, textures.card, textures.lcd];
+    const all = [textures.tag, textures.card, textures.lcd, textures.ring];
     for (const texture of all) texture.needsUpdate = true;
     return () => {
       for (const texture of all) texture.dispose();
@@ -115,8 +124,18 @@ export function useSceneTextures(rig: Rig, bridge: SceneBridge, lcdColour: strin
 
   useFrame(() => {
     const view = bridge.getView();
-    const lcd = shown.current.lcd;
     const target = scrubTargetMs(view.positionMs, view.durationMs, rig.scrubMs);
+    if (rig.model.optionalSlots.jog_ring) {
+      const ring = shown.current.ring;
+      const lit = jogRingLit(target, view.durationMs);
+      if (ring.lit !== lit || ring.colour !== lcdColour) {
+        ring.lit = lit;
+        ring.colour = lcdColour;
+        paintJogRing(surfaces.canvases.ring, lit, lcdColour);
+        surfaces.textures.ring.needsUpdate = true;
+      }
+    }
+    const lcd = shown.current.lcd;
     const second = Math.floor(target / 1000);
     if (
       lcd.track === view.trackNo &&

@@ -22,6 +22,7 @@ function fakeModel() {
     root,
     nodes: nodes as Record<RequiredNode, Object3D>,
     slots: {} as Slots,
+    optionalSlots: {},
     applyLook: vi.fn(),
     dispose,
   };

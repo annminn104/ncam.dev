@@ -20,7 +20,12 @@ import { clearSwatch } from '../clear-looks';
 import { etchColour, GOLD, traceColour } from './decor-colours';
 import type { Look } from '../looks';
 import { skinById, type Skin, type SkinRole } from '../skins';
-import { DYNAMIC_MATERIALS, type DynamicMaterial } from './contract';
+import {
+  DYNAMIC_MATERIALS,
+  OPTIONAL_DYNAMIC_MATERIALS,
+  type DynamicMaterial,
+  type OptionalDynamicMaterial,
+} from './contract';
 import { CLEAR_ROLES, MATERIAL_ROLES, SKIN_ROLES, type MaterialRole } from './material-roles';
 import { leatherNormal, quiltNormal, weaveNormal } from './textures/grain';
 
@@ -41,8 +46,14 @@ function skinRoleOf(name: string): SkinRole | undefined {
   return Object.hasOwn(SKIN_ROLES, name) ? SKIN_ROLES[name] : undefined;
 }
 
+/** The optional dynamic materials this model has (the deck's LED ring). */
+export type OptionalSlots = Partial<
+  Record<OptionalDynamicMaterial, MeshPhysicalMaterial | MeshBasicMaterial>
+>;
+
 export interface UpgradedMaterials {
   slots: Slots;
+  optionalSlots: OptionalSlots;
   /** Recolours the model's materials in place for a look (applyLook, below). */
   applyLook(look: Look): void;
   dispose(): void;
@@ -359,6 +370,7 @@ export function upgradeMaterials(root: Object3D): UpgradedMaterials {
   };
   const made = new Map<string, Material>();
   const slots: Partial<Slots> = {};
+  const optionalSlots: OptionalSlots = {};
   root.traverse((object) => {
     const mesh = object as Mesh;
     if (!mesh.isMesh) return;
@@ -372,6 +384,10 @@ export function upgradeMaterials(root: Object3D): UpgradedMaterials {
         slots[source.name as DynamicMaterial] = material as
           MeshPhysicalMaterial | MeshBasicMaterial;
       }
+      if ((OPTIONAL_DYNAMIC_MATERIALS as readonly string[]).includes(source.name)) {
+        optionalSlots[source.name as OptionalDynamicMaterial] = material as
+          MeshPhysicalMaterial | MeshBasicMaterial;
+      }
     }
     source.dispose();
     mesh.material = material;
@@ -383,6 +399,7 @@ export function upgradeMaterials(root: Object3D): UpgradedMaterials {
   });
   return {
     slots: slots as Slots,
+    optionalSlots,
     applyLook: (look: Look) => applyLook(made.values(), look),
     dispose: () => {
       for (const material of made.values()) material.dispose();

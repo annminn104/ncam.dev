@@ -13,7 +13,7 @@ import {
   clearSlot,
 } from '../testing/model-measures';
 import { RACK_SLOTS } from './stage';
-import { DYNAMIC_MATERIALS, OPTIONAL_NODES, REQUIRED_NODES } from './contract';
+import { DYNAMIC_MATERIALS, REQUIRED_NODES } from './contract';
 import { readGlbJson, triangleCount } from './glb';
 import { CLEAR_ROLES, MATERIAL_ROLES, SKIN_ROLES } from './material-roles';
 
@@ -169,8 +169,7 @@ describe('public/assets/cd-player-clear.glb (art/pipeline/build.mjs clear)', () 
 
   it('has every node the page drives, and its door', () => {
     const names = new Set(json.nodes.map((n) => n.name));
-    for (const name of [...REQUIRED_NODES, ...OPTIONAL_NODES])
-      expect(names.has(name), name).toBe(true);
+    for (const name of [...REQUIRED_NODES, 'door_hinge']) expect(names.has(name), name).toBe(true);
   });
 
   it('has every printed material, a role for every material, and the four parts a look colours', () => {

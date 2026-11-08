@@ -3,11 +3,15 @@ import type { TrackView } from '../../bridge';
 import { clearSwatch, DEFAULT_CLEAR_LOOK } from '../../clear-looks';
 import {
   LCD_ON,
+  JOG_RING_DIM,
+  JOG_RING_SEGMENTS,
+  jogRingLit,
   lcdColour,
   loadFaces,
   paintBooklet,
   paintCard,
   paintDisc,
+  paintJogRing,
   paintLcd,
   paintTag,
 } from './paint';
@@ -171,5 +175,60 @@ describe('lcdColour', () => {
     expect(lcdColour({ model: 'clear', clear: DEFAULT_CLEAR_LOOK })).toBe(
       clearSwatch(DEFAULT_CLEAR_LOOK, 'light').glow,
     );
+  });
+});
+
+/** A canvas that notes each fillRect with the fill style and alpha it was drawn in. */
+function strip(width = 480, height = 8) {
+  const state: Record<string, unknown> = { globalAlpha: 1 };
+  const rects: { x: number; w: number; style: unknown; alpha: unknown }[] = [];
+  const context = new Proxy(
+    {},
+    {
+      get: (_target, key) =>
+        key === 'fillRect'
+          ? (x: number, _y: number, w: number) =>
+              rects.push({ x, w, style: state.fillStyle, alpha: state.globalAlpha })
+          : () => {},
+      set: (_target, key, value) => {
+        state[String(key)] = value;
+        return true;
+      },
+    },
+  );
+  const canvas = { width, height, getContext: () => context };
+  return { canvas: canvas as unknown as HTMLCanvasElement, rects };
+}
+
+describe('jogRingLit', () => {
+  it('lights the share of 48 segments the target has reached, rounded', () => {
+    expect(JOG_RING_SEGMENTS).toBe(48);
+    expect(jogRingLit(0, 30_000)).toBe(0);
+    expect(jogRingLit(15_000, 30_000)).toBe(24);
+    expect(jogRingLit(30_000, 30_000)).toBe(48);
+    expect(jogRingLit(312, 30_000)).toBe(0);
+    expect(jogRingLit(313, 30_000)).toBe(1);
+  });
+  it('stays within the ring, and dark without a duration', () => {
+    expect(jogRingLit(40_000, 30_000)).toBe(48);
+    expect(jogRingLit(-5, 30_000)).toBe(0);
+    expect(jogRingLit(10_000, 0)).toBe(0);
+    expect(jogRingLit(10_000, Number.NaN)).toBe(0);
+  });
+});
+
+describe('paintJogRing', () => {
+  it('blacks the strip, then draws 48 segments left to right: lit in the glow, the rest dim', () => {
+    const { canvas, rects } = strip(480, 8);
+    paintJogRing(canvas, 5, '#7fd8ff');
+    expect(rects[0]).toMatchObject({ x: 0, w: 480, style: '#000000', alpha: 1 });
+    const segments = rects.slice(1);
+    expect(segments).toHaveLength(48);
+    segments.forEach((rect, k) => {
+      expect(rect.style, String(k)).toBe('#7fd8ff');
+      expect(rect.alpha, String(k)).toBe(k < 5 ? 1 : JOG_RING_DIM);
+      expect(rect.x, String(k)).toBeCloseTo(k * 10 + 0.9, 9);
+      expect(rect.w, String(k)).toBeCloseTo(8.2, 9);
+    });
   });
 });

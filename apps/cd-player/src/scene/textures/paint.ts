@@ -330,3 +330,37 @@ export function paintLcd(
   const label = status === 'playing' ? 'CD   ▶ PLAY' : status === 'paused' ? 'CD   ❚❚ PAUSE' : 'CD';
   ctx.fillText(label, w * 0.07, h * 0.08);
 }
+
+/** The deck's LED ring: its segments round the jog. */
+export const JOG_RING_SEGMENTS = 48;
+/** A dim segment's share of the glow. */
+export const JOG_RING_DIM = 0.12;
+
+/** How many of the ring's segments `targetMs` of `durationMs` lights: none without a duration. */
+export function jogRingLit(targetMs: number, durationMs: number): number {
+  if (!(durationMs > 0)) return 0;
+  const lit = Math.round((JOG_RING_SEGMENTS * targetMs) / durationMs);
+  return Math.min(JOG_RING_SEGMENTS, Math.max(0, lit));
+}
+
+/**
+ * The ring's strip. Its u runs clockwise round the ring from twelve o'clock
+ * (art/blender/scripts/deck.py unwraps it so), so segment k fills the k-th 48th of the width, less
+ * a gap of 18 % of a cell. The first `lit` segments are the glow, the rest the glow at
+ * JOG_RING_DIM, the gaps black.
+ */
+export function paintJogRing(canvas: HTMLCanvasElement, lit: number, colour: string): void {
+  const ctx = context(canvas);
+  const { width: w, height: h } = canvas;
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = '#000000';
+  ctx.fillRect(0, 0, w, h);
+  const cell = w / JOG_RING_SEGMENTS;
+  const gap = cell * 0.18;
+  ctx.fillStyle = colour;
+  for (let k = 0; k < JOG_RING_SEGMENTS; k++) {
+    ctx.globalAlpha = k < lit ? 1 : JOG_RING_DIM;
+    ctx.fillRect(k * cell + gap / 2, 0, cell - gap, h);
+  }
+  ctx.globalAlpha = 1;
+}

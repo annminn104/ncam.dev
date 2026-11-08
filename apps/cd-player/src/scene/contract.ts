@@ -40,11 +40,15 @@ export const REQUIRED_NODES = [
 export type RequiredNode = (typeof REQUIRED_NODES)[number];
 
 /**
- * Nodes a model may have: the Clear model's door. The page drives them when they are there
- * (src/scene/profiles.ts names each model's).
+ * Nodes a model may have: the Clear's and the deck's door, the deck's LED ring. The page drives
+ * them when they are there (src/scene/profiles.ts names each model's).
  */
-export const OPTIONAL_NODES = ['door_hinge'] as const;
+export const OPTIONAL_NODES = ['door_hinge', 'jog_ring'] as const;
 export type OptionalNode = (typeof OPTIONAL_NODES)[number];
+
+/** Materials a model may have whose maps the page paints at runtime: the deck's LED ring. */
+export const OPTIONAL_DYNAMIC_MATERIALS = ['jog_ring'] as const;
+export type OptionalDynamicMaterial = (typeof OPTIONAL_DYNAMIC_MATERIALS)[number];
 
 /** Materials whose maps the page paints at runtime (src/scene/textures). */
 export const DYNAMIC_MATERIALS = [

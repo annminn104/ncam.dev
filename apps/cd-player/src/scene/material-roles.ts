@@ -61,6 +61,7 @@ export const MATERIAL_ROLES: Readonly<Record<string, MaterialRole>> = {
   card_print: 'print',
   tag_print: 'print',
   lcd_screen: 'screen',
+  jog_ring: 'screen',
   clear_shell: 'clear-shell',
   door_glass: 'crystal',
   clear_frame: 'frame',
