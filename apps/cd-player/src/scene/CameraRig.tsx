@@ -15,7 +15,7 @@ import {
   type Tap,
 } from './orbit';
 import { SCENE_PROFILES } from './profiles';
-import { scrollersOf, scrollsFirst, wheelFactor } from './wheel';
+import { scrollersOf, scrollsFirst, wheelFactor, wheelStep, type WheelStream } from './wheel';
 import {
   INITIAL_ZOOM,
   resetZoom,
@@ -230,14 +230,20 @@ export function CameraRig({ model, channel }: { model: ModelId; channel: CameraC
       if (!interaction.controlActive) recentre();
     };
     // A plain wheel scrolls the page where it can that way (a phone's, a narrow window's); Ctrl or
-    // ⌘ with the wheel, and a trackpad's pinch (a wheel with ctrlKey), always zoom.
+    // ⌘ with the wheel, and a trackpad's pinch (a wheel with ctrlKey), always zoom. A stream of
+    // events keeps its first choice (wheel.ts wheelStep), and a sideways one is the page's.
+    let stream: WheelStream | null = null;
     const wheel = (event: WheelEvent) => {
-      if (event.deltaY === 0) return;
-      const plain = !event.ctrlKey && !event.metaKey;
-      if (plain && scrollsFirst(scrollersOf(element), event.deltaY)) return;
+      const { deltaX, deltaY, timeStamp: at } = event;
+      const zoomKey = event.ctrlKey || event.metaKey;
+      const step = wheelStep(stream, { deltaX, deltaY, zoomKey, at }, () =>
+        scrollsFirst(scrollersOf(element), deltaY),
+      );
+      stream = step.stream;
+      if (!step.zooms) return;
       event.preventDefault();
-      const at = pointAt(event.clientX, event.clientY);
-      zoomAt(wheelFactor(event.deltaY, event.deltaMode), at, at);
+      const point = pointAt(event.clientX, event.clientY);
+      zoomAt(wheelFactor(deltaY, event.deltaMode), point, point);
     };
     publish();
     const offCommand = channel.onCommand(command);

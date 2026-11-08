@@ -1,5 +1,12 @@
-import { describe, expect, it } from 'vitest';
-import { scrollsFirst, wheelFactor, type Scroller } from './wheel';
+import { describe, expect, it, vi } from 'vitest';
+import {
+  scrollsFirst,
+  WHEEL_STREAM_MS,
+  wheelFactor,
+  wheelStep,
+  type Scroller,
+  type WheelInput,
+} from './wheel';
 import { ZOOM_STEP } from './zoom';
 
 const PIXELS = 0;
@@ -69,5 +76,79 @@ describe('scrollsFirst', () => {
   it('asks every box up the page: any one with room scrolls first', () => {
     const stuck = box({ scrollTop: 400 });
     expect(scrollsFirst([stuck, box({ overflowY: 'hidden' }), box({})], 100)).toBe(true);
+  });
+});
+
+describe('wheelStep', () => {
+  /** A plain wheel up or down (deltaY) at `at` ms. */
+  const plain = (at: number, deltaY = -100, deltaX = 0): WheelInput => ({
+    deltaX,
+    deltaY,
+    zoomKey: false,
+    at,
+  });
+  const pinch = (at: number): WheelInput => ({ deltaX: 0, deltaY: -3, zoomKey: true, at });
+
+  it('starts a plain stream by asking the page: scroll where it can that way, else zoom', () => {
+    expect(wheelStep(null, plain(0), () => true)).toEqual({
+      zooms: false,
+      stream: { zooms: false, at: 0 },
+    });
+    expect(wheelStep(null, plain(0), () => false)).toEqual({
+      zooms: true,
+      stream: { zooms: true, at: 0 },
+    });
+  });
+
+  it('keeps yielding through the stream: momentum past the page’s end still scrolls, never zooms', () => {
+    let { stream } = wheelStep(null, plain(0), () => true);
+    // The page has reached its top; a flick's momentum keeps coming, 16 ms apart.
+    const atTheTop = vi.fn(() => false);
+    for (let at = 16; at < 1000; at += 16) {
+      const step = wheelStep(stream, plain(at), atTheTop);
+      expect(step.zooms, `${at} ms`).toBe(false);
+      stream = step.stream;
+    }
+    expect(atTheTop).not.toHaveBeenCalled();
+  });
+
+  it('decides anew after a gap: a new stream at the top zooms', () => {
+    const { stream } = wheelStep(null, plain(0), () => true);
+    expect(wheelStep(stream, plain(WHEEL_STREAM_MS - 1), () => false).zooms).toBe(false);
+    expect(wheelStep(stream, plain(WHEEL_STREAM_MS), () => false).zooms).toBe(true);
+    expect(wheelStep(stream, plain(2000), () => false).zooms).toBe(true);
+  });
+
+  it('keeps a stream that zoomed zooming, though the page could scroll by then', () => {
+    let { stream } = wheelStep(null, plain(0), () => false);
+    for (let at = 100; at < 1000; at += 100) {
+      const step = wheelStep(stream, plain(at, 100), () => true);
+      expect(step.zooms, `${at} ms`).toBe(true);
+      stream = step.stream;
+    }
+  });
+
+  it('always zooms with Ctrl or ⌘, or a trackpad’s pinch, and the stream zooms on', () => {
+    const { stream } = wheelStep(null, plain(0), () => true);
+    const pinched = wheelStep(stream, pinch(16), () => true);
+    expect(pinched).toEqual({ zooms: true, stream: { zooms: true, at: 16 } });
+    expect(wheelStep(pinched.stream, plain(32), () => true).zooms).toBe(true);
+  });
+
+  it('leaves a plain wheel that goes more sideways than up or down to the page, and the stream be', () => {
+    const { stream } = wheelStep(null, plain(0), () => false);
+    for (const [deltaX, deltaY] of [
+      [30, 5],
+      [-30, -29],
+      [12, 0],
+      [0, 0],
+    ]) {
+      const step = wheelStep(stream, plain(16, deltaY, deltaX), () => false);
+      expect(step, `${deltaX}, ${deltaY}`).toEqual({ zooms: false, stream });
+    }
+    // Ctrl's or a pinch's goes on zooming, whichever way it leans.
+    expect(
+      wheelStep(stream, { deltaX: 30, deltaY: 5, zoomKey: true, at: 16 }, () => true).zooms,
+    ).toBe(true);
   });
 });
