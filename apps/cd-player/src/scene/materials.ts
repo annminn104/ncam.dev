@@ -17,6 +17,7 @@ import {
   type Texture,
 } from 'three';
 import { clearSwatch } from '../clear-looks';
+import { etchColour, GOLD, traceColour } from './decor-colours';
 import type { Look } from '../looks';
 import { skinById, type Skin, type SkinRole } from '../skins';
 import { DYNAMIC_MATERIALS, type DynamicMaterial } from './contract';
@@ -154,6 +155,26 @@ export function makeMaterial(
       return physical(source, { roughness: source.roughness, metalness: source.metalness });
     case 'pcb':
       return physical(source, { roughness: 0.3, clearcoat: 0.6, clearcoatRoughness: 0.12 });
+    case 'etch':
+      // Frosted lines on the shell: a pale, half-opaque, rough surface (no transmission) that
+      // leaves the depth buffer alone.
+      return new MeshPhysicalMaterial({
+        name: source.name,
+        color: source.color.clone(),
+        metalness: 0,
+        roughness: 0.85,
+        opacity: 0.5,
+        transparent: true,
+        depthWrite: false,
+        side: FrontSide,
+      });
+    case 'gold':
+      return new MeshPhysicalMaterial({
+        name: source.name,
+        color: new Color(GOLD),
+        metalness: 1,
+        roughness: 0.3,
+      });
     case 'metal':
       return physical(source, {
         metalness: 1,
@@ -245,7 +266,7 @@ const SILK_LUMA_SWITCH = 0.45;
 /**
  * Recolours `materials` in place for `look`: the suitcase's skin roles from its skin (as
  * `applySkin` did), or the Clear model's parts from their swatches, its silkscreen following the
- * board. Uniforms only.
+ * board and its `trace` and `etch` the board and the shell. Uniforms only.
  */
 export function applyLook(materials: Iterable<Material>, look: Look): void {
   if (look.model === 'suitcase') {
@@ -260,6 +281,15 @@ export function applyLook(materials: Iterable<Material>, look: Look): void {
       (material as MeshPhysicalMaterial).color.set(
         luma < SILK_LUMA_SWITCH ? SILK_LIGHT : SILK_DARK,
       );
+      continue;
+    }
+    if (material.name === 'trace') {
+      (material as MeshPhysicalMaterial).color.set(traceColour(board));
+      continue;
+    }
+    if (material.name === 'etch') {
+      const { tint } = clearSwatch(look.clear, 'shell');
+      (material as MeshPhysicalMaterial).color.set(etchColour(tint));
       continue;
     }
     const part = Object.hasOwn(CLEAR_ROLES, material.name) ? CLEAR_ROLES[material.name] : undefined;
@@ -283,7 +313,7 @@ export function applyLook(materials: Iterable<Material>, look: Look): void {
 
 /**
  * The materials under `root` a look recolours, by name, as sRGB hex (for the live check): a skin's
- * roles on the suitcase, the Clear model's parts and its silkscreen.
+ * roles on the suitcase, the Clear model's parts, its silkscreen and its `trace` and `etch`.
  */
 export function skinColours(root: Object3D): Record<string, string> {
   const colours: Record<string, string> = {};
@@ -292,7 +322,13 @@ export function skinColours(root: Object3D): Record<string, string> {
     if (!mesh.isMesh) return;
     const material = mesh.material as MeshStandardMaterial;
     const { name } = material;
-    if (skinRoleOf(name) || Object.hasOwn(CLEAR_ROLES, name) || name === 'silk') {
+    if (
+      skinRoleOf(name) ||
+      Object.hasOwn(CLEAR_ROLES, name) ||
+      name === 'silk' ||
+      name === 'trace' ||
+      name === 'etch'
+    ) {
       colours[name] = `#${material.color.getHexString()}`;
     }
   });
@@ -327,9 +363,10 @@ export function upgradeMaterials(root: Object3D): UpgradedMaterials {
     const mesh = object as Mesh;
     if (!mesh.isMesh) return;
     const source = mesh.material as MeshStandardMaterial;
+    const role = MATERIAL_ROLES[source.name] ?? 'plastic';
     let material = made.get(source.name);
     if (!material) {
-      material = makeMaterial(MATERIAL_ROLES[source.name] ?? 'plastic', source, maps);
+      material = makeMaterial(role, source, maps);
       made.set(source.name, material);
       if ((DYNAMIC_MATERIALS as readonly string[]).includes(source.name)) {
         slots[source.name as DynamicMaterial] = material as
@@ -338,8 +375,11 @@ export function upgradeMaterials(root: Object3D): UpgradedMaterials {
     }
     source.dispose();
     mesh.material = material;
-    // Glass casts no hard shadow.
-    if ((material as MeshPhysicalMaterial).transmission > 0) mesh.castShadow = false;
+    // Glass casts no hard shadow, and neither do the etched lines: three's shadow map ignores
+    // opacity, so half-opaque lines would shade the inside of the shell at full strength.
+    if ((material as MeshPhysicalMaterial).transmission > 0 || role === 'etch') {
+      mesh.castShadow = false;
+    }
   });
   return {
     slots: slots as Slots,

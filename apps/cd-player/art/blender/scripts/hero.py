@@ -4,10 +4,11 @@
       /Applications/Blender.app/Contents/MacOS/Blender --background --factory-startup \\
       --python-exit-code 1 --python apps/cd-player/art/blender/scripts/hero.py
 
-CDP_MODEL picks the player: `suitcase` (the default) or `clear` (clear.py). The suitcase's views:
-`hero` is the three-quarter product still the design was approved from (the lid open, a disc
-spinning, five more in the rack, a stack of cases beside it); `lid` looks straight into the open
-lid (the case, the rack and its discs, the strap and the plate). The Clear model's: `hero`, the
+CDP_MODEL picks the player: `suitcase` (the default) or `clear` (clear.py, with its board in
+clear_board.py and its decorations in clear_decor.py). The suitcase's views: `hero` is the
+three-quarter product still the design was approved from (the lid open, a disc spinning, five more
+in the rack, a stack of cases beside it); `lid` looks straight into the open lid (the case, the
+rack and its discs, the strap and the plate). The Clear model's: `hero`, the
 three-quarter still of the player between its stand and its case, and `inside`, a close-up of the
 board, the LCD and the mechanism through the shell. `preview` is 800 x 600 at 24 samples, `final`
 1600 x 1200 at 160; any other value of the model, the view or the quality stops the run with exit
@@ -145,7 +146,8 @@ def suitcase_scene():
 
 
 def clear_scene():
-    exec(compile(open(BASE + "/clear.py").read(), "clear.py", "exec"), globals())
+    for f in ("clear.py", "clear_board.py", "clear_decor.py"):
+        exec(compile(open(BASE + "/" + f).read(), f, "exec"), globals())
     look, ids = clear_look(CLEAR_LOOK)
     new_scene("cd_player_clear", res=(1600, 1200), samples=128)
     build_clear_materials(look)

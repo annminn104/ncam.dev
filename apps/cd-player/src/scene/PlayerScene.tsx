@@ -91,7 +91,7 @@ function Precompile({ model, onDone }: { model: PlayerModel; onDone(model: Playe
 }
 
 export function PlayerScene(props: PlayerSceneProps) {
-  const { assetBase, bridge, look, onReady, onFail, onProgress, onModel, onStage } = props;
+  const { assetBase, bridge, camera, look, onReady, onFail, onProgress, onModel, onStage } = props;
   const wanted = modelById(look.model);
   // The model on the stage, for App: told the moment the holder changes it (the boot's first
   // included, before its first frames), and none as the scene goes. The holder outlives every
@@ -220,7 +220,7 @@ export function PlayerScene(props: PlayerSceneProps) {
     >
       <Studio narrow={narrow} />
       <ShadowFloor />
-      <CameraRig model={shown?.id ?? wanted.id} />
+      <CameraRig model={shown?.id ?? wanted.id} channel={camera} />
       {shown && (
         <PlayerRig
           // One rig per model: a new one is seated from the view at once, with its own ready probe.

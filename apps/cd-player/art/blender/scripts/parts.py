@@ -277,7 +277,9 @@ def button_icon(kind):
     if kind == "next":
         return [rrect(0.8, 3.8, 0, cx=2.8), [(2.1, 0), (-0.4, 1.9), (-0.4, -1.9)], [(-0.8, 0), (-3.3, 1.9), (-3.3, -1.9)]]
     if kind == "play":
-        return [[(-3.0, -2.0), (-3.0, 2.0), (0.3, 0)], rrect(0.8, 4.0, 0, cx=1.5), rrect(0.8, 4.0, 0, cx=3.0)]
+        return [[(-1.6, -2.1), (-1.6, 2.1), (2.0, 0)]]
+    if kind == "pause":  # the play key's second icon: the page shows one of the two at a time
+        return [rrect(0.9, 4.2, 0, cx=-1.05), rrect(0.9, 4.2, 0, cx=1.05)]
     if kind == "stop":
         return [rrect(3.4, 3.4, 0.3)]
     return []
@@ -517,8 +519,12 @@ def make_player(name, disc_label, booklet, rack_labels=None, lid_open=100.0, arm
                                          (0.01, 3.66)], M["btn"], seg=64, parent=b)
         shapes = button_icon(kind)
         if shapes:
-            ic = slab(f"{name}_btn_icon_{kind}", shapes, 3.6, 3.78, M["ink_dark"], parent=b)
-            ic.scale = (1.3, 1.3, 1.0)
+            # ▶ and ‖ share the play key's cap, the page showing one at a time; a render plays, so
+            # it prints ‖ alone.
+            icons = (("play", "pause") if web else ("pause",)) if kind == "play" else (kind,)
+            for icon in icons:
+                ic = slab(f"{name}_btn_icon_{icon}", button_icon(icon), 3.6, 3.78, M["ink_dark"], parent=b)
+                ic.scale = (1.3, 1.3, 1.0)
         else:
             text(f"{name}_btn_txt_{kind}", "RPT" if kind == "rpt" else "M", 3.0, M["ink_dark"], font="avenir",
                  parent=b, loc=L(0, 0, 3.68))

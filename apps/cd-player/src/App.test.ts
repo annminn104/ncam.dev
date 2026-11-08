@@ -9,6 +9,7 @@ import { LOOK_SCRIPT } from './persist';
 import type { InitialData } from './playback/engine';
 import { createRouteController } from './route-controller';
 import { DEFAULT_SKIN, skinById } from './skins';
+import { textOf } from './testing/markup';
 
 const initial: InitialData = {
   ref: { type: 'playlist', id: '37i9dQZEVXbMDoHDwVN2tF' },
@@ -107,6 +108,65 @@ describe('App (the layout)', () => {
     expect(html.indexOf('<p class="cdp-hud">')).toBeLessThan(side);
     expect(html).toContain('<div class="cdp-side"><section class="cdp-now"');
     expect(html.indexOf('<aside class="cdp-tracks"')).toBeGreaterThan(side);
+  });
+});
+
+describe('App and the view (zoom)', () => {
+  const source = readFileSync(new URL('./App.tsx', import.meta.url), 'utf8');
+
+  it('says how to zoom on the help line', () => {
+    const html = renderToString(
+      createElement(App, { controller: createRouteController({ route: '/' }), initial }),
+    );
+    expect(textOf(/<p class="cdp-hud">[\s\S]*?<\/p>/.exec(html)?.[0] ?? '')).toBe(
+      'Space play or pause · N next · P previous · drag to look around · scroll or pinch to zoom',
+    );
+  });
+
+  it('leaves the view’s buttons out of the server’s markup: they come once the scene is live', () => {
+    const html = renderToString(
+      createElement(App, { controller: createRouteController({ route: '/' }), initial }),
+    );
+    expect(html).not.toContain('cdp-zoom');
+    expect(html).not.toContain('Zoom in');
+    // In the stage, after the help line, and only once live (read from the JSX: the server renders
+    // the waiting phase).
+    const stage = source.indexOf('<div className="cdp-stage">');
+    const hud = source.indexOf('<Hud camera={camera} />');
+    const buttons = source.indexOf('{live && <ZoomControls camera={camera} />}');
+    expect(hud).toBeGreaterThan(stage);
+    expect(buttons).toBeGreaterThan(hud);
+    expect(buttons).toBeLessThan(source.indexOf('<div className="cdp-side">'));
+  });
+
+  it('hands the scene the camera’s channel, made once per mount, as it hands it the bridge', () => {
+    expect(source).toMatch(/const \[camera\] = useState\(createCameraChannel\);/);
+    expect(source).toMatch(/<SceneHost[^>]*\bcamera=\{camera\}/);
+    // The help line hears it too: it fades out while the view is zoomed in.
+    expect(source).toContain('<Hud camera={camera} />');
+  });
+
+  it('sends +, - and 0 to the camera from the page’s key handler, behind its guards', () => {
+    // Ctrl, ⌘ or Alt, a field or a focused control, and a held key all come first (src/keys.ts
+    // maps the keys).
+    const handler = /const onKey = \(event: KeyboardEvent\) => \{([\s\S]*?)\n {4}\};/.exec(
+      source,
+    )?.[1];
+    const order = [
+      'if (event.metaKey || event.ctrlKey || event.altKey) return;',
+      'if (target?.closest?.(\'input, textarea, select, button, [contenteditable="true"]\')) return;',
+      'const command = keyCommand(event);',
+      'if (event.repeat) return;',
+      'else if (live) camera.send(command);',
+    ].map((line) => handler?.indexOf(line) ?? -1);
+    expect(order.every((at) => at > -1)).toBe(true);
+    expect([...order].sort((a, b) => a - b)).toEqual(order);
+  });
+
+  it('keeps the view’s keys, like its buttons, for a live scene, so it never comes live zoomed', () => {
+    // The camera listens from the moment the scene mounts, while it still boots unseen.
+    expect(source).toMatch(/\}, \[act, camera, live\]\);/);
+    expect(source.match(/camera\.send\(/g)).toHaveLength(1);
   });
 });
 

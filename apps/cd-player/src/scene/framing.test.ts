@@ -1,9 +1,21 @@
-import { PerspectiveCamera, Vector3 } from 'three';
+import { PerspectiveCamera, Plane, Ray, Vector3 } from 'three';
 import { describe, expect, it } from 'vitest';
-import { FAR, FOV, frameDistance, frameFor, frameForViewport, isWide, nearFor } from './framing';
+import {
+  FAR,
+  FOV,
+  frameDistance,
+  frameFor,
+  frameForViewport,
+  isWide,
+  nearFor,
+  panKeeping,
+  type CanvasPoint,
+} from './framing';
 import type { ModelId } from '../models';
 import { BOXES, CLEAR_DOOR } from '../testing/model-measures';
 import { PITCH_LIMIT, YAW_LIMIT } from './orbit';
+import { SCENE_PROFILES } from './profiles';
+import { clampPan, NO_PAN, ZOOM_MAX, type Pan } from './zoom';
 
 const dist = (f: ReturnType<typeof frameFor>) =>
   Math.hypot(f.position[0] - f.target[0], f.position[1] - f.target[1], f.position[2] - f.target[2]);
@@ -22,16 +34,23 @@ const dist = (f: ReturnType<typeof frameFor>) =>
  */
 const FILL_FLOOR = { suitcase: 0.7, clear: 0.6 } as const;
 
-/** The hero camera of a canvas this size, turned by the orbit, as PlayerScene makes it. */
+/**
+ * The hero camera of a canvas this size, turned by the orbit, magnified by the lens and panned, as
+ * CameraRig makes it.
+ */
 function heroCamera(
   model: ModelId,
   width: number,
   height: number,
   yaw = 0,
   pitch = 0,
+  zoom = 1,
+  pan: Pan = NO_PAN,
 ): PerspectiveCamera {
-  const frame = frameForViewport(width, height, yaw, pitch, model);
+  const frame = frameForViewport(width, height, yaw, pitch, model, pan);
   const camera = new PerspectiveCamera(FOV, width / height, nearFor(model), FAR);
+  camera.zoom = zoom;
+  camera.updateProjectionMatrix();
   camera.position.set(...frame.position);
   camera.lookAt(...frame.target);
   camera.updateMatrixWorld();
@@ -86,9 +105,19 @@ function corners(model: ModelId, width: number, height: number, yaw = 0, pitch =
   return boxCorners(model).map((corner) => corner.project(camera));
 }
 
-/** How far in front of the camera, along its axis, each of the box's corners stands (metres). */
-function depths(model: ModelId, width: number, height: number, yaw = 0, pitch = 0): number[] {
-  const camera = heroCamera(model, width, height, yaw, pitch);
+/**
+ * How far in front of the camera, along its axis, each of the box's corners stands (metres), the
+ * camera turned by the orbit and translated by the pan (the lens's zoom moves nothing).
+ */
+function depths(
+  model: ModelId,
+  width: number,
+  height: number,
+  yaw = 0,
+  pitch = 0,
+  pan: Pan = NO_PAN,
+): number[] {
+  const camera = heroCamera(model, width, height, yaw, pitch, 1, pan);
   return boxCorners(model).map((corner) => -corner.applyMatrix4(camera.matrixWorldInverse).z);
 }
 
@@ -107,6 +136,53 @@ const SHAPES = ASPECTS.map((aspect) => [Math.round(aspect * 800), 800]);
 
 /** The orbit's corners and its middle: yaw ±25°, pitch ±10°. */
 const TURNS = [-1, 0, 1].flatMap((y) => [-1, 0, 1].map((p) => [y * YAW_LIMIT, p * PITCH_LIMIT]));
+
+/** The pan's four extremes at 3×: (1 − 1/3) of the frame's half-size each way (zoom.ts clampPan). */
+function panCorners(model: ModelId): Pan[] {
+  const { frame } = SCENE_PROFILES[model];
+  return [-1, 1].flatMap((x) => [-1, 1].map((y) => clampPan([x, y], ZOOM_MAX, frame)));
+}
+
+/**
+ * How far beyond the near plane each model's box keeps at 3× with the pan at its extremes, across
+ * the orbit (metres). The suitcase keeps the 0.2 m it keeps at 1×. The pan lies in the aim's plane,
+ * square to the hero direction, and the orbit turns about the panned aim, so a turned orbit carries
+ * a pan's share along the view: the Clear's worst, at 4:3, yaw −25°, pitch +10° and the pan at the
+ * right and down, brings the near end of its wide set 0.13 m nearer than at 1×, and keeps 0.12 m.
+ */
+const PAN_CLEARANCE = { suitcase: 0.2, clear: 0.12 } as const;
+
+/** The point of the aim's plane under a canvas point: the plane every panned aim lies on. */
+function aimPlanePoint(model: ModelId, camera: PerspectiveCamera, at: CanvasPoint): Vector3 {
+  const { target, direction } = SCENE_PROFILES[model].frame;
+  const plane = new Plane().setFromNormalAndCoplanarPoint(
+    new Vector3(...direction),
+    new Vector3(...target),
+  );
+  const toward = new Vector3(at.x, at.y, 0.5).unproject(camera).sub(camera.position).normalize();
+  const point = new Ray(camera.position.clone(), toward).intersectPlane(plane, new Vector3());
+  if (!point) throw new Error('the pointer’s ray misses the aim’s plane');
+  return point;
+}
+
+/** Points over each face of the model's box, 5 × 5 a face. */
+function boxSurface(model: ModelId): Vector3[] {
+  const { min, max } = BOXES[model];
+  const steps = [0, 0.25, 0.5, 0.75, 1];
+  const out: Vector3[] = [];
+  for (let axis = 0; axis < 3; axis++)
+    for (const side of [min[axis], max[axis]])
+      for (const s of steps)
+        for (const t of steps) {
+          const [a, b] = [0, 1, 2].filter((i) => i !== axis);
+          const p = [0, 0, 0];
+          p[axis] = side;
+          p[a] = min[a] + (max[a] - min[a]) * s;
+          p[b] = min[b] + (max[b] - min[b]) * t;
+          out.push(new Vector3(p[0], p[1], p[2]));
+        }
+  return out;
+}
 
 describe('framing', () => {
   it('backs off as the view narrows', () => {
@@ -194,10 +270,124 @@ describe('framing', () => {
         // about 0.26), whose camera stands 2.5 to 4 m back, the foil two or three steps over the
         // label there; the page drew it clean at 1440 × 2560 all the same.
         for (const [width, height] of SHAPES.filter(([w, h]) => w / h >= 0.5)) {
-          const farthest = Math.max(...depths(model, width, height));
-          const steps = foilOverLabel / depthStep(farthest, nearFor(model));
-          expect(steps, `${width}×${height}`).toBeGreaterThanOrEqual(6);
+          // The pan at 3× too: at the orbit's middle it lies square to the view and moves no depth.
+          for (const pan of [NO_PAN, ...panCorners(model)]) {
+            const farthest = Math.max(...depths(model, width, height, 0, 0, pan));
+            const steps = foilOverLabel / depthStep(farthest, nearFor(model));
+            expect(steps, `${width}×${height}, pan ${pan.join(', ')}`).toBeGreaterThanOrEqual(6);
+          }
         }
       });
+
+      it('keeps its box clear of the near plane at 3×, the pan at its extremes, across the orbit', () => {
+        // The lens moves no depth; the pan, carried by the camera, does once the orbit turns.
+        for (const [width, height] of SHAPES)
+          for (const [yaw, pitch] of TURNS)
+            for (const pan of panCorners(model)) {
+              const at = `${width}×${height}, yaw ${yaw.toFixed(2)}, pitch ${pitch.toFixed(2)}, pan ${pan.map((c) => c.toFixed(3)).join(', ')}`;
+              const depth = depths(model, width, height, yaw, pitch, pan);
+              expect(Math.min(...depth) - nearFor(model), at).toBeGreaterThan(PAN_CLEARANCE[model]);
+              expect(FAR - Math.max(...depth), at).toBeGreaterThan(0.2);
+            }
+      });
+
+      it('never loses the player: part of its box stays on the canvas at 3× and the pan’s extremes', () => {
+        const surface = boxSurface(model);
+        for (const [width, height] of SHAPES)
+          for (const [yaw, pitch] of TURNS)
+            for (const pan of panCorners(model)) {
+              const camera = heroCamera(model, width, height, yaw, pitch, ZOOM_MAX, pan);
+              const seen = surface.some((point) => {
+                const p = point.clone().project(camera);
+                return Math.abs(p.x) <= 1 && Math.abs(p.y) <= 1 && Math.abs(p.z) < 1;
+              });
+              const at = `${width}×${height}, yaw ${yaw.toFixed(2)}, pitch ${pitch.toFixed(2)}, pan ${pan.map((c) => c.toFixed(3)).join(', ')}`;
+              expect(seen, at).toBe(true);
+            }
+      });
     });
+});
+
+describe('the zoom', () => {
+  const MODELS = ['suitcase', 'clear'] as const;
+
+  it('magnifies with the lens: the camera stays where 1× puts it, each point z times as far out', () => {
+    for (const model of MODELS) {
+      const one = heroCamera(model, 1600, 900, 0.2, -0.1);
+      const two = heroCamera(model, 1600, 900, 0.2, -0.1, 2);
+      expect(two.position.toArray()).toEqual(one.position.toArray());
+      for (const corner of boxCorners(model)) {
+        const a = corner.clone().project(one);
+        const b = corner.clone().project(two);
+        expect(b.x).toBeCloseTo(a.x * 2, 9);
+        expect(b.y).toBeCloseTo(a.y * 2, 9);
+      }
+    }
+  });
+
+  it('pans the aim in its plane along the hero camera’s axes, the camera with it, whatever the turn', () => {
+    for (const model of MODELS) {
+      const { target: aim, direction } = SCENE_PROFILES[model].frame;
+      const hero = heroCamera(model, 1600, 900);
+      const right = new Vector3(1, 0, 0).applyQuaternion(hero.quaternion);
+      const up = new Vector3(0, 1, 0).applyQuaternion(hero.quaternion);
+      const pan: Pan = [0.05, -0.03];
+      for (const [yaw, pitch] of TURNS) {
+        const still = frameFor(16 / 9, yaw, pitch, model);
+        const panned = frameFor(16 / 9, yaw, pitch, model, pan);
+        const shift = new Vector3(...panned.target).sub(new Vector3(...aim));
+        expect(shift.dot(new Vector3(...direction))).toBeCloseTo(0, 12);
+        expect(shift.dot(right)).toBeCloseTo(pan[0], 12);
+        expect(shift.dot(up)).toBeCloseTo(pan[1], 12);
+        // The camera moves as the aim does: the orbit turns about the panned aim, as far off it.
+        const moved = new Vector3(...panned.position).sub(new Vector3(...still.position));
+        expect(moved.distanceTo(shift)).toBeCloseTo(0, 12);
+      }
+    }
+  });
+
+  it('keeps the point of the aim’s plane under the pointer where it is, the orbit turned or not', () => {
+    const cases: { from: CanvasPoint; to: CanvasPoint; zoom: number; next: number; pan: Pan }[] = [
+      { from: { x: 0.6, y: -0.3 }, to: { x: 0.6, y: -0.3 }, zoom: 1, next: 1.25, pan: NO_PAN },
+      { from: { x: -0.8, y: 0.5 }, to: { x: -0.8, y: 0.5 }, zoom: 2, next: 1.6, pan: [0.04, 0.02] },
+      // A pinch: the fingers' midpoint moves as they spread, and the point goes with it.
+      { from: { x: -0.2, y: 0.1 }, to: { x: 0.1, y: 0.3 }, zoom: 2.5, next: 3, pan: [-0.08, 0.05] },
+    ];
+    for (const model of MODELS)
+      for (const [width, height] of [
+        [1600, 900],
+        [390, 520],
+      ])
+        for (const [yaw, pitch] of TURNS)
+          for (const { from, to, zoom, next, pan } of cases) {
+            const before = heroCamera(model, width, height, yaw, pitch, zoom, pan);
+            const point = aimPlanePoint(model, before, from);
+            const kept = panKeeping(width / height, yaw, pitch, model, zoom, pan, from, to, next);
+            const seen = point.project(heroCamera(model, width, height, yaw, pitch, next, kept));
+            const at = `${model} ${width}×${height}, yaw ${yaw.toFixed(2)}, pitch ${pitch.toFixed(2)}, ${zoom}× to ${next}×`;
+            expect(seen.x, at).toBeCloseTo(to.x, 9);
+            expect(seen.y, at).toBeCloseTo(to.y, 9);
+          }
+  });
+
+  it('moves the pan by the point’s share of the view × (1/zoom − 1/next), the orbit at its middle', () => {
+    for (const model of MODELS) {
+      const aspect = 16 / 9;
+      const { across, up } = SCENE_PROFILES[model].frame;
+      const halfHeight = frameDistance(aspect, FOV, across, up) * Math.tan((FOV * Math.PI) / 360);
+      const at = { x: 0.5, y: -0.4 };
+      const pan: Pan = [0.03, 0.01];
+      const kept = panKeeping(aspect, 0, 0, model, 2, pan, at, at, 2.5);
+      expect(kept[0]).toBeCloseTo(pan[0] + at.x * halfHeight * aspect * (1 / 2 - 1 / 2.5), 12);
+      expect(kept[1]).toBeCloseTo(pan[1] + at.y * halfHeight * (1 / 2 - 1 / 2.5), 12);
+    }
+  });
+
+  it('keeps the pan for the view’s centre, as the buttons and the keys zoom', () => {
+    const pan: Pan = [0.07, -0.02];
+    const centre = { x: 0, y: 0 };
+    const kept = panKeeping(16 / 9, 0.3, -0.1, 'clear', 2, pan, centre, centre, 2.5);
+    expect(kept[0]).toBeCloseTo(pan[0], 12);
+    expect(kept[1]).toBeCloseTo(pan[1], 12);
+  });
 });

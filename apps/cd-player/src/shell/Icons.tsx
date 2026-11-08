@@ -49,6 +49,24 @@ export const ShuffleIcon = () => (
     />
   </svg>
 );
+/** Zoom out. */
+export const MinusIcon = () => (
+  <svg {...common}>
+    <path d="M5 11h14v2H5z" fill="currentColor" />
+  </svg>
+);
+/** Zoom in. */
+export const PlusIcon = () => (
+  <svg {...common}>
+    <path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z" fill="currentColor" />
+  </svg>
+);
+/** An arrow turning back round a circle: the view back to where it began. */
+export const ResetViewIcon = () => (
+  <svg {...common}>
+    <path d="M12 5a7 7 0 1 1-7 7h2a5 5 0 1 0 5-5zM12 2.5 8 6l4 3.5z" fill="currentColor" />
+  </svg>
+);
 /** A tick: the colourway in use. */
 export const CheckIcon = () => (
   <svg {...common}>

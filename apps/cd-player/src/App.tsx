@@ -12,7 +12,9 @@ import { createLogger } from '@ncam/logger';
 import { readAutoplaySignals, shouldAutoplay, whenSettled } from './autoplay';
 import { bootReducer, INITIAL_BOOT, PAGE_TIMERS, watchStall, type StallWatch } from './boot';
 import { createBridge } from './bridge';
+import { createCameraChannel } from './camera-channel';
 import { BootStallError, describeFailure } from './failure';
+import { keyCommand } from './keys';
 import { remoteBase } from './lib/asset-url';
 import { createLinkLoader, IDLE_LINK, type LinkState } from './link-loader';
 import { DEFAULT_LOOK_STATE, lookAccent, lookOf, type LookState } from './looks';
@@ -50,6 +52,7 @@ import { Loader } from './shell/Loader';
 import { NowPlaying } from './shell/NowPlaying';
 import { SceneHost } from './shell/SceneHost';
 import { Tracklist } from './shell/Tracklist';
+import { ZoomControls } from './shell/ZoomControls';
 import { createSpotifyClient } from './spotify/client';
 import { linkErrorMessage, parseSpotifyLink } from './spotify/link';
 import {
@@ -110,6 +113,9 @@ export default function App({ controller, initial = null, assetBase = '', initia
     },
   }));
   const { engine, snapshot } = usePlayerEngine(deps, initial, ref);
+  // The scene camera's line (src/camera-channel.ts): the zoom buttons and keys in, the zoom's ends
+  // out. Nothing hears a command while no scene runs.
+  const [camera] = useState(createCameraChannel);
   const [boot, dispatchBoot] = useReducer(bootReducer, INITIAL_BOOT);
   // The player's look (src/looks.ts): the model, the suitcase's skin and the Clear model's colours.
   // The suitcase in Blush on the server and on the first render of a hydration, so the markup
@@ -325,22 +331,28 @@ export default function App({ controller, initial = null, assetBase = '', initia
     [loader],
   );
 
-  // Space plays or pauses, N and P change tracks; never while typing, and a held key is one press.
+  // Space plays or pauses, N and P change tracks, + and - zoom and 0 resets the view (src/keys.ts);
+  // never with Ctrl, ⌘ or Alt (Ctrl and + is the browser's zoom), never while typing or on a
+  // focused control, and a held key is one press. The view's keys, like its buttons, wait for the
+  // live scene: the camera listens while the scene still boots unseen, which would come live zoomed.
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.metaKey || event.ctrlKey || event.altKey) return;
       const target = event.target as Element | null;
       if (target?.closest?.('input, textarea, select, button, [contenteditable="true"]')) return;
+      const command = keyCommand(event);
+      if (!command) return;
       // Space is kept from scrolling the page even while it repeats.
-      if (event.code === 'Space') event.preventDefault();
+      if (command === 'toggle') event.preventDefault();
       if (event.repeat) return;
-      if (event.code === 'Space') act({ type: 'TOGGLE' });
-      else if (event.key === 'n' || event.key === 'N') act({ type: 'NEXT' });
-      else if (event.key === 'p' || event.key === 'P') act({ type: 'PREV' });
+      if (command === 'toggle') act({ type: 'TOGGLE' });
+      else if (command === 'next') act({ type: 'NEXT' });
+      else if (command === 'prev') act({ type: 'PREV' });
+      else if (live) camera.send(command);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [act]);
+  }, [act, camera, live]);
 
   const backdrop = backdropFor(snapshot);
   // A first load that failed leaves nothing to show: the tracklist's empty shelf says why, with
@@ -403,6 +415,7 @@ export default function App({ controller, initial = null, assetBase = '', initia
           <SceneHost
             assetBase={remoteBase(assetBase)}
             bridge={deps.bridge}
+            camera={camera}
             look={look}
             live={live}
             onReady={onReady}
@@ -414,7 +427,9 @@ export default function App({ controller, initial = null, assetBase = '', initia
         )}
         {/* After the scene layer, so it draws over the invisible canvas and fades out with it. */}
         {showLoader && <Loader percent={percent} />}
-        <Hud />
+        <Hud camera={camera} />
+        {/* Only once the scene is live, so never in the server's markup or the first paint. */}
+        {live && <ZoomControls camera={camera} />}
         {!showLoader && <EnterButton phase={boot.phase} failure={boot.failure} onStart={start} />}
       </div>
       {/* What plays over the tracklist: a column beside the stage, the phone's foot. */}

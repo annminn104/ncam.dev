@@ -4,12 +4,17 @@ import { Box3, Vector3 } from 'three';
 import type { SceneBridge } from '../bridge';
 import {
   angleDelta,
+  BUTTON_ACTIONS,
   BUTTON_NODES,
   hitFor,
   knobSeekMs,
+  pinchedSince,
   PRESS_MS,
   pressDepth,
+  pressesOnDown,
+  stillTap,
   type ButtonNode,
+  type KeyTouch,
 } from './controls';
 import { interaction, releaseLost } from './interaction';
 import type { Rig } from './rig';
@@ -23,6 +28,8 @@ interface Turn {
   total: number;
   /** The knob's rotation when it went down, to give back if the turn is abandoned. */
   from: number;
+  /** interaction.pinches as it went down: a turn that becomes a pinch is abandoned. */
+  pinches: number;
 }
 
 /**
@@ -32,7 +39,11 @@ interface Turn {
 const isNearest = (event: ThreeEvent<PointerEvent>) =>
   event.object === event.intersections[0]?.object;
 
-/** Pointer handlers for the player: press the keys, turn the knob to scrub. */
+/**
+ * Pointer handlers for the player: press the keys, turn the knob to scrub. A mouse or a pen
+ * presses a key as it goes down; a touch as it lifts, if it stayed a tap, so a pinch whose first
+ * finger lands on a key presses nothing (controls.ts stillTap).
+ */
 export function useControls(rig: Rig, bridge: SceneBridge) {
   const gl = useThree((state) => state.gl);
   const camera = useThree((state) => state.camera);
@@ -42,6 +53,15 @@ export function useControls(rig: Rig, bridge: SceneBridge) {
     [rig],
   );
   const knob = rig.model.nodes.knob;
+  // The key sinks and comes back, and its action goes to the app.
+  const pressKey = (node: ButtonNode) => {
+    presses.current.set(node, performance.now());
+    bridge.emit(BUTTON_ACTIONS[node]);
+  };
+  const pressRef = useRef(pressKey);
+  pressRef.current = pressKey;
+  // A touch on a key, which presses it as it lifts.
+  const touching = useRef<KeyTouch | null>(null);
 
   useFrame(() => {
     const now = performance.now();
@@ -71,16 +91,24 @@ export function useControls(rig: Rig, bridge: SceneBridge) {
   angleRef.current = angleAt;
 
   useEffect(() => {
-    // A turn that does not end in a release (cancelled, or its release lost) seeks nothing.
+    // A turn that does not end in a release (cancelled, its release lost, or become a pinch)
+    // seeks nothing.
     const abandon = (turn: Turn) => {
       knob.rotation.y = turn.from;
       turning.current = null;
     };
     const move = (event: PointerEvent) => {
+      const touch = touching.current;
+      // A touch that strays from its key, or sees a pinch begin, is not a tap any more.
+      if (touch?.id === event.pointerId) {
+        if (!stillTap(touch, event.clientX, event.clientY, interaction.pinches)) {
+          touching.current = null;
+        }
+      }
       const turn = turning.current;
       if (!turn || event.pointerId !== turn.id) return;
       // A mouse that moves with no button down has lost its release (a native menu took it, say).
-      if (releaseLost(event)) {
+      if (releaseLost(event) || pinchedSince(turn.pinches, interaction.pinches)) {
         abandon(turn);
         return;
       }
@@ -91,13 +119,25 @@ export function useControls(rig: Rig, bridge: SceneBridge) {
       knob.rotation.y -= delta;
     };
     const up = (event: PointerEvent) => {
+      const touch = touching.current;
+      if (touch?.id === event.pointerId) {
+        touching.current = null;
+        if (stillTap(touch, event.clientX, event.clientY, interaction.pinches)) {
+          pressRef.current(touch.node);
+        }
+      }
       const turn = turning.current;
       if (!turn || event.pointerId !== turn.id) return;
+      if (pinchedSince(turn.pinches, interaction.pinches)) {
+        abandon(turn);
+        return;
+      }
       turning.current = null;
       const deltaMs = knobSeekMs(turn.total);
       if (deltaMs !== 0) bridge.emit({ type: 'seek', deltaMs });
     };
     const cancel = (event: PointerEvent) => {
+      if (touching.current?.id === event.pointerId) touching.current = null;
       const turn = turning.current;
       if (turn && event.pointerId === turn.id) abandon(turn);
     };
@@ -113,21 +153,37 @@ export function useControls(rig: Rig, bridge: SceneBridge) {
 
   return {
     onPointerDown: (event: ThreeEvent<PointerEvent>) => {
-      // The primary button (or a touch) on the nearest mesh: a press does what the cursor says.
+      // The primary button (or a touch) on the nearest mesh: a press does what the cursor says. A
+      // touch that lands while another is down pinches (the camera has said so by now), and
+      // presses nothing.
       if (event.button !== 0 || !isNearest(event)) return;
+      if (event.pointerType === 'touch' && interaction.pinching) return;
       const hit = hitFor(event.object);
       if (!hit) return;
       interaction.controlActive = true;
+      const { clientX, clientY } = event.nativeEvent;
       if (hit.kind === 'button') {
-        presses.current.set(hit.node, performance.now());
-        bridge.emit(hit.action);
+        // A mouse or a pen presses now; a touch waits to lift.
+        if (pressesOnDown(event.pointerType)) {
+          pressKey(hit.node);
+          return;
+        }
+        const { pointerId: id } = event;
+        touching.current = {
+          id,
+          node: hit.node,
+          x: clientX,
+          y: clientY,
+          pinches: interaction.pinches,
+        };
         return;
       }
       turning.current = {
         id: event.pointerId,
-        last: angleAt(event.nativeEvent.clientX, event.nativeEvent.clientY),
+        last: angleAt(clientX, clientY),
         total: 0,
         from: knob.rotation.y,
+        pinches: interaction.pinches,
       };
     },
     // R3F hovers the player as one (its handlers sit on the root) for as long as the first mesh it
