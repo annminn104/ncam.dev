@@ -110,6 +110,32 @@ describe('App (the layout)', () => {
   });
 });
 
+describe('App and the view (zoom)', () => {
+  const source = readFileSync(new URL('./App.tsx', import.meta.url), 'utf8');
+
+  it('hands the scene the camera’s channel, made once per mount, as it hands it the bridge', () => {
+    expect(source).toMatch(/const \[camera\] = useState\(createCameraChannel\);/);
+    expect(source).toMatch(/<SceneHost[^>]*\bcamera=\{camera\}/);
+  });
+
+  it('sends +, - and 0 to the camera from the page’s key handler, behind its guards', () => {
+    // Ctrl, ⌘ or Alt, a field or a focused control, and a held key all come first (src/keys.ts
+    // maps the keys).
+    const handler = /const onKey = \(event: KeyboardEvent\) => \{([\s\S]*?)\n {4}\};/.exec(
+      source,
+    )?.[1];
+    const order = [
+      'if (event.metaKey || event.ctrlKey || event.altKey) return;',
+      'if (target?.closest?.(\'input, textarea, select, button, [contenteditable="true"]\')) return;',
+      'const command = keyCommand(event);',
+      'if (event.repeat) return;',
+      'else camera.send(command);',
+    ].map((line) => handler?.indexOf(line) ?? -1);
+    expect(order.every((at) => at > -1)).toBe(true);
+    expect([...order].sort((a, b) => a - b)).toEqual(order);
+  });
+});
+
 describe('App and the presets', () => {
   it('marks the collection on show as the current preset in the server markup', () => {
     const html = renderToString(

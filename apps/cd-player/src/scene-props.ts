@@ -1,4 +1,5 @@
 import type { SceneBridge } from './bridge';
+import type { CameraChannel } from './camera-channel';
 import type { Look } from './looks';
 import type { ModelId } from './models';
 
@@ -16,6 +17,8 @@ export type ModelLoad =
 export interface PlayerSceneProps {
   assetBase: string;
   bridge: SceneBridge;
+  /** The shell's zoom and reset commands in, where the zoom is going out (the buttons). */
+  camera: CameraChannel;
   /**
    * The visitor's look: the scene recolours the model in place when it changes, and loads the
    * model it names, keeping the one on show drawn until the new one can take its place.

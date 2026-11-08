@@ -1,5 +1,6 @@
 import { DEFAULT_MODEL, type ModelId } from '../models';
-import { SCENE_PROFILES } from './profiles';
+import { SCENE_PROFILES, type Vec3 } from './profiles';
+import { NO_PAN, type Pan } from './zoom';
 
 /**
  * The hero camera, in three's Y-up metres. Each model has its own aim, direction and fit in
@@ -10,7 +11,8 @@ import { SCENE_PROFILES } from './profiles';
  * so the camera aims at the model and stands just far enough back for a box of the profile's half-width
  * (`across`) and half-height (`up`) round the aim to show in a canvas of any shape, whichever way
  * the orbit turns it (src/scene/framing.test.ts projects each model's box through
- * `frameForViewport` over the shapes and the turns).
+ * `frameForViewport` over the shapes and the turns). The zoom (src/scene/zoom.ts) magnifies that
+ * framing with the lens (the camera's `zoom`), never by bringing the camera nearer, and pans it.
  */
 export const FOV = 30;
 /**
@@ -68,29 +70,113 @@ export function frameForViewport(
   yaw = 0,
   pitch = 0,
   model: ModelId = DEFAULT_MODEL,
+  pan: Pan = NO_PAN,
 ): Frame {
-  return frameFor(width / Math.max(height, 1), yaw, pitch, model);
+  return frameFor(width / Math.max(height, 1), yaw, pitch, model, pan);
 }
 
-export function frameFor(
-  aspect: number,
-  yaw = 0,
-  pitch = 0,
-  model: ModelId = DEFAULT_MODEL,
-): Frame {
-  const { target: aim, direction, across, up } = SCENE_PROFILES[model].frame;
-  const distance = frameDistance(aspect, FOV, across, up);
-  const target: [number, number, number] = [aim[0], aim[1], aim[2]];
+type V3 = [number, number, number];
+const add = (a: Vec3, b: Vec3): V3 => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
+const sub = (a: Vec3, b: Vec3): V3 => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+const scale = (a: Vec3, k: number): V3 => [a[0] * k, a[1] * k, a[2] * k];
+const dot = (a: Vec3, b: Vec3) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+
+/**
+ * A camera's right and up axes, looking back along `toward` (a unit vector from its aim toward
+ * it), as three's lookAt makes them with the world's Y up.
+ */
+function axesFor(toward: Vec3): { right: V3; up: V3 } {
+  const across = Math.hypot(toward[0], toward[2]);
+  const right: V3 = [toward[2] / across, 0, -toward[0] / across];
+  const up: V3 = [
+    toward[1] * right[2] - toward[2] * right[1],
+    toward[2] * right[0] - toward[0] * right[2],
+    toward[0] * right[1] - toward[1] * right[0],
+  ];
+  return { right, up };
+}
+
+/** The way from the aim to the camera: the profile's direction, turned by the orbit. */
+function towardCamera(direction: Vec3, yaw: number, pitch: number): V3 {
   const [dx, dy, dz] = direction;
   const x = dx * Math.cos(yaw) + dz * Math.sin(yaw);
   const z = -dx * Math.sin(yaw) + dz * Math.cos(yaw);
   const horizontal = Math.hypot(x, z);
   const elevation = Math.atan2(dy, horizontal) + pitch;
-  const nx = (x / horizontal) * Math.cos(elevation);
-  const nz = (z / horizontal) * Math.cos(elevation);
-  const ny = Math.sin(elevation);
-  return {
-    position: [target[0] + nx * distance, target[1] + ny * distance, target[2] + nz * distance],
-    target,
-  };
+  return [
+    (x / horizontal) * Math.cos(elevation),
+    Math.sin(elevation),
+    (z / horizontal) * Math.cos(elevation),
+  ];
+}
+
+/**
+ * The frame: where the camera stands and what it aims at. The aim is the profile's, panned
+ * (zoom.ts) in the aim's plane, the plane through the profile's aim square to its direction, along
+ * the hero camera's right and up axes; the camera stands the fitted distance from the panned aim,
+ * the way the orbit turns it. So the orbit turns about the panned aim, and the pan moves the camera
+ * with the aim.
+ */
+export function frameFor(
+  aspect: number,
+  yaw = 0,
+  pitch = 0,
+  model: ModelId = DEFAULT_MODEL,
+  pan: Pan = NO_PAN,
+): Frame {
+  const { target: aim, direction, across, up } = SCENE_PROFILES[model].frame;
+  const distance = frameDistance(aspect, FOV, across, up);
+  const hero = axesFor(direction);
+  const target = add(aim, add(scale(hero.right, pan[0]), scale(hero.up, pan[1])));
+  return { position: add(target, scale(towardCamera(direction, yaw, pitch), distance)), target };
+}
+
+/** A point on the canvas in normalised device coordinates: −1 to 1, left to right, bottom to top. */
+export interface CanvasPoint {
+  x: number;
+  y: number;
+}
+
+/**
+ * The pan at `nextZoom` that puts the point of the aim's plane under `from` (seen at `zoom` and
+ * `pan`) under `to`: the same canvas point for the wheel, the fingers' new midpoint for a pinch.
+ * The aim's plane holds every panned aim. With the orbit at its middle the pan moves by the point's
+ * share of the view times (1/zoom − 1/nextZoom); turned, a pan also moves the camera along the
+ * view, which the solve allows for: the new aim is found on the plane, at the fitted distance down
+ * the camera's axis from the point's ray through `to`.
+ */
+export function panKeeping(
+  aspect: number,
+  yaw: number,
+  pitch: number,
+  model: ModelId,
+  zoom: number,
+  pan: Pan,
+  from: CanvasPoint,
+  to: CanvasPoint,
+  nextZoom: number,
+): Pan {
+  const { target: aim, direction, across, up } = SCENE_PROFILES[model].frame;
+  const distance = frameDistance(aspect, FOV, across, up);
+  const eye = frameFor(aspect, yaw, pitch, model, pan).position;
+  const toward = towardCamera(direction, yaw, pitch);
+  const view = axesFor(toward);
+  const tan = Math.tan((FOV * Math.PI) / 360);
+  // The way into the scene through a canvas point, the lens magnifying by `lens`.
+  const ray = (point: CanvasPoint, lens: number) =>
+    add(
+      scale(toward, -1),
+      add(
+        scale(view.right, (point.x * tan * aspect) / lens),
+        scale(view.up, (point.y * tan) / lens),
+      ),
+    );
+  const before = ray(from, zoom);
+  const point = add(eye, scale(before, dot(sub(aim, eye), direction) / dot(before, direction)));
+  // point = aim′ + toward · distance + reach · after, with aim′ on the plane.
+  const after = ray(to, nextZoom);
+  const reach = (-distance * dot(toward, direction)) / dot(after, direction);
+  const offset = sub(sub(sub(point, scale(toward, distance)), scale(after, reach)), aim);
+  const hero = axesFor(direction);
+  return [dot(offset, hero.right), dot(offset, hero.up)];
 }
