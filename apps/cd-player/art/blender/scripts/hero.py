@@ -5,14 +5,14 @@
       --python-exit-code 1 --python apps/cd-player/art/blender/scripts/hero.py
 
 CDP_MODEL picks the player: `suitcase` (the default), `clear` (clear.py, with its board in
-clear_board.py and its decorations in clear_decor.py) or `deck` (deck.py, with its flight case in
-deck_case.py). The suitcase's views: `hero` is the three-quarter product still the design was
+clear_board.py and its decorations in clear_decor.py) or `deck` (deck.py, with its screen, decor
+and body detail in deck_panel.py and its flight case in deck_case.py). The suitcase's views: `hero` is the three-quarter product still the design was
 approved from (the lid open, a disc spinning, five more in the rack, a stack of cases beside it);
 `lid` looks straight into the open lid (the case, the rack and its discs, the strap and the plate).
 The Clear model's: `hero`, the three-quarter still of the player between its stand and its case,
 and `inside`, a close-up of the board, the LCD and the mechanism through the shell. The Deck's:
 `hero`, the three-quarter still of the deck and its flight case from the front left, and `top`,
-over the jog (the disc through the acrylic, the LED ring, the LCD, the keys). `preview` is
+over the jog (the disc through the acrylic, the LED ring, the pads, the keys and the screen). `preview` is
 800 x 600 at 24 samples, `final` 1600 x 1200 at 160; any other value of the model, the view or the
 quality stops the run with exit 1, naming the valid ones. The art it prints is the gallery's
 thumbnails (apps/portfolio/public/thumbnails), so anyone can rerun it. The suitcase's PNG lands in
@@ -131,17 +131,19 @@ def clear_flags():
 
 
 def deck_flags():
-    """The Deck's flag: a dark card behind and above the deck that glossy rays alone see (out of
-    the camera's sight, casting no shadow, lighting nothing), as a photographer flags a glossy
-    product: the display bay's black glass, tilted toward the hero camera, would otherwise mirror
-    the rim light and the bright studio and read white, and the acrylic plate's back half too."""
+    """The Deck's flags: dark cards that glossy rays alone see (out of the camera's sight, casting no
+    shadow, lighting nothing), as a photographer flags a glossy product. One behind and above the
+    deck keeps the acrylic plate's back half and the deck's top from mirroring the rim light and the
+    bright studio; one in front and above keeps the screen's black bezel, which faces the hero
+    camera, from mirroring the bright studio behind that camera and reading grey."""
     m = mat("flag", (0.012, 0.012, 0.014, 1), rough=0.9)
-    loc, target = L(190, 640, 580), L(0, 143, 93)
-    ob = rbox("flag_deck", (1000.0, 700.0, 1.0), m, loc=loc)
-    ob.rotation_euler = (Vector(target) - Vector(loc)).to_track_quat("Z", "Y").to_euler()
-    for attr in ("visible_camera", "visible_diffuse", "visible_transmission", "visible_volume_scatter",
-                 "visible_shadow"):
-        setattr(ob, attr, False)
+    for name, loc, size, target in (("flag_deck", L(190, 640, 580), (1000.0, 700.0), L(0, 143, 93)),
+                                    ("flag_screen", L(120, -420, 280), (1000.0, 520.0), L(0, 152, 136))):
+        ob = rbox(name, (size[0], size[1], 1.0), m, loc=loc)
+        ob.rotation_euler = (Vector(target) - Vector(loc)).to_track_quat("Z", "Y").to_euler()
+        for attr in ("visible_camera", "visible_diffuse", "visible_transmission", "visible_volume_scatter",
+                     "visible_shadow"):
+            setattr(ob, attr, False)
     return m
 
 
@@ -206,7 +208,7 @@ def clear_scene():
 
 
 def deck_scene():
-    for f in ("deck.py", "deck_case.py"):
+    for f in ("deck.py", "deck_panel.py", "deck_case.py"):
         exec(compile(open(BASE + "/" + f).read(), f, "exec"), globals())
     look, ids = deck_look(DECK_LOOK)
     new_scene("cd_player_deck", res=(1600, 1200), samples=128)
@@ -217,18 +219,19 @@ def deck_scene():
         ("chess.jpg", "mini-store.jpg", "garden-home.jpg", "cd-player.jpg", "holodex.jpg"))]
     M["card_print"] = mat("card_print", (0.92, 0.9, 0.88, 1), rough=0.4)
     M["tag_print"] = mat("tag_print", (0.92, 0.9, 0.88, 1), rough=0.55)
-    # Matte, without the Clear's gloss: the screen lies on the bay's glass, facing up, and any
-    # specular smears the studio's lights over its digits.
-    M["lcd_screen"] = mat("lcd_screen", lin(14, 22, 26), rough=1.0, spec=0.0,
-                          emit=lin(*hexrgb(look["light"]["glow"])), emit_s=0.06)
+    # Matte and dark, without the Clear's gloss: a render draws the playing screen over it, and any
+    # specular smears the studio's lights across the type.
+    M["lcd_screen"] = mat("lcd_screen", lin(10, 12, 15), rough=1.0, spec=0.0,
+                          emit=lin(*hexrgb(look["light"]["glow"])), emit_s=0.02)
     floor = rbox("floor", (5000, 5000, 10), M["floor"], loc=L(0, 0, -5))
     floor.is_shadow_catcher = True
     make_deck_player("deck", artist, album, look, rack_art)
     studio()
     deck_flags()
     if VIEW == "top":
-        # Over the jog from a little in front: the disc through the plate, the ring, the LCD, the keys.
-        camera("cam", L(30, -260, 720), L(30, -10, 75), lens=50, fstop=8.0, focus=L(30, -10, 84))
+        # Over the jog from in front: the disc through the plate, the ring, the pads, the keys, and
+        # the screen standing at the back (its top 116 mm over the deck), all in the frame.
+        camera("cam", L(30, -320, 800), L(30, 10, 95), lens=50, fstop=8.0, focus=L(30, 10, 90))
     else:
         camera("cam", L(-320, -900, 480), L(60, 0, 80), lens=50, fstop=7.1, focus=L(40, -30, 90))
     return OUT + "deck/%s/deck-%s-%s.png" % ("-".join(ids[p] for p in DECK_PARTS), VIEW, QUALITY)

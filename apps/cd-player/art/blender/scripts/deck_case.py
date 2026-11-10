@@ -1,18 +1,20 @@
 """The Deck's flight case and its jewel case: make_flight_case and deck_jewel_case, which deck.py's
 make_deck_player calls.
 
-Needs cdkit's, parts.py's and deck.py's namespace (exec'd after them). Blender's axes as in
-parts.py, millimetres through L(x, y, z).
+Needs cdkit's, parts.py's, deck.py's and deck_panel.py's namespace (exec'd after them: the rivets
+are deck_panel.py's _dome_cluster). Blender's axes as in parts.py, millimetres through L(x, y, z).
 
 The flight case stands right of the deck, turned toward it and the viewer: an aluminium base
 (open on top) on its four ball corners, dark angle extrusions on every edge of the base and the
-lid, a foam block in the base with five slots, a disc standing upright in each (a render; the web
-build carries the slots' empties, `<name>_rack_slot_i`, for the page to fill), each slot behind
-and above the one in front so every label shows. The lid, hinged on the base's back top edge,
-stands open past upright, a foam pad inside it with the setlist card taped to it (`<name>_card`,
-the page's card_print; a render letters it). A strap handle crosses the base's front, a paper tag
-hanging from it on a string (`<name>_tag`, the page's tag_print). The jewel case (parts.py's
-make_case) lies shut on the floor in front of the flight case.
+lid, riveted about every 30 mm, two aluminium ribs along each of the base's sides, two butterfly
+latches on its front seam, a foam block in the base with five slots, a disc standing upright in
+each (a render; the web build carries the slots' empties, `<name>_rack_slot_i`, for the page to
+fill), each slot behind and above the one in front so every label shows. The lid, hinged on the
+base's back top edge, stands open past upright, a foam pad inside it with the setlist card taped
+to it (`<name>_card`, the page's card_print; a render letters it), two plain paper stickers on its
+outside. A strap handle crosses the base's front, a paper tag hanging from it on a string
+(`<name>_tag`, the page's tag_print). The jewel case (parts.py's make_case) lies shut on the floor
+in front of the flight case.
 """
 import math
 
@@ -38,6 +40,11 @@ JEWEL_TURN = math.radians(-10.0)
 # a few hundredths apart, so that where two overlap at a corner no two faces coincide.
 FC_T = {"x": 1.60, "y": 1.65, "z": 1.72}
 FC_END = {"x": 1.68, "y": 1.69}
+FC_RIVET = (1.5, 0.7)               # the rivets' radius and height (3 mm across)
+FC_RIVETS_X = (-60.0, -30.0, 0.0, 30.0, 60.0)   # along the extrusions across the front and back, clear of the corners
+FC_RIVETS_Y = (-57.0, -28.5, 0.0, 28.5, 57.0)   # along those on the sides
+FC_LATCH_X = 45.0                   # the butterfly latches, either side of the front seam's middle
+FC_TAG = (40.0, 60.0)               # the paper tag: 2:3, the page's 512 x 768 tag canvas
 
 
 def flight_slot_pose(k):
@@ -62,26 +69,34 @@ def flight_rail(name, parent, p0, p1, n1, n2, legs, t):
                 parent=parent, loc=L(*p0), rot=rot)
 
 
-def flight_box(name, parent, a, b, cy, z_closed, z_open):
+def flight_box(name, parent, a, b, cy, z_closed, z_open, riveted):
     """The extrusions round a box x +-a, y cy +-b, between its closed face at z_closed and its open
     rim at z_open: on the closed face's four edges, up its four corners and round its rim (whose
     legs lie on the face and across the rim), and a ball corner on each corner of the closed face.
-    The extrusions run full length and overlap at the corners, under the balls."""
+    The extrusions run full length and overlap at the corners, under the balls. Their legs on the
+    box's sides are riveted about every 30 mm at the heights `riveted` gives the upright ones, all
+    the rivets one mesh (`<name>_rivets`)."""
     up = 1.0 if z_open > z_closed else -1.0
     out = (0.0, 0.0, -up)               # the closed face's outward normal
     rim = (0.0, 0.0, up)                # the rim's
+    r, h = FC_RIVET
+    rivets = []
     k = 0
     for z, n2, legs in ((z_closed, out, (FC_RAIL, FC_RAIL)), (z_open, rim, (FC_RAIL, FC_CAP))):
+        zr = z - n2[2] * FC_RAIL / 2    # the middle of the leg on the side
         for sy in (-1, 1):
             ex = a + FC_END["x"]
             flight_rail("%s_rail_%d" % (name, k), parent, (-ex, cy + sy * b, z), (ex, cy + sy * b, z), (0.0, sy, 0.0),
                         n2, legs, FC_T["x"])
             k += 1
+            # On the front seam the latches (x +-33 to +-57) stand between these.
+            rivets += [((x, cy + sy * (b + FC_T["x"]), zr), (0.0, sy, 0.0), r, h) for x in FC_RIVETS_X]
         for sx in (-1, 1):
             ey = b + FC_END["y"]
             flight_rail("%s_rail_%d" % (name, k), parent, (sx * a, cy - ey, z), (sx * a, cy + ey, z), (sx, 0.0, 0.0),
                         n2, (legs[0] - 0.1, legs[1]), FC_T["y"])
             k += 1
+            rivets += [((sx * (a + FC_T["y"]), cy + y, zr), (sx, 0.0, 0.0), r, h) for y in FC_RIVETS_Y]
     for sx in (-1, 1):
         for sy in (-1, 1):
             flight_rail("%s_rail_%d" % (name, k), parent, (sx * a, cy + sy * b, z_closed), (sx * a, cy + sy * b, z_open),
@@ -89,20 +104,51 @@ def flight_box(name, parent, a, b, cy, z_closed, z_open):
             k += 1
             sphere("%s_ball_%d%d" % (name, sx, sy), FC_BALL, M["hardware"], seg=16 if WEB else 32, parent=parent,
                    loc=L(sx * a, cy + sy * b, z_closed))
+            for zz in riveted:
+                rivets.append(((sx * (a + FC_T["z"]), cy + sy * (b - FC_RAIL / 2), zz), (sx, 0.0, 0.0), r, h))
+                rivets.append(((sx * (a - FC_RAIL / 2), cy + sy * (b + FC_T["z"]), zz), (0.0, sy, 0.0), r, h))
+    _dome_cluster(name + "_rivets", rivets, M["hardware"], parent, seg=8 if WEB else 12)
 
 
 def flight_base(name, case):
-    """The base: aluminium walls and floor, open on top, on its ball corners; the foam block with
-    the five slots; the slots' empties (and, in a render, their discs)."""
+    """The base: aluminium walls and floor, open on top, on its ball corners, its extrusions
+    riveted; two aluminium ribs along each side between the upright extrusions; the two butterfly
+    latches on the front seam; the foam block with the five slots."""
     z0, z1 = FC_LIFT, FC_LIFT + FC_H
     outer = rrect(FC_W, FC_D, 1.5, seg=4)
     inner = rrect(FC_W - 2 * FC_WALL, FC_D - 2 * FC_WALL, 0.6, seg=4)
     slab(name + "_floor", [outer], z0, z0 + FC_WALL, M["alu"], parent=case)
     slab(name + "_walls", [outer, inner], z0 + FC_WALL, z1, M["alu"], parent=case)
-    flight_box(name + "_base", case, FC_W / 2, FC_D / 2, 0.0, z0, z1)
+    flight_box(name + "_base", case, FC_W / 2, FC_D / 2, 0.0, z0, z1, (z0 + 30.0, z0 + 60.0, z0 + 90.0))
+    for k, (sx, z) in enumerate([(sx, z) for sx in (-1, 1) for z in (z0 + 40.0, z0 + 80.0)]):
+        x = sx * (FC_W / 2 + 0.6)
+        tube("%s_rib_%d" % (name, k), [(x, -FC_D / 2 + FC_RAIL + 2.0, z), (x, FC_D / 2 - FC_RAIL - 2.0, z)], 2.0, M["alu"],
+             parent=case)
+    for k, sx in enumerate((-1, 1)):
+        flight_latch("%s_latch_%d" % (name, k), case, sx * FC_LATCH_X, z1)
     slots = [rrect(124.0, 2.6, 1.2, cy=FC_SLOT_Y + FC_SLOT_DY * k) for k in range(5)]
     slab(name + "_foam", [rrect(FC_W - 2 * FC_WALL - 0.4, FC_D - 2 * FC_WALL - 0.4, 1.0)] + slots, z0 + FC_WALL,
          FC_FOAM_TOP, M["foam"], bevel_mm=0.0 if WEB else 0.8, parent=case)
+
+
+def flight_latch(name, case, x, rim):
+    """A butterfly latch on the base's front, just under the seam, over the rim's extrusion: its
+    plate, a spacer under the plate's lower half (the panel there stands behind the extrusion), the
+    butterfly lying flat on its pivot, and the bail hanging open below it (the lid is up)."""
+    face = -FC_D / 2 - FC_T["x"] - 0.05          # the extrusion's outer face
+    zc = rim - 11.0
+    rbox(name, (24.0, 1.4, 22.0), M["hardware"], bevel_mm=0.0 if WEB else 0.5, parent=case,
+         loc=L(x, face - 0.7, zc))
+    rbox(name + "_spacer", (20.0, FC_T["x"] + 0.05, 7.0), M["hardware"], parent=case,
+         loc=L(x, -FC_D / 2 - (FC_T["x"] + 0.05) / 2, rim - FC_RAIL - 3.6))
+    wing = [(-10.0, -4.2), (-3.0, -1.6), (3.0, -1.6), (10.0, -4.2), (10.6, 0.0), (10.0, 4.2), (3.0, 1.6), (-3.0, 1.6),
+            (-10.0, 4.2), (-10.6, 0.0)]
+    slab(name + "_wing", [wing], 0.0, 1.2, M["hardware"], bevel_mm=0.0 if WEB else 0.3, parent=case,
+         loc=L(x, face - 1.4, zc + 3.0), rot=DK_FRONT)
+    _dome_cluster(name + "_pivot", [((x, face - 2.6, zc + 3.0), (0.0, -1.0, 0.0), 2.2, 1.0)], M["hardware"], case)
+    tube(name + "_bail", [(x - 6.0, face - 2.4, zc - 2.0), (x - 6.0, face - 2.9, zc - 11.0), (x - 4.0, face - 3.0, zc - 14.0),
+                          (x + 4.0, face - 3.0, zc - 14.0), (x + 6.0, face - 2.9, zc - 11.0), (x + 6.0, face - 2.4, zc - 2.0)],
+         0.7, M["hardware"], parent=case)
 
 
 def flight_rack(name, case, rack_labels):
@@ -117,9 +163,11 @@ def flight_rack(name, case, rack_labels):
 
 def flight_lid(name, case, playlist, web):
     """The lid, hinged on the base's back top edge (its hinge 2 mm outboard of the extrusions, at
-    the rims' meeting plane) and open FC_LID_OPEN: its walls, top and extrusions, a foam pad
-    inside, and the setlist card taped to the pad (`<name>_card`, an empty holding the page's
-    `<name>_card_print`, 112 x 20 mm: the canvas's 1024 x 182; a render letters it)."""
+    the rims' meeting plane) and open FC_LID_OPEN: its walls, top and riveted extrusions, the
+    latches' keepers on its front seam, two plain paper stickers on its outside top (ncam, and
+    HANDLE WITH CARE), a foam pad inside, and the setlist card taped to the pad (`<name>_card`, an
+    empty holding the page's `<name>_card_print`, 112 x 20 mm: the canvas's 1024 x 182; a render
+    letters it)."""
     hy = FC_D / 2 + FC_T["z"] + 2.0
     hz = FC_LIFT + FC_H + FC_T["x"]
     tube(name + "_hinge_pin", [(-FC_W / 2 + 6.0, hy, hz), (FC_W / 2 - 6.0, hy, hz)], 1.8, M["hardware"], parent=case)
@@ -132,7 +180,17 @@ def flight_lid(name, case, playlist, web):
     inner = rrect(FC_W - 2 * FC_WALL, FC_D - 2 * FC_WALL, 0.6, seg=4, cy=cy)
     slab(name + "_lid_walls", [outer, inner], z0, z1 - FC_WALL, M["alu"], parent=lid)
     slab(name + "_lid_top", [outer], z1 - FC_WALL, z1, M["alu"], parent=lid)
-    flight_box(name + "_lid", lid, FC_W / 2, FC_D / 2, cy, z1, z0)
+    flight_box(name + "_lid", lid, FC_W / 2, FC_D / 2, cy, z1, z0, ((z0 + z1) / 2,))
+    front = cy - FC_D / 2 - FC_T["x"] - 0.05      # the lid's front extrusion's outer face, shut
+    for k, sx in enumerate((-1, 1)):
+        rbox("%s_keeper_%d" % (name, k), (16.0, 1.4, 10.0), M["hardware"], bevel_mm=0.0 if web else 0.4, parent=lid,
+             loc=L(sx * FC_LATCH_X, front - 0.7, z0 + 6.0))
+        tube("%s_keeper_hook_%d" % (name, k), [(sx * FC_LATCH_X - 5.0, front - 1.4, z0 + 2.2),
+                                                (sx * FC_LATCH_X - 5.0, front - 3.2, z0 + 1.6),
+                                                (sx * FC_LATCH_X + 5.0, front - 3.2, z0 + 1.6),
+                                                (sx * FC_LATCH_X + 5.0, front - 1.4, z0 + 2.2)], 0.8, M["hardware"],
+             parent=lid)
+    flight_stickers(name, lid, cy, z1)
     pad = z1 - FC_WALL - 12.0
     slab(name + "_lid_foam", [rrect(FC_W - 2 * FC_WALL - 0.4, FC_D - 2 * FC_WALL - 0.4, 1.0, cy=cy)], pad,
          z1 - FC_WALL, M["foam"], bevel_mm=0.0 if web else 0.8, parent=lid)
@@ -148,6 +206,27 @@ def flight_lid(name, case, playlist, web):
         rbox("%s_card_tape_%d" % (name, k), (7.0, 28.0, 0.1), M["ink"], parent=card,
              loc=L(sx * 50.5, 0.0, 0.08), rot=(0.0, 0.0, math.radians(6.0 * sx)))
     return lid
+
+
+def flight_stickers(name, lid, cy, top):
+    """Two plain paper stickers on the lid's outside top, inside its extrusions' legs, printed in
+    ink: ncam, and HANDLE WITH CARE between two rules. No maker's marks; neither is a print the page
+    paints."""
+    z = top + 0.06
+    for key, (x, y, w, d, turn) in (("ncam", (-36.0, cy + 24.0, 38.0, 30.0, 6.0)),
+                                    ("care", (22.0, cy - 30.0, 74.0, 22.0, -4.0))):
+        rot = (0.0, 0.0, math.radians(turn))
+        sticker = empty("%s_sticker_%s" % (name, key), L(x, y, z), rot, parent=lid)
+        rbox("%s_sticker_%s_paper" % (name, key), (w, d, 0.12), M["sticker"], parent=sticker)
+        if key == "ncam":
+            text("%s_sticker_%s_t" % (name, key), "ncam", 10.0, M["ink"], font="futura", parent=sticker,
+                 loc=L(0.0, 0.0, 0.07))
+        else:
+            text("%s_sticker_%s_t" % (name, key), "HANDLE WITH CARE", 4.2, M["ink"], font="avenir", parent=sticker,
+                 loc=L(0.0, 0.0, 0.07))
+            for j, yy in enumerate((6.2, -6.2)):
+                rbox("%s_sticker_%s_rule_%d" % (name, key, j), (w - 8.0, 0.6, 0.04), M["ink"], parent=sticker,
+                     loc=L(0.0, yy, 0.07))
 
 
 def flight_handle(name, case):
@@ -168,27 +247,29 @@ def flight_handle(name, case):
 
 
 def flight_tag(name, case, playlist, web):
-    """The paper tag (`<name>_tag`, 40 x 70 mm, the page's tag_print; a render letters it) hanging
-    in front of the handle's strap from a string looped round its middle, turned 20 degrees toward
-    the viewer."""
+    """The paper tag (`<name>_tag`, FC_TAG: 40 x 60 mm, the 2:3 of the page's tag canvas, its
+    tag_print; a render letters it) hanging in front of the handle's strap from a string looped
+    round its middle, turned 20 degrees toward the viewer."""
     y_strap = -FC_D / 2 - 4.0 - 14.0      # the strap's middle
     face = y_strap - 1.5 - 3.0            # the tag's plane, in front of the strap
     top = FC_HANDLE_Z - 6.0 - 1.0         # just under the strap
+    tw, th = FC_TAG
     turn = math.radians(-20.0)
-    root = empty(name + "_tag_root", L(0.0, face, top - 35.0), (math.radians(90), 0.0, turn), parent=case)
-    rbox(name + "_tag", (40.0, 70.0, 0.4), M["tag_print"], parent=root)
+    root = empty(name + "_tag_root", L(0.0, face, top - th / 2), (math.radians(90), 0.0, turn), parent=case)
+    rbox(name + "_tag", (tw, th, 0.4), M["tag_print"], parent=root)
+    hole = th / 2 - 5.0                   # the eyelet, 5 mm under the tag's top edge
     for k, z in enumerate((0.45, -0.45)):
         tube("%s_tag_eyelet_%d" % (name, k), circle(2.2, 20), 0.5, M["hardware"], cyclic=True, parent=root,
-             loc=L(0.0, 30.0, z))
+             loc=L(0.0, hole, z))
     if not web:
-        text(name + "_tag_t1", "NAME", 1.8, M["ink"], font="avenir", align="LEFT", parent=root, loc=L(-15.0, 20.0, 0.22))
+        text(name + "_tag_t1", "NAME", 1.8, M["ink"], font="avenir", align="LEFT", parent=root, loc=L(-15.0, 16.0, 0.22))
         text(name + "_tag_t2", playlist, 3.6, M["ink_dark"], font="futura", align="LEFT", parent=root,
-             loc=L(-15.0, 12.0, 0.22))
-        for k, yy in enumerate((5.0, -5.0, -15.0, -25.0)):
+             loc=L(-15.0, 8.5, 0.22))
+        for k, yy in enumerate((2.0, -7.0, -16.0, -25.0)):
             rbox("%s_tag_rule_%d" % (name, k), (30.0, 0.25, 0.04), M["ink"], parent=root, loc=L(0.0, yy, 0.22))
     # The string: out of the eyelet's front, up the tag's face and over its top edge, up the strap's
     # front, over it, down its back, and behind the tag back into the eyelet.
-    eye = top - 35.0 + 30.0
+    eye = top - th / 2 + hole
     nx, ny = math.sin(turn), -math.cos(turn)       # the tag's face toward the viewer, in the case's frame
     s_front, s_back = y_strap - 1.5 - 0.95, y_strap + 1.5 + 0.95
     path = [(nx * 1.0, face + ny * 1.0, eye), (nx * 0.9, face + ny * 0.9, top - 0.6), (nx * 0.3, face + 0.2, top + 1.0),

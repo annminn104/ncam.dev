@@ -3,24 +3,27 @@
 CDP_MODEL=deck).
 
 Needs cdkit's and parts.py's namespace (exec'd after them), and is followed into it by
-deck_case.py (the flight case and the jewel case), which make_deck_player calls, so both are
-exec'd before it runs. Blender's axes as in parts.py: x right, y away from the viewer (the front
-faces -y), z up, millimetres through L(x, y, z). The deck's footprint is centred on the origin,
-standing on the floor on its four feet; the flight case stands on its right, the jewel case lies
-in front of the case.
+deck_panel.py (the screen module, the decor controls, the labels and the body's detail) and
+deck_case.py (the flight case and the jewel case), which make_deck and make_deck_player call, so
+all three are exec'd before they run. Blender's axes as in parts.py: x right, y away from the
+viewer (the front faces -y), z up, millimetres through L(x, y, z). The deck's footprint is centred
+on the origin, standing on the floor on its four feet; the flight case stands on its right, the
+jewel case lies in front of the case.
 
-The body is one rounded box with the jog's well cut into its top (deck_chassis). Along its back
-a raised display bay tilts its glass face 12 degrees toward the viewer: the LCD, the VU strip and
-the ncam logo. Right of centre the well holds the disc on its spindle and the laser's arm; over
-it the acrylic plate (the contract's knob, its ridged side ring and its centre cap) hangs from
-its hinge at the well's back edge (door_hinge), the hinge's local X along the world's X, so the
-plate lifts about it. Round the well the LED ring (jog_ring) lies flat on the top. The keys stand
-in a column on the left, the tempo fader (decor) at the front right.
+The body is one rounded box with the jog's well cut into its top, its rim chamfered
+(deck_chassis). At its back the screen module stands, leaning back toward the viewer: a 16:9 glass
+in a black bezel, the VU strip beside it. Right of centre the well holds the disc on its spindle
+and the laser's arm; over it the acrylic plate (the contract's knob: fine grooves on its top, a
+knurled metal side ring, a metal centre cap ringed in the light) hangs from its hinge at the
+well's back edge (door_hinge), the hinge's local X along the world's X, so the plate lifts about
+it. Round the well the LED ring (jog_ring) lies flat on the top. The keys stand in a column on the
+left; the decor (eight pads between the jog and the screen, FX knobs, BROWSE, the tempo fader with
+SYNC, MASTER, KEY LOCK and TEMPO RANGE) is deck_panel.py's.
 
 Its colours come from src/deck-looks.json (deck_look): build_deck_materials(look) makes the
 body's and the light's materials and the fixed ones. The web build (WEB) carries what the page
 drives at rest: the plate shut, the arm beside the disc, the prints as plain planes, one ring
-mesh whose UVs the page paints; a render (not WEB) plays: the arm over the disc, the LCD lit,
+mesh whose UVs the page paints; a render (not WEB) plays: the arm over the disc, a playing screen,
 seven VU segments and 30 of the ring's 48 lit, ‖ alone on the play key.
 """
 import json
@@ -124,7 +127,15 @@ def build_deck_materials(look):
     # them (src/scene/vu-materials.ts), so the GLB carries 1.0; a render's lit segments glow at 3.
     M["vu"] = mat("vu", (0.02, 0.02, 0.022, 1), rough=0.3, emit=glow, emit_s=1.0 if WEB else 3.0)
     M["lcd_screen"] = mat("lcd_screen", (0.01, 0.01, 0.012, 1), rough=0.2)
+    # The flight case's stickers (paper), the RCA outputs' rings.
+    M["sticker"] = mat("sticker", lin(238, 235, 226), rough=0.7)
+    M["rca_red"] = mat("rca_red", lin(178, 34, 30), rough=0.4)
+    M["rca_white"] = mat("rca_white", lin(236, 236, 232), rough=0.4)
     if not WEB:
+        # Render-only: a playing screen's white and grey type, its waveform's unplayed bars.
+        M["screen_white"] = mat("screen_white", (0, 0, 0, 1), emit=(1.0, 1.0, 1.0, 1.0), emit_s=1.6)
+        M["screen_grey"] = mat("screen_grey", (0, 0, 0, 1), emit=(0.55, 0.57, 0.6, 1.0), emit_s=0.9)
+        M["screen_dim"] = mat("screen_dim", (0, 0, 0, 1), emit=glow, emit_s=0.35)
         add_bump(M["deck_body"], "noise", scale=6000, strength=0.05, distance=0.00008)   # bead-blasted
         add_bump(M["alu"], "noise", scale=2200, strength=0.04, distance=0.0001)          # satin
         add_bump(M["foam"], "noise", scale=900, strength=0.6, distance=0.0004, detail=4.0)
@@ -162,23 +173,13 @@ DK_ARM_LEN = 62.0                   # pivot to head
 # head parked beside the disc 79 mm from its centre, to over the disc 41 mm from it: the page's
 # profile `arm.play`. The pivot itself is unturned at rest.
 DECK_ARM_PLAY = math.radians(50.0)
-# The display bay along the back: its front, behind the LED ring (r 116, so y 106 at x 30) and
-# clear of the plate's back edge as the plate lifts past 70 degrees (it sweeps to y 109), and its
-# back; its top face rises 12 degrees toward the back, 18 mm high at its middle.
-DK_BAY_Y = (111.0, 175.0)
-DK_BAY_W = 300.0
-DK_BAY_TILT = math.radians(12.0)
-DK_BAY_MID = 18.0
+DK_RIM_CHAMFER = 2.5                # the well's rim, chamfered at 45 degrees
+DK_GROOVES = (93.0, 80.0, 66.0, 52.0, 38.0)   # the fine rings on the plate's top, 0.8 wide, 0.3 high
 # The keys: kind -> (x, y, cap). A round cap is its radius; a square one its width and depth.
 DK_KEYS = (("play", -120.0, -150.0, 17.0), ("stop", -120.0, -105.0, 17.0),
            ("prev", -137.0, -55.0, (30.0, 18.0)), ("next", -103.0, -55.0, (30.0, 18.0)),
            ("rpt", -137.0, 60.0, 7.0), ("mode", -107.0, 60.0, 7.0))
 DK_KEY_WORDS = {"rpt": "RPT", "mode": "SHFL"}   # button_icon draws the other four
-# The tempo fader (decor): its slot's x, its ends, its cap's y. At the front right, where the slot
-# stays 8 mm off the LED ring and the cap off the body's right edge.
-DK_FADER_X = 144.0
-DK_FADER_Y = (-162.0, -66.0)
-DK_FADER_CAP = -114.0
 
 DK_FRONT = (math.radians(90), 0.0, 0.0)            # local z toward the viewer (-y), local y up
 DK_SIDE = (math.radians(90), 0.0, math.radians(90))  # local x back (+y), y up, z right (+x)
@@ -188,9 +189,9 @@ DK_SIDE = (math.radians(90), 0.0, math.radians(90))  # local x back (+y), y up, 
 def deck_chassis(name, root):
     """The body: a box DK_W x DK_D (its corners DK_CORNER round in plan, its top and bottom edges
     rounded by DK_EDGE) from DK_FOOT up to DK_TOP, the jog's well (DK_WELL_R, down to DK_FLOOR)
-    cut into its top. One mesh: the body's faces in deck_body, the well's wall and floor in well.
-    The top and the bottom are flat-shaded and the well's wall stands on vertices of its own, so
-    no normal smooths across the well's rim."""
+    cut into its top, its rim chamfered DK_RIM_CHAMFER at 45 degrees. One mesh: the body's faces
+    and the chamfer in deck_body, the well's wall and its floor in well. The top, the chamfer and
+    the bottom are flat-shaded, so no normal smooths across the rim."""
     b, z0, z1 = DK_EDGE, DK_FOOT, DK_TOP
     outline = rrect(DK_W, DK_D, DK_CORNER, seg=6 if WEB else 12)   # counter-clockwise from above
     nb = 2 if WEB else 6
@@ -214,9 +215,14 @@ def deck_chassis(name, root):
     bottom.smooth = False
     cx, cy = DK_WELL
     seg = q(192)
-    rim = [(cx + DK_WELL_R * math.cos(2 * math.pi * i / seg), cy + DK_WELL_R * math.sin(2 * math.pi * i / seg))
-           for i in range(seg)]
-    hole = [bm.verts.new((x * MM, y * MM, z1 * MM)) for x, y in rim]
+
+    def circle_at(r, z):
+        return [bm.verts.new(((cx + r * math.cos(2 * math.pi * i / seg)) * MM,
+                              (cy + r * math.sin(2 * math.pi * i / seg)) * MM, z * MM)) for i in range(seg)]
+    c = DK_RIM_CHAMFER
+    hole = circle_at(DK_WELL_R + c, z1)            # where the top meets the chamfer
+    upper = circle_at(DK_WELL_R, z1 - c)           # where the chamfer meets the wall
+    lower = circle_at(DK_WELL_R, DK_FLOOR)
     top_edges = [bm.edges.get((rings[-1][i], rings[-1][(i + 1) % n])) for i in range(n)]
     top_edges += [bm.edges.new((hole[i], hole[(i + 1) % seg])) for i in range(seg)]
     filled = bmesh.ops.triangle_fill(bm, use_beauty=True, use_dissolve=False, edges=top_edges, normal=(0, 0, 1))
@@ -226,11 +232,14 @@ def deck_chassis(name, root):
             if f.normal.z < 0:
                 f.normal_flip()
             f.smooth = False
-    # The well: its wall on vertices of its own (facing in), its floor (facing up).
-    upper = [bm.verts.new((x * MM, y * MM, z1 * MM)) for x, y in rim]
-    lower = [bm.verts.new((x * MM, y * MM, DK_FLOOR * MM)) for x, y in rim]
+    # The chamfer (facing up and in), the well's wall (facing in), its floor (facing up).
     for i in range(seg):
         k = (i + 1) % seg
+        f = bm.faces.new((upper[i], hole[i], hole[k], upper[k]))
+        f.normal_update()
+        if f.normal.z < 0:
+            f.normal_flip()
+        f.smooth = False
         f = bm.faces.new((lower[i], upper[i], upper[k], lower[k]))
         f.smooth = True
         f.material_index = 1
@@ -247,50 +256,6 @@ def deck_feet(name, root):
             lathe("%s_foot_%d%d" % (name, sx, sy), [(0.01, 0.0), (9.0, 0.0), (9.0, DK_FOOT - 0.8),
                                                     (8.2, DK_FOOT), (0.01, DK_FOOT)], M["rubber"], seg=32,
                   parent=root, loc=L(sx * (DK_W / 2 - 25.0), sy * (DK_D / 2 - 25.0), 0.0))
-
-
-def deck_prints(name, root):
-    """The model line printed on the body's front."""
-    text(name + "_front_print", "ncam   DK·01   COMPACT DISC DECK", 3.2, M["ink"], font="avenir", align="LEFT",
-         parent=root, loc=L(-146.0, -DK_D / 2 - 0.02, 38.0), rot=DK_FRONT)
-
-
-# ------------------------------------------------------------------ the display bay
-def deck_bay(name, root, playing):
-    """The raised bay along the back, its top face tilted DK_BAY_TILT toward the viewer, under a
-    black glass 0.6 mm proud of it: the LCD (`<name>_lcd_screen`, the page's print; a render
-    lights the track and the time over the unlit segments), the ten VU segments (`<name>_vu_seg_i`,
-    one `vu` material; a render lights the first seven) and the ncam logo in the light."""
-    y0, y1 = DK_BAY_Y
-    depth = y1 - y0
-    rise = depth * math.tan(DK_BAY_TILT)
-    zf = DK_TOP + DK_BAY_MID - rise / 2      # the face's front edge
-    zb = DK_TOP + DK_BAY_MID + rise / 2      # its back edge
-    sunk = DK_TOP - 1.5                       # its bottom, below the top: its rounded edge stays inside
-    slab(name + "_bay", [[(y0, sunk), (y1, sunk), (y1, zb), (y0, zf)]], -DK_BAY_W / 2, DK_BAY_W / 2,
-         M["deck_body"], bevel_mm=1.5, res=3, parent=root, rot=DK_SIDE)
-    # The face's frame: local x along X, local y up the slope, local z its normal.
-    face = empty(name + "_bay_face", L(0.0, (y0 + y1) / 2, DK_TOP + DK_BAY_MID), (DK_BAY_TILT, 0.0, 0.0), parent=root)
-    span = depth / math.cos(DK_BAY_TILT)
-    slab(name + "_bay_glass", [rrect(DK_BAY_W - 6.0, span - 7.0, 3.0)], 0.0, 0.6, M["black_glass"],
-         bevel_mm=0.0 if WEB else 0.2, parent=face)
-    gz = 0.6
-    lx = -60.0
-    rbox(name + "_lcd_screen", (80.0, 30.0, 0.05), M["lcd_screen"], parent=face, loc=L(lx, 0.0, gz + 0.025))
-    if not WEB:
-        on = M["lcd_glow"] if playing else M["lcd_ghost"]
-        z = gz + 0.07
-        text(name + "_lcd_g1", "88", 15.0, M["lcd_ghost"], font="din", parent=face, loc=L(lx - 22.0, -2.6, z - 0.01))
-        text(name + "_lcd_t1", "01", 15.0, on, font="din", parent=face, loc=L(lx - 22.0, -2.6, z))
-        text(name + "_lcd_g2", "8:88", 11.0, M["lcd_ghost"], font="din", parent=face, loc=L(lx + 14.0, -3.6, z - 0.01))
-        text(name + "_lcd_t2", "1:24", 11.0, on, font="din", parent=face, loc=L(lx + 14.0, -3.6, z))
-        text(name + "_lcd_cd", "CD   PLAY   RPT", 2.6, on, font="avenir", align="LEFT", parent=face,
-             loc=L(lx - 35.0, 10.4, z))
-    for k in range(10):
-        lit = WEB or (playing and k < 7)
-        rbox("%s_vu_seg_%d" % (name, k), (3.8, 6.6, 0.3), M["vu"] if lit else M["vu_dim"], parent=face,
-             loc=L(10.0 + 1.9 + 5.2 * k, 0.0, gz + 0.15))
-    text(name + "_logo", "ncam", 7.0, M["deck_light"], font="futura", parent=face, loc=L(100.0, 0.0, gz + 0.02))
 
 
 # ------------------------------------------------------------------ the well: the spindle and the disc
@@ -355,22 +320,27 @@ def deck_ring(name, root, playing):
 def deck_jog(name, root):
     """The jog: its hinge (`<name>_door`, unturned: its local X is the world's, the axis the page
     lifts the plate about) at the well's back edge, and under it the jog itself (`<name>_knob`, at
-    the well's centre, its local Z up, which the page turns it about): the clear acrylic plate, its
-    dark side ring with 64 shallow ridges, the centre cap with the ncam logo and an index dot in the
-    light at twelve o'clock."""
+    the well's centre, its local Z up, which the page turns it about): the clear acrylic plate with
+    five fine raised rings on its top (they show it turning), a knurled metal side ring with 96
+    shallow ridges, the metal centre cap ringed in the light, with the ncam logo and an index dot in
+    the light at twelve o'clock."""
     door = empty(name + "_door", L(*DK_HINGE), parent=root)
     cx, cy = DK_WELL
     knob = empty(name + "_knob", L(cx - DK_HINGE[0], cy - DK_HINGE[1], DK_PLATE_Z - DK_HINGE[2]), parent=door)
     t = DK_PLATE_T
     r = DK_PLATE_R - 0.05
-    lathe(name + "_jog_plate", [(0.01, 0.0), (r, 0.0), (r, t - 0.8), (r - 0.8, t), (0.01, t)], M["jog_acrylic"],
-          seg=192, parent=knob)
-    # 64 ridges: lathe ridges every other segment, and the web build halves the segments.
-    lathe(name + "_jog_side", [(DK_PLATE_R + 0.05, 0.0), (105.5, 0.0), (105.5, t), (DK_PLATE_R + 0.05, t)],
-          M["rubber"], seg=256 if WEB else 128, ridge=({1, 2}, 0.5), parent=knob)
+    plate = [(0.01, 0.0), (r, 0.0), (r, t - 0.8), (r - 0.8, t)]
+    for g in DK_GROOVES:   # outside in
+        plate += [(g + 0.4, t), (g + 0.4, t + 0.3), (g - 0.4, t + 0.3), (g - 0.4, t)]
+    lathe(name + "_jog_plate", plate + [(0.01, t)], M["jog_acrylic"], seg=192, parent=knob)
+    # 96 ridges: lathe ridges every other segment, and the web build halves the segments.
+    lathe(name + "_jog_side", [(DK_PLATE_R + 0.05, 0.0), (105.6, 0.0), (105.6, t), (DK_PLATE_R + 0.05, t)],
+          M["hardware"], seg=384 if WEB else 192, ridge=({1, 2}, 0.4), parent=knob)
     top = t + 0.02
     lathe(name + "_jog_cap", [(0.01, top), (25.0, top), (25.0, top + 2.6), (24.2, top + 3.6), (22.6, top + 4.0),
-                              (0.01, top + 4.0)], M["hub_black"], seg=128, parent=knob)
+                              (0.01, top + 4.0)], M["hardware"], seg=128, parent=knob)
+    lathe(name + "_jog_cap_ring", [(25.25, top), (26.4, top), (26.4, top + 0.6), (25.25, top + 0.6)],
+          M["deck_light"], seg=128, parent=knob)
     text(name + "_jog_logo", "ncam", 6.0, M["ink"], font="futura", parent=knob, loc=L(0.0, -1.2, top + 4.03))
     lathe(name + "_jog_dot", [(0.01, top + 4.0), (2.0, top + 4.0), (2.0, top + 4.2), (1.6, top + 4.3),
                               (0.01, top + 4.3)], M["deck_light"], seg=24, parent=knob, loc=L(0.0, 18.0, 0.0))
@@ -415,8 +385,9 @@ def deck_keys(name, root, playing=False):
     """The keys, a column on the left: play and stop (34 mm round) at the front, prev and next
     (30 x 18) above them, repeat and shuffle (14 mm round) by the display. Each key is an empty on
     the top (the page sinks it) holding its dark cap and its icon lit in the light (`deck_light`);
-    its dark surround and its printed label are the body's. The play key's cap carries ▶ and ‖ in
-    the web build (the page shows one at a time); a render prints ‖ alone, as it plays."""
+    its dark surround and its printed label (deck_panel.py's deck_labels) are the body's. The play
+    key's cap carries ▶ and ‖ in the web build (the page shows one at a time); a render prints ‖
+    alone, as it plays."""
     for kind, x, y, cap in DK_KEYS:
         key = empty("%s_btn_%s" % (name, kind), L(x, y, DK_TOP), parent=root)
         if isinstance(cap, tuple):
@@ -449,32 +420,6 @@ def deck_keys(name, root, playing=False):
         else:
             text("%s_btn_%s_word" % (name, kind), DK_KEY_WORDS[kind], 2.3, M["deck_light"], font="din", parent=key,
                  loc=L(0.0, 0.0, h + 0.03))
-    # The body's printed labels by the keys.
-    text(name + "_lbl_track", "TRACK", 2.4, M["ink"], font="avenir", parent=root, loc=L(-120.0, -41.0, DK_TOP + 0.02))
-    text(name + "_lbl_rpt", "REPEAT", 2.2, M["ink"], font="avenir", parent=root, loc=L(-137.0, 47.5, DK_TOP + 0.02))
-    text(name + "_lbl_mode", "SHUFFLE", 2.2, M["ink"], font="avenir", parent=root, loc=L(-107.0, 47.5, DK_TOP + 0.02))
-
-
-# ------------------------------------------------------------------ the tempo fader (decor)
-def deck_fader(name, root):
-    """The tempo fader at the front right: decor (no name the page drives). A dark slot with its
-    opening, the cap at its middle with a line across it, ticks to its right and -8 / +8 at its
-    ends (+ toward the player, as a DJ deck's)."""
-    x = DK_FADER_X
-    y0, y1 = DK_FADER_Y
-    yc = (y0 + y1) / 2
-    slab(name + "_fader_slot", [rrect(8.0, y1 - y0, 4.0, cx=x, cy=yc)], DK_TOP, DK_TOP + 0.03, M["well"], parent=root)
-    slab(name + "_fader_gap", [rrect(2.4, y1 - y0 - 6.0, 1.2, cx=x, cy=yc)], DK_TOP, DK_TOP + 0.05, M["rubber"],
-         parent=root)
-    rbox(name + "_fader_cap", (18.0, 10.0, 8.0), M["rubber"], bevel_mm=0.0 if WEB else 1.4, parent=root,
-         loc=L(x, DK_FADER_CAP, DK_TOP + 4.0))
-    rbox(name + "_fader_line", (16.0, 1.0, 0.08), M["ink"], parent=root, loc=L(x, DK_FADER_CAP, DK_TOP + 8.04))
-    for k in range(9):
-        yy = y0 + 4.0 + (y1 - y0 - 8.0) * k / 8
-        rbox("%s_fader_tick_%d" % (name, k), (4.4 if k == 4 else 2.6, 0.5, 0.04), M["ink"], parent=root,
-             loc=L(x + 6.4 + (0.9 if k == 4 else 0.0), yy, DK_TOP + 0.02))
-    text(name + "_fader_minus", "-8", 2.6, M["ink"], font="din", parent=root, loc=L(x, y1 + 5.0, DK_TOP + 0.02))
-    text(name + "_fader_plus", "+8", 2.6, M["ink"], font="din", parent=root, loc=L(x, y0 - 5.0, DK_TOP + 0.02))
 
 
 # ------------------------------------------------------------------ the whole Deck
@@ -484,21 +429,21 @@ def make_deck(name, root, look, playing, disc_label=None):
     spindle (the web build's art_disc unless given)."""
     deck_chassis(name, root)
     deck_feet(name, root)
-    deck_bay(name, root, playing)
+    deck_screen(name, root, playing)
     deck_spindle(name, root, disc_label if disc_label is not None else M["art_disc"])
     deck_ring(name, root, playing)
     deck_jog(name, root)
     deck_arm(name, root, playing)
     deck_keys(name, root, playing)
-    deck_fader(name, root)
-    deck_prints(name, root)
+    deck_controls(name, root)
+    deck_body_detail(name, root)
     return root
 
 
 def make_deck_player(name, disc_label, booklet, look, rack_labels=None, playlist="Top 50 · Global"):
     """The whole Deck under the empty `name`: the deck, and the flight case beside it
-    (deck_case.py). A render (not WEB) plays: the arm over the disc, the LCD, seven VU segments
-    and 30 of the ring's 48 lit, the play key printing ‖ alone."""
+    (deck_case.py). A render (not WEB) plays: the arm over the disc, a playing screen, seven VU
+    segments and 30 of the ring's 48 lit, the play key printing ‖ alone."""
     playing = not WEB
     root = empty(name, L(0, 0, 0))
     make_deck(name, root, look, playing, disc_label)

@@ -83,6 +83,9 @@ export const MATERIAL_ROLES: Readonly<Record<string, MaterialRole>> = {
   deck_light: 'emissive',
   jog_acrylic: 'crystal',
   foam: 'matte',
+  sticker: 'matte',
+  rca_red: 'plastic',
+  rca_white: 'plastic',
 };
 
 /**
