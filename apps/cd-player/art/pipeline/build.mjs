@@ -1,9 +1,11 @@
 // Builds public/assets/cd-player.glb (or, given `clear`, cd-player-clear.glb, or, given `deck`,
 // cd-player-deck.glb) from the Blender scripts: Blender, in the background, writes
 // art/.out/<name>.raw.glb (art/blender/scripts/export.py); gltf-transform then dedups, welds,
-// prunes (keeping the empty pivots) and meshopt-compresses it. Run by hand; the output is committed.
+// prunes (keeping the empty pivots) and meshopt-compresses it. The Deck's build also writes its
+// print layer's atlas layout, src/scene/textures/deck-atlas.json, which this formats with the
+// repository's Prettier. Run by hand; the outputs are committed.
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, statSync } from 'node:fs';
+import { mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { NodeIO, PropertyType } from '@gltf-transform/core';
 import { ALL_EXTENSIONS } from '@gltf-transform/extensions';
@@ -41,6 +43,15 @@ const blender = spawnSync(
 if (blender.status !== 0) {
   console.error(`art:build: Blender exited with ${blender.status}`);
   process.exit(1);
+}
+
+if (MODEL === 'deck') {
+  // Blender writes the layout as plain JSON; the repository's Prettier gives it its committed form.
+  const { format, resolveConfig } = await import('prettier');
+  const atlas = `${APP}src/scene/textures/deck-atlas.json`;
+  const options = (await resolveConfig(atlas)) ?? {};
+  writeFileSync(atlas, await format(readFileSync(atlas, 'utf8'), { ...options, filepath: atlas }));
+  console.log(`art:build: ${atlas}`);
 }
 
 await MeshoptEncoder.ready;

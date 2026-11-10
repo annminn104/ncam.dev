@@ -11,10 +11,11 @@ latches on its front seam, a foam block in the base with five slots, a disc stan
 each (a render; the web build carries the slots' empties, `<name>_rack_slot_i`, for the page to
 fill), each slot behind and above the one in front so every label shows. The lid, hinged on the
 base's back top edge, stands open past upright, a foam pad inside it with the setlist card taped
-to it (`<name>_card`, the page's card_print; a render letters it), two plain paper stickers on its
-outside. A strap handle crosses the base's front, a paper tag hanging from it on a string
-(`<name>_tag`, the page's tag_print). The jewel case (parts.py's make_case) lies shut on the floor
-in front of the flight case.
+to it (`<name>_card`, the page's card_print; a render letters it). A strap handle crosses the
+base's front, a paper tag hanging from it on a string (`<name>_tag`, the page's tag_print). The
+case's front and sides carry the print layer (deck_print.py), the front its stencil: the open
+lid's outside faces away from every view, so it carries nothing. The jewel case (parts.py's
+make_case) lies shut on the floor in front of the flight case.
 """
 import math
 
@@ -164,10 +165,9 @@ def flight_rack(name, case, rack_labels):
 def flight_lid(name, case, playlist, web):
     """The lid, hinged on the base's back top edge (its hinge 2 mm outboard of the extrusions, at
     the rims' meeting plane) and open FC_LID_OPEN: its walls, top and riveted extrusions, the
-    latches' keepers on its front seam, two plain paper stickers on its outside top (ncam, and
-    HANDLE WITH CARE), a foam pad inside, and the setlist card taped to the pad (`<name>_card`, an
-    empty holding the page's `<name>_card_print`, 112 x 20 mm: the canvas's 1024 x 182; a render
-    letters it)."""
+    latches' keepers on its front seam, a foam pad inside, and the setlist card taped to the pad
+    (`<name>_card`, an empty holding the page's `<name>_card_print`, 112 x 20 mm: the canvas's
+    1024 x 182; a render letters it)."""
     hy = FC_D / 2 + FC_T["z"] + 2.0
     hz = FC_LIFT + FC_H + FC_T["x"]
     tube(name + "_hinge_pin", [(-FC_W / 2 + 6.0, hy, hz), (FC_W / 2 - 6.0, hy, hz)], 1.8, M["hardware"], parent=case)
@@ -190,7 +190,6 @@ def flight_lid(name, case, playlist, web):
                                                 (sx * FC_LATCH_X + 5.0, front - 3.2, z0 + 1.6),
                                                 (sx * FC_LATCH_X + 5.0, front - 1.4, z0 + 2.2)], 0.8, M["hardware"],
              parent=lid)
-    flight_stickers(name, lid, cy, z1)
     pad = z1 - FC_WALL - 12.0
     slab(name + "_lid_foam", [rrect(FC_W - 2 * FC_WALL - 0.4, FC_D - 2 * FC_WALL - 0.4, 1.0, cy=cy)], pad,
          z1 - FC_WALL, M["foam"], bevel_mm=0.0 if web else 0.8, parent=lid)
@@ -206,27 +205,6 @@ def flight_lid(name, case, playlist, web):
         rbox("%s_card_tape_%d" % (name, k), (7.0, 28.0, 0.1), M["ink"], parent=card,
              loc=L(sx * 50.5, 0.0, 0.08), rot=(0.0, 0.0, math.radians(6.0 * sx)))
     return lid
-
-
-def flight_stickers(name, lid, cy, top):
-    """Two plain paper stickers on the lid's outside top, inside its extrusions' legs, printed in
-    ink: ncam, and HANDLE WITH CARE between two rules. No maker's marks; neither is a print the page
-    paints."""
-    z = top + 0.06
-    for key, (x, y, w, d, turn) in (("ncam", (-36.0, cy + 24.0, 38.0, 30.0, 6.0)),
-                                    ("care", (22.0, cy - 30.0, 74.0, 22.0, -4.0))):
-        rot = (0.0, 0.0, math.radians(turn))
-        sticker = empty("%s_sticker_%s" % (name, key), L(x, y, z), rot, parent=lid)
-        rbox("%s_sticker_%s_paper" % (name, key), (w, d, 0.12), M["sticker"], parent=sticker)
-        if key == "ncam":
-            text("%s_sticker_%s_t" % (name, key), "ncam", 10.0, M["ink"], font="futura", parent=sticker,
-                 loc=L(0.0, 0.0, 0.07))
-        else:
-            text("%s_sticker_%s_t" % (name, key), "HANDLE WITH CARE", 4.2, M["ink"], font="avenir", parent=sticker,
-                 loc=L(0.0, 0.0, 0.07))
-            for j, yy in enumerate((6.2, -6.2)):
-                rbox("%s_sticker_%s_rule_%d" % (name, key, j), (w - 8.0, 0.6, 0.04), M["ink"], parent=sticker,
-                     loc=L(0.0, yy, 0.07))
 
 
 def flight_handle(name, case):

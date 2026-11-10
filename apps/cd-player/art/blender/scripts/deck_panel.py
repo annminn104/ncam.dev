@@ -18,6 +18,7 @@ import math
 import random
 
 import bmesh
+import bpy
 from mathutils import Vector
 
 # ------------------------------------------------------------------ dimensions (mm)
@@ -45,8 +46,20 @@ DK_FADER_X = 144.0                         # the tempo fader (decor): its slot's
 DK_FADER_Y = (-164.0, -96.0)
 DK_FADER_CAP = -130.0
 DK_SYNC = ((114.0, -155.0, "SYNC"), (114.0, -141.0, "MASTER"))   # left of the fader
-DK_LOCK = ((136.0, -84.0, "KEY LOCK"), (149.0, -84.0, "RANGE"))  # above it, off the LED ring
+DK_LOCK = ((134.0, -84.0, "KEY LOCK"), (147.0, -84.0, "RANGE"))  # above it, off the rings, inside the top's edge
 DK_SCREWS = [(sx * 150.0, sy * 170.0) for sx in (-1, 1) for sy in (-1, 1)]
+# Lettering printed on the top stands over the print layer (deck_print.py's, 0.15 off the top).
+DK_INK_Z = DK_TOP + 0.2
+# The signature ring, outside the LED ring (r 110 to 116): 3 mm wide, its outer edge 1.5 mm inside the
+# nearest controls (r 121: the pads behind the jog, the next key at its left), whose openings in the
+# print layer start at r 120.5, and 0.5 inside the top print's opening round the jog (r 120).
+DK_SIG_RING = (116.5, 119.5)
+DK_SIG_TOP = DK_TOP + 0.5            # its face
+DK_SIG_TEXT = ("ncam · deck", 2.4)   # raised 0.3, along the arc at six o'clock; its letters' height (mm)
+# The centre cap's guilloché rosette: rings r0 + a sin(18 theta), r0 every 1.2 mm from just outside
+# its ncam (whose corners stand 5.9 mm from the centre) to just inside its flat top (r 22.6).
+DK_ROSETTE = (7.5, 21.9, 1.2, 0.45)  # first r0, last r0, the step, a
+DK_NAMEPLATE = (95.0, 40.0, 60.0, 14.0, 0.8)   # its centre on the front (x, z), its size, how far it stands proud
 DK_BACK_FACE = (math.radians(90), 0.0, math.radians(180))   # local z toward the back (+y), y up, x toward -x
 
 
@@ -94,6 +107,108 @@ def _quads(name, rects, mats, parent, z):
     return from_bm(name, bm, [mats], smooth=False, parent=parent)
 
 
+def _ribbons(name, runs, width, mats, parent, z):
+    """One mesh of flat ribbons `width` mm wide along polylines (mm, the parent's frame) at height z,
+    facing up: grooves and guilloché lines."""
+    bm = bmesh.new()
+    for run in runs:
+        left, right = [], []
+        for i, (x, y) in enumerate(run):
+            ax, ay = run[max(i - 1, 0)]
+            bx, by = run[min(i + 1, len(run) - 1)]
+            tx, ty = bx - ax, by - ay
+            n = math.hypot(tx, ty) or 1.0
+            ox, oy = -ty / n * width / 2, tx / n * width / 2
+            left.append(bm.verts.new(mmv((x + ox, y + oy, z))))
+            right.append(bm.verts.new(mmv((x - ox, y - oy, z))))
+        for i in range(len(run) - 1):
+            f = bm.faces.new((right[i], right[i + 1], left[i + 1], left[i]))
+            f.normal_update()
+            if f.normal.z < 0:
+                f.normal_flip()
+    return from_bm(name, bm, [mats], smooth=False, parent=parent)
+
+
+def _bent_text(name, body, height, mats, centre, radius, at_deg, z, parent, font="futura"):
+    """`body` in letters `height` mm high (its tallest) and 0.3 mm deep, standing on z, set along the
+    circle of `radius` round `centre` (mm) and centred on it at `at_deg` degrees (counter-clockwise
+    from +x: 270 is six o'clock), its letters' tops toward the centre: there it reads left to right
+    from the front. A straight lettering bent onto the arc, as one mesh. Returns the mesh and the
+    half-angle (degrees) its letters span."""
+    probe = text(name + "_probe", body, 1.0, mats, font=font, extrude_mm=0.15)
+    probe.data.resolution_u = 3 if WEB else 12
+    dg = SC.view_layers[0].depsgraph
+    dg.update()
+    me = bpy.data.meshes.new_from_object(probe.evaluated_get(dg), depsgraph=dg)
+    bpy.data.objects.remove(probe, do_unlink=True)
+    bm = bmesh.new()
+    bm.from_mesh(me)
+    bpy.data.meshes.remove(me)
+    xs, ys = [v.co.x / MM for v in bm.verts], [v.co.y / MM for v in bm.verts]
+    scale = height / (max(ys) - min(ys))
+    x_mid, y_mid = (max(xs) + min(xs)) / 2, (max(ys) + min(ys)) / 2
+    for v in bm.verts:
+        along, up = (v.co.x / MM - x_mid) * scale, (v.co.y / MM - y_mid) * scale
+        a = math.radians(at_deg) + along / radius
+        rr = radius - up
+        v.co = mmv((centre[0] + rr * math.cos(a), centre[1] + rr * math.sin(a), z + 0.15 + v.co.z / MM))
+    half = math.degrees((max(xs) - min(xs)) * scale / 2 / radius)
+    return from_bm(name, bm, [mats], smooth=False, parent=parent), half
+
+
+def deck_signature_ring(name, root):
+    """ncam's signature on the Deck, its counterpart of the Clear's Đông Sơn ring, the same for every
+    visitor: a flat metal ring (DK_SIG_RING, its face 0.5 over the top) just outside the LED ring,
+    a chevron groove every 6 degrees round it, pointing clockwise (dark, as a groove reads), and
+    DK_SIG_TEXT in raised letters along its arc at six o'clock, where the grooves make way."""
+    cx, cy = DK_WELL
+    r0, r1 = DK_SIG_RING
+    top = DK_SIG_TOP
+    lathe(name + "_sig_ring", [(r0, DK_TOP + 0.02), (r1, DK_TOP + 0.02), (r1, top - 0.15), (r1 - 0.15, top),
+                               (r0 + 0.15, top), (r0, top - 0.15)], M["hardware"], seg=192, parent=root,
+          loc=L(cx, cy, 0.0))
+    word, height = DK_SIG_TEXT
+    rm = (r0 + r1) / 2
+    _, half = _bent_text(name + "_sig_text", word, height, M["hardware"], (cx, cy), rm, 270.0, top, root)
+
+    def at(r, cw):
+        a = math.radians(90.0 - cw)
+        return (cx + r * math.cos(a), cy + r * math.sin(a))
+    runs = []
+    for k in range(60):
+        cw = 6.0 * k + 3.0
+        if abs(cw - 180.0) < half + 2.5:
+            continue
+        runs += [[at(rm - 1.0, cw - 1.2), at(rm, cw + 1.2)], [at(rm + 1.0, cw - 1.2), at(rm, cw + 1.2)]]
+    _ribbons(name + "_sig_grooves", runs, 0.32, M["ink_dark"], root, top + 0.01)
+
+
+def deck_rosette(name, knob, z):
+    """The centre cap's guilloché rosette (DK_ROSETTE): rings r0 + a sin(18 theta), flat dark ribbons
+    0.15 over the cap's top at z (the knob's frame), each broken round the index dot at twelve."""
+    first, last, step, amp = DK_ROSETTE
+    n = 180 if WEB else 360
+    dot = (0.0, 18.0)
+    runs = []
+    r0 = first
+    while r0 <= last + 1e-6:
+        run = []
+        for i in range(n + 1):
+            th = 2 * math.pi * i / n
+            rr = r0 + amp * math.sin(18 * th)
+            p = (rr * math.cos(th), rr * math.sin(th))
+            if math.hypot(p[0] - dot[0], p[1] - dot[1]) < 2.7:
+                if len(run) > 1:
+                    runs.append(run)
+                run = []
+                continue
+            run.append(p)
+        if len(run) > 1:
+            runs.append(run)
+        r0 += step
+    _ribbons(name + "_jog_rosette", runs, 0.2, M["ink_dark"], knob, z + 0.15)
+
+
 # ------------------------------------------------------------------ the screen module
 def deck_screen_frame():
     """The screen face's centre (mm), its turn (local x along X, local y up the face, local z its
@@ -126,8 +241,9 @@ def deck_screen(name, root, playing):
     slab(name + "_bezel", [rrect(gw + 2 * DK_BEZEL, gh + 2 * DK_BEZEL, 4.0, cx=DK_BEZEL_X)], 0.0, 0.8, M["black_glass"],
          bevel_mm=0.0 if WEB else 0.3, parent=face)
     rbox(name + "_lcd_screen", (gw, gh, 0.05), M["lcd_screen"], parent=face, loc=L(DK_BEZEL_X, 0.0, 0.825))
+    # Over the bezel's print (0.15 off the bezel), so that the pattern never hides it.
     text(name + "_logo", "ncam", 3.2, M["deck_light"], font="futura", parent=face,
-         loc=L(DK_BEZEL_X, -(gh / 2 + DK_BEZEL / 2), 0.82))
+         loc=L(DK_BEZEL_X, -(gh / 2 + DK_BEZEL / 2), 1.0))
     slab(name + "_vu_window", [rrect(9.0, 58.0, 2.0, cx=DK_VU_X)], 0.0, 0.5, M["black_glass"], parent=face)
     for k in range(10):
         lit = WEB or (playing and k < 7)
@@ -215,9 +331,9 @@ def deck_pads(name, root):
         rbox("%s_pad_%d" % (name, k), (w, d, h), M["rubber"], bevel_mm=1.0 if WEB else 1.3, seg=1 if WEB else 3,
              parent=root, loc=L(x, y, DK_TOP + h / 2))
         text("%s_pad_letter_%d" % (name, k), "ABCDEFGH"[k], 2.4, M["ink"], font="din", parent=root,
-             loc=L(x - DK_PAD_PITCH / 2, y, DK_TOP + 0.02))
+             loc=L(x - DK_PAD_PITCH / 2, y, DK_INK_Z))
     text(name + "_lbl_hot_cue", "HOT CUE", 2.2, M["ink"], font="avenir", align="LEFT", parent=root,
-         loc=L(-141.0, y + d / 2 + 5.6, DK_TOP + 0.02))
+         loc=L(-141.0, y + d / 2 + 5.6, DK_INK_Z))
 
 
 def deck_browse(name, root):
@@ -228,16 +344,16 @@ def deck_browse(name, root):
         cap = _knob("%s_fx_%d" % (name, k), root, x, y, 6.0, 9.0, 18, 7.5)
         rbox("%s_fx_%d_mark" % (name, k), (0.8, 4.0, 0.06), M["ink"], parent=root, loc=L(x, y + 2.6, cap + 0.03))
         text("%s_lbl_fx_%d" % (name, k), "FX %d" % (k + 1), 2.0, M["ink"], font="avenir", parent=root,
-             loc=L(x, y + 11.5, DK_TOP + 0.02))
+             loc=L(x, y + 11.5, DK_INK_Z))
     x = DK_BROWSE_X
     cap = _knob(name + "_browse", root, x, y, 8.0, 11.0, 24, 10.5)
     lathe(name + "_browse_top", [(0.01, cap), (5.4, cap), (5.4, cap + 0.3), (5.0, cap + 0.5), (0.01, cap + 0.5)],
           M["hardware"], seg=48, parent=root, loc=L(x, y, 0.0))
-    text(name + "_lbl_browse", "BROWSE", 2.0, M["ink"], font="avenir", parent=root, loc=L(x, y + 13.5, DK_TOP + 0.02))
+    text(name + "_lbl_browse", "BROWSE", 2.0, M["ink"], font="avenir", parent=root, loc=L(x, y + 13.5, DK_INK_Z))
     for k, (bx, word) in enumerate(DK_BACK_TAG):
         _round_key("%s_%s_key" % (name, word.lower()), root, bx, y, 4.5, 3.2)
         text("%s_lbl_%s" % (name, word.lower()), word, 1.8, M["ink"], font="avenir", parent=root,
-             loc=L(bx, y + 8.5, DK_TOP + 0.02))
+             loc=L(bx, y + 8.5, DK_INK_Z))
 
 
 def deck_tempo(name, root):
@@ -253,12 +369,12 @@ def deck_tempo(name, root):
     rbox(name + "_fader_cap", (18.0, 10.0, 8.0), M["rubber"], bevel_mm=1.0 if WEB else 1.4, seg=1 if WEB else 3,
          parent=root, loc=L(x, DK_FADER_CAP, DK_TOP + 4.0))
     rbox(name + "_fader_line", (16.0, 1.0, 0.08), M["ink"], parent=root, loc=L(x, DK_FADER_CAP, DK_TOP + 8.04))
-    ticks = [((x + 7.0 + (0.9 if k == 4 else 0.0), y0 + 4.0 + (y1 - y0 - 8.0) * k / 8, DK_TOP + 0.02),
+    ticks = [((x + 7.0 + (0.9 if k == 4 else 0.0), y0 + 4.0 + (y1 - y0 - 8.0) * k / 8, DK_INK_Z),
               (4.4 if k == 4 else 2.6, 0.5, 0.04)) for k in range(9)]
     _box_cluster(name + "_fader_ticks", ticks, M["ink"], root)
     for word, yy in (("+8", y0 + 4.0), ("-8", y1 - 4.0), ("TEMPO", y1 + 4.0)):
         text("%s_lbl_tempo_%s" % (name, "plus" if word == "+8" else "minus" if word == "-8" else "name"), word, 2.4,
-             M["ink"], font="din" if word != "TEMPO" else "avenir", parent=root, loc=L(x - 13.0, yy, DK_TOP + 0.02))
+             M["ink"], font="din" if word != "TEMPO" else "avenir", parent=root, loc=L(x - 13.0, yy, DK_INK_Z))
     for kx, ky, word in DK_SYNC:
         key = word.lower()
         rbox("%s_%s_key" % (name, key), (18.0, 10.0, 3.5), M["btn"], bevel_mm=1.0 if WEB else 1.6, seg=1 if WEB else 3,
@@ -268,13 +384,13 @@ def deck_tempo(name, root):
         key = word.lower().replace(" ", "_")
         _round_key("%s_%s_key" % (name, key), root, kx, ky, 4.5, 3.0)
         text("%s_lbl_%s" % (name, key), word, 1.7, M["ink"], font="avenir", parent=root,
-             loc=L(kx, ky + 7.5, DK_TOP + 0.02))
+             loc=L(kx, ky + 7.5, DK_INK_Z))
 
 
 def deck_labels(name, root):
     """The labels printed round the keys (the keys keep their icons): TRACK SEARCH over prev and
     next, CUE and PLAY under the two big keys, REPEAT and SHUFFLE under the small ones."""
-    z = DK_TOP + 0.02
+    z = DK_INK_Z
     for word, x, y, size in (("TRACK SEARCH", -120.0, -41.0, 2.4), ("CUE", -120.0, -127.5, 2.4),
                              ("PLAY", -120.0, -171.0, 2.4), ("REPEAT", -137.0, 47.5, 2.2),
                              ("SHUFFLE", -107.0, 47.5, 2.2)):
@@ -293,7 +409,9 @@ def deck_controls(name, root):
 # ------------------------------------------------------------------ the body's detail
 def deck_front(name, root):
     """The front: the model line on the left, a USB-A port (a metal shell round its dark opening and
-    tongue) and an SD slot beside it, each named under it; ncam engraved on the right half."""
+    tongue) and an SD slot beside it, each named under it; on the right half the brushed nameplate
+    (`<name>_nameplate`, DK_NAMEPLATE: 60 x 14 mm, 0.8 proud, its corners 1 mm round), on which the
+    page engraves the visitor's name, or ncam, through its print."""
     y = -DK_D / 2
     text(name + "_front_print", "ncam   DK·01   COMPACT DISC DECK", 3.2, M["ink"], font="avenir", align="LEFT",
          parent=root, loc=L(-146.0, y - 0.02, 38.0), rot=DK_FRONT)
@@ -309,8 +427,9 @@ def deck_front(name, root):
     for word, x in (("USB", ux), ("SD", sx)):
         text("%s_lbl_%s" % (name, word.lower()), word, 1.8, M["ink"], font="avenir", parent=root,
              loc=L(x, y - 0.02, uz - 6.5), rot=DK_FRONT)
-    text(name + "_front_logo", "ncam", 6.0, M["ink"], font="futura", parent=root, loc=L(95.0, y - 0.02, 40.0),
-         rot=DK_FRONT)
+    px, pz, pw, ph, proud = DK_NAMEPLATE
+    slab(name + "_nameplate", [rrect(pw, ph, 1.0, seg=4 if WEB else 8)], 0.0, proud, M["alu"],
+         bevel_mm=0.0 if WEB else 0.2, parent=root, loc=L(px, y, pz), rot=DK_FRONT)
 
 
 def deck_back(name, root):

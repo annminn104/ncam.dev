@@ -84,6 +84,18 @@ describe('makeMaterial', () => {
     expect(gold.metalness).toBe(1);
     expect(gold.roughness).toBe(0.3);
   });
+
+  // The Deck’s prints draw in the opaque pass, cut out by their atlas’s alpha, and sit 0.15 mm over
+  // their faces: the offset keeps them from fighting those faces in the depth buffer.
+  it('makes the Deck’s print layer a cut-out decal pulled off its face, hidden until it is painted', () => {
+    const decal = makeMaterial('decal', source, maps) as MeshPhysicalMaterial;
+    expect(decal.alphaTest).toBe(0.5);
+    expect(decal.transparent).toBe(false);
+    expect(decal.polygonOffset).toBe(true);
+    expect(decal.polygonOffsetFactor).toBe(-1);
+    expect(decal.polygonOffsetUnits).toBe(-4);
+    expect(decal.visible).toBe(false);
+  });
 });
 
 describe('upgradeMaterials', () => {
@@ -134,6 +146,17 @@ describe('upgradeMaterials', () => {
     expect(glass.castShadow).toBe(false);
     expect(etch.castShadow).toBe(false);
     expect(board.castShadow).toBe(true);
+    upgraded.dispose();
+  });
+
+  it('keeps the Deck’s print layer out of the shadow map, and hands it to the page as a slot', () => {
+    const root = new Group();
+    const print = meshOf('deck_pattern');
+    print.castShadow = true;
+    root.add(print);
+    const upgraded = upgradeMaterials(root);
+    expect(print.castShadow).toBe(false);
+    expect(upgraded.optionalSlots.deck_pattern).toBe(print.material);
     upgraded.dispose();
   });
 

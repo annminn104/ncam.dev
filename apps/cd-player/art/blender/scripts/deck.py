@@ -3,9 +3,10 @@
 CDP_MODEL=deck).
 
 Needs cdkit's and parts.py's namespace (exec'd after them), and is followed into it by
-deck_panel.py (the screen module, the decor controls, the labels and the body's detail) and
-deck_case.py (the flight case and the jewel case), which make_deck and make_deck_player call, so
-all three are exec'd before they run. Blender's axes as in parts.py: x right, y away from the
+deck_panel.py (the screen module, the decor controls, the labels, the body's detail and ncam's
+signature ring and rosette), deck_case.py (the flight case and the jewel case) and deck_print.py
+(the print layer the page paints), which make_deck and make_deck_player call, so all four are
+exec'd before they run. Blender's axes as in parts.py: x right, y away from the
 viewer (the front faces -y), z up, millimetres through L(x, y, z). The deck's footprint is centred
 on the origin, standing on the floor on its four feet; the flight case stands on its right, the
 jewel case lies in front of the case.
@@ -127,8 +128,10 @@ def build_deck_materials(look):
     # them (src/scene/vu-materials.ts), so the GLB carries 1.0; a render's lit segments glow at 3.
     M["vu"] = mat("vu", (0.02, 0.02, 0.022, 1), rough=0.3, emit=glow, emit_s=1.0 if WEB else 3.0)
     M["lcd_screen"] = mat("lcd_screen", (0.01, 0.01, 0.012, 1), rough=0.2)
-    # The flight case's stickers (paper), the RCA outputs' rings.
-    M["sticker"] = mat("sticker", lin(238, 235, 226), rough=0.7)
+    # The print layer (deck_print.py): plain in the GLB, where the page paints its atlas; hero.py
+    # hides it in the owner's stills, or maps its debug checker onto it.
+    M["deck_pattern"] = mat("deck_pattern", (0.9, 0.9, 0.9, 1), rough=0.5)
+    # The RCA outputs' rings.
     M["rca_red"] = mat("rca_red", lin(178, 34, 30), rough=0.4)
     M["rca_white"] = mat("rca_white", lin(236, 236, 232), rough=0.4)
     if not WEB:
@@ -305,7 +308,7 @@ def deck_ring(name, root, playing):
         uv = bm.loops.layers.uv.new("UVMap")
         _ring_sector(bm, uv, DK_RING_IN, DK_RING_OUT, 0.0, 360.0, DK_RING_QUADS, 0.0, 1.0)
         return from_bm(name + "_jog_ring", bm, [M["jog_ring"]], smooth=False, parent=root, loc=L(cx, cy, DK_RING_Z))
-    annulus(name + "_ring_base", DK_RING_OUT + 0.6, DK_RING_IN - 0.6, M["black_glass"], z_mm=DK_RING_Z - 0.03,
+    annulus(name + "_ring_base", DK_RING_OUT + 0.4, DK_RING_IN - 0.6, M["black_glass"], z_mm=DK_RING_Z - 0.03,
             seg=192, parent=root, loc=L(cx, cy, 0.0))
     pitch = 360.0 / DK_RING_SEGMENTS
     for k in range(DK_RING_SEGMENTS):
@@ -322,8 +325,9 @@ def deck_jog(name, root):
     lifts the plate about) at the well's back edge, and under it the jog itself (`<name>_knob`, at
     the well's centre, its local Z up, which the page turns it about): the clear acrylic plate with
     five fine raised rings on its top (they show it turning), a knurled metal side ring with 96
-    shallow ridges, the metal centre cap ringed in the light, with the ncam logo and an index dot in
-    the light at twelve o'clock."""
+    shallow ridges, the metal centre cap ringed in the light, with the ncam logo, a guilloché
+    rosette round it (deck_panel.py's deck_rosette) and an index dot in the light at twelve o'clock.
+    The rim's print (deck_print.py) hangs from the knob too, under the plate."""
     door = empty(name + "_door", L(*DK_HINGE), parent=root)
     cx, cy = DK_WELL
     knob = empty(name + "_knob", L(cx - DK_HINGE[0], cy - DK_HINGE[1], DK_PLATE_Z - DK_HINGE[2]), parent=door)
@@ -342,6 +346,7 @@ def deck_jog(name, root):
     lathe(name + "_jog_cap_ring", [(25.25, top), (26.4, top), (26.4, top + 0.6), (25.25, top + 0.6)],
           M["deck_light"], seg=128, parent=knob)
     text(name + "_jog_logo", "ncam", 6.0, M["ink"], font="futura", parent=knob, loc=L(0.0, -1.2, top + 4.03))
+    deck_rosette(name, knob, top + 4.0)
     lathe(name + "_jog_dot", [(0.01, top + 4.0), (2.0, top + 4.0), (2.0, top + 4.2), (1.6, top + 4.3),
                               (0.01, top + 4.3)], M["deck_light"], seg=24, parent=knob, loc=L(0.0, 18.0, 0.0))
     return door
@@ -432,6 +437,7 @@ def make_deck(name, root, look, playing, disc_label=None):
     deck_screen(name, root, playing)
     deck_spindle(name, root, disc_label if disc_label is not None else M["art_disc"])
     deck_ring(name, root, playing)
+    deck_signature_ring(name, root)
     deck_jog(name, root)
     deck_arm(name, root, playing)
     deck_keys(name, root, playing)
@@ -441,12 +447,14 @@ def make_deck(name, root, look, playing, disc_label=None):
 
 
 def make_deck_player(name, disc_label, booklet, look, rack_labels=None, playlist="Top 50 · Global"):
-    """The whole Deck under the empty `name`: the deck, and the flight case beside it
-    (deck_case.py). A render (not WEB) plays: the arm over the disc, a playing screen, seven VU
-    segments and 30 of the ring's 48 lit, the play key printing ‖ alone."""
+    """The whole Deck under the empty `name`: the deck, the flight case beside it (deck_case.py) and,
+    once both stand, the print layer over them (deck_print.py). A render (not WEB) plays: the arm
+    over the disc, a playing screen, seven VU segments and 30 of the ring's 48 lit, the play key
+    printing ‖ alone."""
     playing = not WEB
     root = empty(name, L(0, 0, 0))
     make_deck(name, root, look, playing, disc_label)
     make_flight_case(name + "_flight", root, rack_labels, playlist, WEB)
     deck_jewel_case(name, root, booklet)
+    deck_prints(name, root)
     return root

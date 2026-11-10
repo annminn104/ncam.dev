@@ -1,10 +1,11 @@
 """The web scene of the Deck: the names the page drives (src/scene/contract.ts), its jog plate's
-hinge (`door_hinge`) and its LED ring (`jog_ring`).
+hinge (`door_hinge`) and its LED ring (`jog_ring`), and the print layer's atlas layout, written to
+src/scene/textures/deck-atlas.json (art/pipeline/build.mjs then formats it with Prettier).
 
-Exec'd by export.py (CDP_MODEL=deck) after cdkit.py, parts.py, deck.py and deck_case.py, into the
-same namespace. The plate is shut, the arm at rest beside the disc, the disc on its spindle, the
-five rack slots in the case empty (the page puts discs in them): the page moves all of it at
-runtime.
+Exec'd by export.py (CDP_MODEL=deck) after cdkit.py, parts.py, deck.py, deck_panel.py,
+deck_case.py and deck_print.py, into the same namespace. The plate is shut, the arm at rest beside
+the disc, the disc on its spindle, the five rack slots in the case empty (the page puts discs in
+them): the page moves all of it at runtime.
 """
 
 import bpy
@@ -54,6 +55,7 @@ def build():
     empty("disc_seat", tuple(disc.location), tuple(disc.rotation_euler), parent=disc.parent)
     case = bpy.data.objects["case"]
     empty("case_seat", tuple(case.location), tuple(case.rotation_euler), parent=case.parent)
+    print("build_deck: the atlas's layout -> %s" % write_deck_atlas(deck_atlas_path()))
     tris = sum(
         sum(len(p.vertices) - 2 for p in ob.data.polygons)
         for ob in SC.collection.all_objects

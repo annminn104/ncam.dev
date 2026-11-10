@@ -46,7 +46,7 @@ function skinRoleOf(name: string): SkinRole | undefined {
   return Object.hasOwn(SKIN_ROLES, name) ? SKIN_ROLES[name] : undefined;
 }
 
-/** The optional dynamic materials this model has (the deck's LED ring). */
+/** The optional dynamic materials this model has (the deck's LED ring and its print layer). */
 export type OptionalSlots = Partial<
   Record<OptionalDynamicMaterial, MeshPhysicalMaterial | MeshBasicMaterial>
 >;
@@ -241,6 +241,22 @@ export function makeMaterial(
         color: new Color('#ffffff'),
         toneMapped: false,
       });
+    case 'decal':
+      // The Deck's personal prints (src/scene/textures): one atlas, cut out by its alpha so that the
+      // prints draw in the opaque pass (the jog's acrylic sees the rim's through its transmission),
+      // pulled toward the camera so that they never fight the faces under them. Hidden until the
+      // page paints the atlas (useDeckPattern).
+      return new MeshPhysicalMaterial({
+        name: source.name,
+        color: new Color('#ffffff'),
+        roughness: 0.5,
+        specularIntensity: 0.3,
+        alphaTest: 0.5,
+        polygonOffset: true,
+        polygonOffsetFactor: -1,
+        polygonOffsetUnits: -4,
+        visible: false,
+      });
   }
 }
 
@@ -391,9 +407,14 @@ export function upgradeMaterials(root: Object3D): UpgradedMaterials {
     }
     source.dispose();
     mesh.material = material;
-    // Glass casts no hard shadow, and neither do the etched lines: three's shadow map ignores
-    // opacity, so half-opaque lines would shade the inside of the shell at full strength.
-    if ((material as MeshPhysicalMaterial).transmission > 0 || role === 'etch') {
+    // Glass casts no hard shadow, and neither do the etched lines nor the Deck's prints: three's
+    // shadow map ignores opacity, so half-opaque lines would shade the inside of the shell at full
+    // strength, and a print, which lies 0.15 mm over its face, would shade the face it covers.
+    if (
+      (material as MeshPhysicalMaterial).transmission > 0 ||
+      role === 'etch' ||
+      role === 'decal'
+    ) {
       mesh.castShadow = false;
     }
   });

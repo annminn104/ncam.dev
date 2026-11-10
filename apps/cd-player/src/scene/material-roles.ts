@@ -25,7 +25,8 @@ export type MaterialRole =
   | 'frame'
   | 'pcb'
   | 'etch'
-  | 'gold';
+  | 'gold'
+  | 'decal';
 
 export const MATERIAL_ROLES: Readonly<Record<string, MaterialRole>> = {
   leather: 'leather',
@@ -83,7 +84,7 @@ export const MATERIAL_ROLES: Readonly<Record<string, MaterialRole>> = {
   deck_light: 'emissive',
   jog_acrylic: 'crystal',
   foam: 'matte',
-  sticker: 'matte',
+  deck_pattern: 'decal',
   rca_red: 'plastic',
   rca_white: 'plastic',
 };

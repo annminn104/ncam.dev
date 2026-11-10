@@ -46,8 +46,11 @@ export type RequiredNode = (typeof REQUIRED_NODES)[number];
 export const OPTIONAL_NODES = ['door_hinge', 'jog_ring'] as const;
 export type OptionalNode = (typeof OPTIONAL_NODES)[number];
 
-/** Materials a model may have whose maps the page paints at runtime: the deck's LED ring. */
-export const OPTIONAL_DYNAMIC_MATERIALS = ['jog_ring'] as const;
+/**
+ * Materials a model may have whose maps the page paints at runtime: the deck's LED ring, and the
+ * deck's print layer (`deck_pattern`: one atlas over every print zone, src/scene/textures/deck-atlas.json).
+ */
+export const OPTIONAL_DYNAMIC_MATERIALS = ['jog_ring', 'deck_pattern'] as const;
 export type OptionalDynamicMaterial = (typeof OPTIONAL_DYNAMIC_MATERIALS)[number];
 
 /** Materials whose maps the page paints at runtime (src/scene/textures). */
