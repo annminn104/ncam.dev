@@ -34,8 +34,8 @@ const LCD_GHOST = 'rgba(158, 238, 255, 0.08)';
 // has them loaded before a print uses them; a face is picked by family, weight and style, so the
 // size it is loaded at does not matter.
 const title = (px: number) => `italic 500 ${px}px ${DISPLAY}`;
-const semibold = (px: number) => `600 ${px}px ${UI}`;
-const bold = (px: number) => `700 ${px}px ${UI}`;
+export const semibold = (px: number) => `600 ${px}px ${UI}`;
+export const bold = (px: number) => `700 ${px}px ${UI}`;
 const FACES = [title(16), semibold(16), bold(16)];
 
 /** How long a print waits for the page's fonts: past it, it goes out in the fallback faces. */
@@ -78,7 +78,7 @@ export function setMap(
   material.needsUpdate = true;
 }
 
-function context(canvas: HTMLCanvasElement): CanvasRenderingContext2D {
+export function context(canvas: HTMLCanvasElement): CanvasRenderingContext2D {
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('no 2D canvas');
   return ctx;
