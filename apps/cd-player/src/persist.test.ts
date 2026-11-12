@@ -3,9 +3,11 @@ import { describe, expect, it } from 'vitest';
 import { CLEAR_SWATCHES, DEFAULT_CLEAR_LOOK } from './clear-looks';
 import {
   CLEAR_KEY,
+  DECK_KEY,
   LOOK_SCRIPT,
   MODEL_KEY,
   readClearLook,
+  readDeckLook,
   readLast,
   readLookState,
   readModel,
@@ -15,10 +17,12 @@ import {
   SKIN_KEY,
   STORAGE_KEY,
   writeClearLook,
+  writeDeckLook,
   writeLast,
   writeModel,
   writeSkin,
 } from './persist';
+import { DEFAULT_DECK_LOOK } from './deck-looks';
 import { DEFAULT_COLLECTION, type CollectionRef } from './routes';
 import { SKINS } from './skins';
 
@@ -131,16 +135,36 @@ describe('the saved model and the Clear model’s colours', () => {
     expect(readClearLook(broken)).toEqual(DEFAULT_CLEAR_LOOK);
   });
 
+  it('round-trips the Deck look as JSON, part by part', () => {
+    const storage = memory();
+    const look = { body: 'silver', light: 'violet' };
+    writeDeckLook(storage, look);
+    expect(DECK_KEY).toBe('ncam.cd-player.deck');
+    expect(readDeckLook(storage)).toEqual(look);
+    expect(readDeckLook(memory({ [DECK_KEY]: '{"body":"silver","light":"neon"}' }))).toEqual({
+      ...DEFAULT_DECK_LOOK,
+      body: 'silver',
+    });
+    for (const junk of ['{nope', '"deck"', 'null', '[]']) {
+      expect(readDeckLook(memory({ [DECK_KEY]: junk })), junk).toEqual(DEFAULT_DECK_LOOK);
+    }
+    expect(readDeckLook(null)).toEqual(DEFAULT_DECK_LOOK);
+    expect(readDeckLook(broken)).toEqual(DEFAULT_DECK_LOOK);
+    expect(() => writeDeckLook(broken, look)).not.toThrow();
+  });
+
   it('reads the whole look state', () => {
     const storage = memory({
       [MODEL_KEY]: 'clear',
       [SKIN_KEY]: 'sage',
       [CLEAR_KEY]: '{"light":"lime"}',
+      [DECK_KEY]: '{"light":"red"}',
     });
     expect(readLookState(storage)).toEqual({
       model: 'clear',
       skin: 'sage',
       clear: { ...DEFAULT_CLEAR_LOOK, light: 'lime' },
+      deck: { ...DEFAULT_DECK_LOOK, light: 'red' },
     });
   });
 });

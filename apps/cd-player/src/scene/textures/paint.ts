@@ -6,6 +6,7 @@ import {
 } from 'three';
 import type { TrackView } from '../../bridge';
 import { clearSwatch } from '../../clear-looks';
+import { deckSwatch } from '../../deck-looks';
 import type { Look } from '../../looks';
 import type { Status } from '../../playback/sequencer';
 import { DECK_SCREEN, playedBars, screenTimes, WAVE_BARS, waveHeights } from './deck-screen';
@@ -287,9 +288,11 @@ function drawDigits(
   }
 }
 
-/** The display's lit colour for a look: the suitcase's cyan, or the Clear model's light. */
+/** The display's lit colour for a look: the suitcase's cyan, or the Clear model's or the Deck's light. */
 export function lcdColour(look: Look): string {
-  return look.model === 'suitcase' ? LCD_ON : clearSwatch(look.clear, 'light').glow;
+  if (look.model === 'clear') return clearSwatch(look.clear, 'light').glow;
+  if (look.model === 'deck') return deckSwatch(look.deck, 'light').glow;
+  return LCD_ON;
 }
 
 /** The deck's display: unlit "88 8:88" ghosts under the lit digits, as on a real LCD. */

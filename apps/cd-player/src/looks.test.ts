@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { clearSwatch, DEFAULT_CLEAR_LOOK } from './clear-looks';
+import { DEFAULT_DECK_LOOK } from './deck-looks';
 import { DEFAULT_LOOK_STATE, lookAccent, lookLabel, lookOf, lookSwatch } from './looks';
 import { skinById } from './skins';
 
@@ -9,6 +10,7 @@ describe('looks', () => {
       model: 'suitcase',
       skin: 'blush',
       clear: DEFAULT_CLEAR_LOOK,
+      deck: DEFAULT_DECK_LOOK,
     });
     expect(lookOf(DEFAULT_LOOK_STATE)).toEqual({ model: 'suitcase', skin: 'blush' });
     expect(lookOf({ ...DEFAULT_LOOK_STATE, model: 'clear' })).toEqual({
@@ -38,5 +40,18 @@ describe('looks', () => {
     expect(lookLabel({ model: 'clear', clear: DEFAULT_CLEAR_LOOK })).toBe(
       'Player: Clear, Ice light',
     );
+  });
+
+  it('draws the Deck in its own colours, its light the page’s accent', () => {
+    const state = {
+      ...DEFAULT_LOOK_STATE,
+      model: 'deck' as const,
+      deck: { body: 'silver', light: 'red' },
+    };
+    const look = lookOf(state);
+    expect(look).toEqual({ model: 'deck', deck: { body: 'silver', light: 'red' } });
+    expect(lookAccent(look)).toEqual({ accent: '#f2aaa5', onAccent: '#2c0f0d' });
+    expect(lookSwatch(look)).toBe('#ff5a52');
+    expect(lookLabel(look)).toBe('Player: Deck, Red light');
   });
 });

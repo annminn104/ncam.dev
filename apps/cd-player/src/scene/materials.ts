@@ -17,6 +17,7 @@ import {
   type Texture,
 } from 'three';
 import { clearSwatch } from '../clear-looks';
+import { deckSwatch } from '../deck-looks';
 import { etchColour, GOLD, traceColour } from './decor-colours';
 import type { Look } from '../looks';
 import { skinById, type Skin, type SkinRole } from '../skins';
@@ -26,7 +27,13 @@ import {
   type DynamicMaterial,
   type OptionalDynamicMaterial,
 } from './contract';
-import { CLEAR_ROLES, MATERIAL_ROLES, SKIN_ROLES, type MaterialRole } from './material-roles';
+import {
+  CLEAR_ROLES,
+  DECK_ROLES,
+  MATERIAL_ROLES,
+  SKIN_ROLES,
+  type MaterialRole,
+} from './material-roles';
 import { leatherNormal, quiltNormal, weaveNormal } from './textures/grain';
 
 export type Slots = Record<DynamicMaterial, MeshPhysicalMaterial | MeshBasicMaterial>;
@@ -293,11 +300,27 @@ const SILK_LUMA_SWITCH = 0.45;
 /**
  * Recolours `materials` in place for `look`: the suitcase's skin roles from its skin (as
  * `applySkin` did), or the Clear model's parts from their swatches, its silkscreen following the
- * board and its `trace` and `etch` the board and the shell. Uniforms only.
+ * board and its `trace` and `etch` the board and the shell, or the Deck's body and light from theirs
+ * (its other materials, the print layer included, stay as they are). Uniforms only.
  */
 export function applyLook(materials: Iterable<Material>, look: Look): void {
   if (look.model === 'suitcase') {
     applySkin(materials, skinById(look.skin));
+    return;
+  }
+  if (look.model === 'deck') {
+    for (const material of materials) {
+      const part = Object.hasOwn(DECK_ROLES, material.name) ? DECK_ROLES[material.name] : undefined;
+      if (part === 'body') {
+        const body = deckSwatch(look.deck, 'body');
+        const surface = material as MeshPhysicalMaterial;
+        surface.color.set(body.colour);
+        surface.metalness = body.metalness;
+        surface.roughness = body.roughness;
+      } else if (part === 'light') {
+        (material as MeshBasicMaterial).color.set(deckSwatch(look.deck, 'light').glow);
+      }
+    }
     return;
   }
   const board = clearSwatch(look.clear, 'board').colour;
@@ -340,7 +363,8 @@ export function applyLook(materials: Iterable<Material>, look: Look): void {
 
 /**
  * The materials under `root` a look recolours, by name, as sRGB hex (for the live check): a skin's
- * roles on the suitcase, the Clear model's parts, its silkscreen and its `trace` and `etch`.
+ * roles on the suitcase, the Clear model's parts, its silkscreen and its `trace` and `etch`, the
+ * Deck's body and light.
  */
 export function skinColours(root: Object3D): Record<string, string> {
   const colours: Record<string, string> = {};
@@ -352,6 +376,7 @@ export function skinColours(root: Object3D): Record<string, string> {
     if (
       skinRoleOf(name) ||
       Object.hasOwn(CLEAR_ROLES, name) ||
+      Object.hasOwn(DECK_ROLES, name) ||
       name === 'silk' ||
       name === 'trace' ||
       name === 'etch'

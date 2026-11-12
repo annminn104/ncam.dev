@@ -30,9 +30,11 @@ const dist = (f: ReturnType<typeof frameFor>) =>
  * The Clear's floor is 60 %: under the shared orbit, perspective swings the near end of its wide,
  * low set toward the camera on a wide canvas, so its projected half-height grows about 1.6 times
  * from the orbit's middle to its ends, where 70 % at the middle and 1 % clear at the ends allow
- * only 1.4.
+ * only 1.4. The Deck's is 65 %: its set is wide and low like the Clear's, and its near end
+ * (the deck's front left, the jewel case's front right) swings the same way; the least, at 8:7,
+ * is 67 %.
  */
-const FILL_FLOOR = { suitcase: 0.7, clear: 0.6 } as const;
+const FILL_FLOOR = { suitcase: 0.7, clear: 0.6, deck: 0.65 } as const;
 
 /**
  * The hero camera of a canvas this size, turned by the orbit, magnified by the lens and panned, as
@@ -149,8 +151,11 @@ function panCorners(model: ModelId): Pan[] {
  * square to the hero direction, and the orbit turns about the panned aim, so a turned orbit carries
  * a pan's share along the view: the Clear's worst, at 4:3, yaw −25°, pitch +10° and the pan at the
  * right and down, brings the near end of its wide set 0.13 m nearer than at 1×, and keeps 0.12 m.
+ * The Deck's set is deeper (the jewel case lies 0.22 m in front of its middle): its near plane, which
+ * the foil's depth steps hold at 0.82 m, leaves its worst (at 4:3, yaw −25°, pitch +10° and the pan
+ * at the right and down) 0.048 m.
  */
-const PAN_CLEARANCE = { suitcase: 0.2, clear: 0.12 } as const;
+const PAN_CLEARANCE = { suitcase: 0.2, clear: 0.12, deck: 0.04 } as const;
 
 /** The point of the aim's plane under a canvas point: the plane every panned aim lies on. */
 function aimPlanePoint(model: ModelId, camera: PerspectiveCamera, at: CanvasPoint): Vector3 {
@@ -195,7 +200,7 @@ describe('framing', () => {
     expect(isWide(821)).toBe(true);
   });
 
-  for (const model of ['suitcase', 'clear'] as const)
+  for (const model of ['suitcase', 'clear', 'deck'] as const)
     describe(model, () => {
       it('looks from the hero still: front left, above', () => {
         const f = frameFor(16 / 9, 0, 0, model);

@@ -1,4 +1,5 @@
 import type { ClearPart } from '../clear-looks';
+import type { DeckPart } from '../deck-looks';
 import type { SkinRole } from '../skins';
 
 /**
@@ -111,4 +112,10 @@ export const CLEAR_ROLES: Readonly<Record<string, ClearPart>> = {
   clear_frame: 'frame',
   board: 'board',
   light: 'light',
+};
+
+/** GLB material name → the Deck's part that colours it (src/deck-looks.ts). */
+export const DECK_ROLES: Readonly<Record<string, DeckPart>> = {
+  deck_body: 'body',
+  deck_light: 'light',
 };

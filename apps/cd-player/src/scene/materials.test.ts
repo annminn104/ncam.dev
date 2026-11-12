@@ -15,6 +15,7 @@ import {
 } from 'three';
 import { describe, expect, it } from 'vitest';
 import { CLEAR_SWATCHES, clearSwatch, type ClearLook } from '../clear-looks';
+import { deckSwatch } from '../deck-looks';
 import { SKINS, skinById, type Skin } from '../skins';
 import { DYNAMIC_MATERIALS } from './contract';
 import { etchColour, traceColour } from './decor-colours';
@@ -356,6 +357,53 @@ describe('applyLook', () => {
     applyLook(Object.values(m), { model: 'suitcase', skin: 'cherry' });
     expect(hex(m.shell.color)).toBe(shell);
     expect(hex(m.leather.color)).toBe(skinById('cherry').palette.leather);
+  });
+
+  describe('the Deck', () => {
+    const deck = { body: 'silver', light: 'red' };
+    const deckMaterials = () => ({
+      body: new MeshPhysicalMaterial({ name: 'deck_body' }),
+      light: new MeshBasicMaterial({ name: 'deck_light' }),
+      hardware: new MeshPhysicalMaterial({ name: 'hardware' }),
+      pattern: new MeshBasicMaterial({ name: 'deck_pattern' }),
+      shell: new MeshPhysicalMaterial({ name: 'clear_shell' }),
+    });
+
+    it('colours the body and the light from their swatches', () => {
+      const m = deckMaterials();
+      applyLook(Object.values(m), { model: 'deck', deck });
+      expect(hex(m.body.color)).toBe(deckSwatch(deck, 'body').colour);
+      expect(m.body.metalness).toBe(deckSwatch(deck, 'body').metalness);
+      expect(m.body.roughness).toBe(deckSwatch(deck, 'body').roughness);
+      expect(hex(m.light.color)).toBe(deckSwatch(deck, 'light').glow);
+    });
+
+    it('leaves every other material alone, the suitcase’s hardware and the print layer included', () => {
+      const m = deckMaterials();
+      const before = Object.fromEntries(
+        Object.entries(m).map(([key, material]) => [key, hex(material.color)]),
+      );
+      applyLook(Object.values(m), { model: 'deck', deck });
+      for (const key of ['hardware', 'pattern', 'shell'] as const) {
+        expect(hex(m[key].color), key).toBe(before[key]);
+      }
+    });
+
+    it('is left alone by the other looks, and reports its colours to the live check', () => {
+      const m = deckMaterials();
+      applyLook(Object.values(m), { model: 'deck', deck });
+      const body = hex(m.body.color);
+      applyLook(Object.values(m), { model: 'suitcase', skin: 'cherry' });
+      expect(hex(m.body.color)).toBe(body);
+      const root = new Group();
+      for (const material of [m.body, m.light, m.pattern]) {
+        root.add(new Mesh(new BoxGeometry(), material));
+      }
+      expect(skinColours(root)).toEqual({
+        deck_body: deckSwatch(deck, 'body').colour,
+        deck_light: deckSwatch(deck, 'light').glow,
+      });
+    });
   });
 
   it('prints the silkscreen light on a dark board and dark on the white one, as the render does', () => {

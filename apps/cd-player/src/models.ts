@@ -1,9 +1,9 @@
 /**
- * The players a visitor can pick under Player: the suitcase (the default, with its four skins)
- * and the Clear model (its colours chosen part by part). Three-free on purpose
+ * The players a visitor can pick under Player: the suitcase (the default, with its four skins),
+ * the Clear model and the Deck (their colours chosen part by part). Three-free on purpose
  * (src/ssr-graph.test.ts); the scene's own numbers per model are in src/scene/profiles.ts.
  */
-export type ModelId = 'suitcase' | 'clear';
+export type ModelId = 'suitcase' | 'clear' | 'deck';
 export type LookKind = 'skins' | 'parts';
 
 export interface ModelProfile {

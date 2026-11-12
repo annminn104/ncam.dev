@@ -1,4 +1,5 @@
 import { CLEAR_SWATCHES, clearLookFrom, DEFAULT_CLEAR_LOOK, type ClearLook } from './clear-looks';
+import { deckLookFrom, DEFAULT_DECK_LOOK, type DeckLook } from './deck-looks';
 import type { LookState } from './looks';
 import { DEFAULT_MODEL, modelById, type ModelId } from './models';
 import { DEFAULT_COLLECTION, SPOTIFY_ID, sameCollection, type CollectionRef } from './routes';
@@ -61,6 +62,8 @@ export function writeSkin(storage: WriteStore | null, id: SkinId): void {
 export const MODEL_KEY = 'ncam.cd-player.model';
 /** The Clear model's colours, part by part (src/clear-looks.ts), as JSON. */
 export const CLEAR_KEY = 'ncam.cd-player.clear';
+/** The Deck's colours, part by part (src/deck-looks.ts), as JSON. */
+export const DECK_KEY = 'ncam.cd-player.deck';
 
 /** The saved model; nothing saved, an id no model has, or storage that throws is the suitcase. */
 export function readModel(storage: ReadStore | null): ModelId {
@@ -99,9 +102,33 @@ export function writeClearLook(storage: WriteStore | null, look: ClearLook): voi
   }
 }
 
-/** Everything saved: the model, the suitcase's skin and the Clear model's colours. */
+/** The saved Deck colours, part by part; a part that is missing or unknown is its default. */
+export function readDeckLook(storage: ReadStore | null): DeckLook {
+  try {
+    const raw = storage?.getItem(DECK_KEY);
+    return deckLookFrom(raw ? (JSON.parse(raw) as unknown) : null);
+  } catch {
+    // Unreadable storage or JSON that does not parse is no saved look.
+    return DEFAULT_DECK_LOOK;
+  }
+}
+
+export function writeDeckLook(storage: WriteStore | null, look: DeckLook): void {
+  try {
+    storage?.setItem(DECK_KEY, JSON.stringify(look));
+  } catch {
+    // A full or blocked storage just forgets.
+  }
+}
+
+/** Everything saved: the model, the suitcase's skin, and the Clear model's and the Deck's colours. */
 export function readLookState(storage: ReadStore | null): LookState {
-  return { model: readModel(storage), skin: readSkin(storage), clear: readClearLook(storage) };
+  return {
+    model: readModel(storage),
+    skin: readSkin(storage),
+    clear: readClearLook(storage),
+    deck: readDeckLook(storage),
+  };
 }
 
 const SKIN_PAIRS = Object.fromEntries(SKINS.map((skin) => [skin.id, [skin.accent, skin.onAccent]]));

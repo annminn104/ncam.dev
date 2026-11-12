@@ -81,4 +81,36 @@ export const SCENE_PROFILES: Readonly<Record<ModelId, SceneProfile>> = {
     // door, which opens to the left (src/scene/rig.test.ts flies every way against the shell).
     flight: { reach: { slot: 0.3, spindle: 0.1 }, aside: [0.1, 0.1, 0.1] },
   },
+  deck: {
+    // Seen from the Deck hero still's camera (Blender's (-320, -900, 480) over its aim (60, 0, 80),
+    // in three's axes): front left, above. The set (the deck and the flight case right of it) is
+    // wide and low: the camera fits it by its own half-width and half-height. It aims at the set's
+    // middle (x 0.128, 0.42 of its height) a little in front of the box's middle (z 0.05), toward
+    // the jewel case: from there the orbit's ends keep the whole set 1 % inside the canvas.
+    frame: {
+      target: [0.128, 0.115, 0.05],
+      direction: unit([-0.38, 0.4, 0.9]),
+      across: 0.44,
+      up: 0.36,
+    },
+    // The set is deep (0.45 m) as well as wide: the foil's depth steps (rig test: six or more, even on
+    // a narrow canvas where the camera stands far back) need this near plane, and the orbit's worst
+    // corner still stands 0.2 m past it.
+    near: 0.82,
+    // About the arm pivot's Y: 0 is its rest beside the disc; play puts the head over the outer
+    // tracks (deck.py's DECK_ARM_PLAY, 50°).
+    arm: { rest: 0, play: (50 * Math.PI) / 180 },
+    // The jog plate lifts about its back edge (the hinge's X), front up: a negative turn.
+    door: { angle: -(70 * Math.PI) / 180, axis: 'x' },
+    // A disc leaves its slot along the slot's normal, 30 cm out, so that it clears the case's front
+    // wall before it turns toward the deck; it comes down into the well from 25 cm above it, high
+    // enough to clear the deck's right edge (a lower reach cuts the chassis) and, leaving, to stay in
+    // front of the lifted plate (src/scene/rig.test.ts flies every way against both). Out of sight
+    // it goes up, to the right and toward the viewer, clear of the plate, which lifts at the back.
+    flight: { reach: { slot: 0.3, spindle: 0.25 }, aside: [0.1, 0.1, 0.1] },
+    knobTurnsDisc: true,
+    clockwise: true,
+    // The big 16:9 screen instead of the segment LCD.
+    screen: 'deck',
+  },
 };

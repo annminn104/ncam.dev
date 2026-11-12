@@ -41,4 +41,25 @@ describe('scene profiles', () => {
     expect(arm).toEqual({ rest: 0, play: 0.52 });
     expect(door?.angle).toBeCloseTo(-(100 * Math.PI) / 180, 12);
   });
+
+  it('drives the Deck’s jog plate about X, its disc clockwise by the knob, with its big screen', () => {
+    const { arm, door, knobTurnsDisc, clockwise, screen, frame } = SCENE_PROFILES.deck;
+    expect(knobTurnsDisc).toBe(true);
+    expect(clockwise).toBe(true);
+    expect(screen).toBe('deck');
+    expect(door?.axis).toBe('x');
+    // The plate lifts front up: a negative turn about X, 70° (the measures test lifts it so).
+    expect(door?.angle).toBeCloseTo(-(70 * Math.PI) / 180, 12);
+    // The arm plays 50° about its pivot's Y (deck.py's DECK_ARM_PLAY).
+    expect(arm).toEqual({ rest: 0, play: (50 * Math.PI) / 180 });
+    expect(Math.hypot(...frame.direction)).toBeCloseTo(1, 12);
+  });
+
+  it('gives the suitcase and the Clear model the segment LCD, and neither a knob that turns the disc', () => {
+    for (const id of ['suitcase', 'clear'] as const) {
+      expect(SCENE_PROFILES[id].screen, id).toBeUndefined();
+      expect(SCENE_PROFILES[id].knobTurnsDisc, id).toBeUndefined();
+      expect(SCENE_PROFILES[id].clockwise, id).toBeUndefined();
+    }
+  });
 });

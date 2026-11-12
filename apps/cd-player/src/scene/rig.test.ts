@@ -1,6 +1,7 @@
 import {
   BoxGeometry,
   Group,
+  Matrix4,
   Mesh,
   MeshPhysicalMaterial,
   Object3D,
@@ -10,7 +11,19 @@ import {
 } from 'three';
 import { describe, expect, it, vi } from 'vitest';
 import type { TrackView } from '../bridge';
-import { CLEAR_SEAT, CLEAR_SHELL, CLEAR_STAND, clearSlot } from '../testing/model-measures';
+import {
+  CLEAR_SEAT,
+  CLEAR_SHELL,
+  CLEAR_STAND,
+  DECK_CASE,
+  DECK_CHASSIS,
+  DECK_DOOR,
+  DECK_SCREEN,
+  DECK_SEAT,
+  DECK_WELL,
+  clearSlot,
+  deckSlot,
+} from '../testing/model-measures';
 import type { RequiredNode } from './contract';
 import {
   ARM_PLAY,
@@ -233,6 +246,25 @@ describe('the door', () => {
       angle: -(100 * Math.PI) / 180,
       axis: 'y',
     });
+  });
+
+  it('is the Deck’s jog plate: a hinge lifted about X, its shut turn kept', () => {
+    const { model } = fakeModel();
+    const hinge = named(new Object3D(), 'door_hinge');
+    hinge.rotation.x = 0.1;
+    model.root.add(hinge);
+    const deck: PlayerModel = {
+      ...model,
+      id: 'deck',
+      nodes: { ...model.nodes, door_hinge: hinge },
+    };
+    const rig = rigFor(deck);
+    const { angle } = SCENE_PROFILES.deck.door!;
+    expect(rig.door).toEqual({ node: hinge, base: 0.1, angle, axis: 'x' });
+    const rest = restingPose(emptyShelf(), false, false);
+    applyPose(rig, { ...rest, door: 1 }, 0);
+    expect(hinge.rotation.x).toBeCloseTo(0.1 + angle, 12);
+    expect(hinge.rotation.y).toBe(0);
   });
 
   it('is none for a model without one, hinge or no hinge', () => {
@@ -550,6 +582,155 @@ describe('the Clear model’s flights', () => {
     expect(offset.z).toBeGreaterThan(0.04);
     expect(offset.x).toBeGreaterThan(0);
     expect(offset.y).toBeGreaterThan(0);
+  });
+});
+
+describe('the Deck’s flights', () => {
+  /** Rim points of a disc copy (Ø 120 mm), and the obstacles' margin: a hair inside every box. */
+  const RIM = 96;
+  const HAIR = 1e-4;
+  const [cx, , cz] = DECK_WELL.centre;
+
+  /**
+   * The flight case's base (art/blender/scripts/deck_case.py, in its own frame): 170 × 150 mm and
+   * 120 mm tall from its 7 mm ball corners, open on top, its walls (3 mm of aluminium and the
+   * angle extrusions over them) a few millimetres thick, its floor too. Its lid stands open past
+   * upright behind it and its foam block fills the base's lower part, the slots cut in it: neither is
+   * an obstacle here, a disc leaves its slot by the way the rig sends it, along the slot's normal,
+   * and only the walls and the floor stop it.
+   */
+  const BASE = { halfWidth: 0.085, halfDepth: 0.075, top: 0.127, floor: 0.01, wall: 0.006 };
+  /** How far a disc may stray from its slot's axis while it passes the front wall (metres). */
+  const COLUMN_PLAY = 0.003;
+
+  /**
+   * The fake model posed as cd-player-deck.glb: the spindle's seat at the well's centre, flat
+   * (its normal up), the flight case's frame right of the deck turned 18° toward it, and its five
+   * slots in that frame, every one turned a quarter about X so a disc stands up in it facing the
+   * case's front. Measured with three's GLTFLoader, which model-contract.test.ts holds to them
+   * (src/testing/model-measures.ts).
+   */
+  function deckSet() {
+    const { model, slots, lid } = fakeModel();
+    const { disc, disc_seat: seat } = model.nodes;
+    seat.position.set(...DECK_SEAT.position);
+    seat.quaternion.identity();
+    disc.position.copy(seat.position);
+    disc.quaternion.copy(seat.quaternion);
+    lid.position.set(0.28, 0, -0.04);
+    lid.rotation.set(0, DECK_CASE.turn, 0);
+    slots.forEach((slot, k) => {
+      const { position, rotationX } = deckSlot(k);
+      slot.position.set(...position);
+      slot.rotation.set(rotationX, 0, 0);
+    });
+    const deck: PlayerModel = { ...model, id: 'deck' };
+    lid.updateMatrixWorld(true);
+    return { rig: rigFor(deck), toCase: lid.matrixWorld.clone().invert() };
+  }
+
+  const inBox = (
+    p: Vector3,
+    box: { readonly min: readonly number[]; readonly max: readonly number[] },
+  ) =>
+    p.x > box.min[0] + HAIR &&
+    p.x < box.max[0] - HAIR &&
+    p.y > box.min[1] + HAIR &&
+    p.y < box.max[1] - HAIR &&
+    p.z > box.min[2] + HAIR &&
+    p.z < box.max[2] - HAIR;
+
+  /** The jog plate lifted by the profile's angle about its hinge's X: a point's place in its shut frame. */
+  const hinge = new Vector3(...DECK_DOOR.hinge);
+  const unlift = (p: Vector3, angle: number) =>
+    p
+      .clone()
+      .sub(hinge)
+      .applyAxisAngle(new Vector3(1, 0, 0), -angle)
+      .add(hinge);
+
+  /** What a point of a disc, as posed, stands in, if anything. */
+  function obstacle(p: Vector3, toCase: Matrix4, doorAngle: number): string | null {
+    const inWell =
+      Math.hypot(p.x - cx, p.z - cz) <= DECK_WELL.radius && p.y >= DECK_WELL.floor - HAIR;
+    if (inBox(p, DECK_CHASSIS) && !inWell) return 'the chassis';
+    if (inBox(p, DECK_SCREEN)) return 'the screen';
+    if (inBox(unlift(p, doorAngle), DECK_DOOR.shut)) return 'the lifted plate';
+    const local = p.clone().applyMatrix4(toCase);
+    const inner = {
+      min: [-BASE.halfWidth + BASE.wall, BASE.floor, -BASE.halfDepth + BASE.wall],
+      max: [BASE.halfWidth - BASE.wall, BASE.top, BASE.halfDepth - BASE.wall],
+    };
+    const outer = {
+      min: [-BASE.halfWidth, 0, -BASE.halfDepth],
+      max: [BASE.halfWidth, BASE.top, BASE.halfDepth],
+    };
+    if (inBox(local, outer) && !inBox(local, inner)) {
+      // The case's walls and floor, but for the column each slot's disc leaves by: out of its slot
+      // along its normal through the front, a disc's width across and a hair more.
+      const column = [0, 1, 2, 3, 4].some((k) => {
+        const { position } = deckSlot(k);
+        return (
+          local.z >= position[2] &&
+          Math.hypot(local.x - position[0], local.y - position[1]) <= 0.06 + COLUMN_PLAY
+        );
+      });
+      if (!column) return 'the case';
+    }
+    return null;
+  }
+
+  /** Every obstacle any rim point of a disc copy stands in, as posed. */
+  function rimHits(object: Object3D, toCase: Matrix4, doorAngle: number): string[] {
+    object.updateMatrixWorld(true);
+    const hits = new Set<string>();
+    for (let k = 0; k < RIM; k++) {
+      const turn = (k / RIM) * 2 * Math.PI;
+      const rim = new Vector3(0.06 * Math.cos(turn), 0, 0.06 * Math.sin(turn));
+      const hit = obstacle(rim.applyMatrix4(object.matrixWorld), toCase, doorAngle);
+      if (hit) hits.add(hit);
+    }
+    return [...hits];
+  }
+
+  it('keeps the case’s base inside the measured case', () => {
+    expect(BASE.halfWidth).toBeLessThanOrEqual(DECK_CASE.max[0]);
+    expect(-BASE.halfWidth).toBeGreaterThanOrEqual(DECK_CASE.min[0]);
+    expect(BASE.halfDepth).toBeLessThanOrEqual(DECK_CASE.max[2]);
+    expect(-BASE.halfDepth).toBeGreaterThanOrEqual(DECK_CASE.min[2]);
+    expect(BASE.top).toBeLessThanOrEqual(DECK_CASE.max[1]);
+  });
+
+  it('reaches the spindle from above, flat, along its seat’s normal', () => {
+    const { rig } = deckSet();
+    expect(rig.seat.out.distanceTo(new Vector3(0, 1, 0))).toBeLessThan(1e-12);
+    const disc = rig.discs[1].object;
+    applyPose(rig, only(1, { from: 0, to: 'spindle', along: 0.95 }), 0);
+    const offset = disc.position.clone().sub(rig.seat.position);
+    expect(offset.dot(rig.seat.out)).toBeGreaterThan(0);
+    expect(Math.hypot(offset.x, offset.z)).toBeLessThan(0.02);
+  });
+
+  it('flies every way between a slot and the spindle clear of the deck, its screen, the lifted plate and the case', () => {
+    const { rig, toCase } = deckSet();
+    const doorAngle = SCENE_PROFILES.deck.door!.angle;
+    const ways: [string, DiscPose['from'], DiscPose['to']][] = [
+      ...[0, 1, 2, 3, 4].flatMap((slot): [string, DiscPose['from'], DiscPose['to']][] => [
+        [`slot ${slot} onto the spindle`, slot, 'spindle'],
+        [`the spindle back into slot ${slot}`, 'spindle', slot],
+      ]),
+      ['the spindle out of sight', 'spindle', null],
+      ['out of sight onto the spindle', null, 'spindle'],
+    ];
+    for (const [way, from, to] of ways) {
+      for (let step = 0; step <= 200; step++) {
+        const along = step / 200;
+        applyPose(rig, only(1, { from, to, along }), 0);
+        const disc = rig.discs[1].object;
+        if (!disc.visible) continue;
+        expect(rimHits(disc, toCase, doorAngle), `${way}, along ${along}`).toEqual([]);
+      }
+    }
   });
 });
 
