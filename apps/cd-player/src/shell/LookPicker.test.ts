@@ -3,6 +3,7 @@ import { createElement } from 'react';
 import { renderToString } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { CLEAR_SWATCHES, DEFAULT_CLEAR_LOOK } from '../clear-looks';
+import { DECK_SWATCHES, DEFAULT_DECK_LOOK } from '../deck-looks';
 import { DEFAULT_LOOK_STATE, lookLabel, lookOf, lookSwatch, type LookState } from '../looks';
 import type { ModelLoad } from '../scene-props';
 import { SKINS } from '../skins';
@@ -24,6 +25,7 @@ const menu = (look: LookState, load: ModelLoad | null = null, open = true) =>
 const groups = (html: string) =>
   [...html.matchAll(/role="radiogroup" aria-label="([^"]+)"/g)].map((m) => m[1]);
 const CLEAR: LookState = { ...DEFAULT_LOOK_STATE, model: 'clear' };
+const DECK: LookState = { ...DEFAULT_LOOK_STATE, model: 'deck' };
 const RADIO =
   /<button type="button" role="radio" aria-checked="(true|false)" tabindex="(0|-1)"[^>]*>(.*?)<\/button>/g;
 
@@ -87,6 +89,51 @@ describe('LookMenu', () => {
       expect(html).toContain(`aria-label="${swatch.name}"`);
     expect([...html.matchAll(/aria-checked="true"/g)]).toHaveLength(5);
     expect(DEFAULT_CLEAR_LOOK.light).toBe('ice');
+  });
+
+  it('offers the Deck its Body and Light, as dots, with the look’s ids ticked', () => {
+    const html = menu(DECK);
+    expect(groups(html)).toEqual(['Model', 'Body', 'Light']);
+    const models = html.slice(
+      html.indexOf('aria-label="Model"'),
+      html.indexOf('aria-label="Body"'),
+    );
+    for (const name of ['Suitcase', 'Clear', 'Deck']) expect(models).toContain(name);
+    for (const part of ['body', 'light'] as const)
+      for (const swatch of DECK_SWATCHES[part])
+        expect(html).toContain(`aria-label="${swatch.name}"`);
+    expect(DECK_SWATCHES.body).toHaveLength(3);
+    expect(DECK_SWATCHES.light).toHaveLength(6);
+    expect([...html.matchAll(/aria-checked="true"/g)]).toHaveLength(3);
+    const ticked = (label: string, next: string) => {
+      const from = html.indexOf(`aria-label="${label}"`);
+      const end = next ? html.indexOf(`aria-label="${next}"`) : html.length;
+      const m = [...html.slice(from, end).matchAll(RADIO)].find((r) => r[1] === 'true');
+      return m?.[3].includes('<svg');
+    };
+    expect(ticked('Body', 'Light')).toBe(true);
+    expect(ticked('Light', '')).toBe(true);
+    expect(DEFAULT_DECK_LOOK).toEqual({ body: 'black', light: 'ice' });
+  });
+
+  it('changes only the Deck’s light when a light is picked', () => {
+    const seen: LookState[] = [];
+    const tree = LookMenu({ look: DECK, open: true, onChange: (n) => seen.push(n), load: null });
+    const walk = (node: unknown, out: { props: Record<string, unknown> }[] = []) => {
+      if (Array.isArray(node)) for (const k of node) walk(k, out);
+      else if (node && typeof node === 'object') {
+        const el = node as { props?: Record<string, unknown>; type?: unknown };
+        if (el.props) out.push(el as { props: Record<string, unknown> });
+        const kids = el.props?.children;
+        for (const k of Array.isArray(kids) ? kids : [kids]) walk(k, out);
+      }
+      return out;
+    };
+    const lightGroup = walk(tree).find(
+      (n) => (n.props.group as { label?: string } | undefined)?.label === 'Light',
+    )!.props.group as { pick(id: string): void };
+    lightGroup.pick('violet');
+    expect(seen).toEqual([{ ...DECK, deck: { ...DEFAULT_DECK_LOOK, light: 'violet' } }]);
   });
 
   it('is hidden while closed and shown while open', () => {

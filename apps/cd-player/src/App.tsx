@@ -27,6 +27,7 @@ import {
   restoreTarget,
   safeStorage,
   writeClearLook,
+  writeDeckLook,
   writeLast,
   writeModel,
   writeSkin,
@@ -145,6 +146,7 @@ export default function App({ controller, initial = null, assetBase = '', initia
       const storage = safeStorage();
       writeSkin(storage, next.skin);
       writeClearLook(storage, next.clear);
+      writeDeckLook(storage, next.deck);
       // Kept at once while nothing is on the stage (the boot loads it), else once it is on show.
       keeper.choose(next.model);
     },

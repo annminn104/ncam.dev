@@ -22,7 +22,7 @@ import {
   writeModel,
   writeSkin,
 } from './persist';
-import { DEFAULT_DECK_LOOK } from './deck-looks';
+import { DECK_SWATCHES, DEFAULT_DECK_LOOK } from './deck-looks';
 import { DEFAULT_COLLECTION, type CollectionRef } from './routes';
 import { SKINS } from './skins';
 
@@ -194,6 +194,21 @@ describe('LOOK_SCRIPT', () => {
   it('paints nothing where readSkin finds no skin', () => {
     for (const junk of ['midnight', '', 'SAGE', 'toString', '__proto__', 'constructor']) {
       expect(paint(memory({ [SKIN_KEY]: junk })), junk).toEqual({});
+    }
+  });
+
+  it('paints the saved light’s pair on the Deck, its default light’s for junk', () => {
+    const pair = (id: string) => {
+      const light = DECK_SWATCHES.light.find((l) => l.id === id)!;
+      return { '--cdp-accent': light.accent, '--cdp-on-accent': light.onAccent };
+    };
+    expect(paint(memory({ [MODEL_KEY]: 'deck', [DECK_KEY]: '{"light":"violet"}' }))).toEqual(
+      pair('violet'),
+    );
+    for (const junk of [undefined, '{nope', '{"light":"neon"}', '{"light":"__proto__"}']) {
+      const store: Record<string, string> = { [MODEL_KEY]: 'deck' };
+      if (junk !== undefined) store[DECK_KEY] = junk;
+      expect(paint(memory(store)), String(junk)).toEqual(pair(DEFAULT_DECK_LOOK.light));
     }
   });
 

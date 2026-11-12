@@ -1,5 +1,5 @@
 import { CLEAR_SWATCHES, clearLookFrom, DEFAULT_CLEAR_LOOK, type ClearLook } from './clear-looks';
-import { deckLookFrom, DEFAULT_DECK_LOOK, type DeckLook } from './deck-looks';
+import { DECK_SWATCHES, deckLookFrom, DEFAULT_DECK_LOOK, type DeckLook } from './deck-looks';
 import type { LookState } from './looks';
 import { DEFAULT_MODEL, modelById, type ModelId } from './models';
 import { DEFAULT_COLLECTION, SPOTIFY_ID, sameCollection, type CollectionRef } from './routes';
@@ -58,7 +58,7 @@ export function writeSkin(storage: WriteStore | null, id: SkinId): void {
   }
 }
 
-/** The visitor's model (src/models.ts): the suitcase unless they chose the Clear one. */
+/** The visitor's model (src/models.ts): the suitcase unless they chose another. */
 export const MODEL_KEY = 'ncam.cd-player.model';
 /** The Clear model's colours, part by part (src/clear-looks.ts), as JSON. */
 export const CLEAR_KEY = 'ncam.cd-player.clear';
@@ -135,6 +135,9 @@ const SKIN_PAIRS = Object.fromEntries(SKINS.map((skin) => [skin.id, [skin.accent
 const LIGHT_PAIRS = Object.fromEntries(
   CLEAR_SWATCHES.light.map((light) => [light.id, [light.accent, light.onAccent]]),
 );
+const DECK_LIGHT_PAIRS = Object.fromEntries(
+  DECK_SWATCHES.light.map((light) => [light.id, [light.accent, light.onAccent]]),
+);
 
 // What JSON.stringify leaves as it is but an inline script must not hold: `<`, `>` and `/` (a string
 // holding `</script>` or `<!--` would end the element or change how it parses) and U+2028 and
@@ -156,8 +159,8 @@ export function scriptLiteral(value: unknown): string {
 /**
  * The accent pair of the saved look on `.cdp-root` before the first paint: the text of the inline
  * script App renders as the root's first child, which the browser runs as it parses the server's
- * markup. It paints the saved light's pair when the saved model is the Clear one (its default
- * light's where the saved colours name none) and the saved skin's pair otherwise. The server and
+ * markup. It paints the saved light's pair when the saved model is the Clear one or the Deck (its
+ * default light's where the saved colours name none) and the saved skin's pair otherwise. The server and
  * the first client render are in the suitcase's Blush, so the trees match, and the page's pastel
  * is made from the accent: without it a saved Sage or a saved pink light would paint Blush's whole
  * page until the remote hydrates. React leaves the attribute as it is when it hydrates (it never
@@ -169,10 +172,12 @@ export function scriptLiteral(value: unknown): string {
  */
 export const LOOK_SCRIPT = `(function(){try{var s=${scriptLiteral(SKIN_PAIRS)},l=${scriptLiteral(
   LIGHT_PAIRS,
-)},t=localStorage,h=Object.prototype.hasOwnProperty,a=0,k;if(t.getItem(${scriptLiteral(
+)},d=${scriptLiteral(DECK_LIGHT_PAIRS)},t=localStorage,h=Object.prototype.hasOwnProperty,a=0,k,m=t.getItem(${scriptLiteral(
   MODEL_KEY,
-)})==='clear'){try{k=JSON.parse(t.getItem(${scriptLiteral(CLEAR_KEY)})).light}catch(e){}a=typeof k==='string'&&h.call(l,k)?l[k]:l[${scriptLiteral(
+)});if(m==='clear'){try{k=JSON.parse(t.getItem(${scriptLiteral(CLEAR_KEY)})).light}catch(e){}a=typeof k==='string'&&h.call(l,k)?l[k]:l[${scriptLiteral(
   DEFAULT_CLEAR_LOOK.light,
+)}]}else if(m==='deck'){try{k=JSON.parse(t.getItem(${scriptLiteral(DECK_KEY)})).light}catch(e){}a=typeof k==='string'&&h.call(d,k)?d[k]:d[${scriptLiteral(
+  DEFAULT_DECK_LOOK.light,
 )}]}else{k=t.getItem(${scriptLiteral(SKIN_KEY)});a=k&&h.call(s,k)?s[k]:0}if(a){var r=document.currentScript.parentNode.style;r.setProperty('--cdp-accent',a[0]);r.setProperty('--cdp-on-accent',a[1])}}catch(e){}})();`;
 
 /**

@@ -9,6 +9,7 @@ import {
   type LightSwatch,
   type ShellSwatch,
 } from '../clear-looks';
+import { DECK_PART_NAMES, DECK_PARTS, DECK_SWATCHES } from '../deck-looks';
 import { lookLabel, lookOf, lookSwatch, type LookState } from '../looks';
 import { MODELS, modelById, type ModelId } from '../models';
 import type { ModelLoad } from '../scene-props';
@@ -87,7 +88,7 @@ function swatchColour(swatch: ShellSwatch | FrameSwatch | BoardSwatch | LightSwa
   return swatch.colour;
 }
 
-/** The menu's groups: the model, then the suitcase's skins or the Clear model's parts. */
+/** The menu's groups: the model, then the suitcase's skins, the Deck's parts or the Clear model's. */
 function groupsFor(look: LookState, onChange: (next: LookState) => void): Group[] {
   const model: Group = {
     label: 'Model',
@@ -106,6 +107,22 @@ function groupsFor(look: LookState, onChange: (next: LookState) => void): Group[
         value: look.skin,
         pick: (id) => onChange({ ...look, skin: id as SkinId }),
       },
+    ];
+  }
+  if (look.model === 'deck') {
+    return [
+      model,
+      ...DECK_PARTS.map((part) => ({
+        label: DECK_PART_NAMES[part],
+        variant: 'dots' as const,
+        options: DECK_SWATCHES[part].map((s) => ({
+          id: s.id,
+          name: s.name,
+          swatch: swatchColour(s),
+        })),
+        value: look.deck[part],
+        pick: (id: string) => onChange({ ...look, deck: { ...look.deck, [part]: id } }),
+      })),
     ];
   }
   return [

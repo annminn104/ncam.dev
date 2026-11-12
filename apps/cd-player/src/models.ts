@@ -12,7 +12,7 @@ export interface ModelProfile {
   name: string;
   /** The GLB's path under public/. */
   glb: string;
-  /** How its colours are chosen: the suitcase's skins, or the Clear model's parts. */
+  /** How its colours are chosen: the suitcase's skins, or the parts of the Clear model and the Deck. */
   looks: LookKind;
 }
 
@@ -22,6 +22,7 @@ export const DEFAULT_MODEL: ModelId = 'suitcase';
 export const MODELS: readonly ModelProfile[] = [
   { id: 'suitcase', name: 'Suitcase', glb: 'assets/cd-player.glb', looks: 'skins' },
   { id: 'clear', name: 'Clear', glb: 'assets/cd-player-clear.glb', looks: 'parts' },
+  { id: 'deck', name: 'Deck', glb: 'assets/cd-player-deck.glb', looks: 'parts' },
 ];
 
 /** The model with that id; anything else is the default. */

@@ -277,7 +277,7 @@ describe('App and the model on the stage', () => {
     // The keeper's is the only write of a model.
     expect(source.match(/writeModel\(/g)).toHaveLength(1);
     expect(source).toMatch(
-      /writeClearLook\(storage, next\.clear\);\s*(\/\/[^\n]*\n\s*)*keeper\.choose\(next\.model\);/,
+      /writeClearLook\(storage, next\.clear\);\s*writeDeckLook\(storage, next\.deck\);\s*(\/\/[^\n]*\n\s*)*keeper\.choose\(next\.model\);/,
     );
     expect(source).toMatch(
       /if \(load\.status === 'ready'\) \{[^}]*\bkeeper\.drawn\(load\.model\);[^}]*\}/,
