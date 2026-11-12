@@ -97,9 +97,13 @@ export function scrubTargetMs(
   return durationMs > 0 ? Math.min(durationMs, target) : target;
 }
 
-/** A press on the knob turns it only while its model's door is shut (the deck's jog is the door). */
-export function knobTakesTurn(doorOpen: number): boolean {
-  return doorOpen === 0;
+/**
+ * The knob turns only while no change runs and its model's door is shut (the deck's jog is the
+ * door): a turn scrubs the disc in the player, so one going on ends as soon as this stops holding
+ * (knob-turn.ts).
+ */
+export function knobTakesTurn(doorOpen: number, swapping: boolean): boolean {
+  return doorOpen === 0 && !swapping;
 }
 
 /** The spin after a finished turn the disc followed, within one revolution. */

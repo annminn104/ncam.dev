@@ -121,10 +121,11 @@ describe('scrubTargetMs', () => {
 });
 
 describe('knobTakesTurn', () => {
-  it('turns only while the door is shut', () => {
-    expect(knobTakesTurn(0)).toBe(true);
-    expect(knobTakesTurn(0.01)).toBe(false);
-    expect(knobTakesTurn(1)).toBe(false);
+  it('turns only while the door is shut and no change runs', () => {
+    expect(knobTakesTurn(0, false)).toBe(true);
+    expect(knobTakesTurn(0.01, false)).toBe(false);
+    expect(knobTakesTurn(1, false)).toBe(false);
+    expect(knobTakesTurn(0, true)).toBe(false);
   });
 });
 

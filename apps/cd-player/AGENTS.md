@@ -765,11 +765,11 @@ pattern and name, printed over the deck and its flight case at runtime.
   marks (`personal` is a prop of its own), so typing a name repaints the atlas and recolours
   nothing.
 
-**Controls, the orbit and the zoom** (`src/scene/controls.ts`, `useControls.ts`, `interaction.ts`,
-`orbit.ts`, `zoom.ts`, `wheel.ts`, `gestures.ts`, `CameraRig.tsx`, and `src/camera-channel.ts` on
-the shell's side). The canvas's pointer gestures (the drag, the double tap, the pinch) are
-`gestures.ts`'s, a pure tracker that `CameraRig` feeds its pointer events and whose answers (an
-orbit step, a pinch's factor and midpoints, a recentre) it carries out:
+**Controls, the orbit and the zoom** (`src/scene/controls.ts`, `useControls.ts`, `knob-turn.ts`,
+`interaction.ts`, `orbit.ts`, `zoom.ts`, `wheel.ts`, `gestures.ts`, `CameraRig.tsx`, and
+`src/camera-channel.ts` on the shell's side). The canvas's pointer gestures (the drag, the double
+tap, the pinch) are `gestures.ts`'s, a pure tracker that `CameraRig` feeds its pointer events and
+whose answers (an orbit step, a pinch's factor and midpoints, a recentre) it carries out:
 
 - **The deck keys** press on the **primary button** (or a touch), and only the nearest mesh under
   the pointer counts: `btn_prev`, `btn_next`, `btn_play` (play or pause), `btn_stop`, `btn_rpt`
@@ -783,13 +783,19 @@ orbit step, a pinch's factor and midpoints, a recentre) it carries out:
 - **The knob scrubs the track.** A turn is followed on the window, read around the middle of the
   knob's top (its pivot sits at its base), and one full turn is 30 s (`KNOB_MS_PER_TURN`). While it
   turns, `rig.scrubMs` carries the turn's seek for the displays (see "Printed textures"), and on
-  the Deck, whose profile has `knobTurnsDisc`, the disc follows the jog (`rig.knobTurn`). On the
-  Deck the knob sits on the plate that is its door, so a press on it turns nothing while the door
-  is open (`knobTakesTurn(rig.doorOpen)`), and neither orbits nor recentres (the rule is every
-  model's, the Clear's included: `useControls.ts` applies it to all). It emits
-  one `seek {deltaMs}` only on a real release; a cancelled turn, a mouse that moves with no button
-  down (a native menu took the release), or a touch's turn that becomes a pinch puts the knob back
-  where the turn began and seeks nothing. The card's Seek slider is its DOM equivalent.
+  the Deck, whose profile has `knobTurnsDisc`, the disc follows the jog (`rig.knobTurn`). The knob
+  turns only while no change runs and its model's door is shut
+  (`knobTakesTurn(rig.doorOpen, rig.swapping)`; on the Deck the knob sits on the plate that is its
+  door), every model's rule, and it holds for as long as a turn goes on, not only as it begins: `knob-turn.ts`, which
+  `useControls.ts` feeds the pointer events, checks it on every one and every frame. A press it
+  refuses turns nothing, and neither orbits nor recentres. A turn going on when a change begins
+  (a track that ends mid-turn swaps the very disc it scrubs) or the door opens ends where it
+  stands: the knob stays where the hand left it, the disc keeps the turn it followed (so a leaving
+  disc goes with that and no more), the displays stop previewing, and it seeks nothing, its seek
+  having been in the track on its way out. Otherwise it emits one `seek {deltaMs}` only on a real
+  release; a cancelled turn, a mouse that moves with no button down (a native menu took the
+  release), or a touch's turn that becomes a pinch puts the knob back where the turn began and
+  seeks nothing. The card's Seek slider is its DOM equivalent.
 - **A drag elsewhere orbits the view** (the primary button or a touch), within ±25° of yaw and ±10°
   of pitch, eased (`orbit.ts`); the turn is divided by the zoom on screen (`dragOrbit`), so a
   zoomed view swings at 1×'s rate for the same drag. It **recentres, the zoom too, on a mouse
@@ -1788,7 +1794,10 @@ Unit tests (`src/**/*.test.ts`, node environment, run by the root `pnpm test`):
   `controls.test.ts` (besides the keys and the knob: a mouse or a pen pressing on its way down, a
   touch on its way up within the slop and with no pinch begun since, `pinchedSince` letting a key's
   touch or a knob's turn go though the second finger lifted first, `scrubTargetMs`, and a knob
-  that takes no turn while its door is open), `vu.test.ts` (the Clear's
+  that takes no turn while its door is open or a change runs), `knob-turn.test.ts` (a turn's
+  scrub, seek and fold into the spin, the turns it refuses and gives back, and one that a change
+  or the door's opening ends where it stands, at the next frame or the pointer's next event,
+  seeking nothing), `vu.test.ts` (the Clear's
   `vuColours` too), `vu-materials.test.ts`, `interaction.test.ts`, `orbit.test.ts` (with a drag's
   turn divided by the zoom), `zoom.test.ts`
   (1× to 3× by ×1.25 steps, the point under the pointer kept, the pan's clamp and its slide back,
