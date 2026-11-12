@@ -114,7 +114,7 @@ const MARKS_ABOVE = 0.42;
 const MARKS_BELOW = 0.2;
 const DOT_BELOW = String.fromCodePoint(0x323);
 /** The top's print opens round the jog out to the signature ring (deck_print.py): r 120 mm. */
-const JOG_OPENING = 120;
+export const JOG_OPENING = 120;
 /** The share of the stencil's region, from its top, that its stencil cuts clear. */
 const STENCIL_BAND = 0.4;
 
@@ -137,7 +137,7 @@ type Zone = readonly [x: number, y: number, w: number, h: number];
  * nameplate, the case's sides at their ribs, and the case's front shows under its stencil on
  * either side of the tag that hangs there. A region not listed shows whole.
  */
-const OPEN: Readonly<Record<string, readonly Zone[]>> = {
+export const OPEN: Readonly<Record<string, readonly Zone[]>> = {
   top: [
     [58, 306, 198, 39],
     [2, 125, 61, 90],

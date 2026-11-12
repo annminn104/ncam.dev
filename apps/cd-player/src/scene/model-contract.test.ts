@@ -24,6 +24,7 @@ import { DYNAMIC_MATERIALS, REQUIRED_NODES } from './contract';
 import { readGlbJson, triangleCount } from './glb';
 import { CLEAR_ROLES, MATERIAL_ROLES, SKIN_ROLES } from './material-roles';
 import deckAtlas from './textures/deck-atlas.json';
+import { JOG_OPENING, OPEN } from './textures/deck-pattern';
 
 const GLB = fileURLToPath(new URL('../../public/assets/cd-player.glb', import.meta.url));
 /** Box-mapped in export.py (one UV unit per 5 cm), for the maps the page tiles over them. */
@@ -355,6 +356,72 @@ describe('public/assets/cd-player-deck.glb (art/pipeline/build.mjs deck)', () =>
     });
     expect(primitives).toBeGreaterThan(0);
     for (const region of regions) expect(covered.has(region.id), region.id).toBe(true);
+  });
+
+  it('keeps the painter’s openings (deck-pattern.ts) on the print layer’s triangles', async () => {
+    const { width, height, regions } = deckAtlas;
+    type Point = readonly [number, number];
+    const triangles: Record<string, (readonly [Point, Point, Point])[]> = {};
+    const vertexList: Record<string, Point[]> = {};
+    const set = await loadScene(DECK_GLB);
+    set.traverse((child) => {
+      const mesh = child as Mesh;
+      if (!mesh.isMesh) return;
+      const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+      if (!materials.some((material) => material.name === 'deck_pattern')) return;
+      const uv = mesh.geometry.getAttribute('uv');
+      const index = mesh.geometry.getIndex();
+      const region = regions.find((r) => {
+        const x = uv.getX(0) * width;
+        const y = uv.getY(0) * height;
+        return x >= r.x - 1 && x <= r.x + r.w + 1 && y >= r.y - 1 && y <= r.y + r.h + 1;
+      });
+      if (!region) throw new Error(`${mesh.name} lies in no region`);
+      const k = region.w / region.mmW;
+      /** A vertex in its region's mm (x across, y down). */
+      const mm = (i: number): Point => [
+        (uv.getX(i) * width - region.x) / k,
+        (uv.getY(i) * height - region.y) / k,
+      ];
+      const list = (triangles[region.id] ??= []);
+      const count = index ? index.count : uv.count;
+      for (let t = 0; t < count; t += 3) {
+        const at = (o: number) => mm(index ? index.getX(t + o) : t + o);
+        list.push([at(0), at(1), at(2)]);
+      }
+      const verts = (vertexList[region.id] ??= []);
+      for (let i = 0; i < uv.count; i++) verts.push(mm(i));
+    });
+    const inside = (p: Point, [a, b, c]: readonly [Point, Point, Point]) => {
+      const side = (q: Point, r: Point, s: Point) =>
+        (q[0] - s[0]) * (r[1] - s[1]) - (r[0] - s[0]) * (q[1] - s[1]);
+      const d = [side(p, a, b), side(p, b, c), side(p, c, a)];
+      return !(d.some((v) => v < 0) && d.some((v) => v > 0));
+    };
+    const STEPS = 20;
+    for (const [id, zones] of Object.entries(OPEN)) {
+      expect(triangles[id], `${id} has a print`).toBeDefined();
+      zones.forEach(([x, y, w, h], z) => {
+        const missed: string[] = [];
+        for (let i = 0; i <= STEPS; i++) {
+          for (let j = 0; j <= STEPS; j++) {
+            const p: Point = [x + (w * i) / STEPS, y + (h * j) / STEPS];
+            if (!triangles[id].some((t) => inside(p, t))) {
+              missed.push(p.map((v) => v.toFixed(1)).join(','));
+            }
+          }
+        }
+        expect(missed.slice(0, 4), `${id}[${z}] has points off the print`).toEqual([]);
+      });
+    }
+    // The top's print opens round the jog: its nearest vertex sits at JOG_OPENING.
+    const top = regions.find((r) => r.id === 'top');
+    if (!top?.centre) throw new Error('no top region with a centre');
+    const k = top.w / top.mmW;
+    const [cx, cy] = [top.centre[0] / k, top.centre[1] / k];
+    const nearest = Math.min(...vertexList.top.map(([x, y]) => Math.hypot(x - cx, y - cy)));
+    expect(nearest).toBeGreaterThanOrEqual(JOG_OPENING - 1);
+    expect(nearest).toBeLessThanOrEqual(JOG_OPENING + 1);
   });
 
   it('stays inside its budget, meshopt-compressed, with meshes on leaf nodes only', () => {
