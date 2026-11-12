@@ -1,6 +1,7 @@
 import { clearSwatch, DEFAULT_CLEAR_LOOK, type ClearLook } from './clear-looks';
 import { deckSwatch, DEFAULT_DECK_LOOK, type DeckLook } from './deck-looks';
 import { DEFAULT_MODEL, type ModelId } from './models';
+import { DEFAULT_PERSONAL, type Personal } from './personal';
 import { DEFAULT_SKIN, skinById, type SkinId } from './skins';
 
 /** What the scene draws: a model and its colours. Three-free on purpose. */
@@ -15,6 +16,8 @@ export interface LookState {
   skin: SkinId;
   clear: ClearLook;
   deck: DeckLook;
+  /** The visitor's pattern and name (src/personal.ts). */
+  personal: Personal;
 }
 
 export const DEFAULT_LOOK_STATE: LookState = {
@@ -22,6 +25,7 @@ export const DEFAULT_LOOK_STATE: LookState = {
   skin: DEFAULT_SKIN,
   clear: DEFAULT_CLEAR_LOOK,
   deck: DEFAULT_DECK_LOOK,
+  personal: DEFAULT_PERSONAL,
 };
 
 export function lookOf(state: LookState): Look {

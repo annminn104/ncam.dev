@@ -2,6 +2,7 @@ import { CLEAR_SWATCHES, clearLookFrom, DEFAULT_CLEAR_LOOK, type ClearLook } fro
 import { DECK_SWATCHES, deckLookFrom, DEFAULT_DECK_LOOK, type DeckLook } from './deck-looks';
 import type { LookState } from './looks';
 import { DEFAULT_MODEL, modelById, type ModelId } from './models';
+import { DEFAULT_PERSONAL, personalFrom, type Personal } from './personal';
 import { DEFAULT_COLLECTION, SPOTIFY_ID, sameCollection, type CollectionRef } from './routes';
 import { DEFAULT_SKIN, SKINS, skinById, type SkinId } from './skins';
 
@@ -121,13 +122,38 @@ export function writeDeckLook(storage: WriteStore | null, look: DeckLook): void 
   }
 }
 
-/** Everything saved: the model, the suitcase's skin, and the Clear model's and the Deck's colours. */
+export const PERSONAL_KEY = 'ncam.cd-player.personal';
+
+/** The visitor's saved pattern and name (src/personal.ts): junk is no saved marks. */
+export function readPersonal(storage: ReadStore | null): Personal {
+  try {
+    const raw = storage?.getItem(PERSONAL_KEY);
+    return personalFrom(raw ? (JSON.parse(raw) as unknown) : null);
+  } catch {
+    // Unreadable storage or JSON that does not parse is no saved marks.
+    return DEFAULT_PERSONAL;
+  }
+}
+
+export function writePersonal(storage: WriteStore | null, personal: Personal): void {
+  try {
+    storage?.setItem(PERSONAL_KEY, JSON.stringify(personal));
+  } catch {
+    // A full or blocked storage just forgets.
+  }
+}
+
+/**
+ * Everything saved: the model, the suitcase's skin, the Clear model's and the Deck's colours, and
+ * the visitor's pattern and name.
+ */
 export function readLookState(storage: ReadStore | null): LookState {
   return {
     model: readModel(storage),
     skin: readSkin(storage),
     clear: readClearLook(storage),
     deck: readDeckLook(storage),
+    personal: readPersonal(storage),
   };
 }
 

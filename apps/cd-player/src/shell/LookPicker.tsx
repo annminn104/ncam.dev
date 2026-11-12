@@ -12,6 +12,7 @@ import {
 import { DECK_PART_NAMES, DECK_PARTS, DECK_SWATCHES } from '../deck-looks';
 import { lookLabel, lookOf, lookSwatch, type LookState } from '../looks';
 import { MODELS, modelById, type ModelId } from '../models';
+import { cleanName, NAME_FALLBACK, PATTERNS, type PatternId } from '../personal';
 import type { ModelLoad } from '../scene-props';
 import { SKINS, type SkinId } from '../skins';
 import { CheckIcon } from './Icons';
@@ -88,7 +89,10 @@ function swatchColour(swatch: ShellSwatch | FrameSwatch | BoardSwatch | LightSwa
   return swatch.colour;
 }
 
-/** The menu's groups: the model, then the suitcase's skins, the Deck's parts or the Clear model's. */
+/**
+ * The menu's groups: the model, then the suitcase's skins, the Deck's parts and patterns or the
+ * Clear model's.
+ */
 function groupsFor(look: LookState, onChange: (next: LookState) => void): Group[] {
   const model: Group = {
     label: 'Model',
@@ -123,6 +127,14 @@ function groupsFor(look: LookState, onChange: (next: LookState) => void): Group[
         value: look.deck[part],
         pick: (id: string) => onChange({ ...look, deck: { ...look.deck, [part]: id } }),
       })),
+      {
+        label: 'Pattern',
+        variant: 'rows' as const,
+        options: PATTERNS.map((pattern) => ({ id: pattern.id, name: pattern.name })),
+        value: look.personal.pattern,
+        pick: (id: string) =>
+          onChange({ ...look, personal: { ...look.personal, pattern: id as PatternId } }),
+      },
     ];
   }
   return [
@@ -231,6 +243,29 @@ function RadioGroup({ group }: { group: Group }) {
   );
 }
 
+/**
+ * The Deck's engraving: the visitor's name, cleaned as it is typed (src/personal.ts cleanName) and
+ * kept in this browser only. Empty, the Deck prints the placeholder's "ncam".
+ */
+function NameField({ value, onChange }: { value: string; onChange(name: string): void }) {
+  return (
+    <label className="cdp-skin__group cdp-skin__field">
+      <span className="cdp-skin__legend">Your name</span>
+      <input
+        className="cdp-skin__input"
+        type="text"
+        value={value}
+        placeholder={NAME_FALLBACK}
+        autoComplete="off"
+        autoCapitalize="words"
+        spellCheck={false}
+        enterKeyHint="done"
+        onChange={(event) => onChange(cleanName(event.target.value))}
+      />
+    </label>
+  );
+}
+
 interface MenuProps {
   look: LookState;
   open: boolean;
@@ -240,7 +275,8 @@ interface MenuProps {
 }
 
 /**
- * The popover: the model, then its colours, each a radio group whose arrows choose as they move.
+ * The popover: the model, then its colours (the Deck's pattern and name too), each group a radio
+ * group whose arrows choose as they move.
  * A key held with Alt, Ctrl or Cmd is the browser's, never a choice (`optionForPress`). Its status
  * line says what `load` says: the caller hands it the load of the model the visitor last chose.
  */
@@ -251,6 +287,12 @@ export function LookMenu({ look, open, onChange, load }: MenuProps) {
       {groupsFor(look, onChange).map((group) => (
         <RadioGroup key={group.label} group={group} />
       ))}
+      {look.model === 'deck' && (
+        <NameField
+          value={look.personal.name}
+          onChange={(name) => onChange({ ...look, personal: { ...look.personal, name } })}
+        />
+      )}
       {/* Always rendered: a live region added with its text is not announced, so a line set while
           the popover is open is. (A closed popover is `hidden`: nothing says a line then.) */}
       <p className="cdp-skin__load" role="status">

@@ -6,11 +6,13 @@ import {
   DECK_KEY,
   LOOK_SCRIPT,
   MODEL_KEY,
+  PERSONAL_KEY,
   readClearLook,
   readDeckLook,
   readLast,
   readLookState,
   readModel,
+  readPersonal,
   readSkin,
   restoreTarget,
   scriptLiteral,
@@ -20,9 +22,11 @@ import {
   writeDeckLook,
   writeLast,
   writeModel,
+  writePersonal,
   writeSkin,
 } from './persist';
 import { DECK_SWATCHES, DEFAULT_DECK_LOOK } from './deck-looks';
+import { DEFAULT_PERSONAL } from './personal';
 import { DEFAULT_COLLECTION, type CollectionRef } from './routes';
 import { SKINS } from './skins';
 
@@ -153,18 +157,35 @@ describe('the saved model and the Clear model’s colours', () => {
     expect(() => writeDeckLook(broken, look)).not.toThrow();
   });
 
+  it('round-trips the visitor’s pattern and name as JSON', () => {
+    const storage = memory();
+    const personal = { pattern: 'circuit' as const, name: 'Lan Anh' };
+    writePersonal(storage, personal);
+    expect(PERSONAL_KEY).toBe('ncam.cd-player.personal');
+    expect(readPersonal(storage)).toEqual(personal);
+    for (const junk of ['{nope', '[]']) {
+      expect(readPersonal(memory({ [PERSONAL_KEY]: junk })), junk).toEqual(DEFAULT_PERSONAL);
+    }
+    expect(readPersonal(memory())).toEqual(DEFAULT_PERSONAL);
+    expect(readPersonal(null)).toEqual(DEFAULT_PERSONAL);
+    expect(readPersonal(broken)).toEqual(DEFAULT_PERSONAL);
+    expect(() => writePersonal(broken, personal)).not.toThrow();
+  });
+
   it('reads the whole look state', () => {
     const storage = memory({
       [MODEL_KEY]: 'clear',
       [SKIN_KEY]: 'sage',
       [CLEAR_KEY]: '{"light":"lime"}',
       [DECK_KEY]: '{"light":"red"}',
+      [PERSONAL_KEY]: '{"pattern":"waves","name":"Lan"}',
     });
     expect(readLookState(storage)).toEqual({
       model: 'clear',
       skin: 'sage',
       clear: { ...DEFAULT_CLEAR_LOOK, light: 'lime' },
       deck: { ...DEFAULT_DECK_LOOK, light: 'red' },
+      personal: { pattern: 'waves', name: 'Lan' },
     });
   });
 });

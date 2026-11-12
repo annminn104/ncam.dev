@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { CLEAR_SWATCHES, DEFAULT_CLEAR_LOOK } from '../clear-looks';
 import { DECK_SWATCHES, DEFAULT_DECK_LOOK } from '../deck-looks';
 import { DEFAULT_LOOK_STATE, lookLabel, lookOf, lookSwatch, type LookState } from '../looks';
+import { DEFAULT_PERSONAL, PATTERNS } from '../personal';
 import type { ModelLoad } from '../scene-props';
 import { SKINS } from '../skins';
 import { textOf as text } from '../testing/markup';
@@ -93,7 +94,7 @@ describe('LookMenu', () => {
 
   it('offers the Deck its Body and Light, as dots, with the look’s ids ticked', () => {
     const html = menu(DECK);
-    expect(groups(html)).toEqual(['Model', 'Body', 'Light']);
+    expect(groups(html)).toEqual(['Model', 'Body', 'Light', 'Pattern']);
     const models = html.slice(
       html.indexOf('aria-label="Model"'),
       html.indexOf('aria-label="Body"'),
@@ -104,7 +105,7 @@ describe('LookMenu', () => {
         expect(html).toContain(`aria-label="${swatch.name}"`);
     expect(DECK_SWATCHES.body).toHaveLength(3);
     expect(DECK_SWATCHES.light).toHaveLength(6);
-    expect([...html.matchAll(/aria-checked="true"/g)]).toHaveLength(3);
+    expect([...html.matchAll(/aria-checked="true"/g)]).toHaveLength(4);
     const ticked = (label: string, next: string) => {
       const from = html.indexOf(`aria-label="${label}"`);
       const end = next ? html.indexOf(`aria-label="${next}"`) : html.length;
@@ -112,7 +113,7 @@ describe('LookMenu', () => {
       return m?.[3].includes('<svg');
     };
     expect(ticked('Body', 'Light')).toBe(true);
-    expect(ticked('Light', '')).toBe(true);
+    expect(ticked('Light', 'Pattern')).toBe(true);
     expect(DEFAULT_DECK_LOOK).toEqual({ body: 'black', light: 'ice' });
   });
 
@@ -134,6 +135,54 @@ describe('LookMenu', () => {
     )!.props.group as { pick(id: string): void };
     lightGroup.pick('violet');
     expect(seen).toEqual([{ ...DECK, deck: { ...DEFAULT_DECK_LOOK, light: 'violet' } }]);
+  });
+
+  it('offers the Deck a Pattern group of seven rows and a name field', () => {
+    const html = menu({ ...DECK, personal: { pattern: 'waves', name: 'Lan' } });
+    expect(groups(html)).toEqual(['Model', 'Body', 'Light', 'Pattern']);
+    const pattern = html.slice(html.indexOf('aria-label="Pattern"'));
+    const rows = [...pattern.matchAll(RADIO)];
+    expect(rows.map((row) => text(row[3]))).toEqual(PATTERNS.map((p) => p.name));
+    expect(rows.filter((row) => row[1] === 'true').map((row) => text(row[3]))).toEqual([
+      'Sound waves',
+    ]);
+    const input = /<input [^>]*>/.exec(html)![0];
+    expect(input).toContain('type="text"');
+    expect(input).toContain('value="Lan"');
+    expect(input).toContain('placeholder="ncam"');
+    expect(html).toMatch(/<span class="cdp-skin__legend">Your name<\/span><input /);
+    expect(html.indexOf('<input')).toBeGreaterThan(html.indexOf('aria-label="Pattern"'));
+    expect(html.indexOf('<input')).toBeLessThan(html.indexOf('role="status"'));
+  });
+
+  it('shows neither Pattern nor the name field on the suitcase or the Clear', () => {
+    for (const look of [DEFAULT_LOOK_STATE, CLEAR]) {
+      const html = menu(look);
+      expect(groups(html)).not.toContain('Pattern');
+      expect(html).not.toContain('<input');
+    }
+  });
+
+  it('picking a pattern changes only the personal pattern', () => {
+    const seen: LookState[] = [];
+    const look = { ...DECK, personal: { pattern: 'music' as const, name: 'Lan' } };
+    const tree = LookMenu({ look, open: true, onChange: (n) => seen.push(n), load: null });
+    const walk = (node: unknown, out: { props: Record<string, unknown> }[] = []) => {
+      if (Array.isArray(node)) for (const k of node) walk(k, out);
+      else if (node && typeof node === 'object') {
+        const el = node as { props?: Record<string, unknown> };
+        if (el.props) out.push(el as { props: Record<string, unknown> });
+        const kids = el.props?.children;
+        for (const k of Array.isArray(kids) ? kids : [kids]) walk(k, out);
+      }
+      return out;
+    };
+    const group = walk(tree).find(
+      (n) => (n.props.group as { label?: string } | undefined)?.label === 'Pattern',
+    )!.props.group as { pick(id: string): void };
+    group.pick('graffiti');
+    expect(seen).toEqual([{ ...look, personal: { pattern: 'graffiti', name: 'Lan' } }]);
+    expect(DEFAULT_LOOK_STATE.personal).toEqual(DEFAULT_PERSONAL);
   });
 
   it('is hidden while closed and shown while open', () => {

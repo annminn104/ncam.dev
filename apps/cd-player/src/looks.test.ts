@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { clearSwatch, DEFAULT_CLEAR_LOOK } from './clear-looks';
 import { DEFAULT_DECK_LOOK } from './deck-looks';
+import { DEFAULT_PERSONAL } from './personal';
 import { DEFAULT_LOOK_STATE, lookAccent, lookLabel, lookOf, lookSwatch } from './looks';
 import { skinById } from './skins';
 
@@ -11,6 +12,7 @@ describe('looks', () => {
       skin: 'blush',
       clear: DEFAULT_CLEAR_LOOK,
       deck: DEFAULT_DECK_LOOK,
+      personal: DEFAULT_PERSONAL,
     });
     expect(lookOf(DEFAULT_LOOK_STATE)).toEqual({ model: 'suitcase', skin: 'blush' });
     expect(lookOf({ ...DEFAULT_LOOK_STATE, model: 'clear' })).toEqual({
