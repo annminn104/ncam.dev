@@ -28,6 +28,7 @@ overrides:
   '@modelcontextprotocol/node@2': 2.1.1
   hono@4: 4.13.11
   nodemailer@9: 10.1.7
+  nodemailer@10: 10.1.7
   webpack-dev-middleware@6: 7.4.6
   qs@6: 6.16.1
   '@strapi/strapi>vite': 6.4.5
@@ -7208,8 +7209,8 @@ packages:
     resolution: {integrity: sha512-YHs7BmmcsdAI5Ozuf8JZo6PT0mv2GIWC9vMfvUC3dp65M8hn7Ux8CPL+2oBI7juNuj9d0ndhTcznq2ODBps9cQ==}
     engines: {node: '>=18'}
 
-  nodemailer@10.0.9:
-    resolution: {integrity: sha512-BF0qcyplCwp+jMk6HCjFykBz/YhhZSsxrARhOldLwFWH+8kGjQsd2WIMIZhqEuyXRoGFi0ONbDeWDMDoL8MhLw==}
+  nodemailer@10.1.7:
+    resolution: {integrity: sha512-OQa6FDln5fLttmqSbjDiRYvFDOFNrBqfiOwHPlEbURil3b+vPB1v8xpi+Sp46drzNDlsTnNsS502vthmz56r4w==}
     engines: {node: '>=20.0.0'}
 
   normalize-package-data@2.5.0:
@@ -12680,7 +12681,7 @@ snapshots:
 
   '@strapi/provider-email-sendmail@5.60.0':
     dependencies:
-      nodemailer: 10.0.9
+      nodemailer: 10.1.7
 
   '@strapi/provider-upload-local@5.60.0(ts-toolbelt@9.6.0)':
     dependencies:
@@ -16889,7 +16890,7 @@ snapshots:
 
   node-releases@2.0.54: {}
 
-  nodemailer@10.0.9: {}
+  nodemailer@10.1.7: {}
 
   normalize-package-data@2.5.0:
     dependencies:

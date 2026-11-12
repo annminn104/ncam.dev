@@ -56,6 +56,8 @@ overrides:
   # newest addressparser advisories and 10.1.5 to 10.1.7 are fixes to the same parser.
   # 10.x keeps a CommonJS build (main: dist/cjs) and the createTransport API the provider uses.
   'nodemailer@9': '10.1.7' # GHSA-2x7j-588g-ccc2, GHSA-8m3c-c648-2xjj, GHSA-v53p-9fqp-m79j, GHSA-prgh-xp8r-p3m5, GHSA-6vj9-mwq6-2f5v, GHSA-8vvx-rff5-p5rq, GHSA-g57g-f23g-4646, GHSA-39m8-27wv-hr27, GHSA-8c8m-p3m8-cjg8, GHSA-m943-m63m-w62w, GHSA-85x2-q946-cp5h (@strapi/provider-email-sendmail)
+  # Strapi 5.60's sendmail provider pins 10.0.9 itself, under every one of those but the 9.x ones.
+  'nodemailer@10': '10.1.7' # GHSA-39m8-27wv-hr27, GHSA-8c8m-p3m8-cjg8, GHSA-m943-m63m-w62w, GHSA-85x2-q946-cp5h, GHSA-4ffr-jq9g-5ffx, GHSA-g73g-hqqh-jr95, GHSA-4g23-2xm8-66gc (@strapi/provider-email-sendmail pin 10.0.9)
   # No 6.x release fixes GHSA-g84c-rxfj-3j2c (path traversal). Only @strapi/strapi's opt-in
   # webpack bundler (`strapi develop --bundler=webpack`) loads it; the default is vite.
   'webpack-dev-middleware@6': '7.4.6' # GHSA-g84c-rxfj-3j2c (@strapi/strapi)
