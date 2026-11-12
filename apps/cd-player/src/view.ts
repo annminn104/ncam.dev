@@ -47,7 +47,11 @@ export function sceneView(source: ViewSource): SceneView {
   const view = (i: number) => trackView(seq.tracks[i], source.details, source.artists);
   return {
     collection: source.collection
-      ? { name: source.collection.name, subtitle: source.collection.subtitle }
+      ? {
+          name: source.collection.name,
+          subtitle: source.collection.subtitle,
+          key: `${source.collection.type}:${source.collection.id}`,
+        }
       : null,
     current: index === null ? null : view(index),
     upcoming: upcomingIndices(seq, UPCOMING).map(view),

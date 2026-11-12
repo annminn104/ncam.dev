@@ -21,7 +21,7 @@ const track = (id: string): TrackView => ({
   artUrl: null,
   artistUrl: null,
 });
-const MIX = { name: 'Mix', subtitle: 'Owner' };
+const MIX = { name: 'Mix', subtitle: 'Owner', key: 'playlist:mix' };
 /** `current` in the player (null: nothing), the rest coming next. */
 const lineup = (current: string | null, ...upcoming: string[]): Lineup => ({
   collection: MIX,
@@ -61,7 +61,10 @@ describe('the stage', () => {
   it('matches a shelf to a target by its tracks, the collection’s label aside', () => {
     const shelf = fillShelf(targetOf(lineup('a', 'b', 'c')));
     expect(shelfMatches(shelf, targetOf(lineup('a', 'b', 'c')))).toBe(true);
-    const renamed = { ...lineup('a', 'b', 'c'), collection: { name: 'Renamed', subtitle: '' } };
+    const renamed = {
+      ...lineup('a', 'b', 'c'),
+      collection: { name: 'Renamed', subtitle: '', key: 'playlist:mix' },
+    };
     expect(shelfMatches(shelf, targetOf(renamed))).toBe(true);
     expect(shelfMatches(shelf, targetOf(lineup('a', 'c', 'b')))).toBe(false);
     expect(shelfMatches(shelf, targetOf(lineup('a', 'b')))).toBe(false);
@@ -113,7 +116,7 @@ describe('classifyChange', () => {
   it('reads another collection as one, with a swap or without, and a view changed alone as a restack', () => {
     const other: Lineup = {
       ...lineup(null, 'p', 'q'),
-      collection: { name: 'Other', subtitle: 'X' },
+      collection: { name: 'Other', subtitle: 'X', key: 'playlist:other' },
     };
     expect(classifyChange(before, other, null)).toEqual({ kind: 'collection', slot: null });
     expect(classifyChange(before, { ...other, current: track('p') }, track('p'))).toEqual({

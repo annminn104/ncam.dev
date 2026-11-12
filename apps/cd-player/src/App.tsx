@@ -432,6 +432,7 @@ export default function App({ controller, initial = null, assetBase = '', initia
             bridge={deps.bridge}
             camera={camera}
             look={look}
+            personal={lookState.personal}
             live={live}
             onReady={onReady}
             onFail={onFail}

@@ -2,6 +2,7 @@ import type { SceneBridge } from './bridge';
 import type { CameraChannel } from './camera-channel';
 import type { Look } from './looks';
 import type { ModelId } from './models';
+import type { Personal } from './personal';
 
 /**
  * A model coming on show (PlayerSceneProps.onModel): its download, then on show or failed. A change
@@ -24,6 +25,8 @@ export interface PlayerSceneProps {
    * model it names, keeping the one on show drawn until the new one can take its place.
    */
   look: Look;
+  /** The visitor's pattern and name: the Deck prints them (a name typed repaints, not recolours). */
+  personal: Personal;
   /** The first frames of the player are on screen. */
   onReady(): void;
   onFail(error: Error): void;

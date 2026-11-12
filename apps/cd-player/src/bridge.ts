@@ -17,7 +17,8 @@ export interface TrackView {
 }
 
 export interface SceneView {
-  collection: { name: string; subtitle: string } | null;
+  /** `key` is the collection's `type:id`: what the Deck's print is seeded by. */
+  collection: { name: string; subtitle: string; key: string } | null;
   /** The track in the player (or arriving), null before the first play. */
   current: TrackView | null;
   /**
