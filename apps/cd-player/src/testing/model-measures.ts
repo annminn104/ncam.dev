@@ -99,12 +99,23 @@ export function deckSlot(k: number): { position: Vec3; rotationX: number } {
 }
 
 /**
- * The Deck's chassis: the box of the whole `deck` node but for the jog plate and the flight case,
- * so the body with its keys, screen, arm, disc and spindle, and its jewel case on the right.
+ * The Deck's chassis: the box of the deck body alone. That is the `deck` node's meshes but for the
+ * jog plate, the flight case, the jewel case with all that sits on it, and the screen module
+ * (DECK_SCREEN), so the housing with its keys, pads, knobs, fader, ports, arm, spindle and disc
+ * (the disc lies in the well, which the flight test lets a disc enter).
  */
 export const DECK_CHASSIS = {
   min: [-0.16015, 0, -0.1894],
-  max: [0.33227, 0.19209, 0.22338],
+  max: [0.16015, 0.0881, 0.18095],
+} as const satisfies { min: Vec3; max: Vec3 };
+
+/**
+ * The Deck's screen module, standing at the back of the top: its housing (from 68 mm, inside the
+ * body, up to 192 mm) and the bezel, glass and VU strip in its face, as one box.
+ */
+export const DECK_SCREEN = {
+  min: [-0.1, 0.06807, -0.18083],
+  max: [0.1, 0.19209, -0.13503],
 } as const satisfies { min: Vec3; max: Vec3 };
 
 /**

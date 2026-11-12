@@ -14,6 +14,7 @@ import {
   DECK_CASE,
   DECK_CHASSIS,
   DECK_DOOR,
+  DECK_SCREEN,
   DECK_SEAT,
   DECK_WELL,
   deckSlot,
@@ -613,41 +614,83 @@ describe('the GLBs as the scene tests measure them (src/testing/model-measures.t
     }
   });
 
-  it('spans the Deck’s chassis and well, and its case’s box in its own frame', () => {
-    const set = scene('deck');
-    const deck = node(set, 'deck');
-    const apart = new Set<Object3D>([node(set, 'door_hinge'), node(set, 'lid_hinge')]);
-    const chassis: Vector3[] = [];
-    deck.traverse((child) => {
-      for (let at: Object3D | null = child; at; at = at.parent) if (apart.has(at)) return;
+  /** The box of the meshes under `root` that no `apart` node holds, in world space. */
+  const boxOf = (root: Object3D, apart: Object3D[], within?: Object3D[]) => {
+    const points: Vector3[] = [];
+    root.traverse((child) => {
       const mesh = child as Mesh;
       if (!mesh.isMesh) return;
-      chassis.push(...vertices(mesh));
+      const chain: Object3D[] = [];
+      for (let at: Object3D | null = child; at; at = at.parent) chain.push(at);
+      if (chain.some((at) => apart.includes(at))) return;
+      if (within && !chain.some((at) => within.includes(at))) return;
+      points.push(...vertices(mesh));
     });
-    const chassisBox = new Box3().setFromPoints(chassis);
+    return new Box3().setFromPoints(points);
+  };
+  const expectBox = (
+    box: Box3,
+    expected: { min: readonly number[]; max: readonly number[] },
+    at: string,
+  ) => {
+    for (let axis = 0; axis < 3; axis++) {
+      expect(box.min.getComponent(axis), `${at} min, axis ${axis}`).toBeCloseTo(
+        expected.min[axis],
+        PLACES,
+      );
+      expect(box.max.getComponent(axis), `${at} max, axis ${axis}`).toBeCloseTo(
+        expected.max[axis],
+        PLACES,
+      );
+    }
+  };
+
+  it('spans the Deck’s body, leaving its plate, cases and screen module out', () => {
+    const set = scene('deck');
+    const parts = ['door_hinge', 'lid_hinge', 'case', 'deck_screen_housing', 'deck_screen_face'];
+    expectBox(
+      boxOf(
+        node(set, 'deck'),
+        parts.map((name) => node(set, name)),
+      ),
+      DECK_CHASSIS,
+      'chassis',
+    );
+  });
+
+  it('spans the Deck’s screen module', () => {
+    const set = scene('deck');
+    const module = [node(set, 'deck_screen_housing'), node(set, 'deck_screen_face')];
+    expectBox(boxOf(node(set, 'deck'), [], module), DECK_SCREEN, 'screen');
+    // The glass, bezel and VU strip stand inside the housing's box.
+    const face = new Box3().setFromPoints(vertices(module[1]));
+    expect(DECK_SCREEN.min[0]).toBeLessThanOrEqual(face.min.x + EPSILON);
+    expect(DECK_SCREEN.max[1]).toBeGreaterThanOrEqual(face.max.y - EPSILON);
+  });
+
+  it('spans the Deck’s case’s box in its own frame, and its well', () => {
+    const set = scene('deck');
     const flightCase = node(set, 'lid_hinge');
     const own = flightCase.matrixWorld.clone().invert();
     const caseBox = new Box3().setFromPoints(
       vertices(flightCase).map((point) => point.applyMatrix4(own)),
     );
-    for (let axis = 0; axis < 3; axis++) {
-      for (const [actual, expected, at] of [
-        [chassisBox.min, DECK_CHASSIS.min, 'chassis min'],
-        [chassisBox.max, DECK_CHASSIS.max, 'chassis max'],
-        [caseBox.min, DECK_CASE.min, 'case min'],
-        [caseBox.max, DECK_CASE.max, 'case max'],
-      ] as const) {
-        expect(actual.getComponent(axis), `${at}, axis ${axis}`).toBeCloseTo(
-          expected[axis],
-          PLACES,
-        );
-      }
-    }
-    // The well: a pocket round DECK_WELL.centre, wall and floor rim at the radius, floor at the floor.
-    // (`deck_chassis_2` is the chassis's `well` primitive: the wall, the floor, nothing else.)
-    const well = vertices(node(set, 'deck_chassis_2'));
-    expect(well.length).toBeGreaterThan(0);
+    expectBox(caseBox, DECK_CASE, 'case');
+    // The well: the one `well` mesh whose box holds the spindle's seat (the fader's slot is `well`
+    // too, far off, and so are the vents, but they lie below the disc), a pocket round DECK_WELL.centre,
+    // wall and floor rim at the radius, floor at the floor.
     const [cx, , cz] = DECK_WELL.centre;
+    const wells: Vector3[][] = [];
+    node(set, 'deck').traverse((child) => {
+      const mesh = child as Mesh;
+      if (!mesh.isMesh || Array.isArray(mesh.material) || mesh.material.name !== 'well') return;
+      const points = vertices(mesh);
+      if (new Box3().setFromPoints(points).containsPoint(new Vector3(...DECK_SEAT.position))) {
+        wells.push(points);
+      }
+    });
+    expect(wells).toHaveLength(1);
+    const well = wells[0];
     const radii = well.map((p) => Math.hypot(p.x - cx, p.z - cz));
     expect(Math.max(...radii)).toBeCloseTo(DECK_WELL.radius, PLACES);
     expect(Math.min(...radii)).toBeCloseTo(DECK_WELL.radius, PLACES);
