@@ -109,4 +109,10 @@ describe('vuColours', () => {
       expect(sum(colours[i])).toBeGreaterThan(sum(colours[i - 1]));
     }
   });
+
+  it('lights the Deck’s strip in its light, the last step the glow itself', () => {
+    const colours = vuColours({ model: 'deck', deck: { body: 'black', light: 'violet' } });
+    expect(colours).toHaveLength(VU_SEGMENTS);
+    expect(colours[VU_SEGMENTS - 1]).toBe('#b48cff');
+  });
 });

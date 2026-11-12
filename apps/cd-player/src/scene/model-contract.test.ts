@@ -11,11 +11,20 @@ import {
   CLEAR_SHELL,
   CLEAR_STAND,
   clearSlot,
+  DECK_CASE,
+  DECK_CHASSIS,
+  DECK_DOOR,
+  DECK_SCREEN,
+  DECK_SEAT,
+  DECK_WELL,
+  deckSlot,
 } from '../testing/model-measures';
 import { RACK_SLOTS } from './stage';
-import { DYNAMIC_MATERIALS, OPTIONAL_NODES, REQUIRED_NODES } from './contract';
+import { DYNAMIC_MATERIALS, REQUIRED_NODES } from './contract';
 import { readGlbJson, triangleCount } from './glb';
 import { CLEAR_ROLES, MATERIAL_ROLES, SKIN_ROLES } from './material-roles';
+import deckAtlas from './textures/deck-atlas.json';
+import { JOG_OPENING, OPEN, STENCIL_ZONE } from './textures/deck-pattern';
 
 const GLB = fileURLToPath(new URL('../../public/assets/cd-player.glb', import.meta.url));
 /** Box-mapped in export.py (one UV unit per 5 cm), for the maps the page tiles over them. */
@@ -169,8 +178,7 @@ describe('public/assets/cd-player-clear.glb (art/pipeline/build.mjs clear)', () 
 
   it('has every node the page drives, and its door', () => {
     const names = new Set(json.nodes.map((n) => n.name));
-    for (const name of [...REQUIRED_NODES, ...OPTIONAL_NODES])
-      expect(names.has(name), name).toBe(true);
+    for (const name of [...REQUIRED_NODES, 'door_hinge']) expect(names.has(name), name).toBe(true);
   });
 
   it('has every printed material, a role for every material, and the four parts a look colours', () => {
@@ -225,6 +233,207 @@ describe('public/assets/cd-player-clear.glb (art/pipeline/build.mjs clear)', () 
 
   it('stays inside its budget, meshopt-compressed, with meshes on leaf nodes only', () => {
     expect(statSync(CLEAR_GLB).size).toBeLessThanOrEqual(4 * 1024 * 1024);
+    expect(triangleCount(json)).toBeLessThanOrEqual(150_000);
+    expect(json.extensionsUsed).toContain('EXT_meshopt_compression');
+    for (const n of json.nodes) if (n.children?.length) expect(n.mesh, n.name).toBeUndefined();
+  });
+});
+
+const DECK_GLB = fileURLToPath(new URL('../../public/assets/cd-player-deck.glb', import.meta.url));
+
+describe('public/assets/cd-player-deck.glb (art/pipeline/build.mjs deck)', () => {
+  const json = readGlbJson(new Uint8Array(readFileSync(DECK_GLB)));
+  const index = new Map(json.nodes.map((node, i) => [node.name ?? '', i]));
+  const node = (name: string) => json.nodes[index.get(name) ?? -1];
+  const parentOf = (name: string) =>
+    json.nodes.find((candidate) => candidate.children?.includes(index.get(name) ?? -1))?.name;
+  const materialOf = (name: string) => {
+    const mesh = node(name)?.mesh;
+    if (mesh === undefined) return undefined;
+    const material = json.meshes[mesh].primitives[0].material;
+    return material === undefined ? undefined : json.materials[material].name;
+  };
+
+  it('has every node the page drives, its door and its ring', () => {
+    const names = new Set(json.nodes.map((n) => n.name));
+    for (const name of [...REQUIRED_NODES, 'door_hinge', 'jog_ring']) {
+      expect(names.has(name), name).toBe(true);
+    }
+  });
+
+  it('has every printed material, the ring’s, a role for every material, and the two parts a look colours', () => {
+    const names = json.materials.map((material) => material.name ?? '');
+    for (const name of [...DYNAMIC_MATERIALS, 'jog_ring']) expect(names).toContain(name);
+    for (const name of names) expect(MATERIAL_ROLES[name], name).toBeDefined();
+    for (const name of ['deck_body', 'deck_light']) expect(names, name).toContain(name);
+  });
+
+  it('keeps the UVs of every printed primitive and of the ring', () => {
+    const printed = new Set<string>([...DYNAMIC_MATERIALS, 'jog_ring']);
+    const seen = new Set<string>();
+    for (const mesh of json.meshes) {
+      for (const primitive of mesh.primitives) {
+        const name =
+          primitive.material === undefined ? '' : (json.materials[primitive.material].name ?? '');
+        if (!printed.has(name)) continue;
+        seen.add(name);
+        expect(primitive.attributes.TEXCOORD_0, name).toBeDefined();
+      }
+    }
+    expect([...seen].sort()).toEqual([...printed].sort());
+  });
+
+  it('turns the keys, the knob and the door on empties that carry their parts', () => {
+    for (const pivot of [...PIVOTS, 'door_hinge']) {
+      expect(node(pivot), pivot).toBeDefined();
+      expect(node(pivot).mesh, pivot).toBeUndefined();
+      expect(node(pivot).children?.length ?? 0, pivot).toBeGreaterThan(0);
+    }
+  });
+
+  it('hangs the jog plate from its hinge', () => {
+    expect(parentOf('knob')).toBe('door_hinge');
+  });
+
+  it('hangs the five rack slots from the flight case, as empties', () => {
+    for (let i = 0; i < 5; i += 1) {
+      expect(parentOf(`rack_slot_${i}`)).toBe('lid_hinge');
+      expect(node(`rack_slot_${i}`).mesh).toBeUndefined();
+    }
+  });
+
+  it('prints the tag on the tag node, and lights the ten VU segments with one material', () => {
+    expect(materialOf('tag')).toBe('tag_print');
+    for (let i = 0; i < 10; i += 1) expect(materialOf(`vu_seg_${i}`), String(i)).toBe('vu');
+  });
+
+  it('prints ▶ and ‖ as two meshes on the play key, in the light', () => {
+    for (const icon of ['icon_play', 'icon_pause']) {
+      expect(node(icon).mesh, icon).toBeDefined();
+      expect(parentOf(icon), icon).toBe('btn_play');
+      expect(materialOf(icon), icon).toBe('deck_light');
+    }
+  });
+
+  it('draws its LED ring as one mesh in its own material', () => {
+    const mesh = node('jog_ring').mesh;
+    expect(mesh).toBeDefined();
+    expect(materialOf('jog_ring')).toBe('jog_ring');
+    expect(json.meshes[mesh ?? -1].primitives).toHaveLength(1);
+  });
+
+  it('prints every zone of its print layer inside that zone’s region of the atlas', async () => {
+    expect(json.materials.map((material) => material.name)).toContain('deck_pattern');
+    const { width, height, regions } = deckAtlas;
+    /** Half a pixel: the meshes are exact millimetres and the regions whole pixels. */
+    const SLACK = 0.5;
+    const covered = new Set<string>();
+    const set = await loadScene(DECK_GLB);
+    let primitives = 0;
+    set.traverse((child) => {
+      const mesh = child as Mesh;
+      if (!mesh.isMesh) return;
+      const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+      if (!materials.some((material) => material.name === 'deck_pattern')) return;
+      primitives += 1;
+      const uv = mesh.geometry.getAttribute('uv');
+      expect(uv, mesh.name).toBeDefined();
+      const points = Array.from({ length: uv.count }, (_, i) => [
+        uv.getX(i) * width,
+        uv.getY(i) * height,
+      ]);
+      const region = regions.find((r) =>
+        points.every(
+          ([x, y]) =>
+            x >= r.x - SLACK &&
+            x <= r.x + r.w + SLACK &&
+            y >= r.y - SLACK &&
+            y <= r.y + r.h + SLACK,
+        ),
+      );
+      expect(region, `${mesh.name}'s UVs lie in one region`).toBeDefined();
+      covered.add(region?.id ?? '');
+    });
+    expect(primitives).toBeGreaterThan(0);
+    for (const region of regions) expect(covered.has(region.id), region.id).toBe(true);
+  });
+
+  it('keeps the painter’s openings (deck-pattern.ts) on the print layer’s triangles', async () => {
+    const { width, height, regions } = deckAtlas;
+    type Point = readonly [number, number];
+    const triangles: Record<string, (readonly [Point, Point, Point])[]> = {};
+    const vertexList: Record<string, Point[]> = {};
+    const set = await loadScene(DECK_GLB);
+    set.traverse((child) => {
+      const mesh = child as Mesh;
+      if (!mesh.isMesh) return;
+      const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+      if (!materials.some((material) => material.name === 'deck_pattern')) return;
+      const uv = mesh.geometry.getAttribute('uv');
+      const index = mesh.geometry.getIndex();
+      const region = regions.find((r) => {
+        const x = uv.getX(0) * width;
+        const y = uv.getY(0) * height;
+        return x >= r.x - 1 && x <= r.x + r.w + 1 && y >= r.y - 1 && y <= r.y + r.h + 1;
+      });
+      if (!region) throw new Error(`${mesh.name} lies in no region`);
+      const k = region.w / region.mmW;
+      /** A vertex in its region's mm (x across, y down). */
+      const mm = (i: number): Point => [
+        (uv.getX(i) * width - region.x) / k,
+        (uv.getY(i) * height - region.y) / k,
+      ];
+      const list = (triangles[region.id] ??= []);
+      const count = index ? index.count : uv.count;
+      for (let t = 0; t < count; t += 3) {
+        const at = (o: number) => mm(index ? index.getX(t + o) : t + o);
+        list.push([at(0), at(1), at(2)]);
+      }
+      const verts = (vertexList[region.id] ??= []);
+      for (let i = 0; i < uv.count; i++) verts.push(mm(i));
+    });
+    const inside = (p: Point, [a, b, c]: readonly [Point, Point, Point]) => {
+      const side = (q: Point, r: Point, s: Point) =>
+        (q[0] - s[0]) * (r[1] - s[1]) - (r[0] - s[0]) * (q[1] - s[1]);
+      const d = [side(p, a, b), side(p, b, c), side(p, c, a)];
+      return !(d.some((v) => v < 0) && d.some((v) => v > 0));
+    };
+    const STEPS = 20;
+    /** A zone's grid points that no triangle of the region's print holds (the first four). */
+    const offPrint = (id: string, [x, y, w, h]: readonly number[]) => {
+      const missed: string[] = [];
+      for (let i = 0; i <= STEPS; i++) {
+        for (let j = 0; j <= STEPS; j++) {
+          const p: Point = [x + (w * i) / STEPS, y + (h * j) / STEPS];
+          if (!triangles[id].some((t) => inside(p, t))) {
+            missed.push(p.map((v) => v.toFixed(1)).join(','));
+          }
+        }
+      }
+      return missed.slice(0, 4);
+    };
+    for (const [id, zones] of Object.entries(OPEN)) {
+      expect(triangles[id], `${id} has a print`).toBeDefined();
+      zones.forEach((zone, z) => {
+        expect(offPrint(id, zone), `${id}[${z}] has points off the print`).toEqual([]);
+      });
+    }
+    // The stencil's lines keep off the case front's openings: its handle's brackets, its latches.
+    expect(offPrint('case_front', STENCIL_ZONE), 'STENCIL_ZONE has points off the print').toEqual(
+      [],
+    );
+    // The top's print opens round the jog: its nearest vertex sits at JOG_OPENING.
+    const top = regions.find((r) => r.id === 'top');
+    if (!top?.centre) throw new Error('no top region with a centre');
+    const k = top.w / top.mmW;
+    const [cx, cy] = [top.centre[0] / k, top.centre[1] / k];
+    const nearest = Math.min(...vertexList.top.map(([x, y]) => Math.hypot(x - cx, y - cy)));
+    expect(nearest).toBeGreaterThanOrEqual(JOG_OPENING - 1);
+    expect(nearest).toBeLessThanOrEqual(JOG_OPENING + 1);
+  });
+
+  it('stays inside its budget, meshopt-compressed, with meshes on leaf nodes only', () => {
+    expect(statSync(DECK_GLB).size).toBeLessThanOrEqual(4 * 1024 * 1024);
     expect(triangleCount(json)).toBeLessThanOrEqual(150_000);
     expect(json.extensionsUsed).toContain('EXT_meshopt_compression');
     for (const n of json.nodes) if (n.children?.length) expect(n.mesh, n.name).toBeUndefined();
@@ -292,7 +501,7 @@ function expectTurn(actual: Quaternion, expected: Euler, at: string) {
 }
 
 describe('the GLBs as the scene tests measure them (src/testing/model-measures.ts)', () => {
-  const models = { suitcase: GLB, clear: CLEAR_GLB } as const;
+  const models = { suitcase: GLB, clear: CLEAR_GLB, deck: DECK_GLB } as const;
   const scenes: Partial<Record<keyof typeof models, Object3D>> = {};
   beforeAll(async () => {
     for (const [id, file] of Object.entries(models)) {
@@ -305,7 +514,7 @@ describe('the GLBs as the scene tests measure them (src/testing/model-measures.t
     return loaded;
   };
 
-  for (const id of ['suitcase', 'clear'] as const) {
+  for (const id of ['suitcase', 'clear', 'deck'] as const) {
     it(`frames the ${id}’s whole set by its box, a disc in each rack slot, rounded out to the millimetre`, () => {
       const set = scene(id);
       const box = new Box3().setFromPoints(vertices(set));
@@ -329,7 +538,7 @@ describe('the GLBs as the scene tests measure them (src/testing/model-measures.t
 
   // The play key's two icons, told apart by their meshes: ▶ is one triangle, whose faces cross the
   // key's centre line (x = 0 in the key's own frame), and ‖ is two bars, one on each side of it.
-  for (const id of ['suitcase', 'clear'] as const) {
+  for (const id of ['suitcase', 'clear', 'deck'] as const) {
     it(`draws the ${id}’s icon_play as a triangle across the key and icon_pause as two bars apart`, () => {
       const set = scene(id);
       const toKey = node(set, 'btn_play').matrixWorld.clone().invert();
@@ -415,6 +624,153 @@ describe('the GLBs as the scene tests measure them (src/testing/model-measures.t
       }
       expectTurn(slot.quaternion, new Euler(expected.rotationX, 0, 0), `slot ${k}`);
     }
+  });
+
+  it('hangs the Deck’s plate on its hinge, turning about the world’s X, with its shut box', () => {
+    const hinge = node(scene('deck'), 'door_hinge');
+    expect(DECK_DOOR.axis).toBe('x');
+    expectPosition(hinge, DECK_DOOR.hinge, 'door_hinge');
+    expectTurn(hinge.getWorldQuaternion(new Quaternion()), new Euler(0, 0, 0), 'door_hinge');
+    const box = new Box3().setFromPoints(vertices(hinge));
+    for (let axis = 0; axis < 3; axis++) {
+      expect(box.min.getComponent(axis), `min, axis ${axis}`).toBeCloseTo(
+        DECK_DOOR.shut.min[axis],
+        PLACES,
+      );
+      expect(box.max.getComponent(axis), `max, axis ${axis}`).toBeCloseTo(
+        DECK_DOOR.shut.max[axis],
+        PLACES,
+      );
+    }
+    // A negative turn about X lifts the plate's far edge clear of the deck.
+    hinge.rotation.x = (-70 * Math.PI) / 180;
+    hinge.updateMatrixWorld(true);
+    const lifted = new Box3().setFromPoints(vertices(hinge));
+    hinge.rotation.x = 0;
+    hinge.updateMatrixWorld(true);
+    expect(lifted.max.y).toBeGreaterThan(DECK_DOOR.hinge[1] + 0.15);
+    expect(lifted.min.x).toBeCloseTo(box.min.x, PLACES);
+    expect(lifted.max.x).toBeCloseTo(box.max.x, PLACES);
+  });
+
+  it('seats the Deck’s disc on its spindle, its up the world’s up', () => {
+    const set = scene('deck');
+    for (const name of ['disc_seat', 'disc']) {
+      const seat = node(set, name);
+      expectPosition(seat, DECK_SEAT.position, name);
+      const up = new Vector3(0, 1, 0).applyQuaternion(seat.getWorldQuaternion(new Quaternion()));
+      for (let axis = 0; axis < 3; axis++) {
+        expect(up.getComponent(axis), `${name}, axis ${axis}`).toBeCloseTo(
+          DECK_SEAT.up[axis],
+          PLACES,
+        );
+      }
+    }
+  });
+
+  it('stands the Deck’s rack in its case where the rig test flies its discs, slot by slot', () => {
+    const set = scene('deck');
+    const flightCase = node(set, 'lid_hinge');
+    expectTurn(
+      flightCase.getWorldQuaternion(new Quaternion()),
+      new Euler(0, DECK_CASE.turn, 0),
+      'lid_hinge',
+    );
+    for (let k = 0; k < RACK_SLOTS; k++) {
+      const slot = node(set, `rack_slot_${k}`);
+      const expected = deckSlot(k);
+      for (let axis = 0; axis < 3; axis++) {
+        expect(slot.position.getComponent(axis), `slot ${k}, axis ${axis}`).toBeCloseTo(
+          expected.position[axis],
+          PLACES,
+        );
+      }
+      expectTurn(slot.quaternion, new Euler(expected.rotationX, 0, 0), `slot ${k}`);
+    }
+  });
+
+  /** The box of the meshes under `root` that no `apart` node holds, in world space. */
+  const boxOf = (root: Object3D, apart: Object3D[], within?: Object3D[]) => {
+    const points: Vector3[] = [];
+    root.traverse((child) => {
+      const mesh = child as Mesh;
+      if (!mesh.isMesh) return;
+      const chain: Object3D[] = [];
+      for (let at: Object3D | null = child; at; at = at.parent) chain.push(at);
+      if (chain.some((at) => apart.includes(at))) return;
+      if (within && !chain.some((at) => within.includes(at))) return;
+      points.push(...vertices(mesh));
+    });
+    return new Box3().setFromPoints(points);
+  };
+  const expectBox = (
+    box: Box3,
+    expected: { min: readonly number[]; max: readonly number[] },
+    at: string,
+  ) => {
+    for (let axis = 0; axis < 3; axis++) {
+      expect(box.min.getComponent(axis), `${at} min, axis ${axis}`).toBeCloseTo(
+        expected.min[axis],
+        PLACES,
+      );
+      expect(box.max.getComponent(axis), `${at} max, axis ${axis}`).toBeCloseTo(
+        expected.max[axis],
+        PLACES,
+      );
+    }
+  };
+
+  it('spans the Deck’s body, leaving its plate, cases and screen module out', () => {
+    const set = scene('deck');
+    const parts = ['door_hinge', 'lid_hinge', 'case', 'deck_screen_housing', 'deck_screen_face'];
+    expectBox(
+      boxOf(
+        node(set, 'deck'),
+        parts.map((name) => node(set, name)),
+      ),
+      DECK_CHASSIS,
+      'chassis',
+    );
+  });
+
+  it('spans the Deck’s screen module', () => {
+    const set = scene('deck');
+    const module = [node(set, 'deck_screen_housing'), node(set, 'deck_screen_face')];
+    expectBox(boxOf(node(set, 'deck'), [], module), DECK_SCREEN, 'screen');
+    // The glass, bezel and VU strip stand inside the housing's box.
+    const face = new Box3().setFromPoints(vertices(module[1]));
+    expect(DECK_SCREEN.min[0]).toBeLessThanOrEqual(face.min.x + EPSILON);
+    expect(DECK_SCREEN.max[1]).toBeGreaterThanOrEqual(face.max.y - EPSILON);
+  });
+
+  it('spans the Deck’s case’s box in its own frame, and its well', () => {
+    const set = scene('deck');
+    const flightCase = node(set, 'lid_hinge');
+    const own = flightCase.matrixWorld.clone().invert();
+    const caseBox = new Box3().setFromPoints(
+      vertices(flightCase).map((point) => point.applyMatrix4(own)),
+    );
+    expectBox(caseBox, DECK_CASE, 'case');
+    // The well: the one `well` mesh whose box holds the spindle's seat (the fader's slot is `well`
+    // too, far off, and so are the vents, but they lie below the disc), a pocket round DECK_WELL.centre,
+    // wall and floor rim at the radius, floor at the floor.
+    const [cx, , cz] = DECK_WELL.centre;
+    const wells: Vector3[][] = [];
+    node(set, 'deck').traverse((child) => {
+      const mesh = child as Mesh;
+      if (!mesh.isMesh || Array.isArray(mesh.material) || mesh.material.name !== 'well') return;
+      const points = vertices(mesh);
+      if (new Box3().setFromPoints(points).containsPoint(new Vector3(...DECK_SEAT.position))) {
+        wells.push(points);
+      }
+    });
+    expect(wells).toHaveLength(1);
+    const well = wells[0];
+    const radii = well.map((p) => Math.hypot(p.x - cx, p.z - cz));
+    expect(Math.max(...radii)).toBeCloseTo(DECK_WELL.radius, PLACES);
+    expect(Math.min(...radii)).toBeCloseTo(DECK_WELL.radius, PLACES);
+    expect(Math.min(...well.map((p) => p.y))).toBeCloseTo(DECK_WELL.floor, PLACES);
+    expect(DECK_WELL.centre[1]).toBe(DECK_WELL.floor);
   });
 
   describe('the Clear’s shell, whose walls the rig test keeps the discs out of', () => {

@@ -1,0 +1,118 @@
+{
+  "width": 2048,
+  "height": 1024,
+  "regions": [
+    {
+      "id": "top",
+      "kind": "plate",
+      "ground": "body",
+      "x": 8,
+      "y": 8,
+      "w": 876,
+      "h": 990,
+      "mmW": 307.4,
+      "mmH": 347.4,
+      "centre": [523, 523]
+    },
+    {
+      "id": "rim",
+      "kind": "ring",
+      "ground": "acrylic",
+      "x": 892,
+      "y": 8,
+      "w": 1133,
+      "h": 84,
+      "mmW": 515.2,
+      "mmH": 38
+    },
+    {
+      "id": "case_front",
+      "kind": "panel",
+      "ground": "case",
+      "x": 892,
+      "y": 495,
+      "w": 344,
+      "h": 219,
+      "mmW": 137.6,
+      "mmH": 87.6,
+      "stencil": true
+    },
+    {
+      "id": "case_left",
+      "kind": "panel",
+      "ground": "case",
+      "x": 1587,
+      "y": 184,
+      "w": 235,
+      "h": 175,
+      "mmW": 117.6,
+      "mmH": 87.6
+    },
+    {
+      "id": "case_right",
+      "kind": "panel",
+      "ground": "case",
+      "x": 1587,
+      "y": 367,
+      "w": 235,
+      "h": 175,
+      "mmW": 117.6,
+      "mmH": 87.6
+    },
+    {
+      "id": "side_left",
+      "kind": "panel",
+      "ground": "body",
+      "x": 892,
+      "y": 120,
+      "w": 687,
+      "h": 117,
+      "mmW": 343.4,
+      "mmH": 58.4
+    },
+    {
+      "id": "side_right",
+      "kind": "panel",
+      "ground": "body",
+      "x": 892,
+      "y": 245,
+      "w": 687,
+      "h": 117,
+      "mmW": 343.4,
+      "mmH": 58.4
+    },
+    {
+      "id": "front",
+      "kind": "panel",
+      "ground": "body",
+      "x": 892,
+      "y": 370,
+      "w": 607,
+      "h": 117,
+      "mmW": 303.4,
+      "mmH": 58.4
+    },
+    {
+      "id": "bezel",
+      "kind": "band",
+      "ground": "glass",
+      "x": 892,
+      "y": 100,
+      "w": 1111,
+      "h": 12,
+      "mmW": 555.2,
+      "mmH": 6
+    },
+    {
+      "id": "nameplate",
+      "kind": "nameplate",
+      "ground": "metal",
+      "x": 1587,
+      "y": 120,
+      "w": 240,
+      "h": 56,
+      "mmW": 60,
+      "mmH": 14
+    }
+  ]
+}

@@ -17,11 +17,23 @@ import {
   type Texture,
 } from 'three';
 import { clearSwatch } from '../clear-looks';
+import { deckSwatch } from '../deck-looks';
 import { etchColour, GOLD, traceColour } from './decor-colours';
 import type { Look } from '../looks';
 import { skinById, type Skin, type SkinRole } from '../skins';
-import { DYNAMIC_MATERIALS, type DynamicMaterial } from './contract';
-import { CLEAR_ROLES, MATERIAL_ROLES, SKIN_ROLES, type MaterialRole } from './material-roles';
+import {
+  DYNAMIC_MATERIALS,
+  OPTIONAL_DYNAMIC_MATERIALS,
+  type DynamicMaterial,
+  type OptionalDynamicMaterial,
+} from './contract';
+import {
+  CLEAR_ROLES,
+  DECK_ROLES,
+  MATERIAL_ROLES,
+  SKIN_ROLES,
+  type MaterialRole,
+} from './material-roles';
 import { leatherNormal, quiltNormal, weaveNormal } from './textures/grain';
 
 export type Slots = Record<DynamicMaterial, MeshPhysicalMaterial | MeshBasicMaterial>;
@@ -41,8 +53,14 @@ function skinRoleOf(name: string): SkinRole | undefined {
   return Object.hasOwn(SKIN_ROLES, name) ? SKIN_ROLES[name] : undefined;
 }
 
+/** The optional dynamic materials this model has (the deck's LED ring and its print layer). */
+export type OptionalSlots = Partial<
+  Record<OptionalDynamicMaterial, MeshPhysicalMaterial | MeshBasicMaterial>
+>;
+
 export interface UpgradedMaterials {
   slots: Slots;
+  optionalSlots: OptionalSlots;
   /** Recolours the model's materials in place for a look (applyLook, below). */
   applyLook(look: Look): void;
   dispose(): void;
@@ -230,6 +248,22 @@ export function makeMaterial(
         color: new Color('#ffffff'),
         toneMapped: false,
       });
+    case 'decal':
+      // The Deck's personal prints (src/scene/textures): one atlas, cut out by its alpha so that the
+      // prints draw in the opaque pass (the jog's acrylic sees the rim's through its transmission),
+      // pulled toward the camera so that they never fight the faces under them. Hidden until the
+      // page paints the atlas (useDeckPattern).
+      return new MeshPhysicalMaterial({
+        name: source.name,
+        color: new Color('#ffffff'),
+        roughness: 0.5,
+        specularIntensity: 0.3,
+        alphaTest: 0.5,
+        polygonOffset: true,
+        polygonOffsetFactor: -1,
+        polygonOffsetUnits: -4,
+        visible: false,
+      });
   }
 }
 
@@ -266,11 +300,27 @@ const SILK_LUMA_SWITCH = 0.45;
 /**
  * Recolours `materials` in place for `look`: the suitcase's skin roles from its skin (as
  * `applySkin` did), or the Clear model's parts from their swatches, its silkscreen following the
- * board and its `trace` and `etch` the board and the shell. Uniforms only.
+ * board and its `trace` and `etch` the board and the shell, or the Deck's body and light from theirs
+ * (its other materials, the print layer included, stay as they are). Uniforms only.
  */
 export function applyLook(materials: Iterable<Material>, look: Look): void {
   if (look.model === 'suitcase') {
     applySkin(materials, skinById(look.skin));
+    return;
+  }
+  if (look.model === 'deck') {
+    for (const material of materials) {
+      const part = Object.hasOwn(DECK_ROLES, material.name) ? DECK_ROLES[material.name] : undefined;
+      if (part === 'body') {
+        const body = deckSwatch(look.deck, 'body');
+        const surface = material as MeshPhysicalMaterial;
+        surface.color.set(body.colour);
+        surface.metalness = body.metalness;
+        surface.roughness = body.roughness;
+      } else if (part === 'light') {
+        (material as MeshBasicMaterial).color.set(deckSwatch(look.deck, 'light').glow);
+      }
+    }
     return;
   }
   const board = clearSwatch(look.clear, 'board').colour;
@@ -313,7 +363,8 @@ export function applyLook(materials: Iterable<Material>, look: Look): void {
 
 /**
  * The materials under `root` a look recolours, by name, as sRGB hex (for the live check): a skin's
- * roles on the suitcase, the Clear model's parts, its silkscreen and its `trace` and `etch`.
+ * roles on the suitcase, the Clear model's parts, its silkscreen and its `trace` and `etch`, the
+ * Deck's body and light.
  */
 export function skinColours(root: Object3D): Record<string, string> {
   const colours: Record<string, string> = {};
@@ -325,6 +376,7 @@ export function skinColours(root: Object3D): Record<string, string> {
     if (
       skinRoleOf(name) ||
       Object.hasOwn(CLEAR_ROLES, name) ||
+      Object.hasOwn(DECK_ROLES, name) ||
       name === 'silk' ||
       name === 'trace' ||
       name === 'etch'
@@ -359,6 +411,7 @@ export function upgradeMaterials(root: Object3D): UpgradedMaterials {
   };
   const made = new Map<string, Material>();
   const slots: Partial<Slots> = {};
+  const optionalSlots: OptionalSlots = {};
   root.traverse((object) => {
     const mesh = object as Mesh;
     if (!mesh.isMesh) return;
@@ -372,17 +425,27 @@ export function upgradeMaterials(root: Object3D): UpgradedMaterials {
         slots[source.name as DynamicMaterial] = material as
           MeshPhysicalMaterial | MeshBasicMaterial;
       }
+      if ((OPTIONAL_DYNAMIC_MATERIALS as readonly string[]).includes(source.name)) {
+        optionalSlots[source.name as OptionalDynamicMaterial] = material as
+          MeshPhysicalMaterial | MeshBasicMaterial;
+      }
     }
     source.dispose();
     mesh.material = material;
-    // Glass casts no hard shadow, and neither do the etched lines: three's shadow map ignores
-    // opacity, so half-opaque lines would shade the inside of the shell at full strength.
-    if ((material as MeshPhysicalMaterial).transmission > 0 || role === 'etch') {
+    // Glass casts no hard shadow, and neither do the etched lines nor the Deck's prints: three's
+    // shadow map ignores opacity, so half-opaque lines would shade the inside of the shell at full
+    // strength, and a print, which lies 0.15 mm over its face, would shade the face it covers.
+    if (
+      (material as MeshPhysicalMaterial).transmission > 0 ||
+      role === 'etch' ||
+      role === 'decal'
+    ) {
       mesh.castShadow = false;
     }
   });
   return {
     slots: slots as Slots,
+    optionalSlots,
     applyLook: (look: Look) => applyLook(made.values(), look),
     dispose: () => {
       for (const material of made.values()) material.dispose();

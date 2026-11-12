@@ -84,10 +84,15 @@ describe('view model', () => {
       trackNo: 0,
       total: 2,
       status: 'idle',
-      collection: { name: 'Top 50 - Global' },
+      collection: { name: 'Top 50 - Global', key: 'playlist:p' },
     });
     expect(backdropFor(source())).toEqual({ artUrl: 'art-a-640' });
     expect(nowPlayingFor(source())).toBeNull();
+  });
+
+  it("keys the view's collection by its type and id", () => {
+    const album = { ...source(), collection: { ...collection, type: 'album' as const, id: 'z9' } };
+    expect(sceneView(album).collection?.key).toBe('album:z9');
   });
 
   it('names the playing track', () => {

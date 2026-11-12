@@ -1,7 +1,8 @@
 """blender --background --factory-startup --python export.py -- --out <file.glb>
 
-Builds the web scene (build_player.py) into the startup scene, turns curves and text into meshes,
-gives the tiled and printed materials UVs, and writes a GLB. art/pipeline/build.mjs runs it.
+Builds the web scene of the model CDP_MODEL names (build_player.py, build_clear.py or
+build_deck.py) into the startup scene, turns curves and text into meshes, gives the tiled and
+printed materials UVs, and writes a GLB. art/pipeline/build.mjs runs it.
 """
 import os
 import sys
@@ -15,9 +16,11 @@ OUT = ARGS[ARGS.index("--out") + 1]
 
 MODEL = os.environ.get("CDP_MODEL", "suitcase")
 SCRIPTS = {"suitcase": ("cdkit.py", "parts.py", "build_player.py"),
-           "clear": ("cdkit.py", "parts.py", "clear.py", "clear_board.py", "clear_decor.py", "build_clear.py")}
+           "clear": ("cdkit.py", "parts.py", "clear.py", "clear_board.py", "clear_decor.py", "build_clear.py"),
+           "deck": ("cdkit.py", "parts.py", "deck.py", "deck_panel.py", "deck_case.py", "deck_print.py",
+                    "build_deck.py")}
 if MODEL not in SCRIPTS:
-    raise SystemExit("export.py: CDP_MODEL must be suitcase or clear, not %r" % MODEL)
+    raise SystemExit("export.py: CDP_MODEL must be suitcase, clear or deck, not %r" % MODEL)
 for _file in SCRIPTS[MODEL]:
     exec(compile(open(os.path.join(HERE, _file)).read(), _file, "exec"), globals())
 WEB = True  # cdkit's functions read it at call time

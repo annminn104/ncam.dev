@@ -27,6 +27,8 @@ import {
   restoreTarget,
   safeStorage,
   writeClearLook,
+  writeDeckLook,
+  writePersonal,
   writeLast,
   writeModel,
   writeSkin,
@@ -138,21 +140,35 @@ export default function App({ controller, initial = null, assetBase = '', initia
   // keeper (model-keeper.ts) follows the scene's stage (onStage, below), not the phase, as the
   // scene does when it tells the boot's load from a change's.
   const [keeper] = useState(() => createModelKeeper((model) => writeModel(safeStorage(), model)));
+  // The look state as last chosen, for `changeLook` to tell a model choice from a pattern or a name.
+  // Kept in step after each render too: a failed change sends the state back without `changeLook`.
+  const lookRef = useRef(lookState);
+  useEffect(() => {
+    lookRef.current = lookState;
+  }, [lookState]);
   const changeLook = useCallback(
     (next: LookState) => {
+      const before = lookRef.current;
+      lookRef.current = next;
       setLookState(next);
       setAskedModel(next.model);
       const storage = safeStorage();
       writeSkin(storage, next.skin);
       writeClearLook(storage, next.clear);
+      writeDeckLook(storage, next.deck);
+      writePersonal(storage, next.personal);
       // Kept at once while nothing is on the stage (the boot loads it), else once it is on show.
-      keeper.choose(next.model);
+      // A pattern or a name typed is no model choice: the keeper is not asked again.
+      if (next.model !== before.model) keeper.choose(next.model);
     },
     [keeper],
   );
   // Once per change: the scene recolours its model whenever `look` is a new object, and App renders
   // on every playback, progress and boot update.
-  const look = useMemo(() => lookOf(lookState), [lookState]);
+  // Only the model's own fields: the visitor's pattern and name (`personal`) go to the Deck's print
+  // layer, and each key typed in the name must not recolour the player.
+  const { model, skin, clear, deck } = lookState;
+  const look = useMemo(() => lookOf({ model, skin, clear, deck }), [model, skin, clear, deck]);
   // The page settled and the scene did not start by itself (a software rasteriser, reduced
   // motion): "Open the player" stands where the loader was until the visitor starts it.
   const [manual, setManual] = useState(false);
@@ -201,9 +217,8 @@ export default function App({ controller, initial = null, assetBase = '', initia
   // (nothing is on the stage, the boot loads it, and LOOK_SCRIPT has painted the saved one). Colour
   // changes within the model on show turn the page at once.
   const accent = useMemo(
-    () =>
-      lookAccent(lookOf({ ...lookState, model: accentModelFor(live, onShow, lookState.model) })),
-    [lookState, live, onShow],
+    () => lookAccent(lookOf({ model: accentModelFor(live, onShow, model), skin, clear, deck })),
+    [model, skin, clear, deck, live, onShow],
   );
   const onModel = useCallback(
     (load: ModelLoad) => {
@@ -417,6 +432,7 @@ export default function App({ controller, initial = null, assetBase = '', initia
             bridge={deps.bridge}
             camera={camera}
             look={look}
+            personal={lookState.personal}
             live={live}
             onReady={onReady}
             onFail={onFail}

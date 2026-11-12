@@ -1,4 +1,5 @@
 import type { ClearPart } from '../clear-looks';
+import type { DeckPart } from '../deck-looks';
 import type { SkinRole } from '../skins';
 
 /**
@@ -25,7 +26,8 @@ export type MaterialRole =
   | 'frame'
   | 'pcb'
   | 'etch'
-  | 'gold';
+  | 'gold'
+  | 'decal';
 
 export const MATERIAL_ROLES: Readonly<Record<string, MaterialRole>> = {
   leather: 'leather',
@@ -61,6 +63,7 @@ export const MATERIAL_ROLES: Readonly<Record<string, MaterialRole>> = {
   card_print: 'print',
   tag_print: 'print',
   lcd_screen: 'screen',
+  jog_ring: 'screen',
   clear_shell: 'clear-shell',
   door_glass: 'crystal',
   clear_frame: 'frame',
@@ -78,6 +81,13 @@ export const MATERIAL_ROLES: Readonly<Record<string, MaterialRole>> = {
   trace: 'pcb',
   etch: 'etch',
   gold: 'gold',
+  deck_body: 'frame',
+  deck_light: 'emissive',
+  jog_acrylic: 'crystal',
+  foam: 'matte',
+  deck_pattern: 'decal',
+  rca_red: 'plastic',
+  rca_white: 'plastic',
 };
 
 /**
@@ -102,4 +112,10 @@ export const CLEAR_ROLES: Readonly<Record<string, ClearPart>> = {
   clear_frame: 'frame',
   board: 'board',
   light: 'light',
+};
+
+/** GLB material name → the Deck's part that colours it (src/deck-looks.ts). */
+export const DECK_ROLES: Readonly<Record<string, DeckPart>> = {
+  deck_body: 'body',
+  deck_light: 'light',
 };

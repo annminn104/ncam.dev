@@ -3,11 +3,16 @@ import type { TrackView } from '../../bridge';
 import { clearSwatch, DEFAULT_CLEAR_LOOK } from '../../clear-looks';
 import {
   LCD_ON,
+  JOG_RING_DIM,
+  JOG_RING_SEGMENTS,
+  jogRingLit,
   lcdColour,
   loadFaces,
   paintBooklet,
   paintCard,
+  paintDeckScreen,
   paintDisc,
+  paintJogRing,
   paintLcd,
   paintTag,
 } from './paint';
@@ -166,10 +171,98 @@ describe('the lines of text', () => {
 });
 
 describe('lcdColour', () => {
-  it('is the suitcase’s cyan, or the Clear model’s light', () => {
+  it('is the suitcase’s cyan, or the Clear model’s or the Deck’s light', () => {
+    expect(lcdColour({ model: 'deck', deck: { body: 'black', light: 'violet' } })).toBe('#b48cff');
     expect(lcdColour({ model: 'suitcase', skin: 'blush' })).toBe(LCD_ON);
     expect(lcdColour({ model: 'clear', clear: DEFAULT_CLEAR_LOOK })).toBe(
       clearSwatch(DEFAULT_CLEAR_LOOK, 'light').glow,
     );
+  });
+});
+
+/** A canvas that notes each fillRect with the fill style and alpha it was drawn in. */
+function strip(width = 480, height = 8) {
+  const state: Record<string, unknown> = { globalAlpha: 1 };
+  const rects: { x: number; w: number; style: unknown; alpha: unknown }[] = [];
+  const context = new Proxy(
+    {},
+    {
+      get: (_target, key) =>
+        key === 'fillRect'
+          ? (x: number, _y: number, w: number) =>
+              rects.push({ x, w, style: state.fillStyle, alpha: state.globalAlpha })
+          : () => {},
+      set: (_target, key, value) => {
+        state[String(key)] = value;
+        return true;
+      },
+    },
+  );
+  const canvas = { width, height, getContext: () => context };
+  return { canvas: canvas as unknown as HTMLCanvasElement, rects };
+}
+
+describe('jogRingLit', () => {
+  it('lights the share of 48 segments the target has reached, rounded', () => {
+    expect(JOG_RING_SEGMENTS).toBe(48);
+    expect(jogRingLit(0, 30_000)).toBe(0);
+    expect(jogRingLit(15_000, 30_000)).toBe(24);
+    expect(jogRingLit(30_000, 30_000)).toBe(48);
+    expect(jogRingLit(312, 30_000)).toBe(0);
+    expect(jogRingLit(313, 30_000)).toBe(1);
+  });
+  it('stays within the ring, and dark without a duration', () => {
+    expect(jogRingLit(40_000, 30_000)).toBe(48);
+    expect(jogRingLit(-5, 30_000)).toBe(0);
+    expect(jogRingLit(10_000, 0)).toBe(0);
+    expect(jogRingLit(10_000, Number.NaN)).toBe(0);
+  });
+});
+
+describe('paintJogRing', () => {
+  it('blacks the strip, then draws 48 segments left to right: lit in the glow, the rest dim', () => {
+    const { canvas, rects } = strip(480, 8);
+    paintJogRing(canvas, 5, '#7fd8ff');
+    expect(rects[0]).toMatchObject({ x: 0, w: 480, style: '#000000', alpha: 1 });
+    const segments = rects.slice(1);
+    expect(segments).toHaveLength(48);
+    segments.forEach((rect, k) => {
+      expect(rect.style, String(k)).toBe('#7fd8ff');
+      expect(rect.alpha, String(k)).toBe(k < 5 ? 1 : JOG_RING_DIM);
+      expect(rect.x, String(k)).toBeCloseTo(k * 10 + 0.9, 9);
+      expect(rect.w, String(k)).toBeCloseTo(8.2, 9);
+    });
+  });
+});
+
+describe('paintDeckScreen', () => {
+  it('prints the track, the title, the artists, the times and the name', () => {
+    const { canvas, texts } = recorder(768, 432);
+    paintDeckScreen(
+      canvas,
+      {
+        trackNo: 3,
+        title: 'Song',
+        artists: 'Band',
+        id: 'x',
+        targetMs: 42_000,
+        durationMs: 180_000,
+        status: 'playing',
+      },
+      LCD_ON,
+    );
+    for (const text of ['03', 'Song', 'Band', '0:42', '-2:18', 'ncam']) {
+      expect(texts).toContain(text);
+    }
+  });
+
+  it('prints dashes and "No disc" without a track', () => {
+    const { canvas, texts } = recorder(768, 432);
+    paintDeckScreen(
+      canvas,
+      { trackNo: 0, title: '', artists: '', id: null, targetMs: 0, durationMs: 0, status: 'idle' },
+      LCD_ON,
+    );
+    for (const text of ['--', 'No disc', '-:--']) expect(texts).toContain(text);
   });
 });

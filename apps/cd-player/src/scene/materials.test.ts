@@ -15,6 +15,7 @@ import {
 } from 'three';
 import { describe, expect, it } from 'vitest';
 import { CLEAR_SWATCHES, clearSwatch, type ClearLook } from '../clear-looks';
+import { deckSwatch } from '../deck-looks';
 import { SKINS, skinById, type Skin } from '../skins';
 import { DYNAMIC_MATERIALS } from './contract';
 import { etchColour, traceColour } from './decor-colours';
@@ -84,6 +85,18 @@ describe('makeMaterial', () => {
     expect(gold.metalness).toBe(1);
     expect(gold.roughness).toBe(0.3);
   });
+
+  // The Deck’s prints draw in the opaque pass, cut out by their atlas’s alpha, and sit 0.15 mm over
+  // their faces: the offset keeps them from fighting those faces in the depth buffer.
+  it('makes the Deck’s print layer a cut-out decal pulled off its face, hidden until it is painted', () => {
+    const decal = makeMaterial('decal', source, maps) as MeshPhysicalMaterial;
+    expect(decal.alphaTest).toBe(0.5);
+    expect(decal.transparent).toBe(false);
+    expect(decal.polygonOffset).toBe(true);
+    expect(decal.polygonOffsetFactor).toBe(-1);
+    expect(decal.polygonOffsetUnits).toBe(-4);
+    expect(decal.visible).toBe(false);
+  });
 });
 
 describe('upgradeMaterials', () => {
@@ -134,6 +147,17 @@ describe('upgradeMaterials', () => {
     expect(glass.castShadow).toBe(false);
     expect(etch.castShadow).toBe(false);
     expect(board.castShadow).toBe(true);
+    upgraded.dispose();
+  });
+
+  it('keeps the Deck’s print layer out of the shadow map, and hands it to the page as a slot', () => {
+    const root = new Group();
+    const print = meshOf('deck_pattern');
+    print.castShadow = true;
+    root.add(print);
+    const upgraded = upgradeMaterials(root);
+    expect(print.castShadow).toBe(false);
+    expect(upgraded.optionalSlots.deck_pattern).toBe(print.material);
     upgraded.dispose();
   });
 
@@ -333,6 +357,53 @@ describe('applyLook', () => {
     applyLook(Object.values(m), { model: 'suitcase', skin: 'cherry' });
     expect(hex(m.shell.color)).toBe(shell);
     expect(hex(m.leather.color)).toBe(skinById('cherry').palette.leather);
+  });
+
+  describe('the Deck', () => {
+    const deck = { body: 'silver', light: 'red' };
+    const deckMaterials = () => ({
+      body: new MeshPhysicalMaterial({ name: 'deck_body' }),
+      light: new MeshBasicMaterial({ name: 'deck_light' }),
+      hardware: new MeshPhysicalMaterial({ name: 'hardware' }),
+      pattern: new MeshBasicMaterial({ name: 'deck_pattern' }),
+      shell: new MeshPhysicalMaterial({ name: 'clear_shell' }),
+    });
+
+    it('colours the body and the light from their swatches', () => {
+      const m = deckMaterials();
+      applyLook(Object.values(m), { model: 'deck', deck });
+      expect(hex(m.body.color)).toBe(deckSwatch(deck, 'body').colour);
+      expect(m.body.metalness).toBe(deckSwatch(deck, 'body').metalness);
+      expect(m.body.roughness).toBe(deckSwatch(deck, 'body').roughness);
+      expect(hex(m.light.color)).toBe(deckSwatch(deck, 'light').glow);
+    });
+
+    it('leaves every other material alone, the suitcase’s hardware and the print layer included', () => {
+      const m = deckMaterials();
+      const before = Object.fromEntries(
+        Object.entries(m).map(([key, material]) => [key, hex(material.color)]),
+      );
+      applyLook(Object.values(m), { model: 'deck', deck });
+      for (const key of ['hardware', 'pattern', 'shell'] as const) {
+        expect(hex(m[key].color), key).toBe(before[key]);
+      }
+    });
+
+    it('is left alone by the other looks, and reports its colours to the live check', () => {
+      const m = deckMaterials();
+      applyLook(Object.values(m), { model: 'deck', deck });
+      const body = hex(m.body.color);
+      applyLook(Object.values(m), { model: 'suitcase', skin: 'cherry' });
+      expect(hex(m.body.color)).toBe(body);
+      const root = new Group();
+      for (const material of [m.body, m.light, m.pattern]) {
+        root.add(new Mesh(new BoxGeometry(), material));
+      }
+      expect(skinColours(root)).toEqual({
+        deck_body: deckSwatch(deck, 'body').colour,
+        deck_light: deckSwatch(deck, 'light').glow,
+      });
+    });
   });
 
   it('prints the silkscreen light on a dark board and dark on the white one, as the render does', () => {

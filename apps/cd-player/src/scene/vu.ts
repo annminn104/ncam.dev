@@ -1,4 +1,5 @@
 import { clearSwatch } from '../clear-looks';
+import { deckSwatch } from '../deck-looks';
 import type { Look } from '../looks';
 import type { Status } from '../playback/sequencer';
 
@@ -26,12 +27,15 @@ export const VU_COLOURS: readonly string[] = [
 ];
 
 /**
- * The strip's colours for a look: the suitcase's amber to red, or the Clear model's light in ten
- * brightening steps (sRGB, the last being the glow itself).
+ * The strip's colours for a look: the suitcase's amber to red, or the Clear model's or the Deck's
+ * light in ten brightening steps (sRGB, the last being the glow itself).
  */
 export function vuColours(look: Look): readonly string[] {
   if (look.model === 'suitcase') return VU_COLOURS;
-  const glow = clearSwatch(look.clear, 'light').glow;
+  const glow =
+    look.model === 'clear'
+      ? clearSwatch(look.clear, 'light').glow
+      : deckSwatch(look.deck, 'light').glow;
   const channel = (at: number, k: number) =>
     Math.round(parseInt(glow.slice(at, at + 2), 16) * k)
       .toString(16)

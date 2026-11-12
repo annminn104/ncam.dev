@@ -9,8 +9,10 @@ import {
   type LightSwatch,
   type ShellSwatch,
 } from '../clear-looks';
+import { DECK_PART_NAMES, DECK_PARTS, DECK_SWATCHES } from '../deck-looks';
 import { lookLabel, lookOf, lookSwatch, type LookState } from '../looks';
 import { MODELS, modelById, type ModelId } from '../models';
+import { cleanName, NAME_FALLBACK, PATTERNS, type PatternId } from '../personal';
 import type { ModelLoad } from '../scene-props';
 import { SKINS, type SkinId } from '../skins';
 import { CheckIcon } from './Icons';
@@ -87,7 +89,10 @@ function swatchColour(swatch: ShellSwatch | FrameSwatch | BoardSwatch | LightSwa
   return swatch.colour;
 }
 
-/** The menu's groups: the model, then the suitcase's skins or the Clear model's parts. */
+/**
+ * The menu's groups: the model, then the suitcase's skins, the Deck's parts and patterns or the
+ * Clear model's.
+ */
 function groupsFor(look: LookState, onChange: (next: LookState) => void): Group[] {
   const model: Group = {
     label: 'Model',
@@ -105,6 +110,30 @@ function groupsFor(look: LookState, onChange: (next: LookState) => void): Group[
         options: SKINS.map((s) => ({ id: s.id, name: s.name, swatch: s.palette.leather })),
         value: look.skin,
         pick: (id) => onChange({ ...look, skin: id as SkinId }),
+      },
+    ];
+  }
+  if (look.model === 'deck') {
+    return [
+      model,
+      ...DECK_PARTS.map((part) => ({
+        label: DECK_PART_NAMES[part],
+        variant: 'dots' as const,
+        options: DECK_SWATCHES[part].map((s) => ({
+          id: s.id,
+          name: s.name,
+          swatch: swatchColour(s),
+        })),
+        value: look.deck[part],
+        pick: (id: string) => onChange({ ...look, deck: { ...look.deck, [part]: id } }),
+      })),
+      {
+        label: 'Pattern',
+        variant: 'rows' as const,
+        options: PATTERNS.map((pattern) => ({ id: pattern.id, name: pattern.name })),
+        value: look.personal.pattern,
+        pick: (id: string) =>
+          onChange({ ...look, personal: { ...look.personal, pattern: id as PatternId } }),
       },
     ];
   }
@@ -214,6 +243,64 @@ function RadioGroup({ group }: { group: Group }) {
   );
 }
 
+/**
+ * What typing in the name field does with `raw`, the input's text: mid-composition (an input method
+ * is still building a letter, as Vietnamese Telex and VNI do) the text is only drawn as it is and
+ * nothing is kept; otherwise it is cleaned and kept. Cleaning a half-composed text, and handing the
+ * result back as the input's value, would cancel or garble the composition and jump the caret.
+ */
+export function nameEdit(
+  composing: boolean,
+  raw: string,
+): { draft: string; name: null } | { draft: null; name: string } {
+  return composing ? { draft: raw, name: null } : { draft: null, name: cleanName(raw) };
+}
+
+/**
+ * The Deck's engraving: the visitor's name, cleaned as it is typed (src/personal.ts cleanName) and
+ * kept in this browser only. Empty, the Deck prints the placeholder's "ncam". During an input
+ * method's composition the raw text is a local draft, and only its end is cleaned and kept (see
+ * `nameEdit`); Chrome and Safari fire `input` and `compositionend` in different orders, so the end
+ * cleans whatever the input holds, and an `input` after it cleans too.
+ */
+function NameField({ value, onChange }: { value: string; onChange(name: string): void }) {
+  const [draft, setDraft] = useState<string | null>(null);
+  const composing = useRef(false);
+  const keep = (raw: string, isComposing: boolean) => {
+    const edit = nameEdit(isComposing, raw);
+    setDraft(edit.draft);
+    if (edit.name !== null) onChange(edit.name);
+  };
+  return (
+    <label className="cdp-skin__group cdp-skin__field">
+      <span className="cdp-skin__legend">Your name</span>
+      <input
+        className="cdp-skin__input"
+        type="text"
+        value={draft ?? value}
+        placeholder={NAME_FALLBACK}
+        autoComplete="off"
+        autoCapitalize="words"
+        spellCheck={false}
+        enterKeyHint="done"
+        onCompositionStart={() => {
+          composing.current = true;
+        }}
+        onCompositionEnd={(event) => {
+          composing.current = false;
+          keep(event.currentTarget.value, false);
+        }}
+        onChange={(event) =>
+          keep(
+            event.target.value,
+            composing.current || (event.nativeEvent as InputEvent).isComposing,
+          )
+        }
+      />
+    </label>
+  );
+}
+
 interface MenuProps {
   look: LookState;
   open: boolean;
@@ -223,7 +310,8 @@ interface MenuProps {
 }
 
 /**
- * The popover: the model, then its colours, each a radio group whose arrows choose as they move.
+ * The popover: the model, then its colours (the Deck's pattern and name too), each group a radio
+ * group whose arrows choose as they move.
  * A key held with Alt, Ctrl or Cmd is the browser's, never a choice (`optionForPress`). Its status
  * line says what `load` says: the caller hands it the load of the model the visitor last chose.
  */
@@ -234,6 +322,12 @@ export function LookMenu({ look, open, onChange, load }: MenuProps) {
       {groupsFor(look, onChange).map((group) => (
         <RadioGroup key={group.label} group={group} />
       ))}
+      {look.model === 'deck' && (
+        <NameField
+          value={look.personal.name}
+          onChange={(name) => onChange({ ...look, personal: { ...look.personal, name } })}
+        />
+      )}
       {/* Always rendered: a live region added with its text is not announced, so a line set while
           the popover is open is. (A closed popover is `hidden`: nothing says a line then.) */}
       <p className="cdp-skin__load" role="status">

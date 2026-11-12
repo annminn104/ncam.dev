@@ -82,6 +82,36 @@ export function knobSeekMs(deltaRad: number): number {
   return Math.round((deltaRad / (2 * Math.PI)) * KNOB_MS_PER_TURN);
 }
 
+/**
+ * What the display shows during a turn of the knob: the position plus the turn's seek, held
+ * between 0 and the duration (only above 0 while the duration is unknown). With no turn going on,
+ * the position.
+ */
+export function scrubTargetMs(
+  positionMs: number,
+  durationMs: number,
+  scrubMs: number | null,
+): number {
+  if (scrubMs === null) return positionMs;
+  const target = Math.max(0, positionMs + scrubMs);
+  return durationMs > 0 ? Math.min(durationMs, target) : target;
+}
+
+/**
+ * The knob turns only while no change runs and its model's door is shut (the deck's jog is the
+ * door): a turn scrubs the disc in the player, so one going on ends as soon as this stops holding
+ * (knob-turn.ts).
+ */
+export function knobTakesTurn(doorOpen: number, swapping: boolean): boolean {
+  return doorOpen === 0 && !swapping;
+}
+
+/** The spin after a finished turn the disc followed, within one revolution. */
+export function foldTurn(spin: number, turn: number): number {
+  const full = 2 * Math.PI;
+  return (((spin + turn) % full) + full) % full;
+}
+
 /** How long a pressed key takes to sink and come back (ms). */
 export const PRESS_MS = 160;
 

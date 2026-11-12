@@ -1311,6 +1311,36 @@
 .cdp-skin .cdp-skin__option[aria-checked='true'] {
   font-weight: 600;
 }
+/* The Deck's name field: the link bar's input tokens, 16 px so that iOS does not zoom on focus. */
+.cdp-skin .cdp-skin__input {
+  box-sizing: border-box;
+  width: 100%;
+  height: 36px;
+  padding: 0 10px;
+  font: inherit;
+  font-size: 16px;
+  color: var(--cdp-ink);
+  background: var(--cdp-control);
+  border: 1px solid var(--cdp-line);
+  border-radius: var(--cdp-radius-control);
+}
+.cdp-skin .cdp-skin__input::placeholder {
+  color: var(--cdp-ink-faint);
+}
+.cdp-skin .cdp-skin__input:hover {
+  border-color: var(--cdp-line-strong);
+}
+.cdp-skin .cdp-skin__input:focus-visible {
+  outline: 2px solid var(--cdp-accent-ink);
+  outline-offset: 1px;
+  border-color: var(--cdp-accent-ink);
+}
+.cdp-skin__field {
+  display: block;
+}
+.cdp-skin__field .cdp-skin__legend {
+  margin-bottom: 6px;
+}
 /* One radio group per row: the model, then the suitcase's skins or the Clear model's parts. */
 .cdp-skin__group + .cdp-skin__group {
   margin-top: 6px;

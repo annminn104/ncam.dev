@@ -35,7 +35,7 @@ const track = (id: string): TrackView => ({
   artUrl: null,
   artistUrl: null,
 });
-const MIX = { name: 'Mix', subtitle: 'Owner' };
+const MIX = { name: 'Mix', subtitle: 'Owner', key: 'playlist:mix' };
 const lineup = (current: string | null, ...upcoming: string[]): Lineup => ({
   collection: MIX,
   current: current === null ? null : track(current),
@@ -156,7 +156,7 @@ const PICK_4 = plan(
 const SIDE = plan(lineup('a', 'b', 'c', 'd', 'e', 'f'), lineup('x', 'y', 'z', 'd', 'e', 'f'), 'x');
 const OTHER: Lineup = {
   ...lineup(null, 'p', 'q', 'r', 's', 't'),
-  collection: { name: 'Other', subtitle: 'Someone' },
+  collection: { name: 'Other', subtitle: 'Someone', key: 'playlist:other' },
 };
 const COLLECTION = plan(lineup('a', 'b', 'c', 'd', 'e', 'f'), OTHER, null);
 const RESTACK = plan(

@@ -14,3 +14,13 @@ export function xorshift(seed: number): () => number {
     return s / 4294967296;
   };
 }
+
+/** The 32-bit FNV-1a hash of a string's UTF-16 code units: a seed for `xorshift`. */
+export function fnv1a(text: string): number {
+  let hash = 2166136261;
+  for (let i = 0; i < text.length; i++) {
+    hash ^= text.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}

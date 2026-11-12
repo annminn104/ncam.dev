@@ -5,7 +5,7 @@ import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.j
 import type { Look } from '../looks';
 import type { ModelId, ModelProfile } from '../models';
 import { OPTIONAL_NODES, REQUIRED_NODES, type OptionalNode, type RequiredNode } from './contract';
-import { upgradeMaterials, type Slots } from './materials';
+import { upgradeMaterials, type OptionalSlots, type Slots } from './materials';
 
 /** The file a model URL names, for the errors and the logs: its last path segment. */
 function modelFile(url: string): string {
@@ -29,6 +29,8 @@ export interface PlayerModel {
   /** The contract's nodes, and the optional ones this GLB has. */
   nodes: Record<RequiredNode, Object3D> & Partial<Record<OptionalNode, Object3D>>;
   slots: Slots;
+  /** The optional dynamic materials this GLB has (the deck's LED ring). */
+  optionalSlots: OptionalSlots;
   /** Recolours the model for `look` in place: no reload, no new download (materials.ts). */
   applyLook(look: Look): void;
   dispose(): void;
@@ -133,6 +135,7 @@ export async function loadPlayerModel(
     root,
     nodes,
     slots: materials.slots,
+    optionalSlots: materials.optionalSlots,
     applyLook: materials.applyLook,
     dispose: () => {
       materials.dispose();

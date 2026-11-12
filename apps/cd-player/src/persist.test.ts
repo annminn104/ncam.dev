@@ -3,22 +3,30 @@ import { describe, expect, it } from 'vitest';
 import { CLEAR_SWATCHES, DEFAULT_CLEAR_LOOK } from './clear-looks';
 import {
   CLEAR_KEY,
+  DECK_KEY,
   LOOK_SCRIPT,
   MODEL_KEY,
+  PERSONAL_KEY,
   readClearLook,
+  readDeckLook,
   readLast,
   readLookState,
   readModel,
+  readPersonal,
   readSkin,
   restoreTarget,
   scriptLiteral,
   SKIN_KEY,
   STORAGE_KEY,
   writeClearLook,
+  writeDeckLook,
   writeLast,
   writeModel,
+  writePersonal,
   writeSkin,
 } from './persist';
+import { DECK_SWATCHES, DEFAULT_DECK_LOOK } from './deck-looks';
+import { DEFAULT_PERSONAL } from './personal';
 import { DEFAULT_COLLECTION, type CollectionRef } from './routes';
 import { SKINS } from './skins';
 
@@ -131,16 +139,53 @@ describe('the saved model and the Clear model’s colours', () => {
     expect(readClearLook(broken)).toEqual(DEFAULT_CLEAR_LOOK);
   });
 
+  it('round-trips the Deck look as JSON, part by part', () => {
+    const storage = memory();
+    const look = { body: 'silver', light: 'violet' };
+    writeDeckLook(storage, look);
+    expect(DECK_KEY).toBe('ncam.cd-player.deck');
+    expect(readDeckLook(storage)).toEqual(look);
+    expect(readDeckLook(memory({ [DECK_KEY]: '{"body":"silver","light":"neon"}' }))).toEqual({
+      ...DEFAULT_DECK_LOOK,
+      body: 'silver',
+    });
+    for (const junk of ['{nope', '"deck"', 'null', '[]']) {
+      expect(readDeckLook(memory({ [DECK_KEY]: junk })), junk).toEqual(DEFAULT_DECK_LOOK);
+    }
+    expect(readDeckLook(null)).toEqual(DEFAULT_DECK_LOOK);
+    expect(readDeckLook(broken)).toEqual(DEFAULT_DECK_LOOK);
+    expect(() => writeDeckLook(broken, look)).not.toThrow();
+  });
+
+  it('round-trips the visitor’s pattern and name as JSON', () => {
+    const storage = memory();
+    const personal = { pattern: 'circuit' as const, name: 'Lan Anh' };
+    writePersonal(storage, personal);
+    expect(PERSONAL_KEY).toBe('ncam.cd-player.personal');
+    expect(readPersonal(storage)).toEqual(personal);
+    for (const junk of ['{nope', '[]']) {
+      expect(readPersonal(memory({ [PERSONAL_KEY]: junk })), junk).toEqual(DEFAULT_PERSONAL);
+    }
+    expect(readPersonal(memory())).toEqual(DEFAULT_PERSONAL);
+    expect(readPersonal(null)).toEqual(DEFAULT_PERSONAL);
+    expect(readPersonal(broken)).toEqual(DEFAULT_PERSONAL);
+    expect(() => writePersonal(broken, personal)).not.toThrow();
+  });
+
   it('reads the whole look state', () => {
     const storage = memory({
       [MODEL_KEY]: 'clear',
       [SKIN_KEY]: 'sage',
       [CLEAR_KEY]: '{"light":"lime"}',
+      [DECK_KEY]: '{"light":"red"}',
+      [PERSONAL_KEY]: '{"pattern":"waves","name":"Lan"}',
     });
     expect(readLookState(storage)).toEqual({
       model: 'clear',
       skin: 'sage',
       clear: { ...DEFAULT_CLEAR_LOOK, light: 'lime' },
+      deck: { ...DEFAULT_DECK_LOOK, light: 'red' },
+      personal: { pattern: 'waves', name: 'Lan' },
     });
   });
 });
@@ -170,6 +215,21 @@ describe('LOOK_SCRIPT', () => {
   it('paints nothing where readSkin finds no skin', () => {
     for (const junk of ['midnight', '', 'SAGE', 'toString', '__proto__', 'constructor']) {
       expect(paint(memory({ [SKIN_KEY]: junk })), junk).toEqual({});
+    }
+  });
+
+  it('paints the saved light’s pair on the Deck, its default light’s for junk', () => {
+    const pair = (id: string) => {
+      const light = DECK_SWATCHES.light.find((l) => l.id === id)!;
+      return { '--cdp-accent': light.accent, '--cdp-on-accent': light.onAccent };
+    };
+    expect(paint(memory({ [MODEL_KEY]: 'deck', [DECK_KEY]: '{"light":"violet"}' }))).toEqual(
+      pair('violet'),
+    );
+    for (const junk of [undefined, '{nope', '{"light":"neon"}', '{"light":"__proto__"}']) {
+      const store: Record<string, string> = { [MODEL_KEY]: 'deck' };
+      if (junk !== undefined) store[DECK_KEY] = junk;
+      expect(paint(memory(store)), String(junk)).toEqual(pair(DEFAULT_DECK_LOOK.light));
     }
   });
 

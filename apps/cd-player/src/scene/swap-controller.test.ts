@@ -18,7 +18,7 @@ const track = (id: string): TrackView => ({
   artUrl: null,
   artistUrl: null,
 });
-const MIX = { name: 'Mix', subtitle: 'Owner' };
+const MIX = { name: 'Mix', subtitle: 'Owner', key: 'playlist:mix' };
 /** A view: `current` in the player (playing; null: nothing), the rest coming next. */
 const lineup = (current: string | null, ...upcoming: string[]): SceneView => ({
   ...EMPTY_VIEW,
@@ -384,7 +384,7 @@ describe('createSwapController: a change', () => {
     await flush();
     h.frame(500);
     // Another playlist that starts with the track slot 0 now holds (two charts share tracks).
-    const other = { name: 'Other', subtitle: 'Someone' };
+    const other = { name: 'Other', subtitle: 'Someone', key: 'playlist:other' };
     const second = h.swap({ ...lineup('c', 'd', 'e', 'f', 'g', 'h'), collection: other }, 'c');
     await flush();
     expect(first.settled).toBe(true);
@@ -576,7 +576,7 @@ describe('createSwapController: follow', () => {
     const h = await seated(FULL);
     const other: SceneView = {
       ...lineup(null, 'p', 'q', 'r', 's', 't'),
-      collection: { name: 'Other', subtitle: 'Someone' },
+      collection: { name: 'Other', subtitle: 'Someone', key: 'playlist:other' },
     };
     h.controller.follow(other);
     h.landAll();
@@ -608,7 +608,7 @@ describe('createSwapController: follow', () => {
     const h = await seated(lineup('a', 'b', 'c'));
     const renamed: SceneView = {
       ...lineup('a', 'b', 'c'),
-      collection: { name: 'Renamed', subtitle: 'Owner' },
+      collection: { name: 'Renamed', subtitle: 'Owner', key: 'playlist:mix' },
     };
     h.controller.follow(renamed);
     expect(h.stage.swapping).toBe(false);

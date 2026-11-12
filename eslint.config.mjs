@@ -27,6 +27,8 @@ export default tseslint.config(
       'apps/garden-home/art/blender/**',
       // CD Player's Blender build: Python (its pipeline in art/pipeline is linted).
       'apps/cd-player/art/blender/**',
+      // CD Player's art build output (gitignored): raw exports, renders and scratch check scripts.
+      'apps/cd-player/art/.out/**',
       // Strapi (apps/strapi): generated types, admin build context, local SQLite dir.
       'apps/strapi/types/generated/**',
       'apps/strapi/.strapi/**',

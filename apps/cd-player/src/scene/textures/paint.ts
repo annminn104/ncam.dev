@@ -6,8 +6,10 @@ import {
 } from 'three';
 import type { TrackView } from '../../bridge';
 import { clearSwatch } from '../../clear-looks';
+import { deckSwatch } from '../../deck-looks';
 import type { Look } from '../../looks';
 import type { Status } from '../../playback/sequencer';
+import { DECK_SCREEN, playedBars, screenTimes, WAVE_BARS, waveHeights } from './deck-screen';
 import {
   arcLayout,
   brushLines,
@@ -32,8 +34,8 @@ const LCD_GHOST = 'rgba(158, 238, 255, 0.08)';
 // has them loaded before a print uses them; a face is picked by family, weight and style, so the
 // size it is loaded at does not matter.
 const title = (px: number) => `italic 500 ${px}px ${DISPLAY}`;
-const semibold = (px: number) => `600 ${px}px ${UI}`;
-const bold = (px: number) => `700 ${px}px ${UI}`;
+export const semibold = (px: number) => `600 ${px}px ${UI}`;
+export const bold = (px: number) => `700 ${px}px ${UI}`;
 const FACES = [title(16), semibold(16), bold(16)];
 
 /** How long a print waits for the page's fonts: past it, it goes out in the fallback faces. */
@@ -76,7 +78,7 @@ export function setMap(
   material.needsUpdate = true;
 }
 
-function context(canvas: HTMLCanvasElement): CanvasRenderingContext2D {
+export function context(canvas: HTMLCanvasElement): CanvasRenderingContext2D {
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('no 2D canvas');
   return ctx;
@@ -286,9 +288,11 @@ function drawDigits(
   }
 }
 
-/** The display's lit colour for a look: the suitcase's cyan, or the Clear model's light. */
+/** The display's lit colour for a look: the suitcase's cyan, or the Clear model's or the Deck's light. */
 export function lcdColour(look: Look): string {
-  return look.model === 'suitcase' ? LCD_ON : clearSwatch(look.clear, 'light').glow;
+  if (look.model === 'clear') return clearSwatch(look.clear, 'light').glow;
+  if (look.model === 'deck') return deckSwatch(look.deck, 'light').glow;
+  return LCD_ON;
 }
 
 /** The deck's display: unlit "88 8:88" ghosts under the lit digits, as on a real LCD. */
@@ -329,4 +333,117 @@ export function paintLcd(
   ctx.textBaseline = 'top';
   const label = status === 'playing' ? 'CD   ▶ PLAY' : status === 'paused' ? 'CD   ❚❚ PAUSE' : 'CD';
   ctx.fillText(label, w * 0.07, h * 0.08);
+}
+
+/** The deck's LED ring: its segments round the jog. */
+export const JOG_RING_SEGMENTS = 48;
+/** A dim segment's share of the glow. */
+export const JOG_RING_DIM = 0.12;
+
+/** How many of the ring's segments `targetMs` of `durationMs` lights: none without a duration. */
+export function jogRingLit(targetMs: number, durationMs: number): number {
+  if (!(durationMs > 0)) return 0;
+  const lit = Math.round((JOG_RING_SEGMENTS * targetMs) / durationMs);
+  return Math.min(JOG_RING_SEGMENTS, Math.max(0, lit));
+}
+
+/**
+ * The ring's strip. Its u runs clockwise round the ring from twelve o'clock
+ * (art/blender/scripts/deck.py unwraps it so), so segment k fills the k-th 48th of the width, less
+ * a gap of 18 % of a cell. The first `lit` segments are the glow, the rest the glow at
+ * JOG_RING_DIM, the gaps black.
+ */
+export function paintJogRing(canvas: HTMLCanvasElement, lit: number, colour: string): void {
+  const ctx = context(canvas);
+  const { width: w, height: h } = canvas;
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = '#000000';
+  ctx.fillRect(0, 0, w, h);
+  const cell = w / JOG_RING_SEGMENTS;
+  const gap = cell * 0.18;
+  ctx.fillStyle = colour;
+  for (let k = 0; k < JOG_RING_SEGMENTS; k++) {
+    ctx.globalAlpha = k < lit ? 1 : JOG_RING_DIM;
+    ctx.fillRect(k * cell + gap / 2, 0, cell - gap, h);
+  }
+  ctx.globalAlpha = 1;
+}
+
+/** What the deck's screen shows: the view's track, and the time the displays show (the jog's target). */
+export interface DeckScreenView {
+  trackNo: number;
+  title: string;
+  artists: string;
+  id: string | null;
+  targetMs: number;
+  durationMs: number;
+  status: Status;
+}
+
+/**
+ * The deck's big screen, laid out for DECK_SCREEN's 768 × 432 and scaled to the canvas: a top bar
+ * (track, ▶ or ‖, the name, the times), the title and the artists, and the waveform with its played
+ * part and a playhead along the bottom.
+ */
+export function paintDeckScreen(
+  canvas: HTMLCanvasElement,
+  screen: DeckScreenView,
+  colour: string,
+): void {
+  const ctx = context(canvas);
+  const { width: w, height: h } = canvas;
+  const k = w / DECK_SCREEN.width;
+  const margin = 24 * k;
+  const hasTrack = screen.trackNo > 0;
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = '#000000';
+  ctx.fillRect(0, 0, w, h);
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = colour;
+  ctx.shadowColor = colour;
+  ctx.shadowBlur = 6 * k;
+  // The top bar.
+  const barY = 26 * k;
+  ctx.font = bold(Math.round(30 * k));
+  ctx.textAlign = 'left';
+  const track = hasTrack ? String(screen.trackNo % 100).padStart(2, '0') : '--';
+  ctx.fillText(track, margin, barY);
+  const trackW = ctx.measureText(track).width;
+  ctx.fillText(screen.status === 'playing' ? '▶' : '‖', margin + trackW + 14 * k, barY);
+  const { elapsed, remaining } = screenTimes(screen.targetMs, screen.durationMs);
+  ctx.font = bold(Math.round(26 * k));
+  ctx.textAlign = 'right';
+  ctx.fillText(remaining, w - margin, barY);
+  const remainingW = ctx.measureText(remaining).width;
+  ctx.fillText('/', w - margin - remainingW - 10 * k, barY);
+  ctx.fillText(elapsed, w - margin - remainingW - 28 * k, barY);
+  ctx.font = semibold(Math.round(18 * k));
+  ctx.textAlign = 'center';
+  ctx.fillText('ncam', w / 2, barY);
+  // The title and the artists.
+  ctx.textAlign = 'left';
+  ctx.font = title(Math.round(56 * k));
+  const name = hasTrack ? screen.title : 'No disc';
+  ctx.fillText(fitted(ctx, name, w - 2 * margin), margin, 118 * k);
+  ctx.globalAlpha = 0.7;
+  ctx.font = semibold(Math.round(30 * k));
+  ctx.fillText(fitted(ctx, screen.artists, w - 2 * margin), margin, 178 * k);
+  ctx.globalAlpha = 1;
+  ctx.shadowBlur = 0;
+  // The waveform: the bottom 150 px.
+  const heights = screen.id ? waveHeights(screen.id) : new Array<number>(WAVE_BARS).fill(0.18);
+  const played = playedBars(screen.targetMs, screen.durationMs);
+  const waveH = 150 * k;
+  const cell = w / heights.length;
+  heights.forEach((height, i) => {
+    ctx.globalAlpha = i < played ? 1 : 0.25;
+    const barH = waveH * height;
+    ctx.fillRect(i * cell + cell * 0.15, h - barH, cell * 0.7, barH);
+  });
+  ctx.globalAlpha = 1;
+  if (screen.durationMs > 0) {
+    const x = Math.min(w, Math.max(0, (w * screen.targetMs) / screen.durationMs));
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(x - k, h - waveH, 2 * k, waveH);
+  }
 }

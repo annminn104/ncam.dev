@@ -65,9 +65,17 @@ export interface Rig extends StageState {
   /** The booklet's two prints (the print hook sets them): `bookletFront` shows. */
   bookletMaps: [Texture | null, Texture | null];
   spin: number;
+  /** The knob's turn as a seek (ms) while one is going on, for the display's preview; else null. */
+  scrubMs: number | null;
+  /** How far the disc follows the knob's turn going on (radians); 0 between turns. */
+  knobTurn: number;
+  /** 1, or -1 for a profile that plays clockwise. */
+  spinSense: 1 | -1;
   arm: { node: Object3D; baseRotationY: number; baseY: number };
   /** The door's hinge, for a model with one: where it is shut, and the turn that opens it. */
-  door: { node: Object3D; base: number; angle: number } | null;
+  door: { node: Object3D; base: number; angle: number; axis: 'x' | 'y' } | null;
+  /** How far the door stood open at the last pose: 0 shut … 1 open; 0 for a model without one. */
+  doorOpen: number;
   /**
    * The spindle's seat, in world space (the discs live at the root), and its normal: the way a disc
    * leaves and reaches it, as a slot's is (up out of the suitcase's deck, out of the Clear's door).
@@ -79,7 +87,7 @@ export interface Rig extends StageState {
    * The model's flights (its profile's): how far their handles reach out of a slot and out of the
    * spindle, and where a disc leaving the spindle goes out of sight, from its seat.
    */
-  flight: { reach: { slot: number; spindle: number }; aside: Vector3 };
+  flight: { reach: { slot: number; spindle: number }; aside: Vector3; exit: 'normal' | 'up' };
 }
 
 /** Gives every mesh under `root` that wears `name` one copy of it, so each instance prints its own. */
@@ -128,7 +136,28 @@ function flipLift(object: Object3D): number {
   return Math.hypot(across, deep) + CASE_FLIP_MARGIN_M;
 }
 
+/** The axis a profile's door turns about: Y unless it says X. */
+export function doorAxis(door: { axis?: 'x' | 'y' }): 'x' | 'y' {
+  return door.axis ?? 'y';
+}
+
+/** Turns `door`'s hinge to `open` (0 shut … 1 open) about its own axis. */
+export function turnDoor(door: NonNullable<Rig['door']>, open: number): void {
+  door.node.rotation[door.axis] = door.base + door.angle * open;
+}
+
+/**
+ * Between these two parts of its way from a slot (or, mirrored, to one) a disc lifted out of it turns
+ * from upright to flat.
+ */
+const LIFT_TURN = [0.1, 0.5] as const;
+
 const rigs = new WeakMap<PlayerModel, Rig>();
+
+/** Which way a model's disc plays about its seat's up: 1 counter-clockwise, -1 clockwise. */
+export function spinSense(profile: { clockwise?: boolean }): 1 | -1 {
+  return profile.clockwise ? -1 : 1;
+}
 
 /** One rig per model (StrictMode renders twice; building it twice would clone twice). */
 export function rigFor(model: PlayerModel): Rig {
@@ -139,7 +168,13 @@ export function rigFor(model: PlayerModel): Rig {
   const seatPosition = new Vector3();
   const seatQuaternion = new Quaternion();
   nodes.disc_seat.matrixWorld.decompose(seatPosition, seatQuaternion, new Vector3());
-  const slots = RACK_NODES.map((name) => frameOf(nodes[name]));
+  const profile = SCENE_PROFILES[model.id];
+  const slots = RACK_NODES.map((name) => {
+    const frame = frameOf(nodes[name]);
+    // A crate's discs stand in their slots: they leave and come in straight up, not along the face.
+    if (profile.flight.exit === 'up') frame.out.copy(UP);
+    return frame;
+  });
   // The discs fly in world space, so every copy lives at the root.
   const template = nodes.disc;
   root.attach(template);
@@ -158,8 +193,7 @@ export function rigFor(model: PlayerModel): Rig {
     lift: flipLift(nodes.case),
     booklet: ownMaterial(nodes.case, 'art_booklet'),
   };
-  const profile = SCENE_PROFILES[model.id];
-  const doorAngle = profile.door?.angle;
+  const door = profile.door;
   const rig: Rig = {
     model,
     discs,
@@ -171,15 +205,24 @@ export function rigFor(model: PlayerModel): Rig {
     swapping: false,
     last: { armAngle: ARM_REST, spin: 0 },
     spin: 0,
+    scrubMs: null,
+    knobTurn: 0,
+    spinSense: spinSense(profile),
     arm: {
       node: nodes.arm_pivot,
       baseRotationY: nodes.arm_pivot.rotation.y,
       baseY: nodes.arm_pivot.position.y,
     },
     door:
-      nodes.door_hinge && doorAngle !== undefined
-        ? { node: nodes.door_hinge, base: nodes.door_hinge.rotation.y, angle: doorAngle }
+      nodes.door_hinge && door
+        ? {
+            node: nodes.door_hinge,
+            base: nodes.door_hinge.rotation[doorAxis(door)],
+            angle: door.angle,
+            axis: doorAxis(door),
+          }
         : null,
+    doorOpen: 0,
     seat: {
       position: seatPosition,
       quaternion: seatQuaternion,
@@ -187,6 +230,7 @@ export function rigFor(model: PlayerModel): Rig {
     },
     slots,
     flight: {
+      exit: profile.flight.exit ?? 'normal',
       reach: { ...profile.flight.reach },
       aside: new Vector3(...profile.flight.aside),
     },
@@ -223,7 +267,7 @@ function placeAt(rig: Rig, place: Place, into: PlaceFrame): PlaceFrame {
     into.position.copy(rig.seat.position);
     into.quaternion
       .copy(rig.seat.quaternion)
-      .multiply(spinQuaternion.setFromAxisAngle(UP, rig.spin));
+      .multiply(spinQuaternion.setFromAxisAngle(UP, rig.spin + rig.knobTurn));
     into.out.copy(rig.seat.out);
     return into;
   }
@@ -302,7 +346,16 @@ function placeDisc(rig: Rig, copy: DiscCopy, pose: DiscPose | null): void {
     .addScaledVector(handleA, 3 * u * u * a)
     .addScaledVector(handleB, 3 * u * a * a)
     .addScaledVector(end.position, a * a * a);
-  object.quaternion.copy(start.quaternion).slerp(end.quaternion, a);
+  // A disc lifted straight out of a crate's slot stays upright until it is clear of the foam and
+  // lays flat on the way across, as it stands up again before it goes down into a slot.
+  const fromSlot = typeof pose.from === 'number';
+  const turn =
+    rig.flight.exit === 'up' && flies
+      ? fromSlot
+        ? MathUtils.smoothstep(a, LIFT_TURN[0], LIFT_TURN[1])
+        : 1 - MathUtils.smoothstep(1 - a, LIFT_TURN[0], LIFT_TURN[1])
+      : a;
+  object.quaternion.copy(start.quaternion).slerp(end.quaternion, turn);
   object.scale.setScalar(scale);
 }
 
@@ -333,11 +386,12 @@ export function modelArmAngle(model: ModelId, angle: number): number {
 export function applyPose(rig: Rig, pose: Pose, dt: number): void {
   rig.arm.node.rotation.y = rig.arm.baseRotationY + modelArmAngle(rig.model.id, pose.armAngle);
   rig.arm.node.position.y = rig.arm.baseY + pose.armLift * ARM_LIFT_M;
-  rig.spin = (rig.spin + dt * SPIN_RAD_S * pose.spin) % (2 * Math.PI);
+  rig.spin = (rig.spin + dt * SPIN_RAD_S * pose.spin * rig.spinSense) % (2 * Math.PI);
   rig.last.armAngle = pose.armAngle;
   rig.last.spin = pose.spin;
   rig.discs.forEach((copy, index) => placeDisc(rig, copy, pose.discs[index] ?? null));
   placeCase(rig, pose.caseLift, pose.caseTurn);
   showBooklet(rig, pose.bookletNew);
-  if (rig.door) rig.door.node.rotation.y = rig.door.base + rig.door.angle * pose.door;
+  rig.doorOpen = rig.door ? pose.door : 0;
+  if (rig.door) turnDoor(rig.door, pose.door);
 }
