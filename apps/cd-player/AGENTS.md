@@ -782,20 +782,20 @@ whose answers (an orbit step, a pinch's factor and midpoints, a recentre) it car
   in the now-playing card (see "Playback").
 - **The knob scrubs the track.** A turn is followed on the window, read around the middle of the
   knob's top (its pivot sits at its base), and one full turn is 30 s (`KNOB_MS_PER_TURN`). While it
-  turns, `rig.scrubMs` carries the turn's seek for the displays (see "Printed textures"), and on
-  the Deck, whose profile has `knobTurnsDisc`, the disc follows the jog (`rig.knobTurn`). The knob
-  turns only while no change runs and its model's door is shut
+  turns, `rig.scrubMs` carries the turn's seek for the displays (see "Printed textures"), and on the
+  Deck, whose profile has `knobTurnsDisc`, the disc follows the jog (`rig.knobTurn`). The knob turns
+  only while no change runs and its model's door is shut
   (`knobTakesTurn(rig.doorOpen, rig.swapping)`; on the Deck the knob sits on the plate that is its
-  door), every model's rule, and it holds for as long as a turn goes on, not only as it begins: `knob-turn.ts`, which
-  `useControls.ts` feeds the pointer events, checks it on every one and every frame. A press it
-  refuses turns nothing, and neither orbits nor recentres. A turn going on when a change begins
-  (a track that ends mid-turn swaps the very disc it scrubs) or the door opens ends where it
-  stands: the knob stays where the hand left it, the disc keeps the turn it followed (so a leaving
-  disc goes with that and no more), the displays stop previewing, and it seeks nothing, its seek
-  having been in the track on its way out. Otherwise it emits one `seek {deltaMs}` only on a real
-  release; a cancelled turn, a mouse that moves with no button down (a native menu took the
-  release), or a touch's turn that becomes a pinch puts the knob back where the turn began and
-  seeks nothing. The card's Seek slider is its DOM equivalent.
+  door), every model's rule, and it holds for as long as a turn goes on, not only as it begins:
+  `knob-turn.ts`, which `useControls.ts` feeds the pointer events, checks it on every one and every
+  frame. A press it refuses turns nothing, and neither orbits nor recentres. A turn going on when a
+  change begins (a track that ends mid-turn swaps the very disc it scrubs) or the door opens ends
+  where it stands: the knob stays where the hand left it, the disc keeps the turn it followed (so a
+  leaving disc goes with that and no more), the displays stop previewing, and it seeks nothing, its
+  seek having been in the track on its way out. Otherwise it emits one `seek {deltaMs}` only on a
+  real release; a cancelled turn, a mouse that moves with no button down (a native menu took the
+  release), or a touch's turn that becomes a pinch puts the knob back where the turn began and seeks
+  nothing. The card's Seek slider is its DOM equivalent.
 - **A drag elsewhere orbits the view** (the primary button or a touch), within ±25° of yaw and ±10°
   of pitch, eased (`orbit.ts`); the turn is divided by the zoom on screen (`dragOrbit`), so a
   zoomed view swings at 1×'s rate for the same drag. It **recentres, the zoom too, on a mouse
