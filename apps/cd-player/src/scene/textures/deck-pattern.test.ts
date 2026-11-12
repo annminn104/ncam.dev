@@ -9,9 +9,11 @@ import {
   inksFor,
   paintDeckPattern,
   patternKey,
+  STENCIL_ZONE,
   STICKER_WORDS,
   type PatternPrint,
 } from './deck-pattern';
+import { CAP } from './deck-pattern-core';
 import { fnv1a } from './xorshift';
 
 const BLACK_ICE: DeckLook = { body: 'black', light: 'ice' };
@@ -163,16 +165,18 @@ const STYLES: readonly (PatternStyle | null)[] = [...PATTERN_STYLES, null];
 
 describe('paintDeckPattern', () => {
   it('Plain: clears the canvas, then prints the name on the nameplate and the stencil', () => {
-    for (const [name, caps] of [
-      ['ncam', 'NCAM'],
-      ['DJ Lan', 'DJ LAN'],
-    ]) {
+    for (const [name, lines] of [
+      ['ncam', ['NCAM']],
+      ['DJ Lan', ['DJ LAN']],
+      ['Anh Minh DJ NCAM', ['ANH MINH', 'DJ NCAM']],
+    ] as const) {
       const log = paint(printOf({ style: null, name }));
       expect(log[0]).toEqual(['clearRect', 0, 0, DECK_ATLAS.width, DECK_ATLAS.height]);
       expect(log.filter((call) => call[0] === 'clearRect')).toHaveLength(1);
       for (const { region, calls } of blocks(log)) {
-        if (region?.kind === 'nameplate') expect(texts(calls)).toEqual([caps, caps]);
-        else if (region?.stencil) expect(texts(calls)).toEqual(['PROPERTY OF', caps]);
+        if (region?.kind === 'nameplate') {
+          expect(texts(calls)).toEqual(lines.flatMap((line) => [line, line]));
+        } else if (region?.stencil) expect(texts(calls)).toEqual(['PROPERTY OF', ...lines]);
         else
           expect(
             calls.filter((call) => DRAWS.test(String(call[0]))),
@@ -222,6 +226,74 @@ describe('paintDeckPattern', () => {
     expect(after[0].composite).toBe('destination-out');
     expect(after[0].args[3]).toBeCloseTo(0.8, 9);
     expect(after[0].args[1]).toBeLessThan(Number(name.y));
+  });
+
+  it('engraves a long name in two lines of one size, each edge and cut, inside 2 mm', () => {
+    for (const [name, lines, marks] of [
+      ['Anh Minh DJ NCAM', ['ANH MINH', 'DJ NCAM'], 0],
+      ['Nguyễn Văn Ánh', ['NGUYỄN', 'VĂN ÁNH'], 0.42],
+    ] as const) {
+      const print = printOf({ style: null, name });
+      const plate = blockOf(paint(print), (region) => region.kind === 'nameplate');
+      const region = plate?.region as AtlasRegion;
+      const drawn = drawnTexts(plate?.calls ?? []);
+      expect(drawn.map((line) => line.text)).toEqual(lines.flatMap((line) => [line, line]));
+      expect(new Set(drawn.map((line) => line.font)).size).toBe(1);
+      const size = sizeOf(drawn[0].font);
+      const [edge1, cut1, edge2, cut2] = drawn;
+      for (const [edge, cut] of [
+        [edge1, cut1],
+        [edge2, cut2],
+      ]) {
+        expect(edge.fill).toBe(ATLAS_LIGHT);
+        expect(cut.fill).toBe(inksFor('metal', print).line);
+        expect(Number(edge.y) - Number(cut.y)).toBeCloseTo(1 / pxPerMm(region), 9);
+        expect([...String(cut.text)].length * size * 0.6).toBeLessThanOrEqual(region.mmW - 4);
+      }
+      // The first line's marks clear the top margin, the second's its gap, the last line the foot.
+      expect(Number(cut1.y) - (CAP + marks) * size, name).toBeGreaterThanOrEqual(2 - 1e-9);
+      const gap = Number(cut2.y) - CAP * size - Number(cut1.y);
+      expect(gap, name).toBeGreaterThanOrEqual(Math.max(0.18, marks) * size - 1e-9);
+      expect(Number(cut2.y), name).toBeLessThanOrEqual(region.mmH - 2 + 1e-9);
+    }
+  });
+
+  it('stencils each line between the handle’s brackets, above its grip, long names in two', () => {
+    const [zx, zy, zw, zh] = STENCIL_ZONE;
+    for (const [name, lines, marks] of [
+      ['DJ Lan', ['DJ LAN'], 0],
+      ['Lan Ánh', ['LAN ÁNH'], 0.42],
+      ['Anh Minh DJ NCAM', ['ANH MINH', 'DJ NCAM'], 0],
+      ['Nguyễn Văn Ánh', ['NGUYỄN', 'VĂN ÁNH'], 0.42],
+    ] as const) {
+      const stencil = blockOf(paint(printOf({ style: null, name })), (region) => !!region.stencil);
+      const region = stencil?.region as AtlasRegion;
+      const calls = stencil?.calls ?? [];
+      const [property, ...named] = drawnTexts(calls);
+      expect(named.map((line) => line.text)).toEqual(lines);
+      expect(new Set(named.map((line) => line.font)).size).toBe(1);
+      const size = sizeOf(named[0].font);
+      expect(Number(property.y) - CAP * sizeOf(property.font), name).toBeGreaterThanOrEqual(zy);
+      for (const line of [property, ...named]) {
+        const half = ([...String(line.text)].length * sizeOf(line.font) * 0.6) / 2;
+        expect(line.x).toBe(region.mmW / 2);
+        expect(region.mmW / 2 - half, `${name}: ${line.text}`).toBeGreaterThanOrEqual(zx);
+        expect(region.mmW / 2 + half, `${name}: ${line.text}`).toBeLessThanOrEqual(zx + zw);
+      }
+      expect(Number(named.at(-1)?.y), name).toBeLessThanOrEqual(zy + zh + 1e-9);
+      if (named.length === 2) {
+        const gap = Number(named[1].y) - CAP * size - Number(named[0].y);
+        expect(gap, name).toBeGreaterThanOrEqual(Math.max(0.18, marks) * size - 1e-9);
+      }
+      // One bridge across each line, inside its capitals.
+      const bridges = rects(calls).slice(1);
+      expect(bridges, name).toHaveLength(lines.length);
+      bridges.forEach(({ args, composite }, i) => {
+        expect(composite).toBe('destination-out');
+        expect(args[1]).toBeLessThan(Number(named[i].y));
+        expect(args[1]).toBeGreaterThan(Number(named[i].y) - CAP * size);
+      });
+    }
   });
 
   it('makes the same calls for the same print, every time', () => {
@@ -327,6 +399,20 @@ describe('paintDeckPattern', () => {
         for (const word of words) {
           expect(['Top 50 - Global', 'DJ LAN', ...STICKER_WORDS], region.id).toContain(word);
         }
+      }
+    }
+  });
+
+  it('Sticker bomb: a long name in two stickers of its own, on the top and every panel', () => {
+    for (const seed of [1, 2, 3]) {
+      const print = printOf({ style: 'stickers', seed, name: 'Anh Minh DJ NCAM' });
+      for (const { region, calls } of blocks(paint(print))) {
+        if (!region || !isWide(region)) continue;
+        const words = patternTexts(region, calls);
+        expect(words, region.id).toContain('ANH MINH');
+        expect(words, region.id).toContain('DJ NCAM');
+        expect(words, region.id).not.toContain('ANH MINH DJ NCAM');
+        expect(words, region.id).toContain('Top 50 - Global');
       }
     }
   });

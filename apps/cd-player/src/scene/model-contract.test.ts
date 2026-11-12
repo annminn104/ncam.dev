@@ -24,7 +24,7 @@ import { DYNAMIC_MATERIALS, REQUIRED_NODES } from './contract';
 import { readGlbJson, triangleCount } from './glb';
 import { CLEAR_ROLES, MATERIAL_ROLES, SKIN_ROLES } from './material-roles';
 import deckAtlas from './textures/deck-atlas.json';
-import { JOG_OPENING, OPEN } from './textures/deck-pattern';
+import { JOG_OPENING, OPEN, STENCIL_ZONE } from './textures/deck-pattern';
 
 const GLB = fileURLToPath(new URL('../../public/assets/cd-player.glb', import.meta.url));
 /** Box-mapped in export.py (one UV unit per 5 cm), for the maps the page tiles over them. */
@@ -399,21 +399,29 @@ describe('public/assets/cd-player-deck.glb (art/pipeline/build.mjs deck)', () =>
       return !(d.some((v) => v < 0) && d.some((v) => v > 0));
     };
     const STEPS = 20;
-    for (const [id, zones] of Object.entries(OPEN)) {
-      expect(triangles[id], `${id} has a print`).toBeDefined();
-      zones.forEach(([x, y, w, h], z) => {
-        const missed: string[] = [];
-        for (let i = 0; i <= STEPS; i++) {
-          for (let j = 0; j <= STEPS; j++) {
-            const p: Point = [x + (w * i) / STEPS, y + (h * j) / STEPS];
-            if (!triangles[id].some((t) => inside(p, t))) {
-              missed.push(p.map((v) => v.toFixed(1)).join(','));
-            }
+    /** A zone's grid points that no triangle of the region's print holds (the first four). */
+    const offPrint = (id: string, [x, y, w, h]: readonly number[]) => {
+      const missed: string[] = [];
+      for (let i = 0; i <= STEPS; i++) {
+        for (let j = 0; j <= STEPS; j++) {
+          const p: Point = [x + (w * i) / STEPS, y + (h * j) / STEPS];
+          if (!triangles[id].some((t) => inside(p, t))) {
+            missed.push(p.map((v) => v.toFixed(1)).join(','));
           }
         }
-        expect(missed.slice(0, 4), `${id}[${z}] has points off the print`).toEqual([]);
+      }
+      return missed.slice(0, 4);
+    };
+    for (const [id, zones] of Object.entries(OPEN)) {
+      expect(triangles[id], `${id} has a print`).toBeDefined();
+      zones.forEach((zone, z) => {
+        expect(offPrint(id, zone), `${id}[${z}] has points off the print`).toEqual([]);
       });
     }
+    // The stencil's lines keep off the case front's openings: its handle's brackets, its latches.
+    expect(offPrint('case_front', STENCIL_ZONE), 'STENCIL_ZONE has points off the print').toEqual(
+      [],
+    );
     // The top's print opens round the jog: its nearest vertex sits at JOG_OPENING.
     const top = regions.find((r) => r.id === 'top');
     if (!top?.centre) throw new Error('no top region with a centre');

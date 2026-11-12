@@ -735,15 +735,22 @@ pattern and name, printed over the deck and its flight case at runtime.
   `waves`, `stickers`, `graffiti`; `PatternStyle` in `personal.ts`) in the light's three colours
   and two neutrals (`ATLAS_LIGHT`, `ATLAS_DARK`; `inksFor(ground, print)` picks the tones that
   read on a ground), the name engraved on the nameplate and stencilled on the flight case's front
-  ("PROPERTY OF" over it), `ncam` where the visitor gave none. The cut leaves no partial alpha: a
+  ("PROPERTY OF" over it, every line inside `STENCIL_ZONE`: between the handle's brackets and
+  above its grip), `ncam` where the visitor gave none. A name of more than 10 code points with a
+  space (`nameLines` in `personal.ts`) prints in two parts, split at the space that leaves them
+  nearest in length: two lines on the nameplate and the stencil, two stickers in Sticker bomb
+  ("Anh Minh DJ NCAM" is "ANH MINH" and "DJ NCAM"). The cut leaves no partial alpha: a
   print is opaque or not there, so no alpha but 1, no gradient, no blur and no line under 2 px.
   Every region is painted in its own mm (the canvas scaled by the region's pixels per mm), from a
   stream of its own (`xorshift` seeded by the collection's seed XOR the hash of the region's id),
   so a print repaints identically and one region's drawing never moves another's; the `ring` and
   `band` regions are painted y-flipped, and the rim in polar terms (its grid is polar, a step
-  along the ring's circumference). The jog's opening (`JOG_OPENING`, 120 mm) and the openings the
-  names and tags avoid (`OPEN`) are hard-coded from `deck_print.py`: **a known coupling**, so a
-  change to the print zones' openings there is a change to `deck-pattern.ts` too.
+  along the ring's circumference). The jog's opening (`JOG_OPENING`, 120 mm), the openings the
+  names and tags avoid (`OPEN`) and the stencil's zone (`STENCIL_ZONE`) are hard-coded from
+  `deck_print.py` and `deck_case.py`: **a known coupling**, so a change to the print zones'
+  openings or the case's handle there is a change to `deck-pattern-core.ts` too
+  (`model-contract.test.ts` checks the zones against the GLB's print triangles; nothing checks the
+  handle's grip, which stands out of the face rather than opening the print).
 - **What a print depends on** (`PatternPrint`, `patternKey`): the style (from
   `styleFor`: From the music picks one of the five by the collection's seed, Plain none), the seed
   (`collectionSeed`, the FNV-1a hash of `SceneView.collection.key`, the collection's `type:id`),
@@ -1730,7 +1737,7 @@ Unit tests (`src/**/*.test.ts`, node environment, run by the root `pnpm test`):
   order, ids of their own, the colours' format and the frame's finish in 0…1, a part's id kept and
   its default for one it lacks, every light's contrast as the skins', every colour from
   `clear-looks.json`), `deck-looks.test.ts` (the same for the Deck's two parts and six lights),
-  `personal.test.ts` (`cleanName`, `engraving`, `styleFor`, `personalFrom`), `looks.test.ts` (the defaults, the accent from the skin or the light, the
+  `personal.test.ts` (`cleanName`, `engraving`, `nameLines`, `styleFor`, `personalFrom`), `looks.test.ts` (the defaults, the accent from the skin or the light, the
   Player button's swatch and name) and `shell/LookPicker.test.ts` (the closed picker named for the
   look, with its swatch; the menu's groups for each model, the skins in order with the current one
   checked and its group's only tab stop, the tick, the load line in its status element, the tick's
@@ -1797,7 +1804,8 @@ Unit tests (`src/**/*.test.ts`, node environment, run by the root `pnpm test`):
   start at a gesture's first touch; Safari's `gestureFactor`), and `textures/`
   (`grain`, `images`, `layout`, `paint` with `lcdColour` and the ring's segments, `painter`,
   `deck-screen` (the waveform's seed, the played bars, the times), `deck-atlas` (the layout),
-  `deck-pattern` (the nameplate and the stencil, the same calls for the same print and others
+  `deck-pattern` (the nameplate and the stencil, a long name in two lines and two stickers, the
+  stencil inside its zone, the same calls for the same print and others
   for another seed, each region clipped once, the rim and the bezel flipped, the five inks alone
   at full alpha with no gradient, no blur and no line under 2 px, Sticker bomb and Graffiti, then
   `inksFor`, `collectionSeed` and `patternKey`), `deck-print` (what the atlas prints for a look, a name-only

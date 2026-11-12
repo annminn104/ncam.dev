@@ -26,6 +26,7 @@ export {
   JOG_OPENING,
   OPEN,
   patternKey,
+  STENCIL_ZONE,
   STICKER_WORDS,
   type Inks,
   type PatternPrint,

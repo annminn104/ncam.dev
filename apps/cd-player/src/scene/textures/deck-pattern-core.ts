@@ -1,6 +1,6 @@
 // The Deck's print painter: its types, inks, shared helpers, openings, nameplate and stencil (see deck-pattern.ts).
 import type { FrameSwatch, LightSwatch } from '../../clear-looks';
-import type { PatternStyle } from '../../personal';
+import { nameLines, type PatternStyle } from '../../personal';
 import { pxPerMm, type AtlasRegion, type Ground } from './deck-atlas';
 import { fitText } from './layout';
 import { bold, semibold } from './paint';
@@ -155,6 +155,42 @@ export const OPEN: Readonly<Record<string, readonly Zone[]>> = {
   ],
 };
 
+/**
+ * Where the case front's stencil prints its lines, in its region's mm, centred on it: between its
+ * handle's brackets (deck_print.py: 13.2 mm wide at ±40 mm from the middle, from 17.2 mm down),
+ * between its latches' notches at the top, and down to just above the handle's grip, which stands
+ * out of the face from 24.8 mm down (deck_case.py: FC_HANDLE_Z ± 6).
+ */
+export const STENCIL_ZONE: Zone = [36, 1, 65.6, 23];
+
+/** The least gap between two lines of capitals, per em, where their marks need no more. */
+const LINE_GAP = 0.18;
+
+/**
+ * Lines of capitals stacked at 1 em (multiply by a size): each line's baseline from the top of the
+ * first's capitals, LINE_GAP or the marks between two lines apart, and the marks over the first
+ * and under the last.
+ */
+export function stacked(lines: readonly string[]): {
+  baselines: number[];
+  above: number;
+  below: number;
+} {
+  const baselines: number[] = [];
+  let under = 0;
+  for (const line of lines) {
+    const { above, below } = reach(line);
+    const last = baselines.at(-1);
+    baselines.push(last === undefined ? CAP : last + Math.max(LINE_GAP, under + above) + CAP);
+    under = below;
+  }
+  return { baselines, above: reach(lines[0] ?? '').above, below: under };
+}
+
+/** A stack's height at 1 em, from its first line's marks to its last line's. */
+const heightOf = (stack: ReturnType<typeof stacked>) =>
+  stack.above + (stack.baselines.at(-1) ?? 0) + stack.below;
+
 /** A region as its painter sees it: its size in mm, its density, its inks and its own stream. */
 export interface Area {
   readonly region: AtlasRegion;
@@ -308,6 +344,27 @@ export function fitFont(
   return { size, text: fitText((s) => ctx.measureText(s).width, text, room) };
 }
 
+/**
+ * Sets `face` at one size for `lines`, the largest at which every line fits `room` (fitFont), and
+ * gives that size and the lines, with an ellipsis only where `min` is still too wide.
+ */
+export function fitLines(
+  ctx: CanvasRenderingContext2D,
+  face: (px: number) => string,
+  lines: readonly string[],
+  room: number,
+  max: number,
+  min = max / 2,
+): { size: number; texts: string[] } {
+  const fitted = lines.map((line) => fitFont(ctx, face, line, room, max, min));
+  const size = Math.min(...fitted.map((fit) => fit.size));
+  ctx.font = face(size);
+  const texts = fitted.map((fit, i) =>
+    fit.size === size ? fit.text : fitText((s) => ctx.measureText(s).width, lines[i], room),
+  );
+  return { size, texts };
+}
+
 /** The jog's centre, in the top plate's mm. */
 export function centreOf(area: Area): [number, number] {
   const [cx, cy] = area.region.centre ?? [0, 0];
@@ -343,28 +400,35 @@ export function zones(area: Area, n: number): Zone[] {
 }
 
 /**
- * The nameplate: the name in caps, engraved in bold in the metal's line ink over a light edge 1 px
- * below it, as large as fits inside 2 mm margins, its marks included, and centred with them.
+ * The nameplate: the name in caps (in two lines where long: nameLines), engraved in bold in the
+ * metal's line ink over a light edge 1 px below it, as large as fits inside 2 mm margins, its
+ * marks included, and centred with them.
  */
 export function engrave(ctx: CanvasRenderingContext2D, area: Area): void {
   const { w, h, print } = area;
-  const caps = print.name.toUpperCase();
-  const { above, below } = reach(caps);
-  const largest = Math.min((0.45 * h) / CAP, (h - 4) / (CAP + above + below));
-  const { size, text } = fitFont(ctx, bold, caps, w - 4, largest);
-  const y = h / 2 + ((CAP + above - below) * size) / 2;
+  const lines = nameLines(print.name.toUpperCase());
+  const stack = stacked(lines);
+  const tall = heightOf(stack);
+  const largest = Math.min((0.45 * h) / CAP, (h - 4) / tall);
+  const { size, texts } = fitLines(ctx, bold, lines, w - 4, largest);
+  const top = (h - tall * size) / 2 + stack.above * size;
+  const cut = inksFor('metal', print).line;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'alphabetic';
-  ctx.fillStyle = ATLAS_LIGHT;
-  ctx.fillText(text, w / 2, y + 1 / area.k);
-  ctx.fillStyle = inksFor('metal', print).line;
-  ctx.fillText(text, w / 2, y);
+  texts.forEach((text, i) => {
+    const y = top + stack.baselines[i] * size;
+    ctx.fillStyle = ATLAS_LIGHT;
+    ctx.fillText(text, w / 2, y + 1 / area.k);
+    ctx.fillStyle = cut;
+    ctx.fillText(text, w / 2, y);
+  });
 }
 
 /**
- * The flight case's stencil, over its pattern: its top 40 % cut clear, "PROPERTY OF" and under it
- * the name in caps, light and centred, the name cut across at 52 % of its cap height, a stencil's
- * bridge.
+ * The flight case's stencil, over its pattern: its top 40 % cut clear, and in STENCIL_ZONE
+ * "PROPERTY OF" and under it the name in caps (in two lines where long: nameLines), light,
+ * centred and as large as the zone holds, each line cut across at 52 % of its cap height, a
+ * stencil's bridge.
  */
 export function stencil(ctx: CanvasRenderingContext2D, area: Area): void {
   const { w, h, print } = area;
@@ -374,23 +438,27 @@ export function stencil(ctx: CanvasRenderingContext2D, area: Area): void {
   ctx.fillRect(0, 0, w, band);
   ctx.globalCompositeOperation = 'source-over';
   const small = Math.round(0.06 * h * 100) / 100;
-  const caps = print.name.toUpperCase();
-  const { size, text } = fitFont(ctx, bold, caps, 0.86 * w, 0.22 * h, 0.08 * h);
-  // The two lines, a gap between them that the name's marks fit, centred in the cleared band.
-  const marks = reach(caps);
-  const gap = Math.max(0.18, marks.above) * size;
-  const block = CAP * small + gap + (CAP + marks.below) * size;
-  const ownerLine = (band - block) / 2 + CAP * small;
-  const nameLine = ownerLine + gap + CAP * size;
+  const lines = nameLines(print.name.toUpperCase());
+  const stack = stacked(lines);
+  // "PROPERTY OF", a gap that the first line's marks fit, then the name's lines.
+  const lead = Math.max(LINE_GAP, stack.above);
+  const tall = lead - stack.above + heightOf(stack);
+  const [, zy, zw, zh] = STENCIL_ZONE;
+  const largest = Math.min(0.22 * h, (zh - CAP * small) / tall);
+  const { size, texts } = fitLines(ctx, bold, lines, zw - 2, largest, 0.045 * h);
+  const ownerLine = zy + (zh - CAP * small - tall * size) / 2 + CAP * small;
+  const baselines = stack.baselines.map((y) => ownerLine + (lead + y) * size);
   ctx.fillStyle = ATLAS_LIGHT;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'alphabetic';
   ctx.font = semibold(small);
   ctx.fillText('PROPERTY OF', w / 2, ownerLine);
   ctx.font = bold(size);
-  ctx.fillText(text, w / 2, nameLine);
-  const wide = ctx.measureText(text).width + 2;
+  texts.forEach((text, i) => ctx.fillText(text, w / 2, baselines[i]));
   ctx.globalCompositeOperation = 'destination-out';
-  ctx.fillRect((w - wide) / 2, nameLine - 0.52 * CAP * size - 0.4, wide, 0.8);
+  texts.forEach((text, i) => {
+    const wide = ctx.measureText(text).width + 2;
+    ctx.fillRect((w - wide) / 2, baselines[i] - 0.52 * CAP * size - 0.4, wide, 0.8);
+  });
   ctx.globalCompositeOperation = 'source-over';
 }

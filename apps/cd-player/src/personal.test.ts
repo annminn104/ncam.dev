@@ -5,9 +5,11 @@ import {
   engraving,
   NAME_FALLBACK,
   NAME_MAX,
+  nameLines,
   PATTERN_STYLES,
   PATTERNS,
   personalFrom,
+  SPLIT_OVER,
   styleFor,
 } from './personal';
 
@@ -46,6 +48,29 @@ describe('engraving', () => {
 
   it('trims the ends of a name', () => {
     expect(engraving('Lan Anh ')).toBe('Lan Anh');
+  });
+});
+
+describe('nameLines', () => {
+  it('keeps a name of up to SPLIT_OVER code points on one line, spaces and all', () => {
+    expect(SPLIT_OVER).toBe(10);
+    expect(nameLines('NCAM')).toEqual(['NCAM']);
+    expect(nameLines('LAN ÁNH')).toEqual(['LAN ÁNH']);
+    expect(nameLines('DJ LAN ANH')).toEqual(['DJ LAN ANH']);
+  });
+
+  it('splits a longer name at the space that leaves its two parts nearest in length', () => {
+    expect(nameLines('ANH MINH DJ NCAM')).toEqual(['ANH MINH', 'DJ NCAM']);
+    expect(nameLines('NGUYỄN VĂN AN')).toEqual(['NGUYỄN', 'VĂN AN']);
+    expect(nameLines('ABCDE FGHIJ')).toEqual(['ABCDE', 'FGHIJ']);
+  });
+
+  it('takes the first of two spaces as near the middle', () => {
+    expect(nameLines('ABCD EF GHIJ')).toEqual(['ABCD', 'EF GHIJ']);
+  });
+
+  it('keeps a long name with no space whole', () => {
+    expect(nameLines('SUPERCALIFRAGILI')).toEqual(['SUPERCALIFRAGILI']);
   });
 });
 

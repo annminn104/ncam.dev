@@ -67,6 +67,27 @@ export function engraving(name: string): string {
   return cleanName(name).trim() || NAME_FALLBACK;
 }
 
+/** A name longer than this, in code points, prints in two parts where it has a space. */
+export const SPLIT_OVER = 10;
+
+/**
+ * The parts the Deck prints a name in (two stickers, two lines): the name whole, or, when it runs
+ * over SPLIT_OVER code points and has a space, the two sides of the space that leaves them nearest
+ * in length (the first of two as near). `name` is an engraving (single spaces, none at its ends).
+ */
+export function nameLines(name: string): string[] {
+  const chars = Array.from(name);
+  if (chars.length <= SPLIT_OVER) return [name];
+  let best = -1;
+  let balance = Infinity;
+  chars.forEach((char, i) => {
+    const off = Math.abs(2 * i + 1 - chars.length);
+    if (char === ' ' && off < balance) [best, balance] = [i, off];
+  });
+  if (best < 0) return [name];
+  return [chars.slice(0, best).join(''), chars.slice(best + 1).join('')];
+}
+
 /** The style a pattern prints for a collection's seed: none for Plain, one by seed for the music. */
 export function styleFor(pattern: PatternId, seed: number): PatternStyle | null {
   if (pattern === 'plain') return null;

@@ -1,4 +1,5 @@
 // Stickers, the Deck print's die-cut stickers (see deck-pattern.ts).
+import { nameLines } from '../../personal';
 import { bold } from './paint';
 import {
   ATLAS_LIGHT,
@@ -163,10 +164,12 @@ function label(ctx: CanvasRenderingContext2D, area: Area, zone: Zone, text: stri
  * Sticker bomb: one sticker per 900 mm² (3 to 40), overlapping, each turned up to ±25°: circles,
  * labels, bursts, arrow badges and strips of tape, each with a light die-cut edge and a word from
  * STICKER_WORDS. On the top and every panel, one carries the collection's name and, over all, one
- * the name. The rim and the bezel take small dots and stars only.
+ * the name, or two its parts where it is long (nameLines), each in a zone of its own. The rim and
+ * the bezel take small dots and stars only.
  */
 export function stickers(ctx: CanvasRenderingContext2D, area: Area): void {
   const { random, w, h, print } = area;
+  const parts = nameLines(print.name.toUpperCase());
   const count = Math.min(40, Math.max(3, Math.floor((w * h) / 900)));
   if (closes(area)) {
     const most = area.region.kind === 'band' ? 1.4 : 3.2;
@@ -190,7 +193,7 @@ export function stickers(ctx: CanvasRenderingContext2D, area: Area): void {
     }
     return;
   }
-  const named = print.collection ? 2 : 1;
+  const named = parts.length + (print.collection ? 1 : 0);
   for (let i = named; i < count; i++) {
     const [x, y] = somewhere(area, 2);
     const shape = pick(random, SHAPES);
@@ -220,7 +223,8 @@ export function stickers(ctx: CanvasRenderingContext2D, area: Area): void {
       points: whole(random, 8, 12),
     });
   }
-  const [mine, theirs] = zones(area, named);
-  if (print.collection) sticker(ctx, label(ctx, area, theirs, print.collection));
-  sticker(ctx, label(ctx, area, mine, print.name.toUpperCase()));
+  // The name's parts take the best zones, the collection the next; the name's go on top.
+  const spots = zones(area, named);
+  if (print.collection) sticker(ctx, label(ctx, area, spots[parts.length], print.collection));
+  parts.forEach((part, i) => sticker(ctx, label(ctx, area, spots[i], part)));
 }
