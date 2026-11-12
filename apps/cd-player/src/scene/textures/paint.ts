@@ -8,6 +8,7 @@ import type { TrackView } from '../../bridge';
 import { clearSwatch } from '../../clear-looks';
 import type { Look } from '../../looks';
 import type { Status } from '../../playback/sequencer';
+import { DECK_SCREEN, playedBars, screenTimes, waveHeights } from './deck-screen';
 import {
   arcLayout,
   brushLines,
@@ -363,4 +364,83 @@ export function paintJogRing(canvas: HTMLCanvasElement, lit: number, colour: str
     ctx.fillRect(k * cell + gap / 2, 0, cell - gap, h);
   }
   ctx.globalAlpha = 1;
+}
+
+/** What the deck's screen shows: the view's track, and the time the displays show (the jog's target). */
+export interface DeckScreenView {
+  trackNo: number;
+  title: string;
+  artists: string;
+  id: string | null;
+  targetMs: number;
+  durationMs: number;
+  status: Status;
+}
+
+/**
+ * The deck's big screen, laid out for DECK_SCREEN's 768 × 432 and scaled to the canvas: a top bar
+ * (track, ▶ or ‖, the name, the times), the title and the artists, and the waveform with its played
+ * part and a playhead along the bottom.
+ */
+export function paintDeckScreen(
+  canvas: HTMLCanvasElement,
+  screen: DeckScreenView,
+  colour: string,
+): void {
+  const ctx = context(canvas);
+  const { width: w, height: h } = canvas;
+  const k = w / DECK_SCREEN.width;
+  const margin = 24 * k;
+  const hasTrack = screen.trackNo > 0;
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = '#000000';
+  ctx.fillRect(0, 0, w, h);
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = colour;
+  ctx.shadowColor = colour;
+  ctx.shadowBlur = 6 * k;
+  // The top bar.
+  const barY = 26 * k;
+  ctx.font = bold(Math.round(30 * k));
+  ctx.textAlign = 'left';
+  const track = hasTrack ? String(screen.trackNo % 100).padStart(2, '0') : '--';
+  ctx.fillText(track, margin, barY);
+  const trackW = ctx.measureText(track).width;
+  ctx.fillText(screen.status === 'playing' ? '▶' : '‖', margin + trackW + 14 * k, barY);
+  const { elapsed, remaining } = screenTimes(screen.targetMs, screen.durationMs);
+  ctx.font = bold(Math.round(26 * k));
+  ctx.textAlign = 'right';
+  ctx.fillText(remaining, w - margin, barY);
+  const remainingW = ctx.measureText(remaining).width;
+  ctx.fillText('/', w - margin - remainingW - 10 * k, barY);
+  ctx.fillText(elapsed, w - margin - remainingW - 28 * k, barY);
+  ctx.font = semibold(Math.round(18 * k));
+  ctx.textAlign = 'center';
+  ctx.fillText('ncam', w / 2, barY);
+  // The title and the artists.
+  ctx.textAlign = 'left';
+  ctx.font = title(Math.round(56 * k));
+  const name = hasTrack ? screen.title : 'No disc';
+  ctx.fillText(fitted(ctx, name, w - 2 * margin), margin, 118 * k);
+  ctx.globalAlpha = 0.7;
+  ctx.font = semibold(Math.round(30 * k));
+  ctx.fillText(fitted(ctx, screen.artists, w - 2 * margin), margin, 178 * k);
+  ctx.globalAlpha = 1;
+  ctx.shadowBlur = 0;
+  // The waveform: the bottom 150 px.
+  const heights = screen.id ? waveHeights(screen.id) : new Array<number>(120).fill(0.18);
+  const played = playedBars(screen.targetMs, screen.durationMs);
+  const waveH = 150 * k;
+  const cell = w / heights.length;
+  heights.forEach((height, i) => {
+    ctx.globalAlpha = i < played ? 1 : 0.25;
+    const barH = waveH * height;
+    ctx.fillRect(i * cell + cell * 0.15, h - barH, cell * 0.7, barH);
+  });
+  ctx.globalAlpha = 1;
+  if (screen.durationMs > 0) {
+    const x = Math.min(w, Math.max(0, (w * screen.targetMs) / screen.durationMs));
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(x - k, h - waveH, 2 * k, waveH);
+  }
 }

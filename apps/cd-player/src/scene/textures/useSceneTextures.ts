@@ -1,5 +1,5 @@
 import { useFrame } from '@react-three/fiber';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { SceneBridge } from '../../bridge';
 import type { Status } from '../../playback/sequencer';
 import { scrubTargetMs } from '../controls';
@@ -11,11 +11,14 @@ import {
   loadFaces,
   newCanvas,
   paintCard,
+  paintDeckScreen,
   paintJogRing,
   paintLcd,
   paintTag,
   setMap,
 } from './paint';
+import { SCENE_PROFILES } from '../profiles';
+import { DECK_SCREEN, playedBars } from './deck-screen';
 import { settlesWithin } from './painter';
 
 function makeSurfaces() {
@@ -42,7 +45,14 @@ interface Shown {
    * What the display shows: the four things it changes with, compared every frame (a key string
    * would be an allocation per frame), its colour (the Clear model's light) among them.
    */
-  lcd: { track: number; second: number; status: Status | null; colour: string | null };
+  lcd: {
+    track: number;
+    second: number;
+    /** The deck's screen: how many waveform bars are played. */
+    bar: number;
+    status: Status | null;
+    colour: string | null;
+  };
   /** The deck's LED ring: how many segments are lit, and in what colour. */
   ring: { lit: number; colour: string | null };
 }
@@ -51,7 +61,7 @@ const NONE = '\u0000';
 
 const nothingShown = (): Shown => ({
   card: NONE,
-  lcd: { track: -1, second: -1, status: null, colour: null },
+  lcd: { track: -1, second: -1, bar: -1, status: null, colour: null },
   ring: { lit: -1, colour: null },
 });
 
@@ -64,6 +74,13 @@ const nothingShown = (): Shown => ({
 export function useSceneTextures(rig: Rig, bridge: SceneBridge, lcdColour: string): void {
   const [surfaces] = useState(makeSurfaces);
   const shown = useRef<Shown>(nothingShown());
+  // The deck's big screen replaces the LCD: its canvas is made for that model only.
+  const deckScreen = SCENE_PROFILES[rig.model.id].screen === 'deck';
+  const screen = useMemo(() => {
+    if (!deckScreen) return null;
+    const canvas = newCanvas(DECK_SCREEN.width, DECK_SCREEN.height);
+    return { canvas, texture: canvasTexture(canvas) };
+  }, [deckScreen]);
 
   // Once per rig: the defaults until the view's prints are made. A new display colour is the
   // frame's to print (below), so it never takes the plate and the tag back to their defaults.
@@ -71,18 +88,19 @@ export function useSceneTextures(rig: Rig, bridge: SceneBridge, lcdColour: strin
     const { canvases, textures } = surfaces;
     setMap(rig.model.slots.tag_print, textures.tag);
     setMap(rig.model.slots.card_print, textures.card);
-    setMap(rig.model.slots.lcd_screen, textures.lcd);
+    setMap(rig.model.slots.lcd_screen, screen ? screen.texture : textures.lcd);
     const ring = rig.model.optionalSlots.jog_ring;
     if (ring) setMap(ring, textures.ring);
     shown.current = nothingShown();
     paintCard(canvases.card, null);
     paintTag(canvases.tag, null);
     const all = [textures.tag, textures.card, textures.lcd, textures.ring];
+    if (screen) all.push(screen.texture);
     for (const texture of all) texture.needsUpdate = true;
     return () => {
       for (const texture of all) texture.dispose();
     };
-  }, [rig, surfaces]);
+  }, [rig, surfaces, screen]);
 
   useEffect(() => {
     const { canvases, textures } = surfaces;
@@ -137,9 +155,11 @@ export function useSceneTextures(rig: Rig, bridge: SceneBridge, lcdColour: strin
     }
     const lcd = shown.current.lcd;
     const second = Math.floor(target / 1000);
+    const bar = screen ? playedBars(target, view.durationMs) : -1;
     if (
       lcd.track === view.trackNo &&
       lcd.second === second &&
+      lcd.bar === bar &&
       lcd.status === view.status &&
       lcd.colour === lcdColour
     ) {
@@ -147,9 +167,27 @@ export function useSceneTextures(rig: Rig, bridge: SceneBridge, lcdColour: strin
     }
     lcd.track = view.trackNo;
     lcd.second = second;
+    lcd.bar = bar;
     lcd.status = view.status;
     lcd.colour = lcdColour;
-    paintLcd(surfaces.canvases.lcd, view.trackNo, target, view.status, lcdColour);
-    surfaces.textures.lcd.needsUpdate = true;
+    if (screen) {
+      paintDeckScreen(
+        screen.canvas,
+        {
+          trackNo: view.trackNo,
+          title: view.current?.title ?? '',
+          artists: view.current?.artists ?? '',
+          id: view.current?.id ?? null,
+          targetMs: target,
+          durationMs: view.durationMs,
+          status: view.status,
+        },
+        lcdColour,
+      );
+      screen.texture.needsUpdate = true;
+    } else {
+      paintLcd(surfaces.canvases.lcd, view.trackNo, target, view.status, lcdColour);
+      surfaces.textures.lcd.needsUpdate = true;
+    }
   });
 }

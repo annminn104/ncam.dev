@@ -11,7 +11,7 @@ describe('useSceneTextures', () => {
     // colour among its dependencies, a Clear light change printed "Your playlist" on both until
     // the view next changed.
     expect(source).toMatch(
-      /paintCard\(canvases\.card, null\);[\s\S]*?paintTag\(canvases\.tag, null\);[\s\S]*?\}, \[rig, surfaces\]\);/,
+      /paintCard\(canvases\.card, null\);[\s\S]*?paintTag\(canvases\.tag, null\);[\s\S]*?\}, \[rig, surfaces, screen\]\);/,
     );
     expect(source.match(/paintCard\(canvases\.card, null\)/g)).toHaveLength(1);
   });

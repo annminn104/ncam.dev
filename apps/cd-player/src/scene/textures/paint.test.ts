@@ -10,6 +10,7 @@ import {
   loadFaces,
   paintBooklet,
   paintCard,
+  paintDeckScreen,
   paintDisc,
   paintJogRing,
   paintLcd,
@@ -230,5 +231,37 @@ describe('paintJogRing', () => {
       expect(rect.x, String(k)).toBeCloseTo(k * 10 + 0.9, 9);
       expect(rect.w, String(k)).toBeCloseTo(8.2, 9);
     });
+  });
+});
+
+describe('paintDeckScreen', () => {
+  it('prints the track, the title, the artists, the times and the name', () => {
+    const { canvas, texts } = recorder(768, 432);
+    paintDeckScreen(
+      canvas,
+      {
+        trackNo: 3,
+        title: 'Song',
+        artists: 'Band',
+        id: 'x',
+        targetMs: 42_000,
+        durationMs: 180_000,
+        status: 'playing',
+      },
+      LCD_ON,
+    );
+    for (const text of ['03', 'Song', 'Band', '0:42', '-2:18', 'ncam']) {
+      expect(texts).toContain(text);
+    }
+  });
+
+  it('prints dashes and "No disc" without a track', () => {
+    const { canvas, texts } = recorder(768, 432);
+    paintDeckScreen(
+      canvas,
+      { trackNo: 0, title: '', artists: '', id: null, targetMs: 0, durationMs: 0, status: 'idle' },
+      LCD_ON,
+    );
+    for (const text of ['--', 'No disc', '-:--']) expect(texts).toContain(text);
   });
 });

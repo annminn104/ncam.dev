@@ -18,6 +18,11 @@ export interface SceneProfile {
    * (the deck's jog plate lifts about its back edge). null: no door.
    */
   door: { angle: number; axis?: 'x' | 'y' } | null;
+  /**
+   * The glass `lcd_screen` is painted as: the suitcase's and the Clear's segment LCD (absent), or
+   * the deck's big screen with its waveform.
+   */
+  screen?: 'segments' | 'deck';
   /** The disc turns with the knob while a turn lasts: the deck's jog lies over it. */
   knobTurnsDisc?: boolean;
   /**
