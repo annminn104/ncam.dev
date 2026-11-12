@@ -778,7 +778,8 @@ orbit step, a pinch's factor and midpoints, a recentre) it carries out:
   turns, `rig.scrubMs` carries the turn's seek for the displays (see "Printed textures"), and on
   the Deck, whose profile has `knobTurnsDisc`, the disc follows the jog (`rig.knobTurn`). On the
   Deck the knob sits on the plate that is its door, so a press on it turns nothing while the door
-  is open (`knobTakesTurn(rig.doorOpen)`), and neither orbits nor recentres. It emits
+  is open (`knobTakesTurn(rig.doorOpen)`), and neither orbits nor recentres (the rule is every
+  model's, the Clear's included: `useControls.ts` applies it to all). It emits
   one `seek {deltaMs}` only on a real release; a cancelled turn, a mouse that moves with no button
   down (a native menu took the release), or a touch's turn that becomes a pinch puts the knob back
   where the turn began and seeks nothing. The card's Seek slider is its DOM equivalent.
@@ -1314,7 +1315,7 @@ suitcase for an id it does not know. It is three-free, as are `skins.ts`, `clear
   buttons' row. "Player" stays in its accessible name. The server markup is always the closed
   picker.
 - **Persistence**: `localStorage` keys **`ncam.cd-player.model`** (`MODEL_KEY`, `readModel`,
-  `writeModel`), **`ncam.cd-player.skin`** (`SKIN_KEY`, `readSkin`, `writeSkin`) ,
+  `writeModel`), **`ncam.cd-player.skin`** (`SKIN_KEY`, `readSkin`, `writeSkin`),
   **`ncam.cd-player.clear`** (`CLEAR_KEY`, `readClearLook`, `writeClearLook`: JSON of the four
   ids), **`ncam.cd-player.deck`** (`DECK_KEY`, `readDeckLook`, `writeDeckLook`: JSON of the two
   ids) and **`ncam.cd-player.personal`** (`PERSONAL_KEY`, `readPersonal`, `writePersonal`: JSON of
@@ -1411,7 +1412,8 @@ at one unit per 5 cm and the printed ones (`art_disc`, `art_booklet`, `card_prin
 the empty pivots, and the UVs that no texture in the file uses yet) and meshopt-compresses it into
 `public/assets/cd-player.glb`, `public/assets/cd-player-clear.glb` or
 `public/assets/cd-player-deck.glb`, all **committed** (about 100,633 triangles and 777 KB for the
-suitcase, 132,715 and 965 KB for the Clear and 719 KB for the Deck, at the time of writing). **The budget** (`model-contract.test.ts`, for each): 4 MB, 150k triangles,
+suitcase, 132,715 and 965 KB for the Clear and 719 KB for the Deck, at the time of writing).
+**The budget** (`model-contract.test.ts`, for each): 4 MB, 150k triangles,
 `EXT_meshopt_compression`, and meshes only on leaf nodes, so quantisation never scales a pivot.
 Rebuild a model after any change to its scripts (`cdkit.py` and `parts.py` are every model's). The
 lettering (the suitcase's deck, the Clear's logos, silkscreen and keys) uses macOS fonts (Avenir

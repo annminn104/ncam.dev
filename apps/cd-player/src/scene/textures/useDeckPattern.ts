@@ -67,7 +67,32 @@ export function useDeckPattern(
       });
     };
 
+    // What the print reads, as of the last run: a position tick changes none of it.
+    let lastInput: {
+      look: Look;
+      personal: Personal;
+      key: string | undefined;
+      name: string | undefined;
+    } | null = null;
+
     const update = () => {
+      const { look: nowLook, personal: nowPersonal } = latest.current;
+      const collection = bridge.getView().collection;
+      if (
+        lastInput !== null &&
+        lastInput.look === nowLook &&
+        lastInput.personal === nowPersonal &&
+        lastInput.key === collection?.key &&
+        lastInput.name === collection?.name
+      ) {
+        return;
+      }
+      lastInput = {
+        look: nowLook,
+        personal: nowPersonal,
+        key: collection?.key,
+        name: collection?.name,
+      };
       const next = printFor(latest.current.look, latest.current.personal, bridge.getView());
       if (next === null) return;
       if (last !== null && patternKey(last) === patternKey(next)) return;

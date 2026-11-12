@@ -81,8 +81,8 @@ const nothingShown = (): Shown => ({
 /**
  * Prints the bridge's view on the player's other prints: the plate with the collection's name,
  * the luggage tag, and the display, at most once a second and whenever its colour changes. While
- * the knob is turning, the display shows the turn's target time. The
- * discs and the booklet are useDiscPrints'.
+ * the knob is turning, the display shows the turn's target time. The discs and the booklet are
+ * useDiscPrints'.
  */
 export function useSceneTextures(rig: Rig, bridge: SceneBridge, lcdColour: string): void {
   const [surfaces] = useState(makeSurfaces);

@@ -60,7 +60,7 @@ export const STICKER_WORDS: readonly string[] = [
   'BASS',
 ];
 
-/** A collection's seed: its `type:id` hashed (Task 8d), so it prints the same on every visit. */
+/** A collection's seed: its `type:id` hashed, so it prints the same on every visit. */
 export function collectionSeed(key: string | null): number {
   return fnv1a(key ?? '');
 }
@@ -828,7 +828,7 @@ function stickers(ctx: CanvasRenderingContext2D, area: Area): void {
   }
   const [mine, theirs] = zones(area, named);
   if (print.collection) sticker(ctx, label(ctx, area, theirs, print.collection));
-  sticker(ctx, label(ctx, area, mine, print.name.toLocaleUpperCase()));
+  sticker(ctx, label(ctx, area, mine, print.name.toUpperCase()));
 }
 
 /** Where a tag stands, for its doodles: its centre, slant, length and cap height (mm). */
@@ -1012,7 +1012,7 @@ function graffiti(ctx: CanvasRenderingContext2D, area: Area): void {
     }
     return;
   }
-  const text = area.print.name.toLocaleUpperCase();
+  const text = area.print.name.toUpperCase();
   const places = zones(area, whole(random, 1, 2)).map((zone) => tag(ctx, area, text, zone));
   doodles(ctx, area, places[0]);
 }
@@ -1027,7 +1027,7 @@ const PAINTERS: Readonly<
  */
 function engrave(ctx: CanvasRenderingContext2D, area: Area): void {
   const { w, h, print } = area;
-  const caps = print.name.toLocaleUpperCase();
+  const caps = print.name.toUpperCase();
   const { above, below } = reach(caps);
   const largest = Math.min((0.45 * h) / CAP, (h - 4) / (CAP + above + below));
   const { size, text } = fitFont(ctx, bold, caps, w - 4, largest);
@@ -1053,7 +1053,7 @@ function stencil(ctx: CanvasRenderingContext2D, area: Area): void {
   ctx.fillRect(0, 0, w, band);
   ctx.globalCompositeOperation = 'source-over';
   const small = Math.round(0.06 * h * 100) / 100;
-  const caps = print.name.toLocaleUpperCase();
+  const caps = print.name.toUpperCase();
   const { size, text } = fitFont(ctx, bold, caps, 0.86 * w, 0.22 * h, 0.08 * h);
   // The two lines, a gap between them that the name's marks fit, centred in the cleared band.
   const marks = reach(caps);
