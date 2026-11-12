@@ -18,6 +18,10 @@
     {
       "source": "/assets/cd-player-clear.glb",
       "headers": [{ "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }]
+    },
+    {
+      "source": "/assets/cd-player-deck.glb",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }]
     }
   ]
 }

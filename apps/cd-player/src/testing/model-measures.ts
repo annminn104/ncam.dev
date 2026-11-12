@@ -72,7 +72,7 @@ export const CLEAR_SHELL = {
 
 /**
  * The Deck's jog plate (`door_hinge`, carrying `knob`): its hinge, which turns about the world's X
- * (the page lifts it with a negative turn, about -70°) and stands at the well's back edge, 76 mm
+ * (the page lifts it with a negative turn, -90°, to upright) and stands at the well's back edge, 76 mm
  * up, and the box of its parts shut.
  */
 export const DECK_DOOR = {

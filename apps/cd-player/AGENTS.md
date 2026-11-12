@@ -1862,7 +1862,8 @@ points.
 The Vercel project **`ncam-cd-player`** (Root Directory `apps/cd-player`, the Vite preset,
 `SITE_URL` set to the host's public origin) also deploys `api/spotify.ts` as the Function at
 `/api/spotify`. `vercel.json` sends `Access-Control-Allow-Origin: *` on every path except `/api/`
-(the handler sends its own), revalidates `/assets/cd-player.glb` and `/assets/cd-player-clear.glb`
+(the handler sends its own), revalidates `/assets/cd-player.glb`, `/assets/cd-player-clear.glb` and
+`/assets/cd-player-deck.glb`
 (`public, max-age=0, must-revalidate`: their names never change), rewrites `/playlist/<id>` and
 `/album/<id>` to `index.html` for the standalone page, and keeps Dependabot's branches from
 deploying. Docker: the compose service `cd-player` shares the host container's network
