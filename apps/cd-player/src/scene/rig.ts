@@ -87,7 +87,7 @@ export interface Rig extends StageState {
    * The model's flights (its profile's): how far their handles reach out of a slot and out of the
    * spindle, and where a disc leaving the spindle goes out of sight, from its seat.
    */
-  flight: { reach: { slot: number; spindle: number }; aside: Vector3 };
+  flight: { reach: { slot: number; spindle: number }; aside: Vector3; exit: 'normal' | 'up' };
 }
 
 /** Gives every mesh under `root` that wears `name` one copy of it, so each instance prints its own. */
@@ -146,6 +146,12 @@ export function turnDoor(door: NonNullable<Rig['door']>, open: number): void {
   door.node.rotation[door.axis] = door.base + door.angle * open;
 }
 
+/**
+ * Between these two parts of its way from a slot (or, mirrored, to one) a disc lifted out of it turns
+ * from upright to flat.
+ */
+const LIFT_TURN = [0.1, 0.5] as const;
+
 const rigs = new WeakMap<PlayerModel, Rig>();
 
 /** Which way a model's disc plays about its seat's up: 1 counter-clockwise, -1 clockwise. */
@@ -162,7 +168,13 @@ export function rigFor(model: PlayerModel): Rig {
   const seatPosition = new Vector3();
   const seatQuaternion = new Quaternion();
   nodes.disc_seat.matrixWorld.decompose(seatPosition, seatQuaternion, new Vector3());
-  const slots = RACK_NODES.map((name) => frameOf(nodes[name]));
+  const profile = SCENE_PROFILES[model.id];
+  const slots = RACK_NODES.map((name) => {
+    const frame = frameOf(nodes[name]);
+    // A crate's discs stand in their slots: they leave and come in straight up, not along the face.
+    if (profile.flight.exit === 'up') frame.out.copy(UP);
+    return frame;
+  });
   // The discs fly in world space, so every copy lives at the root.
   const template = nodes.disc;
   root.attach(template);
@@ -181,7 +193,6 @@ export function rigFor(model: PlayerModel): Rig {
     lift: flipLift(nodes.case),
     booklet: ownMaterial(nodes.case, 'art_booklet'),
   };
-  const profile = SCENE_PROFILES[model.id];
   const door = profile.door;
   const rig: Rig = {
     model,
@@ -219,6 +230,7 @@ export function rigFor(model: PlayerModel): Rig {
     },
     slots,
     flight: {
+      exit: profile.flight.exit ?? 'normal',
       reach: { ...profile.flight.reach },
       aside: new Vector3(...profile.flight.aside),
     },
@@ -334,7 +346,16 @@ function placeDisc(rig: Rig, copy: DiscCopy, pose: DiscPose | null): void {
     .addScaledVector(handleA, 3 * u * u * a)
     .addScaledVector(handleB, 3 * u * a * a)
     .addScaledVector(end.position, a * a * a);
-  object.quaternion.copy(start.quaternion).slerp(end.quaternion, a);
+  // A disc lifted straight out of a crate's slot stays upright until it is clear of the foam and
+  // lays flat on the way across, as it stands up again before it goes down into a slot.
+  const fromSlot = typeof pose.from === 'number';
+  const turn =
+    rig.flight.exit === 'up' && flies
+      ? fromSlot
+        ? MathUtils.smoothstep(a, LIFT_TURN[0], LIFT_TURN[1])
+        : 1 - MathUtils.smoothstep(1 - a, LIFT_TURN[0], LIFT_TURN[1])
+      : a;
+  object.quaternion.copy(start.quaternion).slerp(end.quaternion, turn);
   object.scale.setScalar(scale);
 }
 

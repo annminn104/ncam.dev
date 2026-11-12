@@ -551,6 +551,15 @@ describe('the Clear model’s flights', () => {
     expect(Math.hypot(offset.x, offset.y)).toBeLessThan(0.004);
   });
 
+  it('leaves the Clear’s slots their own normals', () => {
+    const rig = clearSet();
+    for (const slot of rig.slots) {
+      expect(
+        slot.out.distanceTo(new Vector3(0, 1, 0).applyQuaternion(slot.quaternion)),
+      ).toBeLessThan(1e-12);
+    }
+  });
+
   it('flies every way to and from the spindle through the door’s opening, never through the shell', () => {
     const rig = clearSet();
     const ways: [string, DiscPose['from'], DiscPose['to']][] = [
@@ -595,12 +604,15 @@ describe('the Deck’s flights', () => {
    * The flight case's base (art/blender/scripts/deck_case.py, in its own frame): 170 × 150 mm and
    * 120 mm tall from its 7 mm ball corners, open on top, its walls (3 mm of aluminium and the
    * angle extrusions over them) a few millimetres thick, its floor too. Its lid stands open past
-   * upright behind it and its foam block fills the base's lower part, the slots cut in it: neither is
-   * an obstacle here, a disc leaves its slot by the way the rig sends it, along the slot's normal,
-   * and only the walls and the floor stop it.
+   * upright behind it, out of the way; its foam block fills the base's lower part (to 112 mm), the
+   * slots cut in it: the walls, the floor and the foam stop a disc, but for its slot's own column.
    */
   const BASE = { halfWidth: 0.085, halfDepth: 0.075, top: 0.127, floor: 0.01, wall: 0.006 };
-  /** How far a disc may stray from its slot's axis while it passes the front wall (metres). */
+  /** The foam's top (FC_FOAM_TOP, 112 mm): under it, outside a slot's slit, the base is solid. */
+  const FOAM_TOP = 0.112;
+  /** A slot's slit: 124 mm long (deck_case.py), so 62 mm each way of its middle. */
+  const SLIT_HALF_LENGTH = 0.062;
+  /** How far a disc may stray from its slot's plane inside the crate (metres): the slit's half thickness and a hair. */
   const COLUMN_PLAY = 0.003;
 
   /**
@@ -665,17 +677,18 @@ describe('the Deck’s flights', () => {
       min: [-BASE.halfWidth, 0, -BASE.halfDepth],
       max: [BASE.halfWidth, BASE.top, BASE.halfDepth],
     };
-    if (inBox(local, outer) && !inBox(local, inner)) {
-      // The case's walls and floor, but for the column each slot's disc leaves by: out of its slot
-      // along its normal through the front, a disc's width across and a hair more.
+    if (inBox(local, outer)) {
+      // The base's walls, floor and the foam under its rim, but for each slot's own column: a
+      // prism of the disc's size (a hair of play) standing on the slot, in its plane, up from it.
       const column = [0, 1, 2, 3, 4].some((k) => {
         const { position } = deckSlot(k);
         return (
-          local.z >= position[2] &&
-          Math.hypot(local.x - position[0], local.y - position[1]) <= 0.06 + COLUMN_PLAY
+          Math.abs(local.z - position[2]) <= COLUMN_PLAY &&
+          local.y >= position[1] - 0.06 &&
+          Math.abs(local.x - position[0]) <= SLIT_HALF_LENGTH
         );
       });
-      if (!column) return 'the case';
+      if (!column && (!inBox(local, inner) || local.y < FOAM_TOP)) return 'the case';
     }
     return null;
   }
@@ -699,6 +712,21 @@ describe('the Deck’s flights', () => {
     expect(BASE.halfDepth).toBeLessThanOrEqual(DECK_CASE.max[2]);
     expect(-BASE.halfDepth).toBeGreaterThanOrEqual(DECK_CASE.min[2]);
     expect(BASE.top).toBeLessThanOrEqual(DECK_CASE.max[1]);
+  });
+
+  it('lifts a disc out of and into a slot straight up, the suitcase’s and the Clear’s along the face', () => {
+    const { rig } = deckSet();
+    for (const slot of rig.slots) expect(slot.out.toArray()).toEqual([0, 1, 0]);
+    expect(rig.seat.out.toArray()).toEqual([0, 1, 0]);
+    const suitcase = rigFor(fakeModel().model);
+    for (const slot of suitcase.slots) {
+      expect(
+        slot.out.distanceTo(new Vector3(0, 1, 0).applyQuaternion(slot.quaternion)),
+      ).toBeLessThan(1e-12);
+    }
+    expect(SCENE_PROFILES.suitcase.flight.exit).toBeUndefined();
+    expect(SCENE_PROFILES.clear.flight.exit).toBeUndefined();
+    expect(SCENE_PROFILES.deck.flight.exit).toBe('up');
   });
 
   it('reaches the spindle from above, flat, along its seat’s normal', () => {

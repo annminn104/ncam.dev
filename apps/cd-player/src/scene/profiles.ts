@@ -36,7 +36,17 @@ export interface SceneProfile {
    * `reach.slot` out of a rack slot and `reach.spindle` out of the spindle; a disc leaving the
    * spindle goes out of sight at `aside` from its seat, where one from the side comes from too.
    */
-  flight: { reach: { slot: number; spindle: number }; aside: Vec3 };
+  flight: {
+    reach: { slot: number; spindle: number };
+    aside: Vec3;
+    /**
+     * Which way a disc leaves and reaches a rack slot: along the slot's own normal, the disc's
+     * face ('normal', the default: right for the suitcase's lid and the Clear's stand, which open
+     * toward it), or along the world's up ('up'). A crate's discs stand in foam slots facing its
+     * front, so the face is the way into the foam and the front wall; they lift out of the crate.
+     */
+    exit?: 'normal' | 'up';
+  };
 }
 
 const unit = (v: Vec3): Vec3 => {
@@ -100,14 +110,17 @@ export const SCENE_PROFILES: Readonly<Record<ModelId, SceneProfile>> = {
     // About the arm pivot's Y: 0 is its rest beside the disc; play puts the head over the outer
     // tracks (deck.py's DECK_ARM_PLAY, 50°).
     arm: { rest: 0, play: (50 * Math.PI) / 180 },
-    // The jog plate lifts about its back edge (the hinge's X), front up: a negative turn.
-    door: { angle: -(70 * Math.PI) / 180, axis: 'x' },
-    // A disc leaves its slot along the slot's normal, 30 cm out, so that it clears the case's front
-    // wall before it turns toward the deck; it comes down into the well from 25 cm above it, high
-    // enough to clear the deck's right edge (a lower reach cuts the chassis) and, leaving, to stay in
-    // front of the lifted plate (src/scene/rig.test.ts flies every way against both). Out of sight
-    // it goes up, to the right and toward the viewer, clear of the plate, which lifts at the back.
-    flight: { reach: { slot: 0.3, spindle: 0.25 }, aside: [0.1, 0.1, 0.1] },
+    // The jog plate lifts about its back edge (the hinge's X), front up: a negative turn, to upright.
+    // Leaning forward over the well (the 70° of the first fit) it stands in the way of every disc
+    // that comes down into the well from the crate on the right; upright, its front face is 4 cm
+    // behind the disc's rim, and clear of the screen module (src/scene/rig.test.ts).
+    door: { angle: -(90 * Math.PI) / 180, axis: 'x' },
+    // A disc stands in its foam slot facing the crate's front, so it lifts straight out ('up'), 30 cm
+    // of handle, and the same going in; it turns flat on the way over to the deck, and comes down
+    // into the well from 15 cm above it. Out of sight it goes up, to the right and toward the viewer.
+    // Every way is flown against the crate, the deck, its screen and the lifted plate in
+    // src/scene/rig.test.ts.
+    flight: { reach: { slot: 0.3, spindle: 0.15 }, aside: [0.1, 0.1, 0.1], exit: 'up' },
     knobTurnsDisc: true,
     clockwise: true,
     // The big 16:9 screen instead of the segment LCD.

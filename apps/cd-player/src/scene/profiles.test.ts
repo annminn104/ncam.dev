@@ -48,8 +48,8 @@ describe('scene profiles', () => {
     expect(clockwise).toBe(true);
     expect(screen).toBe('deck');
     expect(door?.axis).toBe('x');
-    // The plate lifts front up: a negative turn about X, 70° (the measures test lifts it so).
-    expect(door?.angle).toBeCloseTo(-(70 * Math.PI) / 180, 12);
+    // The plate lifts front up: a negative turn about X, to upright (the measures test lifts it so).
+    expect(door?.angle).toBeCloseTo(-(90 * Math.PI) / 180, 12);
     // The arm plays 50° about its pivot's Y (deck.py's DECK_ARM_PLAY).
     expect(arm).toEqual({ rest: 0, play: (50 * Math.PI) / 180 });
     expect(Math.hypot(...frame.direction)).toBeCloseTo(1, 12);
