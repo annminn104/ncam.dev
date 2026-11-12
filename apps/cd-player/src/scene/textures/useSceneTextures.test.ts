@@ -16,6 +16,12 @@ describe('useSceneTextures', () => {
     expect(source.match(/paintCard\(canvases\.card, null\)/g)).toHaveLength(1);
   });
 
+  it("prints the deck's screen again when its track changes, not only its number", () => {
+    expect(source).toMatch(/lcd\.id === id/);
+    expect(source).toMatch(/lcd\.title === title/);
+    expect(source).toMatch(/lcd\.artists === artists/);
+  });
+
   it('prints the display again when its colour changes, on the next frame', () => {
     expect(source).toMatch(/lcd\.colour === lcdColour/);
     expect(source).toMatch(/lcd\.colour = lcdColour;/);

@@ -50,6 +50,10 @@ interface Shown {
     second: number;
     /** The deck's screen: how many waveform bars are played. */
     bar: number;
+    /** The deck's screen: the current track's id, title and artists (null/'' before the first). */
+    id: string | null;
+    title: string;
+    artists: string;
     status: Status | null;
     colour: string | null;
   };
@@ -61,7 +65,16 @@ const NONE = '\u0000';
 
 const nothingShown = (): Shown => ({
   card: NONE,
-  lcd: { track: -1, second: -1, bar: -1, status: null, colour: null },
+  lcd: {
+    track: -1,
+    second: -1,
+    bar: -1,
+    id: null,
+    title: NONE,
+    artists: NONE,
+    status: null,
+    colour: null,
+  },
   ring: { lit: -1, colour: null },
 });
 
@@ -156,10 +169,16 @@ export function useSceneTextures(rig: Rig, bridge: SceneBridge, lcdColour: strin
     const lcd = shown.current.lcd;
     const second = Math.floor(target / 1000);
     const bar = screen ? playedBars(target, view.durationMs) : -1;
+    const id = screen ? (view.current?.id ?? null) : null;
+    const title = screen ? (view.current?.title ?? '') : NONE;
+    const artists = screen ? (view.current?.artists ?? '') : NONE;
     if (
       lcd.track === view.trackNo &&
       lcd.second === second &&
       lcd.bar === bar &&
+      lcd.id === id &&
+      lcd.title === title &&
+      lcd.artists === artists &&
       lcd.status === view.status &&
       lcd.colour === lcdColour
     ) {
@@ -168,6 +187,9 @@ export function useSceneTextures(rig: Rig, bridge: SceneBridge, lcdColour: strin
     lcd.track = view.trackNo;
     lcd.second = second;
     lcd.bar = bar;
+    lcd.id = id;
+    lcd.title = title;
+    lcd.artists = artists;
     lcd.status = view.status;
     lcd.colour = lcdColour;
     if (screen) {
@@ -175,9 +197,9 @@ export function useSceneTextures(rig: Rig, bridge: SceneBridge, lcdColour: strin
         screen.canvas,
         {
           trackNo: view.trackNo,
-          title: view.current?.title ?? '',
-          artists: view.current?.artists ?? '',
-          id: view.current?.id ?? null,
+          title,
+          artists,
+          id,
           targetMs: target,
           durationMs: view.durationMs,
           status: view.status,

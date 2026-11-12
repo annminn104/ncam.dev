@@ -8,7 +8,7 @@ import type { TrackView } from '../../bridge';
 import { clearSwatch } from '../../clear-looks';
 import type { Look } from '../../looks';
 import type { Status } from '../../playback/sequencer';
-import { DECK_SCREEN, playedBars, screenTimes, waveHeights } from './deck-screen';
+import { DECK_SCREEN, playedBars, screenTimes, WAVE_BARS, waveHeights } from './deck-screen';
 import {
   arcLayout,
   brushLines,
@@ -428,7 +428,7 @@ export function paintDeckScreen(
   ctx.globalAlpha = 1;
   ctx.shadowBlur = 0;
   // The waveform: the bottom 150 px.
-  const heights = screen.id ? waveHeights(screen.id) : new Array<number>(120).fill(0.18);
+  const heights = screen.id ? waveHeights(screen.id) : new Array<number>(WAVE_BARS).fill(0.18);
   const played = playedBars(screen.targetMs, screen.durationMs);
   const waveH = 150 * k;
   const cell = w / heights.length;
