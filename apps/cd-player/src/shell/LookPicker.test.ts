@@ -14,6 +14,7 @@ import {
   LookPicker,
   loadLine,
   optionForKey,
+  nameEdit,
   optionForPress,
   tickOn,
   type KeyPress,
@@ -293,5 +294,13 @@ describe('LookPicker opening', () => {
     expect(effect?.[0]).toMatch(/document\.activeElement/);
     expect(effect?.[0]).toMatch(/\[role="radio"\]\[aria-checked="true"\]/);
     expect(effect?.[0]).toMatch(/focus\(\{ preventScroll: true \}\)/);
+  });
+});
+
+describe('nameEdit', () => {
+  it('only drafts the raw text mid-composition, and cleans and keeps it otherwise', () => {
+    const raw = 'Ho' + String.fromCodePoint(0x61, 0x300) + '<ng';
+    expect(nameEdit(true, raw)).toEqual({ draft: raw, name: null });
+    expect(nameEdit(false, raw)).toEqual({ draft: null, name: 'Hoàng' });
   });
 });

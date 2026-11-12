@@ -277,7 +277,7 @@ describe('App and the model on the stage', () => {
     // The keeper's is the only write of a model.
     expect(source.match(/writeModel\(/g)).toHaveLength(1);
     expect(source).toMatch(
-      /writeClearLook\(storage, next\.clear\);\s*writeDeckLook\(storage, next\.deck\);\s*writePersonal\(storage, next\.personal\);\s*(\/\/[^\n]*\n\s*)*keeper\.choose\(next\.model\);/,
+      /writeClearLook\(storage, next\.clear\);\s*writeDeckLook\(storage, next\.deck\);\s*writePersonal\(storage, next\.personal\);\s*(\/\/[^\n]*\n\s*)*if \(next\.model !== before\.model\) keeper\.choose\(next\.model\);/,
     );
     expect(source).toMatch(
       /if \(load\.status === 'ready'\) \{[^}]*\bkeeper\.drawn\(load\.model\);[^}]*\}/,
@@ -308,7 +308,7 @@ describe('App and the model on the stage', () => {
 
   it('makes the root’s accent from the model on show once live, never the chosen one alone', () => {
     const source = readFileSync(new URL('./App.tsx', import.meta.url), 'utf8');
-    expect(source).toMatch(/accentModelFor\(\s*live,\s*onShow,\s*lookState\.model\s*\)/);
+    expect(source).toMatch(/accentModelFor\(\s*live,\s*onShow,\s*model\s*\)/);
     // A `ready` notes the model on show, which turns the page as it comes.
     expect(source).toMatch(
       /if \(load\.status === 'ready'\) \{[^}]*\bsetOnShow\(load\.model\);[^}]*\}/,

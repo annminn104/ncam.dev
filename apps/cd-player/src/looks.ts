@@ -28,7 +28,8 @@ export const DEFAULT_LOOK_STATE: LookState = {
   personal: DEFAULT_PERSONAL,
 };
 
-export function lookOf(state: LookState): Look {
+/** The look the scene draws: the model's own colours only, never the visitor's pattern or name. */
+export function lookOf(state: Pick<LookState, 'model' | 'skin' | 'clear' | 'deck'>): Look {
   if (state.model === 'clear') return { model: 'clear', clear: state.clear };
   if (state.model === 'deck') return { model: 'deck', deck: state.deck };
   return { model: 'suitcase', skin: state.skin };

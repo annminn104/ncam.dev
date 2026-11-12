@@ -244,23 +244,58 @@ function RadioGroup({ group }: { group: Group }) {
 }
 
 /**
+ * What typing in the name field does with `raw`, the input's text: mid-composition (an input method
+ * is still building a letter, as Vietnamese Telex and VNI do) the text is only drawn as it is and
+ * nothing is kept; otherwise it is cleaned and kept. Cleaning a half-composed text, and handing the
+ * result back as the input's value, would cancel or garble the composition and jump the caret.
+ */
+export function nameEdit(
+  composing: boolean,
+  raw: string,
+): { draft: string; name: null } | { draft: null; name: string } {
+  return composing ? { draft: raw, name: null } : { draft: null, name: cleanName(raw) };
+}
+
+/**
  * The Deck's engraving: the visitor's name, cleaned as it is typed (src/personal.ts cleanName) and
- * kept in this browser only. Empty, the Deck prints the placeholder's "ncam".
+ * kept in this browser only. Empty, the Deck prints the placeholder's "ncam". During an input
+ * method's composition the raw text is a local draft, and only its end is cleaned and kept (see
+ * `nameEdit`); Chrome and Safari fire `input` and `compositionend` in different orders, so the end
+ * cleans whatever the input holds, and an `input` after it cleans too.
  */
 function NameField({ value, onChange }: { value: string; onChange(name: string): void }) {
+  const [draft, setDraft] = useState<string | null>(null);
+  const composing = useRef(false);
+  const keep = (raw: string, isComposing: boolean) => {
+    const edit = nameEdit(isComposing, raw);
+    setDraft(edit.draft);
+    if (edit.name !== null) onChange(edit.name);
+  };
   return (
     <label className="cdp-skin__group cdp-skin__field">
       <span className="cdp-skin__legend">Your name</span>
       <input
         className="cdp-skin__input"
         type="text"
-        value={value}
+        value={draft ?? value}
         placeholder={NAME_FALLBACK}
         autoComplete="off"
         autoCapitalize="words"
         spellCheck={false}
         enterKeyHint="done"
-        onChange={(event) => onChange(cleanName(event.target.value))}
+        onCompositionStart={() => {
+          composing.current = true;
+        }}
+        onCompositionEnd={(event) => {
+          composing.current = false;
+          keep(event.currentTarget.value, false);
+        }}
+        onChange={(event) =>
+          keep(
+            event.target.value,
+            composing.current || (event.nativeEvent as InputEvent).isComposing,
+          )
+        }
       />
     </label>
   );
