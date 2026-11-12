@@ -210,7 +210,8 @@ export function makeMaterial(
         roughness: 0.12,
         iridescence: 1,
         iridescenceIOR: 1.8,
-        iridescenceThicknessRange: [250, 700],
+        iridescenceThicknessMinimum: 250,
+        iridescenceThicknessMaximum: 700,
       });
     case 'foil':
       return physical(source, {
@@ -218,7 +219,8 @@ export function makeMaterial(
         roughness: 0.1,
         iridescence: 1,
         iridescenceIOR: 1.6,
-        iridescenceThicknessRange: [200, 500],
+        iridescenceThicknessMinimum: 200,
+        iridescenceThicknessMaximum: 500,
       });
     case 'gloss-black':
       return physical(source, {
