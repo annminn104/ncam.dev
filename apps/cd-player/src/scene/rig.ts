@@ -44,9 +44,27 @@ const UP = new Vector3(0, 1, 0);
 /** The case's own vertical in the open lid (Blender's Y): it turns over about it. */
 const CASE_AXIS = new Vector3(0, 0, 1);
 
+/** A turntable record's sleeve: the template's copy, with its own `art_sleeve` print. */
+export interface SleeveCopy {
+  object: Object3D;
+  print: MeshPhysicalMaterial;
+}
+
 export interface DiscCopy {
   object: Object3D;
   label: MeshPhysicalMaterial;
+  /** A turntable record's sleeve, which follows the record on a way of its own; null on a CD player. */
+  sleeve: SleeveCopy | null;
+}
+
+/**
+ * Where a copy's way meets the deck: the record's spindle, which turns with the spin, or the
+ * sleeve's ledge, which does not; and how far the way's handle reaches out of it.
+ */
+export interface Landing {
+  frame: PlaceFrame;
+  spins: boolean;
+  reach: number;
 }
 
 /** A place's pose in world space, and its normal: the way a disc leaves and reaches it. */
@@ -107,13 +125,25 @@ export interface Rig<M extends PlayerModel = PlayerModel> extends StageState {
    * leaves and reaches it, as a slot's is (up out of the suitcase's deck, out of the Clear's door).
    */
   seat: { position: Vector3; quaternion: Quaternion; out: Vector3 };
+  /**
+   * A turntable's ledge (`sleeve_seat`), in world space, where the playing record's sleeve stands.
+   * Its `out` is the world's up: the ledge stands behind the deck, so a sleeve comes down onto it
+   * from above, never along its face through the plinth. Null on a CD player.
+   */
+  sleeveSeat: PlaceFrame | null;
+  /** The ways' ends at the deck: the record's (the spindle's seat) and its sleeve's (the ledge). */
+  landings: { disc: Landing; sleeve: Landing | null };
   /** Each rack slot, in world space. */
   slots: PlaceFrame[];
   /**
    * The model's flights (its profile's): how far their handles reach out of a slot and out of the
    * spindle, and where a disc leaving the spindle goes out of sight, from its seat.
    */
-  flight: { reach: { slot: number; spindle: number }; aside: Vector3; exit: 'normal' | 'up' };
+  flight: {
+    reach: { slot: number; spindle: number; ledge: number };
+    aside: Vector3;
+    exit: 'normal' | 'up';
+  };
 }
 
 /** Gives every mesh under `root` that wears `name` one copy of it, so each instance prints its own. */
@@ -223,15 +253,35 @@ export function rigFor(model: PlayerModel, profile: SceneProfile = SCENE_PROFILE
     if (profile.flight.exit === 'up') frame.out.copy(UP);
     return frame;
   });
-  // The discs fly in world space, so every copy lives at the root.
+  // The discs fly in world space, so every copy lives at the root, and a turntable's sleeves too.
   const template = nodes.disc;
   root.attach(template);
-  const discs: DiscCopy[] = [{ object: template, label: ownMaterial(template, 'art_disc') }];
-  while (discs.length < DISC_COPIES) {
-    const object = template.clone(true);
-    root.add(object);
-    discs.push({ object, label: ownMaterial(object, 'art_disc') });
-  }
+  const sleeveTemplate = model.media === 'vinyl' ? model.nodes.sleeve : null;
+  if (sleeveTemplate) root.attach(sleeveTemplate);
+  const copyOf = (index: number): DiscCopy => {
+    const object = index === 0 ? template : template.clone(true);
+    if (index > 0) root.add(object);
+    let sleeve: SleeveCopy | null = null;
+    if (sleeveTemplate) {
+      const cover = index === 0 ? sleeveTemplate : sleeveTemplate.clone(true);
+      if (index > 0) root.add(cover);
+      sleeve = { object: cover, print: ownMaterial(cover, 'art_sleeve') };
+    }
+    return { object, label: ownMaterial(object, 'art_disc'), sleeve };
+  };
+  const discs: DiscCopy[] = Array.from({ length: DISC_COPIES }, (_, index) => copyOf(index));
+  const seat = {
+    position: seatPosition,
+    quaternion: seatQuaternion,
+    out: UP.clone().applyQuaternion(seatQuaternion),
+  };
+  const sleeveSeat: PlaceFrame | null =
+    model.media === 'vinyl' ? { ...frameOf(model.nodes.sleeve_seat), out: UP.clone() } : null;
+  const reach = {
+    slot: profile.flight.reach.slot,
+    spindle: profile.flight.reach.spindle,
+    ledge: profile.flight.reach.ledge ?? profile.flight.reach.spindle,
+  };
   const jewelCase = model.media === 'cd' ? caseRigFor(model) : null;
   const door = profile.door;
   const rig: Rig = {
@@ -272,20 +322,25 @@ export function rigFor(model: PlayerModel, profile: SceneProfile = SCENE_PROFILE
           }
         : null,
     doorOpen: 0,
-    seat: {
-      position: seatPosition,
-      quaternion: seatQuaternion,
-      out: UP.clone().applyQuaternion(seatQuaternion),
+    seat,
+    sleeveSeat,
+    landings: {
+      disc: { frame: seat, spins: true, reach: reach.spindle },
+      sleeve: sleeveSeat ? { frame: sleeveSeat, spins: false, reach: reach.ledge } : null,
     },
     slots,
     flight: {
       exit: profile.flight.exit ?? 'normal',
-      reach: { ...profile.flight.reach },
+      reach,
       aside: new Vector3(...profile.flight.aside),
     },
   };
   // The model's own dispose knows only its shared materials: the copies go with it.
-  const prints = [...discs.map((disc) => disc.label), ...(jewelCase ? [jewelCase.booklet] : [])];
+  const prints = [
+    ...discs.map((disc) => disc.label),
+    ...discs.flatMap((copy) => (copy.sleeve ? [copy.sleeve.print] : [])),
+    ...(jewelCase ? [jewelCase.booklet] : []),
+  ];
   const disposeModel = model.dispose;
   model.dispose = () => {
     disposeModel();
@@ -310,14 +365,15 @@ const handleB = new Vector3();
 const spinQuaternion = new Quaternion();
 const turnQuaternion = new Quaternion();
 
-/** Where `place` is now, into `into`: the spindle turns with the disc on it. */
-function placeAt(rig: Rig, place: Place, into: PlaceFrame): PlaceFrame {
+/** Where `place` is now, into `into`: the landing (the spindle turns with the disc on it), or a slot. */
+function placeAt(rig: Rig, place: Place, into: PlaceFrame, landing: Landing): PlaceFrame {
   if (place === 'spindle') {
-    into.position.copy(rig.seat.position);
-    into.quaternion
-      .copy(rig.seat.quaternion)
-      .multiply(spinQuaternion.setFromAxisAngle(UP, rig.spin + rig.knobTurn));
-    into.out.copy(rig.seat.out);
+    into.position.copy(landing.frame.position);
+    into.quaternion.copy(landing.frame.quaternion);
+    if (landing.spins) {
+      into.quaternion.multiply(spinQuaternion.setFromAxisAngle(UP, rig.spin + rig.knobTurn));
+    }
+    into.out.copy(landing.frame.out);
     return into;
   }
   const slot = rig.slots[place];
@@ -333,8 +389,8 @@ function placeAt(rig: Rig, place: Place, into: PlaceFrame): PlaceFrame {
  * disc shrinks away, or grows in, where it stands: any way out of the lid would pass through the
  * discs in front of it).
  */
-function asideOf(rig: Rig, place: Place, into: PlaceFrame): PlaceFrame {
-  placeAt(rig, place, into);
+function asideOf(rig: Rig, place: Place, into: PlaceFrame, landing: Landing): PlaceFrame {
+  placeAt(rig, place, into, landing);
   if (place === 'spindle') into.position.add(rig.flight.aside);
   return into;
 }
@@ -345,19 +401,22 @@ function asideOf(rig: Rig, place: Place, into: PlaceFrame): PlaceFrame {
  * line: each slot stands behind the one below it, so a pop-out would cross a neighbour, and the
  * straight way only widens the gaps, as between discs further apart.
  */
-function reachOf(rig: Rig, place: Place | null, flies: boolean): number {
+function reachOf(rig: Rig, place: Place | null, flies: boolean, landing: Landing): number {
   if (!flies) return 0;
-  return place === 'spindle' || place === null ? rig.flight.reach.spindle : rig.flight.reach.slot;
+  return place === 'spindle' || place === null ? landing.reach : rig.flight.reach.slot;
 }
 
-function placeDisc(rig: Rig, copy: DiscCopy, pose: DiscPose | null): void {
-  const { object } = copy;
+/**
+ * Puts `object` where `pose` has it. A turntable's sleeve runs the same way with its ledge as the
+ * landing: it leaves and arrives with its record, on one timeline.
+ */
+function placeOn(rig: Rig, object: Object3D, pose: DiscPose | null, landing: Landing): void {
   if (!pose || (pose.from === null && pose.to === null)) {
     object.visible = false;
     return;
   }
   if (pose.from !== null && pose.from === pose.to) {
-    const at = placeAt(rig, pose.from, fromFrame);
+    const at = placeAt(rig, pose.from, fromFrame, landing);
     object.visible = true;
     object.position.copy(at.position);
     object.quaternion.copy(at.quaternion);
@@ -367,10 +426,12 @@ function placeDisc(rig: Rig, copy: DiscCopy, pose: DiscPose | null): void {
   const a = MathUtils.clamp(pose.along, 0, 1);
   const start =
     pose.from === null
-      ? asideOf(rig, pose.to as Place, fromFrame)
-      : placeAt(rig, pose.from, fromFrame);
+      ? asideOf(rig, pose.to as Place, fromFrame, landing)
+      : placeAt(rig, pose.from, fromFrame, landing);
   const end =
-    pose.to === null ? asideOf(rig, pose.from as Place, toFrame) : placeAt(rig, pose.to, toFrame);
+    pose.to === null
+      ? asideOf(rig, pose.from as Place, toFrame, landing)
+      : placeAt(rig, pose.to, toFrame, landing);
   // Arriving it grows in, leaving it shrinks away; on its way between places it keeps its size.
   const scale =
     pose.from === null
@@ -384,8 +445,8 @@ function placeDisc(rig: Rig, copy: DiscCopy, pose: DiscPose | null): void {
   }
   object.visible = true;
   const flies = pose.from === 'spindle' || pose.to === 'spindle';
-  handleA.copy(start.position).addScaledVector(start.out, reachOf(rig, pose.from, flies));
-  handleB.copy(end.position).addScaledVector(end.out, reachOf(rig, pose.to, flies));
+  handleA.copy(start.position).addScaledVector(start.out, reachOf(rig, pose.from, flies, landing));
+  handleB.copy(end.position).addScaledVector(end.out, reachOf(rig, pose.to, flies, landing));
   // A cubic Bézier: out of the one place along its normal, into the other along its own (with
   // no reach, a straight line between two slots, or no way at all for a disc changing size).
   const u = 1 - a;
@@ -446,7 +507,12 @@ export function applyPose(rig: Rig, pose: Pose, dt: number): void {
   rig.last.armAngle = pose.armAngle;
   rig.last.spin = pose.spin;
   rig.last.armLift = rig.toneArm ? pose.armLift : 0;
-  rig.discs.forEach((copy, index) => placeDisc(rig, copy, pose.discs[index] ?? null));
+  rig.discs.forEach((copy, index) => {
+    const way = pose.discs[index] ?? null;
+    placeOn(rig, copy.object, way, rig.landings.disc);
+    if (copy.sleeve && rig.landings.sleeve)
+      placeOn(rig, copy.sleeve.object, way, rig.landings.sleeve);
+  });
   if (rig.case) {
     placeCase(rig.case, pose.caseLift, pose.caseTurn);
     showBooklet(rig, rig.case, pose.bookletNew);

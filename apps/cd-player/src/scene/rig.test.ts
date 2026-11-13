@@ -52,6 +52,7 @@ import {
   spinSense,
   turnDoor,
   turntableRestFor,
+  type DiscCopy,
   type Rig,
 } from './rig';
 import {
@@ -462,7 +463,10 @@ describe('applyPose', () => {
     const rig = rigFor(model);
     // The suitcase's seat turns only about the vertical: its normal is straight up.
     expect(rig.seat.out.distanceTo(new Vector3(0, 1, 0))).toBeLessThan(1e-12);
-    expect(rig.flight.reach).toEqual(SCENE_PROFILES.suitcase.flight.reach);
+    expect(rig.flight.reach).toEqual({
+      ...SCENE_PROFILES.suitcase.flight.reach,
+      ledge: SCENE_PROFILES.suitcase.flight.reach.spindle,
+    });
     expect(rig.flight.aside.toArray()).toEqual(SCENE_PROFILES.suitcase.flight.aside);
   });
 
@@ -805,6 +809,86 @@ describe('a turntable’s rig', () => {
     const cd = rigFor(fakeModel().model);
     expect([isCdRig(cd), isTurntableRig(cd)]).toEqual([true, false]);
     expect([isCdRig(turntable), isTurntableRig(turntable)]).toEqual([false, true]);
+  });
+});
+
+describe('a turntable’s sleeves', () => {
+  const sleeveOf = (copy: DiscCopy) => {
+    if (!copy.sleeve) throw new Error('no sleeve');
+    return copy.sleeve;
+  };
+  function turntable() {
+    const parts = fakeTurntable();
+    const rig = rigFor(parts.model, TEST_TURNTABLE);
+    if (!rig.sleeveSeat) throw new Error('no ledge');
+    return { ...parts, rig, ledge: rig.sleeveSeat };
+  }
+
+  it('gives each of the seven records a sleeve with a print of its own, disposed with the model', () => {
+    const { rig, model, print, disposed } = turntable();
+    const prints = rig.discs.map((copy) => sleeveOf(copy).print);
+    expect(new Set(prints).size).toBe(DISC_COPIES);
+    expect(prints).not.toContain(print);
+    const spies = prints.map((material) => vi.spyOn(material, 'dispose'));
+    model.dispose();
+    expect(disposed()).toBe(1);
+    for (const spy of spies) expect(spy).toHaveBeenCalledTimes(1);
+  });
+
+  it('gives a CD player’s discs none, and no ledge', () => {
+    const rig = rigFor(fakeModel().model);
+    expect(rig.discs.every((copy) => copy.sleeve === null)).toBe(true);
+    expect(rig.sleeveSeat).toBeNull();
+  });
+
+  it('stands the ledge where the GLB has it, a sleeve coming down onto it from above', () => {
+    const { rig, sleeveSeat, ledge } = turntable();
+    expect(ledge.position.distanceTo(sleeveSeat.getWorldPosition(new Vector3()))).toBeLessThan(
+      1e-9,
+    );
+    expect(ledge.out.toArray()).toEqual([0, 1, 0]);
+    expect(rig.flight.reach.ledge).toBe(0.3);
+  });
+
+  it('rests the record on the platter and its sleeve on the ledge, and a rack record in its sleeve', () => {
+    const { rig, ledge } = turntable();
+    applyPose(rig, restingPose(fillShelf(targetOf(lineup('a', 'b'))), true, false), 0);
+    const [playing, next] = rig.discs;
+    expect(playing.object.position.distanceTo(rig.seat.position)).toBeLessThan(1e-9);
+    expect(sleeveOf(playing).object.position.distanceTo(ledge.position)).toBeLessThan(1e-9);
+    expect(sleeveOf(playing).object.quaternion.angleTo(ledge.quaternion)).toBeLessThan(1e-6);
+    expect(next.object.position.distanceTo(rig.slots[0].position)).toBeLessThan(1e-9);
+    expect(sleeveOf(next).object.position.distanceTo(next.object.position)).toBeLessThan(1e-9);
+    expect(sleeveOf(next).object.quaternion.angleTo(next.object.quaternion)).toBeLessThan(1e-6);
+  });
+
+  it('turns the record with the platter, and never its sleeve', () => {
+    const { rig, ledge } = turntable();
+    applyPose(rig, restingPose(fillShelf(targetOf(lineup('a'))), true, true), 0.45);
+    expect(rig.discs[0].object.quaternion.angleTo(rig.seat.quaternion)).toBeGreaterThan(1);
+    expect(sleeveOf(rig.discs[0]).object.quaternion.angleTo(ledge.quaternion)).toBeLessThan(1e-6);
+  });
+
+  it('takes a record and its sleeve out of sight together, shrinking alike', () => {
+    const { rig } = turntable();
+    applyPose(rig, only(0, { from: 'spindle', to: null, along: 0.7 }), 0);
+    const [copy] = rig.discs;
+    expect(copy.object.visible).toBe(true);
+    expect(sleeveOf(copy).object.visible).toBe(true);
+    expect(sleeveOf(copy).object.scale.x).toBeCloseTo(copy.object.scale.x, 12);
+    applyPose(rig, only(0, { from: 'spindle', to: null, along: 1 }), 0);
+    expect(copy.object.visible).toBe(false);
+    expect(sleeveOf(copy).object.visible).toBe(false);
+  });
+
+  it('flies a sleeve from its slot down onto the ledge from above as its record lands', () => {
+    const { rig, ledge } = turntable();
+    applyPose(rig, only(1, { from: 0, to: 'spindle', along: 0.95 }), 0);
+    const offset = sleeveOf(rig.discs[1]).object.position.clone().sub(ledge.position);
+    expect(offset.y).toBeGreaterThan(0);
+    expect(Math.hypot(offset.x, offset.z)).toBeLessThan(0.02);
+    const record = rig.discs[1].object.position.clone().sub(rig.seat.position);
+    expect(record.dot(rig.seat.out)).toBeGreaterThan(0);
   });
 });
 

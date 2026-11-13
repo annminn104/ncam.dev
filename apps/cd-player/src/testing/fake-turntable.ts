@@ -28,7 +28,7 @@ export const TEST_TURNTABLE: SceneProfile = {
   arm: { rest: 0, play: -0.39, runOut: -0.79 },
   door: null,
   clockwise: true,
-  flight: { reach: { slot: 0.3, spindle: 0.15 }, aside: [-0.1, 0.15, -0.1] },
+  flight: { reach: { slot: 0.3, spindle: 0.15, ledge: 0.3 }, aside: [-0.1, 0.15, -0.1] },
 };
 
 /**

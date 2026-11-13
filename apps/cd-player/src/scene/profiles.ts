@@ -47,9 +47,11 @@ export interface SceneProfile {
    * next along each one's normal (the spindle's is its seat's own), the Bézier's handles reaching
    * `reach.slot` out of a rack slot and `reach.spindle` out of the spindle; a disc leaving the
    * spindle goes out of sight at `aside` from its seat, where one from the side comes from too.
+   * A turntable's sleeve comes down onto its ledge from `reach.ledge` above it (absent:
+   * `reach.spindle`), and leaves it the same way.
    */
   flight: {
-    reach: { slot: number; spindle: number };
+    reach: { slot: number; spindle: number; ledge?: number };
     aside: Vec3;
     /**
      * Which way a disc leaves and reaches a rack slot: along the slot's own normal, the disc's
