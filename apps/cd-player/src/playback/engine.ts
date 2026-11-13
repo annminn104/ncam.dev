@@ -104,6 +104,12 @@ export class PlayerEngine {
   private endWatch = 0;
   /** The last seek sent to the embed and when (`now()`), until a report settles it. */
   private seeking: { ms: number; at: number } | null = null;
+  /**
+   * Play was pressed while the collection was still loading, with no tracks to play yet: the
+   * scene can be up before them (seen live, the press 15–40 ms early). It plays once they are in;
+   * a second press or Stop takes it back, a failed load forgets it.
+   */
+  private playOnLoad = false;
   private detachBridge: (() => void) | null = null;
   private disposed = false;
 
@@ -178,9 +184,14 @@ export class PlayerEngine {
         if (this.disposed || !sameCollection(this.snapshot.ref, ref)) return;
         this.set({ collection, loading: false });
         this.send({ type: 'LOAD', tracks: collection.tracks });
+        if (this.playOnLoad) {
+          this.playOnLoad = false;
+          this.user({ type: 'PLAY' });
+        }
       },
       (error: unknown) => {
         if (this.disposed || !sameCollection(this.snapshot.ref, ref)) return;
+        this.playOnLoad = false;
         this.set({
           loading: false,
           error: { message: requestErrorMessage(error, ref.type), retry: canRetry(error) },
@@ -194,7 +205,15 @@ export class PlayerEngine {
    * the player is built only when the reducer would start playback (a disc change or a load).
    */
   user(event: SeqEvent): void {
-    const { commands } = step(this.snapshot.seq, event);
+    const { seq, loading } = this.snapshot;
+    if (loading && seq.tracks.length === 0) {
+      // Nothing to play yet: Play (or the toggle) waits for the tracks, a toggle again or Stop
+      // takes it back (see `playOnLoad`).
+      if (event.type === 'PLAY') this.playOnLoad = true;
+      else if (event.type === 'TOGGLE') this.playOnLoad = !this.playOnLoad;
+      else if (event.type === 'STOP' || event.type === 'PAUSE') this.playOnLoad = false;
+    }
+    const { commands } = step(seq, event);
     if (commands.some((command) => command.type === 'swap' || command.type === 'load')) {
       this.prepare(event);
     }

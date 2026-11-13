@@ -200,6 +200,56 @@ describe('PlayerEngine', () => {
     expect(engine.getSnapshot().seq.status).toBe('playing');
   });
 
+  // Seen live: the scene can be up, and Play pressed, before the collection's tracks are in.
+  describe('a play pressed while the collection still loads', () => {
+    function loading() {
+      const ctx = setup();
+      let land: () => void = () => {};
+      let refuse: () => void = () => {};
+      vi.mocked(ctx.client.collection).mockReturnValueOnce(
+        new Promise((resolve, reject) => {
+          land = () => resolve(collection);
+          refuse = () => reject(new SpotifyRequestError('upstream', 502));
+        }),
+      );
+      ctx.engine.open(ref);
+      return { ...ctx, land: () => land(), refuse: () => refuse() };
+    }
+
+    it('plays once the tracks are in', async () => {
+      const { engine, flush, createPlayer, land } = loading();
+      engine.user({ type: 'TOGGLE' });
+      expect(createPlayer).not.toHaveBeenCalled();
+      land();
+      await flush();
+      expect(createPlayer).toHaveBeenCalledWith('spotify:track:a', expect.anything());
+      expect(engine.getSnapshot().seq).toMatchObject({ status: 'swapping', cursor: 0 });
+    });
+
+    it('takes a second press back, and a Stop', async () => {
+      for (const second of [{ type: 'TOGGLE' }, { type: 'STOP' }] as SeqEvent[]) {
+        const { engine, flush, createPlayer, land } = loading();
+        engine.user({ type: 'TOGGLE' });
+        engine.user(second);
+        land();
+        await flush();
+        expect(createPlayer).not.toHaveBeenCalled();
+        expect(engine.getSnapshot().seq.status).toBe('idle');
+      }
+    });
+
+    it('forgets it when the collection fails, so a later load does not start by itself', async () => {
+      const { engine, flush, createPlayer, refuse } = loading();
+      engine.user({ type: 'TOGGLE' });
+      refuse();
+      await flush();
+      engine.open(ref);
+      await flush();
+      expect(engine.getSnapshot().collection).not.toBeNull();
+      expect(createPlayer).not.toHaveBeenCalled();
+    });
+  });
+
   it('asks for a press in the widget when playback does not start, and drops the hint when it does', async () => {
     const { engine, flush, swap, timers, cb } = setup();
     engine.open(ref);
