@@ -6,6 +6,7 @@ describe('scene profiles', () => {
   it('plays CDs on the suitcase, the Clear model and the Deck', () => {
     for (const id of ['suitcase', 'clear', 'deck'] as const) {
       expect(SCENE_PROFILES[id].media, id).toBe('cd');
+      expect(SCENE_PROFILES[id].arm.runOut, id).toBeUndefined();
     }
   });
 

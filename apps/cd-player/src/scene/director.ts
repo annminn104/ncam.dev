@@ -1,4 +1,5 @@
 import type { TrackView } from '../bridge';
+import type { Status } from '../playback/sequencer';
 import {
   DISC_COPIES,
   RACK_SLOTS,
@@ -99,6 +100,11 @@ export interface ArmPlan {
   at: number;
   /** When it swings back in and lowers onto the new disc; null when nothing lands. */
   back: Span | null;
+  /**
+   * How lifted it starts (the last pose's lift): a turntable's paused or dragged arm swings away
+   * lifted.
+   */
+  liftFrom: number;
 }
 
 export interface Plan {
@@ -281,7 +287,7 @@ export function planChange(
   change: ChangeOf,
   shelf: Shelf,
   target: Target,
-  last: { armAngle: number; spin: number },
+  last: { armAngle: number; spin: number; armLift?: number },
   options?: { door?: boolean; booklet?: boolean },
 ): Plan {
   const timeline = timelineFor(change, shelf, target);
@@ -428,6 +434,7 @@ export function planChange(
           off: Math.abs(last.armAngle - ARM_REST) > ARM_EPSILON,
           at: 0,
           back: lands ? timing.armIn : null,
+          liftFrom: last.armLift ?? 0,
         }
       : null;
   const flip =
@@ -506,6 +513,7 @@ function armAt(arm: ArmPlan, t: number): ArmPose {
   return {
     armAngle: arm.from + (ARM_REST - arm.from) * away + (ARM_PLAY - ARM_REST) * back,
     armLift: Math.max(
+      arm.liftFrom * (1 - away),
       arm.off ? bump(t, arm.at + ARM_LIFT_OFF[0], arm.at + ARM_LIFT_OFF[1]) : 0,
       arm.back ? bump(t, arm.back[0] - 50, arm.back[1] + 50) : 0,
     ),
@@ -551,15 +559,74 @@ export function restingArm(seated: boolean, loaded: boolean, playing: boolean): 
   };
 }
 
-/** Between changes: every copy where the shelf puts it, the case in its seat. */
-export function restingPose(shelf: Shelf, loaded: boolean, playing: boolean): Pose {
+/** How fast a turntable's resting arm, its lift and its platter ease toward the status's pose (1/s). */
+export const TURNTABLE_EASE = 8;
+/** An arm farther than this from its rest or its groove (the director's units) lifts to swing there. */
+const REST_REACH = 0.01;
+
+/** What a turntable's resting arm reads: the status, and the angles the rig has worked out. */
+export interface TurntableRest {
+  /** A record is on the platter. */
+  seated: boolean;
+  status: Status;
+  positionMs: number;
+  /** The director's angle for the position (ARM_PLAY at the lead-in, tonearm.ts directorAngle). */
+  groove: number;
+  /** A drag's angle (the director's units) while one goes on; null otherwise. */
+  drag: number | null;
+}
+
+/**
+ * Where a turntable's arm and platter go between changes. Playing: down on the groove, the platter
+ * turning. Paused: lifted where it is, the platter still. Stopped (the sequencer's Stop is a pause
+ * at 0:00, ruled 2026-11-13), idle, changing, or with nothing on the platter: at its rest, lifted
+ * while `from` is not there yet. A drag holds the arm lifted at its angle. Any long way lifts it:
+ * farther than REST_REACH from the groove (Play after Stop, a seek), it swings over the record
+ * lifted and lowers once there; tracking, it stays down.
+ */
+export function turntableArm(rest: TurntableRest, from: Pick<ArmPose, 'armAngle'>): ArmPose {
+  const playing = rest.status === 'playing';
+  const paused = rest.status === 'paused' && rest.positionMs > 0;
+  if (rest.drag !== null) return { armAngle: rest.drag, armLift: 1, spin: playing ? 1 : 0 };
+  if (!rest.seated || (!playing && !paused)) {
+    const away = Math.abs(from.armAngle - ARM_REST) > REST_REACH;
+    return { armAngle: ARM_REST, armLift: away ? 1 : 0, spin: 0 };
+  }
+  const far = Math.abs(from.armAngle - rest.groove) > REST_REACH;
+  return { armAngle: rest.groove, armLift: playing && !far ? 0 : 1, spin: playing ? 1 : 0 };
+}
+
+/**
+ * `from` eased toward `to` over `dtS` seconds at TURNTABLE_EASE (Infinity: at once, under reduced
+ * motion), each part landing once within a hair; `snapAngle` takes the angle at once (a drag's).
+ */
+export function easeArm(from: ArmPose, to: ArmPose, dtS: number, snapAngle = false): ArmPose {
+  const k = dtS === Infinity ? 1 : 1 - Math.exp(-TURNTABLE_EASE * Math.max(0, dtS));
+  const step = (a: number, b: number) => (Math.abs(b - a) < 1e-4 ? b : a + (b - a) * k);
+  return {
+    armAngle: snapAngle ? to.armAngle : step(from.armAngle, to.armAngle),
+    armLift: step(from.armLift, to.armLift),
+    spin: step(from.spin, to.spin),
+  };
+}
+
+/**
+ * Between changes: every copy where the shelf puts it, the case in its seat, the arm as `arm` has
+ * it (a turntable's, eased toward its status; a CD player's, restingArm's).
+ */
+export function restingPose(
+  shelf: Shelf,
+  loaded: boolean,
+  playing: boolean,
+  arm: ArmPose = restingArm(shelf.spindle !== null, loaded, playing),
+): Pose {
   const discs: (DiscPose | null)[] = Array.from({ length: DISC_COPIES }, () => null);
   if (shelf.spindle !== null) discs[shelf.spindle] = { from: 'spindle', to: 'spindle', along: 1 };
   shelf.rack.forEach((disc, slot) => {
     if (disc !== null) discs[disc] = { from: slot, to: slot, along: 1 };
   });
   return {
-    ...restingArm(shelf.spindle !== null, loaded, playing),
+    ...arm,
     discs,
     caseLift: 0,
     caseTurn: 0,

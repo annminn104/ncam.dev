@@ -19,8 +19,12 @@ export interface SceneProfile {
   frame: { target: Vec3; direction: Vec3; across: number; up: number };
   /** The camera's near plane (metres); absent, framing.ts's NEAR. */
   near?: number;
-  /** The arm's angles about its pivot's Y: at rest and over the disc. */
-  arm: { rest: number; play: number };
+  /**
+   * The arm's angles about its pivot's Y: at rest and over the disc. A turntable's `play` is the
+   * lead-in (the needle over the record's outer groove) and `runOut` the needle by the label; the
+   * arm tracks between them as the track plays (src/scene/tonearm.ts).
+   */
+  arm: { rest: number; play: number; runOut?: number };
   /**
    * How far the door swings open about its hinge's own axis (radians): Y, unless `axis` says X
    * (the deck's jog plate lifts about its back edge). null: no door.

@@ -10,7 +10,8 @@ import {
   Vector3,
 } from 'three';
 import { describe, expect, it, vi } from 'vitest';
-import type { TrackView } from '../bridge';
+import { EMPTY_VIEW, type SceneView, type TrackView } from '../bridge';
+import type { Status } from '../playback/sequencer';
 import { fakeTurntable, TEST_TURNTABLE } from '../testing/fake-turntable';
 import {
   CLEAR_SEAT,
@@ -42,6 +43,7 @@ import type { CdModel } from './model';
 import { SCENE_PROFILES } from './profiles';
 import {
   applyPose,
+  armAngleFor,
   doorAxis,
   isCdRig,
   isTurntableRig,
@@ -49,6 +51,7 @@ import {
   rigFor,
   spinSense,
   turnDoor,
+  turntableRestFor,
   type Rig,
 } from './rig';
 import {
@@ -366,7 +369,7 @@ describe('applyPose', () => {
       expect(copy.scale.x).toBe(1);
     }
     expect(rig.discs[6].object.visible).toBe(false);
-    expect(rig.last).toEqual({ armAngle: ARM_PLAY, spin: 0 });
+    expect(rig.last).toEqual({ armAngle: ARM_PLAY, spin: 0, armLift: 0 });
   });
 
   it('flies a disc from its slot onto the spindle, leaving and landing along each normal', () => {
@@ -835,5 +838,96 @@ describe('spinSense', () => {
     expect(spinSense({})).toBe(1);
     expect(spinSense({ clockwise: false })).toBe(1);
     expect(spinSense({ clockwise: true })).toBe(-1);
+  });
+});
+
+describe('a turntable’s arm', () => {
+  const view = (positionMs: number, status: Status = 'playing') => ({
+    ...EMPTY_VIEW,
+    current: track('a'),
+    status,
+    positionMs,
+    durationMs: 200_000,
+  });
+  function turntable() {
+    const rig = rigFor(fakeTurntable().model, TEST_TURNTABLE);
+    if (!isTurntableRig(rig)) throw new Error('not a turntable');
+    rig.shelf = fillShelf(targetOf(lineup('a')));
+    return rig;
+  }
+  const angleOf = (rig: ReturnType<typeof turntable>, armAngle: number) =>
+    armAngleFor(rig.profile.arm, armAngle);
+  /**
+   * The arm put on its groove for `at` at once (reduced motion): from its rest that is a long way,
+   * so the first step swings it there lifted and the next lowers it. Each pose is applied.
+   */
+  function settle(rig: ReturnType<typeof turntable>, at: SceneView) {
+    const swung = turntableRestFor(rig, at, Infinity, 0);
+    applyPose(rig, restingPose(rig.shelf, true, true, swung), 0);
+    const lowered = turntableRestFor(rig, at, Infinity, 0);
+    applyPose(rig, restingPose(rig.shelf, true, true, lowered), 0);
+    return { swung, lowered };
+  }
+
+  it('tracks from the lead-in at 0:00 to the run-out at the end, down, the platter turning', () => {
+    const rig = turntable();
+    const { swung, lowered: half } = settle(rig, view(100_000));
+    expect(swung.armLift).toBe(1);
+    expect(angleOf(rig, half.armAngle)).toBeCloseTo((-0.39 + -0.79) / 2, 9);
+    expect(half).toMatchObject({ armLift: 0, spin: 1 });
+    expect(angleOf(rig, turntableRestFor(rig, view(0), Infinity, 0).armAngle)).toBeCloseTo(
+      -0.39,
+      9,
+    );
+  });
+
+  it('stays down as it tracks frame by frame, even through a 30-second preview', () => {
+    const rig = turntable();
+    const at = (positionMs: number): SceneView => ({ ...view(positionMs), durationMs: 30_000 });
+    settle(rig, at(0));
+    for (let frame = 1; frame <= 180; frame++) {
+      const nowMs = (frame * 1000) / 60;
+      // The embed reports every 250 ms; the playhead carries the position on between reports.
+      const pose = turntableRestFor(rig, at(Math.floor(nowMs / 250) * 250), 1 / 60, nowMs);
+      applyPose(rig, restingPose(rig.shelf, true, true, pose), 1 / 60);
+      expect(pose.armLift, `frame ${frame}`).toBe(0);
+    }
+    // On by 3 s's groove, a hair behind it as it eases.
+    expect(angleOf(rig, rig.last.armAngle)).toBeCloseTo(-0.39 - 0.4 * (3 / 30), 2);
+  });
+
+  it('lifts where it stands as it pauses, easing up rather than jumping', () => {
+    const rig = turntable();
+    settle(rig, view(100_000));
+    const step = turntableRestFor(rig, view(100_000, 'paused'), 1 / 60, 16);
+    expect(step.armLift).toBeGreaterThan(0);
+    expect(step.armLift).toBeLessThan(0.5);
+    expect(angleOf(rig, step.armAngle)).toBeCloseTo(-0.59, 9);
+  });
+
+  it('takes over from a change’s landing on the lead-in at 0:00 without a jump', () => {
+    const rig = turntable();
+    rig.last = { armAngle: ARM_PLAY, spin: 1, armLift: 0 };
+    const pose = turntableRestFor(rig, view(0), 1 / 60, 0);
+    expect(pose.armAngle).toBeCloseTo(ARM_PLAY, 12);
+    expect(pose.armLift).toBe(0);
+  });
+
+  it('holds a drag where the hand has it, lifting', () => {
+    const rig = turntable();
+    rig.armDrag = -0.7;
+    const pose = turntableRestFor(rig, view(10_000), 1 / 60, 0);
+    expect(angleOf(rig, pose.armAngle)).toBeCloseTo(-0.7, 12);
+    expect(pose.armLift).toBeGreaterThan(0);
+  });
+
+  it('notes the arm’s lift after a pose on a turntable, and never on a CD player', () => {
+    const rig = turntable();
+    applyPose(rig, { ...restingPose(rig.shelf, true, false), armLift: 0.5 }, 0);
+    expect(rig.last.armLift).toBe(0.5);
+    const cd = rigFor(fakeModel().model);
+    applyPose(cd, { ...restingPose(emptyShelf(), false, false), armLift: 0.5 }, 0);
+    expect(cd.last.armLift).toBe(0);
+    expect(cd.toneArm).toBeNull();
   });
 });

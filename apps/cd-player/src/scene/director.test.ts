@@ -8,13 +8,17 @@ import {
   FLIP_EDGE_MS,
   FLIP_MS,
   PRINT_LEAD_MS,
+  TURNTABLE_EASE,
   doorAt,
+  easeArm,
   planChange,
   posePlan,
   restingArm,
   restingPose,
+  turntableArm,
   withDoor,
   type Plan,
+  type TurntableRest,
 } from './director';
 import {
   DISC_COPIES,
@@ -47,7 +51,12 @@ const RESTING = { armAngle: ARM_REST, spin: 0 };
 const REST = restingArm(true, true, true);
 
 /** The plan the swap controller makes from a shelf that holds `before`, for the view `after`. */
-function plan(before: Lineup, after: Lineup, to: string | null, last = PLAYING): Plan {
+function plan(
+  before: Lineup,
+  after: Lineup,
+  to: string | null,
+  last: { armAngle: number; spin: number; armLift?: number } = PLAYING,
+): Plan {
   const shelf = fillShelf(targetOf(before));
   const arriving = to === null ? null : track(to);
   const change = classifyChange(lineupOf(shelf), after, arriving);
@@ -448,5 +457,124 @@ describe('a model without a jewel case', () => {
     expect(cased.timeline).toBe('cascade');
     expect(cased.duration).toBe(1050 + FLIP_MS);
     expect(caseless.duration).toBe(DURATION.cascade);
+  });
+});
+
+describe('a turntable’s arm between changes', () => {
+  const rest = (over: Partial<TurntableRest> = {}): TurntableRest => ({
+    seated: true,
+    status: 'playing',
+    positionMs: 60_000,
+    groove: -0.8,
+    drag: null,
+    ...over,
+  });
+  const onTrack = { armAngle: -0.8 };
+
+  it('plays down on its groove, the platter turning', () => {
+    expect(turntableArm(rest(), onTrack)).toEqual({ armAngle: -0.8, armLift: 0, spin: 1 });
+  });
+
+  it('lifts on its way from its rest to the lead-in (Play after Stop), and lowers there', () => {
+    const start = rest({ positionMs: 0, groove: ARM_PLAY });
+    expect(turntableArm(start, { armAngle: ARM_REST })).toEqual({
+      armAngle: ARM_PLAY,
+      armLift: 1,
+      spin: 1,
+    });
+    expect(turntableArm(start, { armAngle: ARM_PLAY })).toEqual({
+      armAngle: ARM_PLAY,
+      armLift: 0,
+      spin: 1,
+    });
+  });
+
+  it('swings to a far groove lifted, as a seek sends it, and tracks a near one down', () => {
+    expect(turntableArm(rest({ groove: -0.4 }), onTrack)).toEqual({
+      armAngle: -0.4,
+      armLift: 1,
+      spin: 1,
+    });
+    expect(turntableArm(rest({ groove: -0.805 }), onTrack)).toEqual({
+      armAngle: -0.805,
+      armLift: 0,
+      spin: 1,
+    });
+  });
+
+  it('lifts where it is while paused, the platter still', () => {
+    expect(turntableArm(rest({ status: 'paused' }), onTrack)).toEqual({
+      armAngle: -0.8,
+      armLift: 1,
+      spin: 0,
+    });
+  });
+
+  it('reads a pause at 0:00 as stopped: to its rest, lifted until it is there', () => {
+    const stopped = rest({ status: 'paused', positionMs: 0 });
+    expect(turntableArm(stopped, onTrack)).toEqual({ armAngle: ARM_REST, armLift: 1, spin: 0 });
+    expect(turntableArm(stopped, { armAngle: ARM_REST })).toEqual({
+      armAngle: ARM_REST,
+      armLift: 0,
+      spin: 0,
+    });
+  });
+
+  it('rests while idle, while a change is under way and with nothing on the platter', () => {
+    const resting = { armAngle: ARM_REST, armLift: 0, spin: 0 };
+    expect(turntableArm(rest({ status: 'idle' }), { armAngle: ARM_REST })).toEqual(resting);
+    expect(turntableArm(rest({ status: 'swapping' }), { armAngle: ARM_REST })).toEqual(resting);
+    expect(turntableArm(rest({ seated: false }), { armAngle: ARM_REST })).toEqual(resting);
+  });
+
+  it('holds a drag’s angle, lifted, the platter as the status has it', () => {
+    expect(turntableArm(rest({ drag: -0.9 }), onTrack)).toEqual({
+      armAngle: -0.9,
+      armLift: 1,
+      spin: 1,
+    });
+    expect(turntableArm(rest({ drag: -0.9, status: 'paused' }), onTrack)).toEqual({
+      armAngle: -0.9,
+      armLift: 1,
+      spin: 0,
+    });
+  });
+});
+
+describe('easeArm', () => {
+  const from = { armAngle: 0, armLift: 0, spin: 0 };
+  const to = { armAngle: -1, armLift: 1, spin: 1 };
+
+  it('closes the same share of every gap each frame, TURNTABLE_EASE a second', () => {
+    const k = 1 - Math.exp(-TURNTABLE_EASE * 0.1);
+    const eased = easeArm(from, to, 0.1);
+    expect(eased.armAngle).toBeCloseTo(-k, 12);
+    expect(eased.armLift).toBeCloseTo(k, 12);
+    expect(eased.spin).toBeCloseTo(k, 12);
+  });
+
+  it('lands within a hair of the target, and at once for an infinite step (reduced motion)', () => {
+    expect(easeArm({ armAngle: -0.99995, armLift: 1, spin: 1 }, to, 0.016).armAngle).toBe(-1);
+    expect(easeArm(from, to, Infinity)).toEqual(to);
+  });
+
+  it('takes the angle at once when told to, as a drag’s, easing the lift and the spin', () => {
+    const eased = easeArm(from, to, 0.1, true);
+    expect(eased.armAngle).toBe(-1);
+    expect(eased.armLift).toBeLessThan(1);
+  });
+});
+
+describe('a change from a lifted arm', () => {
+  const before = lineup('a', 'b', 'c', 'd', 'e', 'f');
+  const after = lineup('b', 'c', 'd', 'e', 'f', 'g');
+
+  it('swings away still lifted, and starts a CD player’s, never lifted at rest, as before', () => {
+    const lifted = plan(before, after, 'b', { armAngle: -0.8, spin: 0, armLift: 1 });
+    expect(lifted.arm?.liftFrom).toBe(1);
+    expect(posePlan(lifted, 0, REST).armLift).toBeCloseTo(1, 12);
+    expect(posePlan(lifted, 200, REST).armLift).toBeGreaterThan(0.9);
+    expect(posePlan(lifted, 400, REST).armAngle).toBeCloseTo(ARM_REST);
+    expect(plan(before, after, 'b').arm?.liftFrom).toBe(0);
   });
 });

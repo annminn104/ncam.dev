@@ -25,7 +25,7 @@ export const TEST_TURNTABLE: SceneProfile = {
   rpm: 100 / 3,
   frame: { target: [0.17, 0.13, -0.03], direction: [0, 0.6, 0.8], across: 0.46, up: 0.3 },
   near: 0.8,
-  arm: { rest: 0, play: -0.39 },
+  arm: { rest: 0, play: -0.39, runOut: -0.79 },
   door: null,
   clockwise: true,
   flight: { reach: { slot: 0.3, spindle: 0.15 }, aside: [-0.1, 0.15, -0.1] },

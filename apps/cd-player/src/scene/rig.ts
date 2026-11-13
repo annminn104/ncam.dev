@@ -9,12 +9,23 @@ import {
   type Object3D,
   type Texture,
 } from 'three';
+import type { SceneView } from '../bridge';
 import type { ModelId } from '../models';
 import type { SharedNode } from './contract';
-import { ARM_PLAY, ARM_REST, type DiscPose, type Pose } from './director';
+import {
+  ARM_PLAY,
+  ARM_REST,
+  easeArm,
+  turntableArm,
+  type ArmPose,
+  type DiscPose,
+  type Pose,
+} from './director';
 import type { CdModel, PlayerModel, VinylModel } from './model';
+import { createPlayhead, type Playhead } from './playhead';
 import { SCENE_PROFILES, type SceneProfile } from './profiles';
 import { DISC_COPIES, emptyShelf, type Place, type StageState } from './stage';
+import { directorAngle, grooveAngle, grooveShare, toneArmOf, type ToneArm } from './tonearm';
 
 /** The rack's slots in the model, slot 0 the next to play: each the pose of a disc in it. */
 const RACK_NODES = [
@@ -78,6 +89,15 @@ export interface Rig<M extends PlayerModel = PlayerModel> extends StageState {
   /** A turntable's platter: its node, and its turn as the GLB has it; it turns with the record. */
   platter: { node: Object3D; base: number } | null;
   arm: { node: Object3D; baseRotationY: number; baseY: number };
+  /** A turntable's tonearm (its profile's three angles); null on a CD player. */
+  toneArm: M extends VinylModel ? ToneArm : null;
+  /**
+   * The position carried on frame by frame between the embed's reports (a turntable's arm, its
+   * ring).
+   */
+  playhead: Playhead;
+  /** The arm's angle an arm drag holds, about its pivot from the GLB's pose; null between drags. */
+  armDrag: number | null;
   /** The door's hinge, for a model with one: where it is shut, and the turn that opens it. */
   door: { node: Object3D; base: number; angle: number; axis: 'x' | 'y' } | null;
   /** How far the door stood open at the last pose: 0 shut … 1 open; 0 for a model without one. */
@@ -183,9 +203,9 @@ export function isCdRig(rig: Rig): rig is Rig<CdModel> {
   return rig.model.media === 'cd';
 }
 
-/** A rig for a turntable. */
+/** A rig for a turntable: its tone arm is there. */
 export function isTurntableRig(rig: Rig): rig is Rig<VinylModel> {
-  return rig.model.media === 'vinyl';
+  return rig.model.media === 'vinyl' && rig.toneArm !== null;
 }
 
 /** One rig per model (StrictMode renders twice; building it twice would clone twice). */
@@ -224,7 +244,7 @@ export function rigFor(model: PlayerModel, profile: SceneProfile = SCENE_PROFILE
     bookletFront: 0,
     filled: false,
     swapping: false,
-    last: { armAngle: ARM_REST, spin: 0 },
+    last: { armAngle: ARM_REST, spin: 0, armLift: 0 },
     spin: 0,
     scrubMs: null,
     knobTurn: 0,
@@ -239,6 +259,9 @@ export function rigFor(model: PlayerModel, profile: SceneProfile = SCENE_PROFILE
       baseRotationY: nodes.arm_pivot.rotation.y,
       baseY: nodes.arm_pivot.position.y,
     },
+    toneArm: model.media === 'vinyl' ? toneArmOf(profile) : null,
+    playhead: createPlayhead(),
+    armDrag: null,
     door:
       nodes.door_hinge && door
         ? {
@@ -411,7 +434,10 @@ export function modelArmAngle(model: ModelId, angle: number): number {
   return armAngleFor(SCENE_PROFILES[model].arm, angle);
 }
 
-/** Puts every moving part where `pose` says, and notes where it left the arm and the spin. */
+/**
+ * Puts every moving part where `pose` says, and notes where it left the arm (its lift too, on a
+ * turntable) and the spin.
+ */
 export function applyPose(rig: Rig, pose: Pose, dt: number): void {
   rig.arm.node.rotation.y = rig.arm.baseRotationY + armAngleFor(rig.profile.arm, pose.armAngle);
   rig.arm.node.position.y = rig.arm.baseY + pose.armLift * ARM_LIFT_M;
@@ -419,6 +445,7 @@ export function applyPose(rig: Rig, pose: Pose, dt: number): void {
   if (rig.platter) rig.platter.node.rotation.y = rig.platter.base + rig.spin;
   rig.last.armAngle = pose.armAngle;
   rig.last.spin = pose.spin;
+  rig.last.armLift = rig.toneArm ? pose.armLift : 0;
   rig.discs.forEach((copy, index) => placeDisc(rig, copy, pose.discs[index] ?? null));
   if (rig.case) {
     placeCase(rig.case, pose.caseLift, pose.caseTurn);
@@ -426,4 +453,32 @@ export function applyPose(rig: Rig, pose: Pose, dt: number): void {
   }
   rig.doorOpen = rig.door ? pose.door : 0;
   if (rig.door) turnDoor(rig.door, pose.door);
+}
+
+/**
+ * A turntable's resting arm and platter this frame (turntableArm), eased from the last pose over
+ * `dtS` seconds (Infinity under reduced motion). The groove's angle comes from the playhead, so
+ * the arm tracks smoothly between the embed's progress events, held at the duration; a drag's
+ * angle is taken at once, its lift eased.
+ */
+export function turntableRestFor(
+  rig: Rig<VinylModel>,
+  view: SceneView,
+  dtS: number,
+  nowMs: number,
+): ArmPose {
+  const arm = rig.toneArm;
+  const position = rig.playhead.read(view, nowMs);
+  const target = turntableArm(
+    {
+      seated: rig.shelf.spindle !== null,
+      status: view.status,
+      positionMs: view.positionMs,
+      groove: directorAngle(arm, grooveAngle(arm, grooveShare(position, view.durationMs))),
+      drag: rig.armDrag === null ? null : directorAngle(arm, rig.armDrag),
+    },
+    rig.last,
+  );
+  const from = { armAngle: rig.last.armAngle, armLift: rig.last.armLift ?? 0, spin: rig.last.spin };
+  return easeArm(from, target, dtS, rig.armDrag !== null);
 }

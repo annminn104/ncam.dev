@@ -53,8 +53,12 @@ export interface StageState {
   filled: boolean;
   /** A change is running. */
   swapping: boolean;
-  /** Where the last pose left the arm (radians from its base) and the spin (a share of full speed). */
-  last: { armAngle: number; spin: number };
+  /**
+   * Where the last pose left the arm (radians from its base), its lift (0 down … 1 lifted; a
+   * turntable's only: a CD player's resting arm is never lifted) and the spin (a share of full
+   * speed).
+   */
+  last: { armAngle: number; spin: number; armLift?: number };
 }
 
 /**
