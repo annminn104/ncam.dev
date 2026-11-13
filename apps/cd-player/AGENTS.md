@@ -311,7 +311,8 @@ fails still counts as seated.
 The rules: Next and Previous skip unplayable tracks (disabled in the list); Previous more than 3 s
 into a track (`RESTART_MS`) restarts it; Repeat wraps the list at both ends; Shuffle is a seeded
 Fisher–Yates order with the current track moved to the front; Stop pauses and goes back to the
-start; a seek is held between 0 and a second before the end; a new collection keeps Repeat and
+start, and the state says `stopped` until the track plays, seeks or changes; a seek is held
+between 0 and a second before the end; a new collection keeps Repeat and
 drops Shuffle. The embed ignores a seek to under a second, so `seek` in `createEmbedPlayer` takes
 the start its own way: a playing track restarts (the controller's `restart()`), a paused one waits
 at its first second, since a restart would play it.
@@ -634,8 +635,10 @@ booklet's track, the collection) and where the last pose left the arm.
   (`createPlayhead`, `Rig.playhead`) carries the position on frame by frame between the embed's
   reports, for at most `PLAYHEAD_HOLD_MS` (2 s), so a stalled embed does not run the arm on to the
   label. `turntableArm` (`director.ts`) picks the resting pose from the status: playing, down on the
-  groove with the platter turning; paused, lifted where it is, the platter still; stopped (Stop is
-  a pause at 0:00), idle, changing or with no record, on its rest. It lifts for any swing past
+  groove with the platter turning; paused, lifted where it is, the platter still (in the first
+  second too); stopped (the sequencer's own `stopped`, carried by the view: the embed reports a
+  stopped track at its first second, so a position of 0 cannot tell), idle, changing or with no
+  record, on its rest. It lifts for any swing past
   `LIFT_REACH` off the groove (Play after Stop, a far seek) and stays down when a stall re-anchors
   the playhead; `easeArm` eases the angle, the lift and the platter's spin toward it
   (`TURNTABLE_EASE`, 8 a second; at once under reduced motion), and `turntableRestFor` (`rig.ts`)

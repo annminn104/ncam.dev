@@ -58,6 +58,7 @@ export function sceneView(source: ViewSource): SceneView {
     trackNo: index === null ? 0 : index + 1,
     total: seq.tracks.length,
     status: seq.status,
+    stopped: seq.stopped,
     positionMs: seq.positionMs,
     durationMs: seq.durationMs,
   };

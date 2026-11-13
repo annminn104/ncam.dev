@@ -1183,6 +1183,19 @@ describe('a turntable’s arm', () => {
     expect(angleOf(rig, step.armAngle)).toBeCloseTo(-0.59, 9);
   });
 
+  it('goes to its rest after Stop, though the embed reports the track at its first second', () => {
+    const rig = turntable();
+    settle(rig, view(100_000));
+    const stopped: SceneView = { ...view(1000, 'paused'), stopped: true };
+    const { swung, lowered } = settle(rig, stopped);
+    expect(swung).toMatchObject({ armAngle: ARM_REST, armLift: 1, spin: 0 });
+    expect(lowered).toMatchObject({ armAngle: ARM_REST, armLift: 0, spin: 0 });
+    // A pause there (not a stop) holds the arm lifted over its groove.
+    const paused = settle(rig, view(1000, 'paused')).lowered;
+    expect(angleOf(rig, paused.armAngle)).toBeCloseTo(-0.39 - 0.4 * (1000 / 200_000), 9);
+    expect(paused.armLift).toBe(1);
+  });
+
   it('takes over from a change’s landing on the lead-in at 0:00 without a jump', () => {
     const rig = turntable();
     rig.last = { armAngle: ARM_PLAY, spin: 1, armLift: 0 };

@@ -543,7 +543,7 @@ export function turntableRestFor(
     {
       seated: rig.shelf.spindle !== null,
       status: view.status,
-      positionMs: view.positionMs,
+      stopped: view.stopped,
       groove: directorAngle(arm, grooveAngle(arm, grooveShare(position, view.durationMs))),
       drag: rig.armDrag === null ? null : directorAngle(arm, rig.armDrag),
     },

@@ -277,7 +277,7 @@ export class PlayerEngine {
       const patch: Partial<EngineSnapshot> = { embed: 'blocked' };
       const { seq } = this.snapshot;
       if (current && seq.status !== 'idle') {
-        patch.seq = { ...seq, status: 'idle', positionMs: 0 };
+        patch.seq = { ...seq, status: 'idle', stopped: false, positionMs: 0 };
         this.swapToken++;
       }
       this.set(patch);

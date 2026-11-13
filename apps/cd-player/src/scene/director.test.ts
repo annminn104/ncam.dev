@@ -464,7 +464,7 @@ describe('a turntable’s arm between changes', () => {
   const rest = (over: Partial<TurntableRest> = {}): TurntableRest => ({
     seated: true,
     status: 'playing',
-    positionMs: 60_000,
+    stopped: false,
     groove: -0.8,
     drag: null,
     ...over,
@@ -476,7 +476,7 @@ describe('a turntable’s arm between changes', () => {
   });
 
   it('lifts on its way from its rest to the lead-in (Play after Stop), and lowers there', () => {
-    const start = rest({ positionMs: 0, groove: ARM_PLAY });
+    const start = rest({ groove: ARM_PLAY });
     expect(turntableArm(start, { armAngle: ARM_REST })).toEqual({
       armAngle: ARM_PLAY,
       armLift: 1,
@@ -511,12 +511,22 @@ describe('a turntable’s arm between changes', () => {
     });
   });
 
-  it('reads a pause at 0:00 as stopped: to its rest, lifted until it is there', () => {
-    const stopped = rest({ status: 'paused', positionMs: 0 });
+  it('goes to its rest after Stop, lifted until it is there, wherever the groove of the report', () => {
+    // The embed reports a stopped track at its first second: the groove is just past the lead-in.
+    const stopped = rest({ status: 'paused', stopped: true, groove: ARM_PLAY - 0.02 });
     expect(turntableArm(stopped, onTrack)).toEqual({ armAngle: ARM_REST, armLift: 1, spin: 0 });
     expect(turntableArm(stopped, { armAngle: ARM_REST })).toEqual({
       armAngle: ARM_REST,
       armLift: 0,
+      spin: 0,
+    });
+  });
+
+  it('keeps a pause in the first second a pause: lifted over the lead-in, not at its rest', () => {
+    const early = rest({ status: 'paused', groove: ARM_PLAY });
+    expect(turntableArm(early, { armAngle: ARM_PLAY })).toEqual({
+      armAngle: ARM_PLAY,
+      armLift: 1,
       spin: 0,
     });
   });

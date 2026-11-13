@@ -15,6 +15,12 @@ export interface SeqState {
   /** Position in `order` of the track in the player (or arriving); -1 before the first play. */
   cursor: number;
   status: Status;
+  /**
+   * Stop was pressed: the track waits at its start, paused, until it plays, seeks or changes.
+   * Its own state, since the embed reports a stopped track at its first second (it ignores a
+   * seek under a second), so a position of 0 cannot say so.
+   */
+  stopped: boolean;
   positionMs: number;
   durationMs: number;
   repeat: boolean;
@@ -60,6 +66,7 @@ export function initialSeq(tracks: readonly Track[] = []): SeqState {
     order: tracks.map((_, index) => index),
     cursor: -1,
     status: 'idle',
+    stopped: false,
     positionMs: 0,
     durationMs: 0,
     repeat: false,
@@ -140,7 +147,15 @@ function swapTo(state: SeqState, pos: number): Step {
 
 const loaded = (state: SeqState) => state.status === 'playing' || state.status === 'paused';
 
+/** The next state and commands. A stop lasts only while the track stays paused (`stopped`). */
 export function step(state: SeqState, event: SeqEvent): Step {
+  const next = advance(state, event);
+  return next.state.stopped && next.state.status !== 'paused'
+    ? { ...next, state: { ...next.state, stopped: false } }
+    : next;
+}
+
+function advance(state: SeqState, event: SeqEvent): Step {
   const none: Step = { state, commands: [] };
   switch (event.type) {
     case 'LOAD':
@@ -200,14 +215,17 @@ export function step(state: SeqState, event: SeqEvent): Step {
     case 'STOP':
       return loaded(state)
         ? {
-            state: { ...state, status: 'paused', positionMs: 0 },
+            state: { ...state, status: 'paused', stopped: true, positionMs: 0 },
             commands: [{ type: 'pause' }, { type: 'seek', ms: 0 }],
           }
         : none;
     case 'SEEK': {
       if (!loaded(state)) return none;
       const ms = Math.min(Math.max(0, event.ms), Math.max(0, state.durationMs - 1000));
-      return { state: { ...state, positionMs: ms }, commands: [{ type: 'seek', ms }] };
+      return {
+        state: { ...state, stopped: false, positionMs: ms },
+        commands: [{ type: 'seek', ms }],
+      };
     }
     case 'SWAP_DONE': {
       if (state.status !== 'swapping') return none;

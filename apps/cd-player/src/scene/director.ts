@@ -571,7 +571,8 @@ export interface TurntableRest {
   /** A record is on the platter. */
   seated: boolean;
   status: Status;
-  positionMs: number;
+  /** Stop was pressed (the sequencer's `stopped`): the track waits, paused, at its start. */
+  stopped: boolean;
   /** The director's angle for the position (ARM_PLAY at the lead-in, tonearm.ts directorAngle). */
   groove: number;
   /** A drag's angle (the director's units) while one goes on; null otherwise. */
@@ -580,8 +581,9 @@ export interface TurntableRest {
 
 /**
  * Where a turntable's arm and platter go between changes. Playing: down on the groove, the platter
- * turning. Paused: lifted where it is, the platter still. Stopped (the sequencer's Stop is a pause
- * at 0:00, ruled 2026-11-13), idle, changing, or with nothing on the platter: at its rest, lifted
+ * turning. Paused: lifted where it is, the platter still, even in the first second. Stopped (the
+ * sequencer's own `stopped`, whatever position the embed reports), idle, changing, or with nothing
+ * on the platter: at its rest, lifted
  * while `from` is not there yet. A drag holds the arm lifted at its angle. Any long way lifts it:
  * farther than LIFT_REACH from the groove (Play after Stop, a far seek), it swings over the record
  * lifted and lowers once there. Tracking it stays down, and so it does when a stall (buffering, a
@@ -589,7 +591,7 @@ export interface TurntableRest {
  */
 export function turntableArm(rest: TurntableRest, from: Pick<ArmPose, 'armAngle'>): ArmPose {
   const playing = rest.status === 'playing';
-  const paused = rest.status === 'paused' && rest.positionMs > 0;
+  const paused = rest.status === 'paused' && !rest.stopped;
   if (rest.drag !== null) return { armAngle: rest.drag, armLift: 1, spin: playing ? 1 : 0 };
   if (!rest.seated || (!playing && !paused)) {
     const away = Math.abs(from.armAngle - ARM_REST) > REST_REACH;
