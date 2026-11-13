@@ -83,7 +83,7 @@ export function optionForPress(
   return optionForKey(press.key, ids, current);
 }
 
-/** The colour a Clear part's swatch shows: the shell's tint, the light's glow, else its colour. */
+/** The colour a swatch shows: the shell's tint, the light's glow, else its colour. */
 function swatchColour(swatch: ShellSwatch | FrameSwatch | BoardSwatch | LightSwatch): string {
   if ('tint' in swatch) return swatch.tint;
   if ('glow' in swatch) return swatch.glow;
