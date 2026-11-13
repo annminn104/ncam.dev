@@ -96,10 +96,13 @@ function setup(options: SetupOptions = {}) {
   const timers: (() => void)[] = [];
   const delays: number[] = [];
   const cleared: unknown[] = [];
+  // The engine's clock (ms), moved on by `tick`.
+  let clock = 0;
   const engine = new PlayerEngine({
     client,
     bridge,
     createPlayer,
+    now: () => clock,
     ...(options.realTimers
       ? {}
       : {
@@ -128,6 +131,7 @@ function setup(options: SetupOptions = {}) {
     failSwap: () => failSwap(),
     swaps,
     cb: () => callbacks!,
+    tick: (ms: number) => void (clock += ms),
   };
 }
 
@@ -231,6 +235,80 @@ describe('PlayerEngine', () => {
     cb().onEnded();
     expect(engine.getSnapshot().seq.status).toBe('swapping');
     expect(bridge.getView().current?.id).toBe('b');
+  });
+
+  // Right after a seek the embed posts its last report once more (seen live: the same position,
+  // ~15 ms after the seek), and the report from the target comes ~0.8 s later.
+  describe('a seek and the embed’s echo of its last report', () => {
+    const at = (positionMs: number, paused = false, uri = 'spotify:track:a') => ({
+      uri,
+      paused,
+      buffering: false,
+      positionMs,
+      durationMs: 30_000,
+    });
+    async function playingA() {
+      const ctx = setup();
+      ctx.engine.open(ref);
+      await ctx.flush();
+      ctx.engine.user({ type: 'PLAY' });
+      await ctx.flush();
+      ctx.swap();
+      await ctx.flush();
+      ctx.cb().onStarted('spotify:track:a');
+      ctx.cb().onUpdate(at(4047));
+      return ctx;
+    }
+
+    it.each([
+      { way: 'forward', to: 14_856, landed: 14_732 },
+      { way: 'back', to: 1500, landed: 1480 },
+    ])('keeps a seek $way through the echo, then takes the report from the target', async (t) => {
+      const { engine, bridge, cb, tick, flush } = await playingA();
+      engine.user({ type: 'SEEK', ms: t.to });
+      await flush();
+      tick(15);
+      cb().onUpdate(at(4047));
+      expect(engine.getSnapshot().seq.positionMs).toBe(t.to);
+      expect(bridge.getView().positionMs).toBe(t.to);
+      tick(785);
+      cb().onUpdate(at(t.landed));
+      expect(bridge.getView().positionMs).toBe(t.landed);
+      // Landed: any report counts again.
+      tick(1000);
+      cb().onUpdate(at(t.landed - 900));
+      expect(bridge.getView().positionMs).toBe(t.landed - 900);
+    });
+
+    it('takes the embed’s word again when no report reaches the target within 1.5 s', async () => {
+      const { engine, bridge, cb, tick, flush } = await playingA();
+      engine.user({ type: 'SEEK', ms: 20_000 });
+      await flush();
+      tick(1600);
+      cb().onUpdate(at(5600));
+      expect(bridge.getView().positionMs).toBe(5600);
+    });
+
+    it('takes Stop’s paused report at the embed’s first second', async () => {
+      const { engine, bridge, cb, tick, flush } = await playingA();
+      engine.user({ type: 'STOP' });
+      await flush();
+      tick(28);
+      cb().onUpdate(at(1000, true));
+      expect(bridge.getView()).toMatchObject({ status: 'paused', positionMs: 1000 });
+    });
+
+    it('lets a new track’s reports through at once', async () => {
+      const { engine, bridge, cb, tick, flush, swap } = await playingA();
+      engine.user({ type: 'SEEK', ms: 14_856 });
+      engine.user({ type: 'NEXT' });
+      await flush();
+      swap();
+      await flush();
+      tick(300);
+      cb().onUpdate(at(500, false, 'spotify:track:b'));
+      expect(bridge.getView()).toMatchObject({ status: 'playing', positionMs: 500 });
+    });
   });
 
   it('takes the scene keys', async () => {

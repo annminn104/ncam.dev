@@ -51,6 +51,8 @@ export interface EngineDeps {
   hintMs?: number;
   setTimer?(fn: () => void, ms: number): unknown;
   clearTimer?(handle: unknown): void;
+  /** The clock (ms) a seek's settling is timed by; `performance.now()` when none is injected. */
+  now?(): number;
 }
 
 /** How many tracks ahead get their art and artist fetched: the rack in the lid shows five. */
@@ -63,6 +65,19 @@ const PLAYER_TIMEOUT_MS = 20_000;
  * embed reports an end well within a second, and a longer wait only stretches the silence.
  */
 const END_GRACE_MS = 1500;
+/**
+ * A seek settles once the embed reports a position near its target, or after this long (ms).
+ * Until then a report away from the target is the embed's echo of its last one (it posts that
+ * once more right after a seek, ~15 ms on, before its report from the target ~0.8 s later), and
+ * it is dropped: taken, it would put the slider, the displays and a turntable's arm back for that
+ * while. The bound keeps a seek the embed never carries out from freezing the view.
+ */
+const SEEK_SETTLE_MS = 1500;
+/**
+ * How near its target a report counts as the seek's (ms): the embed lands a little before it,
+ * and holds a seek under a second (Stop's) at its first second.
+ */
+const SEEK_NEAR_MS = 1000;
 
 /**
  * Playback outside React: the sequencer's state, the commands it emits (disc changes through the
@@ -87,6 +102,8 @@ export class PlayerEngine {
    */
   private endTimer: unknown = null;
   private endWatch = 0;
+  /** The last seek sent to the embed and when (`now()`), until a report settles it. */
+  private seeking: { ms: number; at: number } | null = null;
   private detachBridge: (() => void) | null = null;
   private disposed = false;
 
@@ -233,6 +250,7 @@ export class PlayerEngine {
         // Right after a load the embed reports itself paused until the audio starts.
         if (this.awaitingStart && update.paused) return;
         if (update.buffering) return;
+        if (this.echoesBeforeSeek(update)) return;
         this.send({
           type: 'PROGRESS',
           positionMs: update.positionMs,
@@ -305,6 +323,7 @@ export class PlayerEngine {
       }
       case 'load':
         this.clearEndWatch();
+        this.seeking = null;
         this.withPlayer((player) => {
           this.awaitingStart = true;
           player.load(command.uri);
@@ -318,9 +337,32 @@ export class PlayerEngine {
         this.withPlayer((player) => player.resume());
         return;
       case 'seek':
+        this.seeking = { ms: command.ms, at: this.now() };
         this.withPlayer((player) => player.seek(command.ms));
         return;
     }
+  }
+
+  /**
+   * Whether `update` is the embed's echo of where it was before the last seek: away from the
+   * seek's target while the seek has not settled (SEEK_SETTLE_MS). A report near the target, or
+   * any report once the time is up, settles it.
+   */
+  private echoesBeforeSeek(update: PlaybackUpdate): boolean {
+    if (!this.seeking) return false;
+    const since = this.now() - this.seeking.at;
+    const { ms } = this.seeking;
+    const near =
+      update.positionMs >= ms - SEEK_NEAR_MS && update.positionMs <= ms + SEEK_NEAR_MS + since;
+    if (near || since > SEEK_SETTLE_MS) {
+      this.seeking = null;
+      return false;
+    }
+    return true;
+  }
+
+  private now(): number {
+    return this.deps.now ? this.deps.now() : performance.now();
   }
 
   /**

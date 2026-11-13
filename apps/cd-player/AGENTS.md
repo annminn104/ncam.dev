@@ -2102,6 +2102,11 @@ site"), in this order:
 - **The embed ignores a seek to under a second** (`seek(0)` included), and a paused embed reports a
   seek only once it plays again; Previous and Stop rewind through `restart()` and a seek to 1 s
   (see "Playback").
+- **Right after a seek the embed echoes its last report**: the same position again, ~15 ms on,
+  before its report from the target ~0.8 s later. Taken, it put the slider, the displays and the
+  tonearm back for that while, so the engine drops a report away from the last seek's target
+  (`echoesBeforeSeek`) until one lands within `SEEK_NEAR_MS` of it or `SEEK_SETTLE_MS` (1.5 s)
+  passes; a load ends the wait.
 - **Spotify's iFrame API script** (`SpotifyEmbedController`) holds commands while its iframe loads
   and sends them on the iframe's READY, so a command to a player still loading is not lost. Its
   `loadUri` never skips the uri it already holds (`currentUri` is never set): every call loads the
