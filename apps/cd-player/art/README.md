@@ -51,6 +51,15 @@ hand.
   and name on), and the atlas layout it writes to `src/scene/textures/deck-atlas.json`.
 - `blender/scripts/build_deck.py`: the Deck's web scene, with the names the page drives
   (`src/scene/contract.ts`), its jog plate's `door_hinge` and its `jog_ring`.
+- `blender/scripts/ornament.py`: the cloisonné ornament kit, exec'd after `parts.py`: the fixed
+  enamel palette (`build_enamel_materials()`: `enamel_rose`, `_coral`, `_butter`, `_leaf`, `_sky`,
+  `_ivory`), the faces a 2D layout in mm is laid on (`Plane(origin, normal, up)`, `Wall(outline)`
+  round a vertical extrusion, `Tube(p0, p1, radius, ref)` round a cylinder), the motifs (camellia,
+  daisy, five-petal rose, leaf, leaf spray, acanthus, C- and S-scrolls, rocaille shell, pearl row,
+  vine, a vine round a tube, a garland), each outlined in the wire material its caller passes, and
+  `lay(orn, face, items, wire)` with `mirrored(items)` for symmetric layouts. Low relief (enamel
+  0.58 mm proud at most, wire 0.78), every part 0.02 mm off its face; `Ornament(name, parent)`
+  merges one group's into a mesh per material hanging from it. Its docstring has the signatures.
 - `blender/scripts/vinyl.py`: what every turntable shares: the 12-inch record (vinyl and its
   label), its sleeve and the LED ring round the platter.
 - `blender/scripts/luxe.py`: Luxe, on `parts.py` and `vinyl.py`: a lacquered two-tier plinth, the
@@ -60,6 +69,13 @@ hand.
   head and needle) and its two angles, `LUXE_ARM_LEAD_IN` and `LUXE_ARM_RUN_OUT`.
 - `blender/scripts/luxe_stand.py`: Luxe's record stand (five steps with the next five records in
   their sleeves) and the ledge behind the platter.
+- `blender/scripts/luxe_ornament.py`: Luxe's ornament on `ornament.py`'s kit, its wire in
+  `luxe_metal` (so it follows the look's metal): the lower tier's front cartouche and scrollwork and
+  a medallion on each side, a pearl row with roses round the upper tier, two sprays on the top (round
+  the logo, behind the keys), medallions and vines on the stand's side panels, a vine on its back bar
+  and on the ledge's legs, each hanging from the group it decorates. It stops the run if a region's
+  ornament strays (past the tier's band heights, into the keys, the logo, the LED ring or the arm's
+  rest and sweep); every part keeps 5 mm off a record or a sleeve, resting or flying.
 - `blender/scripts/build_luxe.py`: Luxe's web scene, with the names a turntable needs
   (`src/scene/contract.ts`) and the arm's angles printed for the page's profile.
 - `blender/scripts/export.py`: the background entry. It builds the model `CDP_MODEL` names
@@ -91,7 +107,9 @@ They write `public/assets/cd-player.glb`, `public/assets/cd-player-clear.glb`,
 `src/scene/model-contract.test.ts` checks each one's names, materials, where things are parented
 and the budget (150k triangles, 4 MB). The committed suitcase is about 100,633 triangles and
 776 KB, the Clear model about 132,715 and 965 KB, the Deck about 81,762 and 702 KB, the Luxe
-turntable about 28,668 and 250 KB (KB of 1024 bytes). Rebuild a model after any change to its scripts
+turntable about 57,075 and 435 KB with its ornament (KB of 1024 bytes; 28,668 of the triangles are
+the turntable's own). Luxe, the default's, has a budget of its own: 650,000 bytes and 80,000
+triangles. Rebuild a model after any change to its scripts
 (`cdkit.py` and `parts.py` are every model's, `vinyl.py` every turntable's; the Deck's build also
 rewrites `src/scene/textures/deck-atlas.json`, which is committed with the GLB).
 

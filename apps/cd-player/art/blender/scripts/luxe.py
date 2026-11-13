@@ -2,10 +2,11 @@
 on a ledge behind it (art/blender/scripts/build_luxe.py names what the page drives; hero.py renders
 it when CDP_MODEL=luxe).
 
-Needs cdkit's, parts.py's and vinyl.py's namespace (exec'd after them), and is followed into it by
-luxe_arm.py (the tonearm) and luxe_stand.py (the record stand and the ledge), which
-make_luxe_player calls, so all three are exec'd before it runs. Blender's axes as in parts.py: x
-right, y away from the viewer (the front faces -y), z up, millimetres through L(x, y, z). The
+Needs cdkit's, parts.py's, ornament.py's and vinyl.py's namespace (exec'd after them), and is
+followed into it by luxe_arm.py (the tonearm), luxe_stand.py (the record stand and the ledge) and
+luxe_ornament.py (the ornament), which make_luxe and make_luxe_player call, so all four are exec'd
+before they run. Blender's axes as in parts.py: x right, y away from the viewer (the front faces
+-y), z up, millimetres through L(x, y, z). The
 deck's footprint is centred on the origin, standing on the floor on its four feet; the stand stands
 on its right, square to it, the ledge behind it, behind the platter.
 
@@ -20,7 +21,10 @@ stands at the front right. The tonearm (luxe_arm.py) stands at the back right.
 
 Every part of the deck hangs from the body group (`<name>_deck_body`, the keys and the LED ring
 included) but the platter, the record and the tonearm, which hang from the player's root, as the
-stand, the ledge and the sleeve do.
+stand, the ledge and the sleeve do. Cloisonné enamel ornament (luxe_ornament.py: scrolls,
+camellias, daisies, roses and leaves in wire of the look's metal on a fixed enamel palette) dresses
+the plinth's lower tier, a pearl row and roses ring its upper tier, two sprays lie on the top, and
+the stand and the ledge carry their own; each hangs from the group it decorates.
 
 Its colours come from src/luxe-looks.json (luxe_look): build_luxe_materials(look) makes the body's,
 the metal's and the light's materials and the fixed ones. The web build (WEB) carries what the page
@@ -112,7 +116,7 @@ def build_luxe_materials(look):
     """Luxe's materials on top of build_materials() (its rubber, ink and black glass): the body's
     lacquer, the metal and the light from the look's swatches, and the fixed ones (the vinyl, the
     mat, the strobe's dark, the teal cartridge, the sleeve's paper, the arm's hit shape, the ring
-    the page paints)."""
+    the page paints, and ornament.py's enamel palette)."""
     build_materials()
     body, metal, light = (look[p] for p in LUXE_PARTS)
     glow = _luxe_hex(light["glow"])
@@ -135,6 +139,7 @@ def build_luxe_materials(look):
         # over black, which reads as unlit under AgX).
         M["ring_on"] = mat("ring_on", (0, 0, 0, 1), emit=glow, emit_s=6.0)
         M["ring_dim"] = mat("ring_dim", (0, 0, 0, 1), emit=glow, emit_s=0.12)
+    build_enamel_materials()
     return M
 
 
@@ -309,14 +314,16 @@ def luxe_decor(name, body):
 # ------------------------------------------------------------------ the whole Luxe
 def make_luxe(name, root, look, playing, disc_label=None):
     """The deck under `root`: the body group (`<name>_deck_body`: the plinth, the LED ring, the keys,
-    the knob and the logo), the platter and the record on it (`<name>_disc`, its label in
-    `disc_label`, the web build's art_disc unless given). `look` is the swatches (luxe_look):
-    build_luxe_materials made the materials from it; the geometry is the same for every look."""
+    the knob, the logo and the deck's ornament, luxe_deck_ornament), the platter and the record on
+    it (`<name>_disc`, its label in `disc_label`, the web build's art_disc unless given). `look` is
+    the swatches (luxe_look): build_luxe_materials made the materials from it; the geometry is the
+    same for every look."""
     body = empty(name + "_deck_body", L(0, 0, 0), parent=root)
     luxe_plinth(name, body)
     led_ring(name, body, LX_SPINDLE, LX_RING[0], LX_RING[1], LX_RING_Z, playing)
     luxe_keys(name, body, playing)
     luxe_decor(name, body)
+    luxe_deck_ornament(name, body)
     luxe_platter(name, root)
     cx, cy = LX_SPINDLE
     make_record(name + "_disc", disc_label if disc_label is not None else M["art_disc"], L(cx, cy, LX_RECORD_Z),
@@ -326,16 +333,16 @@ def make_luxe(name, root, look, playing, disc_label=None):
 
 def make_luxe_player(name, disc_label, sleeve_art, look, rack_sleeves=None, playlist="Top 50 · Global"):
     """The whole Luxe under the empty `name`: the deck, its tonearm (luxe_arm.py), the record stand
-    beside it and the ledge behind it (luxe_stand.py), and the playing record's sleeve on the ledge
-    (`<name>_sleeve`, printed in `sleeve_art`). A render (not WEB) plays: the arm down 30 % of the
-    way in, 30 of the ring's 48 lit, ‖ alone on the play key, five sleeves in the stand
-    (`rack_sleeves`)."""
+    beside it and the ledge behind it (luxe_stand.py), each with its ornament (luxe_ornament.py),
+    and the playing record's sleeve on the ledge (`<name>_sleeve`, printed in `sleeve_art`). A
+    render (not WEB) plays: the arm down 30 % of the way in, 30 of the ring's 48 lit, ‖ alone on the
+    play key, five sleeves in the stand (`rack_sleeves`)."""
     playing = not WEB
     root = empty(name, L(0, 0, 0))
     make_luxe(name, root, look, playing, disc_label)
     luxe_tonearm(name, root, playing)
-    make_stand(name + "_stand", root, rack_sleeves, playlist, WEB)
-    make_ledge(name + "_ledge", root)
+    luxe_stand_ornament(name + "_stand", make_stand(name + "_stand", root, rack_sleeves, playlist, WEB))
+    luxe_ledge_ornament(name + "_ledge", make_ledge(name + "_ledge", root))
     # Leaning back 15 degrees on the ledge: its front face's bottom edge just behind the lip (its
     # mid-thickness 1.6 mm behind it), 0.5 mm over the bar, its back 0.4 mm off the legs; its
     # middle over the ledge's.

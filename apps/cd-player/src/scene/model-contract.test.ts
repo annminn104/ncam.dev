@@ -43,7 +43,7 @@ import {
   VINYL_NODES,
 } from './contract';
 import { readGlbJson, triangleCount } from './glb';
-import { CLEAR_ROLES, MATERIAL_ROLES, SKIN_ROLES } from './material-roles';
+import { CLEAR_ROLES, LUXE_ROLES, MATERIAL_ROLES, SKIN_ROLES } from './material-roles';
 import deckAtlas from './textures/deck-atlas.json';
 import { JOG_OPENING, OPEN, STENCIL_ZONE } from './textures/deck-pattern';
 
@@ -585,6 +585,38 @@ describe('public/assets/cd-player-luxe.glb (art/pipeline/build.mjs luxe)', () =>
     expect(triangleCount(json)).toBeLessThanOrEqual(150_000);
     expect(json.extensionsUsed).toContain('EXT_meshopt_compression');
     for (const n of json.nodes) if (n.children?.length) expect(n.mesh, n.name).toBeUndefined();
+  });
+
+  // Luxe is the default model: the page must not fetch more than the suitcase's 795 KB did.
+  it('stays inside the default model’s budget: 650 KB and 80,000 triangles as the page loads it', () => {
+    expect(statSync(LUXE_GLB).size).toBeLessThanOrEqual(650_000);
+    expect(triangleCount(json)).toBeLessThanOrEqual(80_000);
+  });
+
+  it('hangs its ornament from the groups it decorates, in the look’s metal and a fixed enamel palette', () => {
+    const enamel = ['rose', 'coral', 'butter', 'leaf', 'sky', 'ivory'].map((c) => `enamel_${c}`);
+    const groups = {
+      luxe_deck_orn_: 'luxe_deck_body',
+      luxe_stand_orn_: 'luxe_stand',
+      luxe_ledge_orn_: 'luxe_ledge',
+    };
+    const seen = new Set<string>();
+    for (const [prefix, group] of Object.entries(groups)) {
+      const parts = json.nodes.filter((n) => n.name?.startsWith(prefix));
+      expect(parts.length, prefix).toBeGreaterThan(0);
+      for (const part of parts) {
+        expect(parentOf(part.name ?? ''), part.name).toBe(group);
+        for (const material of materialsUnder(part.name ?? '')) {
+          expect(['luxe_metal', ...enamel], `${part.name}: ${material}`).toContain(material);
+          seen.add(material);
+        }
+      }
+    }
+    expect([...seen].sort()).toEqual(['luxe_metal', ...enamel].sort());
+    for (const name of enamel) {
+      expect(MATERIAL_ROLES[name], name).toBe('enamel');
+      expect(LUXE_ROLES[name], name).toBeUndefined();
+    }
   });
 });
 
