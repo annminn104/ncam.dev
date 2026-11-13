@@ -26,10 +26,17 @@ export interface ArmDragDeps {
   seek(deltaMs: number): void;
 }
 
-/** What a drag holds: the arm's angle and the pointer's as it went down. */
+/** How far (px) a press goes before it drags: a tap's eased arm is off the position, so no seek. */
+export const ARM_DRAG_SLOP_PX = 4;
+
+/** What a drag holds: the arm's angle and the pointer's as it went down, and where it went down. */
 interface Hold {
   from: number;
   pointer: number;
+  x: number;
+  y: number;
+  /** It has gone more than ARM_DRAG_SLOP_PX from where it went down (and is a drag for good). */
+  moved: boolean;
 }
 
 /** The arm takes a drag while a track is loaded, its duration known, and no change runs. */
@@ -45,10 +52,13 @@ export function armTakesDrag(
 /**
  * A turntable's arm drags (grip.ts keeps the rules the knob's turn keeps too). While one lasts the
  * arm is lifted and follows the pointer's turn round its pivot, held between the lead-in and the
- * run-out, and `dragMs` is its target: the angle's share of the way in, times the duration. The
- * release seeks once, by the target less the position the view has then (the bridge's seek is
- * relative to the engine's own position), and the arm drops there. An abandoned drag puts the arm
- * back (the resting pose takes over); a stopped one leaves it where it stands, for the change.
+ * run-out, and `dragMs` is its target: the angle's share of the way in, times the duration. Once
+ * the pointer has gone more than ARM_DRAG_SLOP_PX from where it went down, the release seeks once,
+ * by the target less the position the view has then (the bridge's seek is relative to the engine's
+ * own position), and the arm drops there. A tap's release seeks nothing: the eased arm it lifted
+ * is never quite at the reported position, so it ends as a stop does and the arm tracks again. An
+ * abandoned drag puts the arm back (the resting pose takes over); a stopped one leaves it where it
+ * stands, for the change.
  */
 export function armDrags(rig: ArmDragRig, deps: ArmDragDeps): Grips {
   const hold = (angle: number) => {
@@ -67,16 +77,17 @@ export function armDrags(rig: ArmDragRig, deps: ArmDragDeps): Grips {
       if (pointer === null) return null;
       const from = deps.angleNow();
       hold(from);
-      return { from, pointer };
+      return { from, pointer, x, y, moved: false };
     },
     move: (held, x, y) => {
+      if (Math.hypot(x - held.x, y - held.y) > ARM_DRAG_SLOP_PX) held.moved = true;
       const pointer = deps.pointerAngle(x, y);
       if (pointer !== null) hold(held.from + angleDelta(held.pointer, pointer));
     },
-    release: () => {
+    release: (held) => {
       const target = rig.dragMs;
       clear();
-      if (target === null) return;
+      if (!held.moved || target === null) return;
       const deltaMs = target - deps.view().positionMs;
       if (deltaMs !== 0) deps.seek(deltaMs);
     },
