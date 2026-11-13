@@ -60,7 +60,6 @@ import {
   doorAxis,
   isCdRig,
   isTurntableRig,
-  modelArmAngle,
   rigFor,
   ringTargetMs,
   spinSense,
@@ -242,10 +241,10 @@ describe('rigFor', () => {
   });
 });
 
-describe('modelArmAngle', () => {
+describe('armAngleFor', () => {
   it('is the director’s own angle for the suitcase', () => {
     for (const angle of [ARM_REST, -0.2, ARM_PLAY])
-      expect(modelArmAngle('suitcase', angle)).toBeCloseTo(angle, 12);
+      expect(armAngleFor(SCENE_PROFILES.suitcase.arm, angle)).toBeCloseTo(angle, 12);
   });
 
   it('is the identity only while the suitcase’s profile arm agrees with the director’s', () => {
@@ -253,9 +252,9 @@ describe('modelArmAngle', () => {
   });
 
   it('maps the director’s rest and play to the Clear model’s own', () => {
-    expect(modelArmAngle('clear', ARM_REST)).toBeCloseTo(0, 12);
-    expect(modelArmAngle('clear', ARM_PLAY)).toBeCloseTo(0.52, 12);
-    expect(modelArmAngle('clear', ARM_PLAY / 2)).toBeCloseTo(0.26, 12);
+    expect(armAngleFor(SCENE_PROFILES.clear.arm, ARM_REST)).toBeCloseTo(0, 12);
+    expect(armAngleFor(SCENE_PROFILES.clear.arm, ARM_PLAY)).toBeCloseTo(0.52, 12);
+    expect(armAngleFor(SCENE_PROFILES.clear.arm, ARM_PLAY / 2)).toBeCloseTo(0.26, 12);
   });
 });
 

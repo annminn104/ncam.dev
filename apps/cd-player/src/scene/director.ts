@@ -583,11 +583,11 @@ export interface TurntableRest {
  * Where a turntable's arm and platter go between changes. Playing: down on the groove, the platter
  * turning. Paused: lifted where it is, the platter still, even in the first second. Stopped (the
  * sequencer's own `stopped`, whatever position the embed reports), idle, changing, or with nothing
- * on the platter: at its rest, lifted
- * while `from` is not there yet. A drag holds the arm lifted at its angle. Any long way lifts it:
- * farther than LIFT_REACH from the groove (Play after Stop, a far seek), it swings over the record
- * lifted and lowers once there. Tracking it stays down, and so it does when a stall (buffering, a
- * gap in the embed's reports) re-anchors the playhead, the groove jumping back by up to its hold.
+ * on the platter: at its rest, lifted while `from` is not there yet. A drag holds the arm lifted
+ * at its angle. Any long way lifts it: farther than LIFT_REACH from the groove (Play after Stop, a
+ * far seek), it swings over the record lifted and lowers once there. Tracking it stays down, and
+ * so it does when a stall (buffering, a gap in the embed's reports) re-anchors the playhead, the
+ * groove jumping back by up to its hold.
  */
 export function turntableArm(rest: TurntableRest, from: Pick<ArmPose, 'armAngle'>): ArmPose {
   const playing = rest.status === 'playing';

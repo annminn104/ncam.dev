@@ -7,6 +7,7 @@ import type { CdModel } from '../model';
 import type { Rig } from '../rig';
 import { collectionLabel, printInFaces } from './collection-print';
 import {
+  CARD_CANVAS,
   canvasTexture,
   loadFaces,
   newCanvas,
@@ -16,11 +17,10 @@ import {
   paintTag,
   setMap,
 } from './paint';
-import { SCENE_PROFILES } from '../profiles';
 import { DECK_SCREEN, playedBars } from './deck-screen';
 
 function makeSurfaces() {
-  const card = newCanvas(1024, 182);
+  const card = newCanvas(CARD_CANVAS.width, CARD_CANVAS.height);
   const tag = newCanvas(512, 768);
   const lcd = newCanvas(256, 112);
   return {
@@ -81,7 +81,7 @@ export function useSceneTextures(rig: Rig<CdModel>, bridge: SceneBridge, lcdColo
   const [surfaces] = useState(makeSurfaces);
   const shown = useRef<Shown>(nothingShown());
   // The deck's big screen replaces the LCD: its canvas is made for that model only.
-  const deckScreen = SCENE_PROFILES[rig.model.id].screen === 'deck';
+  const deckScreen = rig.profile.screen === 'deck';
   const screen = useMemo(() => {
     if (!deckScreen) return null;
     const canvas = newCanvas(DECK_SCREEN.width, DECK_SCREEN.height);

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { SceneBridge } from '../../bridge';
 import type { Rig } from '../rig';
 import { collectionLabel, printInFaces } from './collection-print';
-import { canvasTexture, newCanvas, paintCard, setMap } from './paint';
+import { CARD_CANVAS, canvasTexture, newCanvas, paintCard, setMap } from './paint';
 
 /**
  * A turntable's plate (it has no tag and no display): the collection's name, printed when it
@@ -10,7 +10,7 @@ import { canvasTexture, newCanvas, paintCard, setMap } from './paint';
  */
 export function useCardPrint(rig: Rig, bridge: SceneBridge): void {
   const [surface] = useState(() => {
-    const canvas = newCanvas(1024, 182);
+    const canvas = newCanvas(CARD_CANVAS.width, CARD_CANVAS.height);
     return { canvas, texture: canvasTexture(canvas) };
   });
   /** The label printed last; null before the first. */

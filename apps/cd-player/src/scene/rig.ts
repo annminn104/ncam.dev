@@ -10,7 +10,6 @@ import {
   type Texture,
 } from 'three';
 import type { SceneView } from '../bridge';
-import type { ModelId } from '../models';
 import type { SharedNode } from './contract';
 import { scrubTargetMs } from './controls';
 import {
@@ -492,11 +491,6 @@ function showBooklet(rig: Rig, item: CaseRig, next: boolean): void {
 /** The director's arm angle (ARM_REST … ARM_PLAY) as a profile's own (its rest … play). */
 export function armAngleFor(arm: SceneProfile['arm'], angle: number): number {
   return arm.rest + ((angle - ARM_REST) / (ARM_PLAY - ARM_REST)) * (arm.play - arm.rest);
-}
-
-/** The director's arm angle as model `model`'s own (its profile's rest … play). */
-export function modelArmAngle(model: ModelId, angle: number): number {
-  return armAngleFor(SCENE_PROFILES[model].arm, angle);
 }
 
 /**

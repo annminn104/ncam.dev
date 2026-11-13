@@ -54,6 +54,9 @@ export async function loadFaces(text?: string): Promise<void> {
   );
 }
 
+/** The plate's canvas (the collection's name on the card_print slot), in pixels. */
+export const CARD_CANVAS = { width: 1024, height: 182 } as const;
+
 export function newCanvas(width: number, height: number): HTMLCanvasElement {
   const canvas = document.createElement('canvas');
   canvas.width = width;
