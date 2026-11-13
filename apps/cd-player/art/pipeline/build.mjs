@@ -1,7 +1,8 @@
-// Builds public/assets/cd-player.glb (or, given `clear`, cd-player-clear.glb, or, given `deck`,
-// cd-player-deck.glb) from the Blender scripts: Blender, in the background, writes
-// art/.out/<name>.raw.glb (art/blender/scripts/export.py); gltf-transform then dedups, welds,
-// prunes (keeping the empty pivots) and meshopt-compresses it. The Deck's build also writes its
+// Builds public/assets/cd-player.glb (or, given `clear`, cd-player-clear.glb, given `deck`,
+// cd-player-deck.glb, or, given `luxe`, cd-player-luxe.glb, the Luxe turntable's) from the Blender
+// scripts: Blender, in the background, writes art/.out/<name>.raw.glb
+// (art/blender/scripts/export.py); gltf-transform then dedups, welds, prunes (keeping the empty
+// pivots) and meshopt-compresses it. The Deck's build also writes its
 // print layer's atlas layout, src/scene/textures/deck-atlas.json, which this formats with the
 // repository's Prettier. Run by hand; the outputs are committed.
 import { spawnSync } from 'node:child_process';
@@ -15,7 +16,12 @@ import { MeshoptDecoder, MeshoptEncoder } from 'meshoptimizer';
 const APP = fileURLToPath(new URL('../../', import.meta.url));
 const BLENDER = process.env.BLENDER_BIN ?? '/Applications/Blender.app/Contents/MacOS/Blender';
 const MODEL = process.argv[2] ?? 'suitcase';
-const NAMES = { suitcase: 'cd-player', clear: 'cd-player-clear', deck: 'cd-player-deck' };
+const NAMES = {
+  suitcase: 'cd-player',
+  clear: 'cd-player-clear',
+  deck: 'cd-player-deck',
+  luxe: 'cd-player-luxe',
+};
 if (!Object.hasOwn(NAMES, MODEL)) throw new Error(`build.mjs: unknown model ${MODEL}`);
 const NAME = NAMES[MODEL];
 const RAW = `${APP}art/.out/${NAME}.raw.glb`;
