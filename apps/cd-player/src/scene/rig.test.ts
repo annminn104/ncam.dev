@@ -11,6 +11,7 @@ import {
 } from 'three';
 import { describe, expect, it, vi } from 'vitest';
 import type { TrackView } from '../bridge';
+import { fakeTurntable, TEST_TURNTABLE } from '../testing/fake-turntable';
 import {
   CLEAR_SEAT,
   CLEAR_SHELL,
@@ -37,9 +38,19 @@ import {
   type Pose,
 } from './director';
 import type { Slots } from './materials';
-import type { PlayerModel } from './model';
+import type { CdModel } from './model';
 import { SCENE_PROFILES } from './profiles';
-import { applyPose, doorAxis, modelArmAngle, rigFor, spinSense, turnDoor } from './rig';
+import {
+  applyPose,
+  doorAxis,
+  isCdRig,
+  isTurntableRig,
+  modelArmAngle,
+  rigFor,
+  spinSense,
+  turnDoor,
+  type Rig,
+} from './rig';
 import {
   DISC_COPIES,
   RACK_SLOTS,
@@ -135,7 +146,7 @@ function fakeModel() {
   const root = new Group();
   root.add(player);
   const dispose = vi.fn();
-  const model: PlayerModel = {
+  const model: CdModel = {
     id: 'suitcase',
     media: 'cd',
     root,
@@ -167,11 +178,17 @@ function caseCorners(object: Object3D): Vector3[] {
   return corners;
 }
 
+/** A CD player's rig's jewel case, which it always has. */
+const jewelCase = (rig: Rig) => {
+  if (!rig.case) throw new Error('no case');
+  return rig.case;
+};
+
 describe('rigFor', () => {
   it('gives the seven discs and the booklet prints of their own, and disposes them with the model', () => {
     const { model, label, booklet, dispose } = fakeModel();
     const rig = rigFor(model);
-    const prints = [...rig.discs.map((disc) => disc.label), rig.case.booklet];
+    const prints = [...rig.discs.map((disc) => disc.label), jewelCase(rig).booklet];
     expect(rig.discs).toHaveLength(DISC_COPIES);
     expect(new Set(prints).size).toBe(DISC_COPIES + 1);
     expect(prints).not.toContain(label);
@@ -203,7 +220,7 @@ describe('rigFor', () => {
     });
     expect(rig.seat.quaternion.angleTo(model.nodes.disc_seat.quaternion)).toBeLessThan(1e-6);
     // The reach of its half-width and depth across the turn, and a centimetre.
-    expect(rig.case.lift).toBeCloseTo(Math.hypot(CASE_W / 2, CASE_DEEP) + 0.01, 6);
+    expect(jewelCase(rig).lift).toBeCloseTo(Math.hypot(CASE_W / 2, CASE_DEEP) + 0.01, 6);
   });
 });
 
@@ -231,7 +248,7 @@ describe('the door', () => {
     const hinge = named(new Object3D(), 'door_hinge');
     hinge.rotation.y = 0.1;
     model.root.add(hinge);
-    const clear: PlayerModel = {
+    const clear: CdModel = {
       ...model,
       id: 'clear',
       nodes: { ...model.nodes, door_hinge: hinge },
@@ -254,7 +271,7 @@ describe('the door', () => {
     const hinge = named(new Object3D(), 'door_hinge');
     hinge.rotation.x = 0.1;
     model.root.add(hinge);
-    const deck: PlayerModel = {
+    const deck: CdModel = {
       ...model,
       id: 'deck',
       nodes: { ...model.nodes, door_hinge: hinge },
@@ -461,18 +478,20 @@ describe('applyPose', () => {
     });
     const flip = plan.flip!;
     const seat = lid.localToWorld(caseSeat.position.clone());
-    const normal = rig.case.out.clone().transformDirection(lid.matrixWorld);
+    const normal = jewelCase(rig).out.clone().transformDirection(lid.matrixWorld);
     for (let t = flip.start; t <= flip.end; t += 10) {
       applyPose(rig, posePlan(plan, t, restingArm(true, true, true)), 0);
-      rig.case.object.updateMatrixWorld(true);
-      for (const corner of caseCorners(rig.case.object)) {
+      jewelCase(rig).object.updateMatrixWorld(true);
+      for (const corner of caseCorners(jewelCase(rig).object)) {
         expect(corner.sub(seat).dot(normal), `t ${t}`).toBeGreaterThan(-1e-6);
       }
-      expect(rig.case.booklet.map, `t ${t}`).toBe(t >= flip.start + FLIP_EDGE_MS ? back : front);
+      expect(jewelCase(rig).booklet.map, `t ${t}`).toBe(
+        t >= flip.start + FLIP_EDGE_MS ? back : front,
+      );
     }
     // Back at rest the case sits in its seat again.
     applyPose(rig, restingPose(plan.after, true, true), 0);
-    expect(rig.case.object.position.distanceTo(rig.case.seat)).toBeLessThan(1e-9);
+    expect(jewelCase(rig).object.position.distanceTo(jewelCase(rig).seat)).toBeLessThan(1e-9);
   });
 });
 
@@ -498,7 +517,7 @@ describe('the Clear model’s flights', () => {
       slot.position.set(...position);
       slot.rotation.set(rotationX, 0, 0);
     });
-    const clear: PlayerModel = { ...model, id: 'clear' };
+    const clear: CdModel = { ...model, id: 'clear' };
     return rigFor(clear);
   }
 
@@ -637,7 +656,7 @@ describe('the Deck’s flights', () => {
       slot.position.set(...position);
       slot.rotation.set(rotationX, 0, 0);
     });
-    const deck: PlayerModel = { ...model, id: 'deck' };
+    const deck: CdModel = { ...model, id: 'deck' };
     lid.updateMatrixWorld(true);
     return { rig: rigFor(deck), toCase: lid.matrixWorld.clone().invert() };
   }
@@ -760,6 +779,29 @@ describe('the Deck’s flights', () => {
         expect(rimHits(disc, toCase, doorAngle), `${way}, along ${along}`).toEqual([]);
       }
     }
+  });
+});
+
+describe('a turntable’s rig', () => {
+  it('carries the profile it is given, a CD player’s its own', () => {
+    const rig = rigFor(fakeTurntable().model, TEST_TURNTABLE);
+    expect(rig.profile).toBe(TEST_TURNTABLE);
+    expect(rigFor(fakeModel().model).profile).toBe(SCENE_PROFILES.suitcase);
+  });
+
+  it('has no jewel case, and poses with none', () => {
+    const rig = rigFor(fakeTurntable().model, TEST_TURNTABLE);
+    expect(rig.case).toBeNull();
+    const shelf = fillShelf(targetOf(lineup('a', 'b', 'c')));
+    expect(() => applyPose(rig, restingPose(shelf, true, true), 1 / 60)).not.toThrow();
+    expect(rig.discs[0].object.visible).toBe(true);
+  });
+
+  it('tells a turntable’s rig from a CD player’s', () => {
+    const turntable = rigFor(fakeTurntable().model, TEST_TURNTABLE);
+    const cd = rigFor(fakeModel().model);
+    expect([isCdRig(cd), isTurntableRig(cd)]).toEqual([true, false]);
+    expect([isCdRig(turntable), isTurntableRig(turntable)]).toEqual([false, true]);
   });
 });
 

@@ -2,7 +2,7 @@ import { BoxGeometry, Group, Mesh, MeshBasicMaterial, Object3D } from 'three';
 import { describe, expect, it, vi } from 'vitest';
 import type { RequiredNode } from './contract';
 import type { Slots } from './materials';
-import type { PlayerModel } from './model';
+import type { CdModel } from './model';
 import { VU_NODES, vuMaterialsFor } from './vu-materials';
 
 function fakeModel() {
@@ -17,7 +17,7 @@ function fakeModel() {
     return mesh;
   });
   const dispose = vi.fn();
-  const model: PlayerModel = {
+  const model: CdModel = {
     id: 'suitcase',
     media: 'cd',
     root,

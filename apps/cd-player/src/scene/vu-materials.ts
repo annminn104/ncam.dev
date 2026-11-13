@@ -1,18 +1,18 @@
 import type { Mesh, MeshBasicMaterial } from 'three';
 import type { CdNode } from './contract';
-import type { PlayerModel } from './model';
+import type { CdModel } from './model';
 import { VU_OFF, VU_SEGMENTS } from './vu';
 
 /** The strip's segments, bottom to top: the `vu_seg_` nodes of the model contract. */
 export const VU_NODES = Array.from({ length: VU_SEGMENTS }, (_, i) => `vu_seg_${i}` as CdNode);
 
-const clones = new WeakMap<PlayerModel, MeshBasicMaterial[]>();
+const clones = new WeakMap<CdModel, MeshBasicMaterial[]>();
 
 /**
  * The ten segments share one `vu` material in the GLB; each gets its own copy here, unlit, so each
  * can light alone. Once per model (StrictMode renders twice), disposed with the model.
  */
-export function vuMaterialsFor(model: PlayerModel): MeshBasicMaterial[] {
+export function vuMaterialsFor(model: CdModel): MeshBasicMaterial[] {
   const existing = clones.get(model);
   if (existing) return existing;
   const materials = VU_NODES.map((name, i) => {

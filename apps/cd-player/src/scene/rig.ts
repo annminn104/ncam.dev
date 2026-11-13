@@ -12,8 +12,8 @@ import {
 import type { ModelId } from '../models';
 import type { SharedNode } from './contract';
 import { ARM_PLAY, ARM_REST, type DiscPose, type Pose } from './director';
-import type { PlayerModel } from './model';
-import { SCENE_PROFILES } from './profiles';
+import type { CdModel, PlayerModel, VinylModel } from './model';
+import { SCENE_PROFILES, type SceneProfile } from './profiles';
 import { DISC_COPIES, emptyShelf, type Place, type StageState } from './stage';
 
 /** The rack's slots in the model, slot 0 the next to play: each the pose of a disc in it. */
@@ -57,11 +57,14 @@ export interface CaseRig {
   booklet: MeshPhysicalMaterial;
 }
 
-export interface Rig extends StageState {
-  model: PlayerModel;
+export interface Rig<M extends PlayerModel = PlayerModel> extends StageState {
+  model: M;
+  /** The model's scene profile (src/scene/profiles.ts), as the rig was built from it. */
+  profile: SceneProfile;
   /** DISC_COPIES copies of the disc, each with its own label. */
   discs: DiscCopy[];
-  case: CaseRig;
+  /** A CD player's jewel case; null on a turntable, which has none. */
+  case: CaseRig | null;
   /** The booklet's two prints (the print hook sets them): `bookletFront` shows. */
   bookletMaps: [Texture | null, Texture | null];
   spin: number;
@@ -159,8 +162,31 @@ export function spinSense(profile: { clockwise?: boolean }): 1 | -1 {
   return profile.clockwise ? -1 : 1;
 }
 
+/** A CD player's jewel case, posed where it stands, with a booklet print of its own. */
+function caseRigFor(model: CdModel): CaseRig {
+  const { nodes } = model;
+  return {
+    object: nodes.case,
+    seat: nodes.case_seat.position.clone(),
+    quaternion: nodes.case_seat.quaternion.clone(),
+    out: UP.clone().applyQuaternion(nodes.case_seat.quaternion),
+    lift: flipLift(nodes.case),
+    booklet: ownMaterial(nodes.case, 'art_booklet'),
+  };
+}
+
+/** A rig for a CD player: its case and its knob are there. */
+export function isCdRig(rig: Rig): rig is Rig<CdModel> {
+  return rig.model.media === 'cd';
+}
+
+/** A rig for a turntable. */
+export function isTurntableRig(rig: Rig): rig is Rig<VinylModel> {
+  return rig.model.media === 'vinyl';
+}
+
 /** One rig per model (StrictMode renders twice; building it twice would clone twice). */
-export function rigFor(model: PlayerModel): Rig {
+export function rigFor(model: PlayerModel, profile: SceneProfile = SCENE_PROFILES[model.id]): Rig {
   const existing = rigs.get(model);
   if (existing) return existing;
   const { nodes, root } = model;
@@ -168,7 +194,6 @@ export function rigFor(model: PlayerModel): Rig {
   const seatPosition = new Vector3();
   const seatQuaternion = new Quaternion();
   nodes.disc_seat.matrixWorld.decompose(seatPosition, seatQuaternion, new Vector3());
-  const profile = SCENE_PROFILES[model.id];
   const slots = RACK_NODES.map((name) => {
     const frame = frameOf(nodes[name]);
     // A crate's discs stand in their slots: they leave and come in straight up, not along the face.
@@ -184,18 +209,11 @@ export function rigFor(model: PlayerModel): Rig {
     root.add(object);
     discs.push({ object, label: ownMaterial(object, 'art_disc') });
   }
-  const caseSeat = nodes.case_seat;
-  const jewelCase: CaseRig = {
-    object: nodes.case,
-    seat: caseSeat.position.clone(),
-    quaternion: caseSeat.quaternion.clone(),
-    out: UP.clone().applyQuaternion(caseSeat.quaternion),
-    lift: flipLift(nodes.case),
-    booklet: ownMaterial(nodes.case, 'art_booklet'),
-  };
+  const jewelCase = model.media === 'cd' ? caseRigFor(model) : null;
   const door = profile.door;
   const rig: Rig = {
     model,
+    profile,
     discs,
     case: jewelCase,
     bookletMaps: [null, null],
@@ -236,7 +254,7 @@ export function rigFor(model: PlayerModel): Rig {
     },
   };
   // The model's own dispose knows only its shared materials: the copies go with it.
-  const prints = [...discs.map((disc) => disc.label), jewelCase.booklet];
+  const prints = [...discs.map((disc) => disc.label), ...(jewelCase ? [jewelCase.booklet] : [])];
   const disposeModel = model.dispose;
   model.dispose = () => {
     disposeModel();
@@ -360,8 +378,7 @@ function placeDisc(rig: Rig, copy: DiscCopy, pose: DiscPose | null): void {
 }
 
 /** The case risen `lift` (0 … 1 of its lift) out of its seat and turned over `turn` (1: half a turn). */
-function placeCase(rig: Rig, lift: number, turn: number): void {
-  const item = rig.case;
+function placeCase(item: CaseRig, lift: number, turn: number): void {
   item.object.position.copy(item.seat).addScaledVector(item.out, lift * item.lift);
   item.object.quaternion
     .copy(item.quaternion)
@@ -369,29 +386,35 @@ function placeCase(rig: Rig, lift: number, turn: number): void {
 }
 
 /** The booklet shows its front print, or from a turn's edge-on moment the other one. */
-function showBooklet(rig: Rig, next: boolean): void {
+function showBooklet(rig: Rig, item: CaseRig, next: boolean): void {
   const map = rig.bookletMaps[next ? 1 - rig.bookletFront : rig.bookletFront];
-  if (!map || rig.case.booklet.map === map) return;
-  rig.case.booklet.map = map;
-  rig.case.booklet.needsUpdate = true;
+  if (!map || item.booklet.map === map) return;
+  item.booklet.map = map;
+  item.booklet.needsUpdate = true;
 }
 
-/** The director's arm angle (ARM_REST … ARM_PLAY) as this model's own (its profile's rest … play). */
+/** The director's arm angle (ARM_REST … ARM_PLAY) as a profile's own (its rest … play). */
+export function armAngleFor(arm: SceneProfile['arm'], angle: number): number {
+  return arm.rest + ((angle - ARM_REST) / (ARM_PLAY - ARM_REST)) * (arm.play - arm.rest);
+}
+
+/** The director's arm angle as model `model`'s own (its profile's rest … play). */
 export function modelArmAngle(model: ModelId, angle: number): number {
-  const { rest, play } = SCENE_PROFILES[model].arm;
-  return rest + ((angle - ARM_REST) / (ARM_PLAY - ARM_REST)) * (play - rest);
+  return armAngleFor(SCENE_PROFILES[model].arm, angle);
 }
 
 /** Puts every moving part where `pose` says, and notes where it left the arm and the spin. */
 export function applyPose(rig: Rig, pose: Pose, dt: number): void {
-  rig.arm.node.rotation.y = rig.arm.baseRotationY + modelArmAngle(rig.model.id, pose.armAngle);
+  rig.arm.node.rotation.y = rig.arm.baseRotationY + armAngleFor(rig.profile.arm, pose.armAngle);
   rig.arm.node.position.y = rig.arm.baseY + pose.armLift * ARM_LIFT_M;
   rig.spin = (rig.spin + dt * SPIN_RAD_S * pose.spin * rig.spinSense) % (2 * Math.PI);
   rig.last.armAngle = pose.armAngle;
   rig.last.spin = pose.spin;
   rig.discs.forEach((copy, index) => placeDisc(rig, copy, pose.discs[index] ?? null));
-  placeCase(rig, pose.caseLift, pose.caseTurn);
-  showBooklet(rig, pose.bookletNew);
+  if (rig.case) {
+    placeCase(rig.case, pose.caseLift, pose.caseTurn);
+    showBooklet(rig, rig.case, pose.bookletNew);
+  }
   rig.doorOpen = rig.door ? pose.door : 0;
   if (rig.door) turnDoor(rig.door, pose.door);
 }

@@ -12,8 +12,9 @@ import {
   type OptionalNode,
   type PrintedMaterial,
   type RequiredNode,
+  type TurntableNode,
 } from './contract';
-import { upgradeMaterials, type OptionalSlots, type Slots } from './materials';
+import { upgradeMaterials, type OptionalSlots, type Slots, type TurntableSlots } from './materials';
 import { SCENE_PROFILES } from './profiles';
 
 /** The file a model URL names, for the errors and the logs: its last path segment. */
@@ -32,20 +33,32 @@ export class ModelContractError extends Error {
   }
 }
 
-export interface PlayerModel {
+/** What every loaded model has, whatever it plays. */
+interface LoadedModel {
   id: ModelId;
-  /** What it plays (its profile's): the contract it was held to. */
-  media: Media;
   root: Group;
-  /** The contract's nodes, and the optional ones this GLB has. */
-  nodes: Record<RequiredNode, Object3D> & Partial<Record<OptionalNode, Object3D>>;
-  slots: Slots;
-  /** The optional dynamic materials this GLB has (the deck's LED ring). */
+  /** The optional dynamic materials this GLB has (the LED ring, the Deck's print layer). */
   optionalSlots: OptionalSlots;
   /** Recolours the model for `look` in place: no reload, no new download (materials.ts). */
   applyLook(look: Look): void;
   dispose(): void;
 }
+
+/** A CD player: a CD player's nodes (src/scene/contract.ts), the optional ones it has, its five prints. */
+export interface CdModel extends LoadedModel {
+  media: 'cd';
+  nodes: Record<RequiredNode, Object3D> & Partial<Record<OptionalNode, Object3D>>;
+  slots: Slots;
+}
+
+/** A turntable: a turntable's nodes, the optional ones it has, its three prints. */
+export interface VinylModel extends LoadedModel {
+  media: 'vinyl';
+  nodes: Record<TurntableNode, Object3D> & Partial<Record<OptionalNode, Object3D>>;
+  slots: TurntableSlots;
+}
+
+export type PlayerModel = CdModel | VinylModel;
 
 /** What a progress event of the download carries (`ProgressEvent`'s fields). */
 export type DownloadProgress = Pick<ProgressEvent, 'lengthComputable' | 'loaded' | 'total'>;
@@ -161,12 +174,9 @@ export async function loadPlayerModel(
     throw new ModelContractError(missing, modelFile(url));
   }
   root.updateMatrixWorld(true);
-  return {
+  const loaded: LoadedModel = {
     id: profile.id,
-    media,
     root,
-    nodes: nodes as Record<RequiredNode, Object3D> & Partial<Record<OptionalNode, Object3D>>,
-    slots: materials.slots as Slots,
     optionalSlots: materials.optionalSlots,
     applyLook: materials.applyLook,
     dispose: () => {
@@ -177,4 +187,12 @@ export async function loadPlayerModel(
       });
     },
   };
+  return media === 'cd'
+    ? { ...loaded, media, nodes: nodes as CdModel['nodes'], slots: materials.slots as Slots }
+    : {
+        ...loaded,
+        media,
+        nodes: nodes as VinylModel['nodes'],
+        slots: materials.slots as TurntableSlots,
+      };
 }

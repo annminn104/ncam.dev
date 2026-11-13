@@ -1,6 +1,5 @@
 import { useFrame, useThree, type ThreeEvent } from '@react-three/fiber';
 import { useEffect, useMemo, useRef } from 'react';
-import { Box3, Vector3 } from 'three';
 import type { SceneBridge } from '../bridge';
 import {
   BUTTON_ACTIONS,
@@ -13,10 +12,9 @@ import {
   type ButtonNode,
   type KeyTouch,
 } from './controls';
-import { interaction, releaseLost } from './interaction';
-import { knobTurns } from './knob-turn';
-import { SCENE_PROFILES } from './profiles';
+import { interaction } from './interaction';
 import type { Rig } from './rig';
+import type { Grip } from './useGrip';
 
 /**
  * R3F reports a pointer event once per mesh under the pointer, nearest first: only the nearest
@@ -26,20 +24,17 @@ const isNearest = (event: ThreeEvent<PointerEvent>) =>
   event.object === event.intersections[0]?.object;
 
 /**
- * Pointer handlers for the player: press the keys, turn the knob to scrub. A mouse or a pen
- * presses a key as it goes down; a touch as it lifts, if it stayed a tap, so a pinch whose first
- * finger lands on a key presses nothing (controls.ts stillTap).
+ * Pointer handlers for the player: press the keys, and hand a press on the knob or the tonearm's
+ * head to its grip. A mouse or a pen presses a key as it goes down; a touch as it lifts, if it
+ * stayed a tap, so a pinch whose first finger lands on a key presses nothing (controls.ts stillTap).
  */
-export function useControls(rig: Rig, bridge: SceneBridge) {
+export function useControls(rig: Rig, bridge: SceneBridge, grip: Grip | null) {
   const gl = useThree((state) => state.gl);
-  const camera = useThree((state) => state.camera);
   const presses = useRef(new Map<ButtonNode, number>());
   const keyBase = useMemo(
     () => new Map(BUTTON_NODES.map((name) => [name, rig.model.nodes[name].position.y])),
     [rig],
   );
-  const knob = rig.model.nodes.knob;
-  const follows = SCENE_PROFILES[rig.model.id].knobTurnsDisc === true;
   // The key sinks and comes back, and its action goes to the app.
   const pressKey = (node: ButtonNode) => {
     presses.current.set(node, performance.now());
@@ -59,36 +54,6 @@ export function useControls(rig: Rig, bridge: SceneBridge) {
     }
   });
 
-  // A turn of the knob is followed on the window, so it survives leaving the knob's mesh. It is
-  // read around the middle of the knob's top, where the pointer lands (its pivot is at the base).
-  const centre = useRef(new Vector3());
-  const lift = useMemo(
-    () => new Box3().setFromObject(knob).max.y - knob.getWorldPosition(new Vector3()).y,
-    [knob],
-  );
-  const angleAt = (clientX: number, clientY: number) => {
-    knob.localToWorld(centre.current.set(0, lift, 0)).project(camera);
-    const rect = gl.domElement.getBoundingClientRect();
-    const cx = rect.left + (centre.current.x * 0.5 + 0.5) * rect.width;
-    const cy = rect.top + (-centre.current.y * 0.5 + 0.5) * rect.height;
-    return Math.atan2(clientY - cy, clientX - cx);
-  };
-  const angleRef = useRef(angleAt);
-  angleRef.current = angleAt;
-  const turns = useMemo(
-    () =>
-      knobTurns(
-        rig,
-        knob,
-        follows,
-        (x, y) => angleRef.current(x, y),
-        (deltaMs) => bridge.emit({ type: 'seek', deltaMs }),
-      ),
-    [rig, knob, follows, bridge],
-  );
-  // A track that ends while the hand holds the knob still: its turn ends as the change begins.
-  useFrame(() => turns.frame());
-
   useEffect(() => {
     const move = (event: PointerEvent) => {
       const touch = touching.current;
@@ -98,23 +63,17 @@ export function useControls(rig: Rig, bridge: SceneBridge) {
           touching.current = null;
         }
       }
-      // A mouse that moves with no button down has lost its release (a native menu took it, say).
-      const { pointerId, clientX, clientY } = event;
-      turns.move(pointerId, clientX, clientY, interaction.pinches, releaseLost(event));
     };
     const up = (event: PointerEvent) => {
       const touch = touching.current;
-      if (touch?.id === event.pointerId) {
-        touching.current = null;
-        if (stillTap(touch, event.clientX, event.clientY, interaction.pinches)) {
-          pressRef.current(touch.node);
-        }
+      if (touch?.id !== event.pointerId) return;
+      touching.current = null;
+      if (stillTap(touch, event.clientX, event.clientY, interaction.pinches)) {
+        pressRef.current(touch.node);
       }
-      turns.up(event.pointerId, interaction.pinches);
     };
     const cancel = (event: PointerEvent) => {
       if (touching.current?.id === event.pointerId) touching.current = null;
-      turns.cancel(event.pointerId);
     };
     window.addEventListener('pointermove', move);
     window.addEventListener('pointerup', up);
@@ -124,7 +83,7 @@ export function useControls(rig: Rig, bridge: SceneBridge) {
       window.removeEventListener('pointerup', up);
       window.removeEventListener('pointercancel', cancel);
     };
-  }, [turns]);
+  }, []);
 
   return {
     onPointerDown: (event: ThreeEvent<PointerEvent>) => {
@@ -153,8 +112,10 @@ export function useControls(rig: Rig, bridge: SceneBridge) {
         };
         return;
       }
-      // A press the knob takes no turn from still neither orbits nor recentres (controlActive).
-      turns.down(event.pointerId, clientX, clientY, interaction.pinches);
+      // A press the knob takes no turn from (or the arm no drag) still neither orbits nor
+      // recentres (controlActive).
+      if (grip?.kind === hit.kind)
+        grip.down(event.pointerId, clientX, clientY, interaction.pinches);
     },
     // R3F hovers the player as one (its handlers sit on the root) for as long as the first mesh it
     // met stays under the pointer, so over would miss a key met from the deck: the cursor follows

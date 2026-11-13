@@ -66,8 +66,11 @@ export function useDiscPrints(rig: Rig, bridge: SceneBridge): DiscPrinter {
   useEffect(() => {
     const { textures } = surfaces;
     rig.discs.forEach((disc, index) => setMap(disc.label, textures.disc[index]));
-    rig.bookletMaps = [textures.booklet[0], textures.booklet[1]];
-    setMap(rig.case.booklet, textures.booklet[rig.bookletFront]);
+    // A turntable has no jewel case: no booklet to show.
+    if (rig.case) {
+      rig.bookletMaps = [textures.booklet[0], textures.booklet[1]];
+      setMap(rig.case.booklet, textures.booklet[rig.bookletFront]);
+    }
     if (blankFor.current !== rig) {
       blankFor.current = rig;
       printed.current = nothingPrinted();
