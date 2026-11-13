@@ -489,14 +489,15 @@ describe('a turntable’s arm between changes', () => {
     });
   });
 
-  it('swings to a far groove lifted, as a seek sends it, and tracks a near one down', () => {
+  it('swings to a far groove lifted, as a seek sends it, and stays down over a re-anchor', () => {
     expect(turntableArm(rest({ groove: -0.4 }), onTrack)).toEqual({
       armAngle: -0.4,
       armLift: 1,
       spin: 1,
     });
-    expect(turntableArm(rest({ groove: -0.805 }), onTrack)).toEqual({
-      armAngle: -0.805,
+    // A buffering stall's re-anchor: the groove jumps back 0.04, and the needle stays in it.
+    expect(turntableArm(rest({ groove: -0.76 }), onTrack)).toEqual({
+      armAngle: -0.76,
       armLift: 0,
       spin: 1,
     });

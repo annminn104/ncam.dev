@@ -75,6 +75,16 @@ describe('import graphs', () => {
     }
   });
 
+  it('keeps the scene’s three-free modules off three and R3F', () => {
+    for (const entry of ['scene/tonearm.ts', 'scene/playhead.ts']) {
+      const { bare } = graph(path.join(SRC, ...entry.split('/')));
+      expect(
+        [...bare].filter((s) => THREE.test(s)),
+        entry,
+      ).toEqual([]);
+    }
+  });
+
   it('walks the whole shell, so the checks above cannot pass vacuously', () => {
     const { files } = graph(path.join(SRC, 'ssr.tsx'));
     for (const file of [

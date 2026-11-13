@@ -561,8 +561,10 @@ export function restingArm(seated: boolean, loaded: boolean, playing: boolean): 
 
 /** How fast a turntable's resting arm, its lift and its platter ease toward the status's pose (1/s). */
 export const TURNTABLE_EASE = 8;
-/** An arm farther than this from its rest or its groove (the director's units) lifts to swing there. */
+/** An arm farther than this from its rest (the director's units) lifts to swing there. */
 const REST_REACH = 0.01;
+/** Past this off its groove it lifts (Play after Stop, a far seek), not for a stall's re-anchor. */
+export const LIFT_REACH = 0.1;
 
 /** What a turntable's resting arm reads: the status, and the angles the rig has worked out. */
 export interface TurntableRest {
@@ -581,8 +583,9 @@ export interface TurntableRest {
  * turning. Paused: lifted where it is, the platter still. Stopped (the sequencer's Stop is a pause
  * at 0:00, ruled 2026-11-13), idle, changing, or with nothing on the platter: at its rest, lifted
  * while `from` is not there yet. A drag holds the arm lifted at its angle. Any long way lifts it:
- * farther than REST_REACH from the groove (Play after Stop, a seek), it swings over the record
- * lifted and lowers once there; tracking, it stays down.
+ * farther than LIFT_REACH from the groove (Play after Stop, a far seek), it swings over the record
+ * lifted and lowers once there. Tracking it stays down, and so it does when a stall (buffering, a
+ * gap in the embed's reports) re-anchors the playhead, the groove jumping back by up to its hold.
  */
 export function turntableArm(rest: TurntableRest, from: Pick<ArmPose, 'armAngle'>): ArmPose {
   const playing = rest.status === 'playing';
@@ -592,7 +595,7 @@ export function turntableArm(rest: TurntableRest, from: Pick<ArmPose, 'armAngle'
     const away = Math.abs(from.armAngle - ARM_REST) > REST_REACH;
     return { armAngle: ARM_REST, armLift: away ? 1 : 0, spin: 0 };
   }
-  const far = Math.abs(from.armAngle - rest.groove) > REST_REACH;
+  const far = Math.abs(from.armAngle - rest.groove) > LIFT_REACH;
   return { armAngle: rest.groove, armLift: playing && !far ? 0 : 1, spin: playing ? 1 : 0 };
 }
 

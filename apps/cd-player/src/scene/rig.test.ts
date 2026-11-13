@@ -881,19 +881,25 @@ describe('a turntable’s arm', () => {
     );
   });
 
-  it('stays down as it tracks frame by frame, even through a 30-second preview', () => {
+  it('stays down as it tracks frame by frame on a 30-second preview, through a buffering stall', () => {
     const rig = turntable();
     const at = (positionMs: number): SceneView => ({ ...view(positionMs), durationMs: 30_000 });
     settle(rig, at(0));
-    for (let frame = 1; frame <= 180; frame++) {
+    // The embed reports every 250 ms, but buffers from 1 s to 3.5 s, the audio stalled with it and
+    // its updates dropped: the playhead runs on 2 s past the last report and holds, then the
+    // reports resume from 1 s and the groove jumps back.
+    const reported = (nowMs: number) => {
+      const played = nowMs < 1000 ? nowMs : nowMs < 3500 ? 1000 : nowMs - 2500;
+      return Math.floor(played / 250) * 250;
+    };
+    for (let frame = 1; frame <= 360; frame++) {
       const nowMs = (frame * 1000) / 60;
-      // The embed reports every 250 ms; the playhead carries the position on between reports.
-      const pose = turntableRestFor(rig, at(Math.floor(nowMs / 250) * 250), 1 / 60, nowMs);
+      const pose = turntableRestFor(rig, at(reported(nowMs)), 1 / 60, nowMs);
       applyPose(rig, restingPose(rig.shelf, true, true, pose), 1 / 60);
       expect(pose.armLift, `frame ${frame}`).toBe(0);
     }
-    // On by 3 s's groove, a hair behind it as it eases.
-    expect(angleOf(rig, rig.last.armAngle)).toBeCloseTo(-0.39 - 0.4 * (3 / 30), 2);
+    // 6 s in, 3.5 s of it played: on by that groove, a hair behind it as it eases.
+    expect(angleOf(rig, rig.last.armAngle)).toBeCloseTo(-0.39 - 0.4 * (3.5 / 30), 2);
   });
 
   it('lifts where it stands as it pauses, easing up rather than jumping', () => {
