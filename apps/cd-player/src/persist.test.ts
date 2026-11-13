@@ -29,7 +29,7 @@ import {
   writeSkin,
 } from './persist';
 import { DECK_SWATCHES, DEFAULT_DECK_LOOK } from './deck-looks';
-import { DEFAULT_LUXE_LOOK } from './luxe-looks';
+import { DEFAULT_LUXE_LOOK, LUXE_SWATCHES } from './luxe-looks';
 import { DEFAULT_PERSONAL } from './personal';
 import { DEFAULT_COLLECTION, type CollectionRef } from './routes';
 import { SKINS } from './skins';
@@ -280,6 +280,27 @@ describe('LOOK_SCRIPT', () => {
       const store: Record<string, string> = { [MODEL_KEY]: 'clear' };
       if (junk !== undefined) store[CLEAR_KEY] = junk;
       expect(paint(memory(store)), String(junk)).toEqual(pair(DEFAULT_CLEAR_LOOK.light));
+    }
+  });
+
+  it('paints the saved light’s pair on Luxe, its default light’s for junk', () => {
+    const pair = (id: string) => {
+      const light = LUXE_SWATCHES.light.find((l) => l.id === id)!;
+      return { '--cdp-accent': light.accent, '--cdp-on-accent': light.onAccent };
+    };
+    expect(paint(memory({ [MODEL_KEY]: 'luxe', [LUXE_KEY]: '{"light":"amber"}' }))).toEqual(
+      pair('amber'),
+    );
+    for (const junk of [
+      undefined,
+      '{nope',
+      '{"light":"neon"}',
+      '{"light":"__proto__"}',
+      '{"light":"lime"}',
+    ]) {
+      const store: Record<string, string> = { [MODEL_KEY]: 'luxe' };
+      if (junk !== undefined) store[LUXE_KEY] = junk;
+      expect(paint(memory(store)), String(junk)).toEqual(pair(DEFAULT_LUXE_LOOK.light));
     }
   });
 

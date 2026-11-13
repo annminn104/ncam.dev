@@ -183,6 +183,16 @@ describe('LookMenu', () => {
     const html = menu(LUXE);
     expect(groups(html)).toEqual(['Model', 'Body', 'Metal', 'Light']);
     expect(html).not.toContain('<input');
+    const models = html.slice(
+      html.indexOf('aria-label="Model"'),
+      html.indexOf('aria-label="Body"'),
+    );
+    expect([...models.matchAll(/cdp-skin__name">([^<]+)</g)].map((m) => m[1])).toEqual([
+      'Suitcase',
+      'Clear',
+      'Deck',
+      'Luxe',
+    ]);
     for (const s of LUXE_SWATCHES.metal) expect(html).toContain(`aria-label="${s.name}"`);
   });
 

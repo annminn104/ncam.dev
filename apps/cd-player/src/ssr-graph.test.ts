@@ -100,6 +100,7 @@ describe('import graphs', () => {
       'shell/NowPlaying.tsx',
       'shell/LookPicker.tsx',
       'skins.ts',
+      'luxe-looks.ts',
       'playback/engine.ts',
       'server/initial.ts',
       'spotify/embed.ts',
