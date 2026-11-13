@@ -14,6 +14,7 @@ import {
   paintDisc,
   paintJogRing,
   paintLcd,
+  paintRecord,
   paintTag,
 } from './paint';
 
@@ -264,5 +265,19 @@ describe('paintDeckScreen', () => {
       LCD_ON,
     );
     for (const text of ['--', 'No disc', '-:--']) expect(texts).toContain(text);
+  });
+});
+
+describe('paintDisc', () => {
+  it('prints a record’s blank label as a record’s, and a CD’s as a CD’s', () => {
+    const cd = recorder(512);
+    paintDisc(cd.canvas, null, null);
+    expect(cd.texts).toContain('CD·01  ·  COMPACT DISC');
+    expect(cd.texts.join('')).toContain('NCAM  ·  CD PLAYER  ·  SIDE A');
+    const record = recorder(512);
+    paintRecord(record.canvas, null, null);
+    expect(record.texts).toContain('33⅓ RPM  ·  LONG PLAY');
+    expect(record.texts).not.toContain('CD·01  ·  COMPACT DISC');
+    expect(record.texts.join('')).toContain('NCAM  ·  TURNTABLE  ·  SIDE A');
   });
 });

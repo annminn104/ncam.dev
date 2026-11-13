@@ -102,11 +102,21 @@ function fitted(ctx: CanvasRenderingContext2D, text: string, max: number): strin
   return fitText((s) => ctx.measureText(s).width, text, max);
 }
 
+/** What a disc is, for its blank label: a CD's, or a record's. */
+export type DiscKind = 'cd' | 'record';
+
+/** The blank label's caption and the words round its rim, by kind. */
+const BLANK_LABEL: Readonly<Record<DiscKind, { caption: string; arc: string }>> = {
+  cd: { caption: 'CD·01  ·  COMPACT DISC', arc: 'ncam  ·  CD player  ·  side A' },
+  record: { caption: '33⅓ RPM  ·  LONG PLAY', arc: 'ncam  ·  turntable  ·  side A' },
+};
+
 /** The disc's label: the artist's photo, a darkened rim and the title and artist printed round it. */
 export function paintDisc(
   canvas: HTMLCanvasElement,
   image: HTMLImageElement | null,
   view: TrackView | null,
+  kind: DiscKind = 'cd',
 ): void {
   const ctx = context(canvas);
   const size = canvas.width;
@@ -133,16 +143,14 @@ export function paintDisc(
     ctx.font = title(Math.round(size * 0.09));
     ctx.fillText('ncam', r, r * 0.6);
     ctx.font = bold(Math.round(size * 0.026));
-    ctx.fillText('CD·01  ·  COMPACT DISC', r, r * 1.45);
+    ctx.fillText(BLANK_LABEL[kind].caption, r, r * 1.45);
   }
   const rim = ctx.createRadialGradient(r, r, r * 0.72, r, r, r);
   rim.addColorStop(0, 'rgba(0, 0, 0, 0)');
   rim.addColorStop(1, 'rgba(0, 0, 0, 0.5)');
   ctx.fillStyle = rim;
   ctx.fillRect(0, 0, size, size);
-  const text = (
-    view ? `${view.title}  ·  ${view.artists}` : 'ncam  ·  CD player  ·  side A'
-  ).toUpperCase();
+  const text = (view ? `${view.title}  ·  ${view.artists}` : BLANK_LABEL[kind].arc).toUpperCase();
   const radius = r * 0.9;
   ctx.font = bold(Math.round(size * 0.027));
   ctx.fillStyle = 'rgba(255, 255, 255, 0.92)';
@@ -157,6 +165,15 @@ export function paintDisc(
     ctx.fillText(char, 0, 0);
     ctx.restore();
   }
+}
+
+/** A record's label: the disc's print (the artist's photo, the title round it), a record's blank. */
+export function paintRecord(
+  canvas: HTMLCanvasElement,
+  image: HTMLImageElement | null,
+  view: TrackView | null,
+): void {
+  paintDisc(canvas, image, view, 'record');
 }
 
 /** The booklet behind the case's lid: the album art, or the page's own cover before any art. */

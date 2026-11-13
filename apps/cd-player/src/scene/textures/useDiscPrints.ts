@@ -1,7 +1,7 @@
 import { createLogger } from '@ncam/logger';
 import { useEffect, useRef, useState } from 'react';
 import type { SceneBridge, TrackView } from '../../bridge';
-import type { Rig } from '../rig';
+import { isTurntableRig, type Rig } from '../rig';
 import { DISC_COPIES } from '../stage';
 import type { DiscPrinter } from '../swap-controller';
 import {
@@ -24,6 +24,7 @@ import {
   newCanvas,
   paintBooklet,
   paintDisc,
+  paintRecord,
   setMap,
 } from './paint';
 import { reprintFor, settlesWithin } from './painter';
@@ -47,8 +48,16 @@ async function loadPrint(view: TrackView): Promise<PrintLoad> {
   return { art, photo, late: inTime ? null : faces };
 }
 
-/** The page's printing: its canvases, paint.ts's painters, the image cache and the page's faces. */
-const PAGE: PrinterDeps = { load: loadPrint, paintDisc, paintBooklet, onFailed: reportFailed };
+/** A CD player's printing: its discs' labels and its booklet, in the page's faces, through the image cache. */
+const CD_PAGE: PrinterDeps = { load: loadPrint, paintDisc, paintBooklet, onFailed: reportFailed };
+/** A turntable's: its records' labels, and their sleeves printed as a booklet is (the album art). */
+const TURNTABLE_PAGE: PrinterDeps = {
+  load: loadPrint,
+  paintDisc: paintRecord,
+  paintBooklet,
+  paintSleeve: paintBooklet,
+  onFailed: reportFailed,
+};
 
 /**
  * Prints the disc copies and the booklet (the printer itself is textures/disc-printer.ts). The
@@ -57,18 +66,25 @@ const PAGE: PrinterDeps = { load: loadPrint, paintDisc, paintBooklet, onFailed: 
  * once the page's fonts are in.
  */
 export function useDiscPrints(rig: Rig, bridge: SceneBridge): DiscPrinter {
+  const [page] = useState(() => (isTurntableRig(rig) ? TURNTABLE_PAGE : CD_PAGE));
   const [surfaces] = useState(() =>
-    makeSurfaces({ canvas: newCanvas, texture: canvasTexture }, { booklet: rig.case !== null }),
+    makeSurfaces(
+      { canvas: newCanvas, texture: canvasTexture },
+      { booklet: rig.case !== null, sleeves: isTurntableRig(rig) },
+    ),
   );
   const printed = useRef<Printed>(nothingPrinted());
   // State, not a memo: React may drop a memo, and the painter's order of prints with it.
-  const [printer] = useState(() => makePrinter(surfaces, printed, PAGE));
+  const [printer] = useState(() => makePrinter(surfaces, printed, page));
   /** The rig the copies were made blank for: StrictMode's second run keeps their prints. */
   const blankFor = useRef<Rig | null>(null);
 
   useEffect(() => {
     const { textures } = surfaces;
-    rig.discs.forEach((disc, index) => setMap(disc.label, textures.disc[index]));
+    rig.discs.forEach((copy, index) => {
+      setMap(copy.label, textures.disc[index]);
+      if (copy.sleeve) setMap(copy.sleeve.print, textures.sleeve[index]);
+    });
     // A turntable has no jewel case: no booklet to show.
     if (rig.case) {
       rig.bookletMaps = [textures.booklet[0], textures.booklet[1]];
@@ -78,17 +94,17 @@ export function useDiscPrints(rig: Rig, bridge: SceneBridge): DiscPrinter {
       blankFor.current = rig;
       printed.current = nothingPrinted();
       for (let index = 0; index < DISC_COPIES; index++) {
-        blankDisc(surfaces, paintDisc, index, null, FIRST_SIZE);
+        blankDisc(surfaces, page, index, null, FIRST_SIZE);
       }
       for (const side of bookletSides(surfaces)) blankBooklet(surfaces, paintBooklet, side, null);
     }
-    const all = [...textures.disc, ...textures.booklet];
+    const all = [...textures.disc, ...textures.booklet, ...textures.sleeve];
     for (const texture of all) texture.needsUpdate = true;
     return () => {
       rig.bookletMaps = [null, null];
       for (const texture of all) texture.dispose();
     };
-  }, [rig, surfaces]);
+  }, [rig, surfaces, page]);
 
   useEffect(() => {
     let live = true;
@@ -120,7 +136,7 @@ export function useDiscPrints(rig: Rig, bridge: SceneBridge): DiscPrinter {
         if (!printed.current.landed[index]) {
           blankDisc(
             surfaces,
-            paintDisc,
+            page,
             index,
             printed.current.disc[index],
             printed.current.size[index],
@@ -137,7 +153,7 @@ export function useDiscPrints(rig: Rig, bridge: SceneBridge): DiscPrinter {
       live = false;
       unsubscribe();
     };
-  }, [bridge, surfaces, printer]);
+  }, [bridge, surfaces, printer, page]);
 
   return printer;
 }
