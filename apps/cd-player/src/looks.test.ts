@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { clearSwatch, DEFAULT_CLEAR_LOOK } from './clear-looks';
 import { DEFAULT_DECK_LOOK } from './deck-looks';
 import { DEFAULT_PERSONAL } from './personal';
-import { DEFAULT_LOOK_STATE, lookAccent, lookLabel, lookOf, lookSwatch } from './looks';
+import { DEFAULT_LOOK_STATE, exhaustive, lookAccent, lookLabel, lookOf, lookSwatch } from './looks';
 import { skinById } from './skins';
 
 describe('looks', () => {
@@ -55,5 +55,10 @@ describe('looks', () => {
     expect(lookAccent(look)).toEqual({ accent: '#f2aaa5', onAccent: '#2c0f0d' });
     expect(lookSwatch(look)).toBe('#ff5a52');
     expect(lookLabel(look)).toBe('Player: Deck, Red light');
+  });
+
+  it('names a model no switch has a case for, should one ever get past the compiler', () => {
+    expect(() => exhaustive('glass' as never)).toThrow('glass');
+    expect(() => exhaustive({ model: 'glass' } as never)).toThrow('glass');
   });
 });

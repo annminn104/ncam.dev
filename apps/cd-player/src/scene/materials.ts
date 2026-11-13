@@ -16,10 +16,10 @@ import {
   type Object3D,
   type Texture,
 } from 'three';
-import { clearSwatch } from '../clear-looks';
-import { deckSwatch } from '../deck-looks';
+import { clearSwatch, type ClearLook } from '../clear-looks';
+import { deckSwatch, type DeckLook } from '../deck-looks';
 import { etchColour, GOLD, traceColour } from './decor-colours';
-import type { Look } from '../looks';
+import { exhaustive, type Look } from '../looks';
 import { skinById, type Skin, type SkinRole } from '../skins';
 import {
   OPTIONAL_DYNAMIC_MATERIALS,
@@ -312,26 +312,40 @@ const SILK_LUMA_SWITCH = 0.45;
  * (its other materials, the print layer included, stay as they are). Uniforms only.
  */
 export function applyLook(materials: Iterable<Material>, look: Look): void {
-  if (look.model === 'suitcase') {
-    applySkin(materials, skinById(look.skin));
-    return;
+  switch (look.model) {
+    case 'suitcase':
+      applySkin(materials, skinById(look.skin));
+      return;
+    case 'clear':
+      applyClearLook(materials, look.clear);
+      return;
+    case 'deck':
+      applyDeckLook(materials, look.deck);
+      return;
+    default:
+      exhaustive(look);
   }
-  if (look.model === 'deck') {
-    for (const material of materials) {
-      const part = Object.hasOwn(DECK_ROLES, material.name) ? DECK_ROLES[material.name] : undefined;
-      if (part === 'body') {
-        const body = deckSwatch(look.deck, 'body');
-        const surface = material as MeshPhysicalMaterial;
-        surface.color.set(body.colour);
-        surface.metalness = body.metalness;
-        surface.roughness = body.roughness;
-      } else if (part === 'light') {
-        (material as MeshBasicMaterial).color.set(deckSwatch(look.deck, 'light').glow);
-      }
+}
+
+/** The Deck's body and light from their swatches. */
+function applyDeckLook(materials: Iterable<Material>, deck: DeckLook): void {
+  for (const material of materials) {
+    const part = Object.hasOwn(DECK_ROLES, material.name) ? DECK_ROLES[material.name] : undefined;
+    if (part === 'body') {
+      const body = deckSwatch(deck, 'body');
+      const surface = material as MeshPhysicalMaterial;
+      surface.color.set(body.colour);
+      surface.metalness = body.metalness;
+      surface.roughness = body.roughness;
+    } else if (part === 'light') {
+      (material as MeshBasicMaterial).color.set(deckSwatch(deck, 'light').glow);
     }
-    return;
   }
-  const board = clearSwatch(look.clear, 'board').colour;
+}
+
+/** The Clear model's parts from their swatches. */
+function applyClearLook(materials: Iterable<Material>, clear: ClearLook): void {
+  const board = clearSwatch(clear, 'board').colour;
   for (const material of materials) {
     if (material.name === 'silk') {
       const { r, g, b } = new Color(board);
@@ -346,7 +360,7 @@ export function applyLook(materials: Iterable<Material>, look: Look): void {
       continue;
     }
     if (material.name === 'etch') {
-      const { tint } = clearSwatch(look.clear, 'shell');
+      const { tint } = clearSwatch(clear, 'shell');
       (material as MeshPhysicalMaterial).color.set(etchColour(tint));
       continue;
     }
@@ -354,17 +368,17 @@ export function applyLook(materials: Iterable<Material>, look: Look): void {
     if (!part) continue;
     const surface = material as MeshPhysicalMaterial;
     if (part === 'shell') {
-      const { tint } = clearSwatch(look.clear, 'shell');
+      const { tint } = clearSwatch(clear, 'shell');
       surface.color.set(tint);
     } else if (part === 'frame') {
-      const frame = clearSwatch(look.clear, 'frame');
+      const frame = clearSwatch(clear, 'frame');
       surface.color.set(frame.colour);
       surface.metalness = frame.metalness;
       surface.roughness = frame.roughness;
     } else if (part === 'board') {
       surface.color.set(board);
     } else {
-      (material as MeshBasicMaterial).color.set(clearSwatch(look.clear, 'light').glow);
+      (material as MeshBasicMaterial).color.set(clearSwatch(clear, 'light').glow);
     }
   }
 }
