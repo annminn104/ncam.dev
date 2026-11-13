@@ -281,7 +281,10 @@ click is the user activation the browser's autoplay policy wants, and it keeps t
 third-party cookies out of the first load, which Lighthouse's Best Practices audit counts. The
 engine (`PlayerEngine.user()` in `src/playback/engine.ts`) builds the player only when a press
 would start playback (the sequencer would emit a `swap` or a `load`): Repeat, Shuffle, Stop or a
-seek before that loads nothing. `App`'s `createPlayer` hands it a fresh `<div>` inside the
+seek before that loads nothing. A Play pressed while the collection still loads (the scene can be
+up before its tracks are) is remembered and plays once the tracks are in; a second press, Stop, a
+failed load or opening another collection forgets it, so a new collection never starts on its
+own. `App`'s `createPlayer` hands it a fresh `<div>` inside the
 now-playing card's `.cdp-now__embed`, where React renders nothing; Spotify swaps the div for its
 iframe, 80 px high and the card's width. The script gets 15 s, building the player 20 s
 (`PLAYER_TIMEOUT_MS`). If either fails (an ad blocker, a privacy setting), the card says "The
@@ -571,7 +574,7 @@ back, and settles, and it turns only while no disc flies to or from the spindle.
 two prints, the one that shows and the next turn's (`bookletFront`), swapped as the case passes
 edge-on. The arm turns by the director's angles (`ARM_REST` to `ARM_PLAY`), mapped onto the
 profile's own
-(`modelArmAngle`: the suitcase's 0 to −0.52 rad about its pivot's Y, the Clear's 0 to +0.52, its
+(`armAngleFor`: the suitcase's 0 to −0.52 rad about its pivot's Y, the Clear's 0 to +0.52, its
 pivot's Y being the disc's normal); the door (`rig.door`: the hinge, its shut angle and the
 profile's turn, −100° on the Clear, out toward the viewer) opens as far as the pose's `door`
 says, 0 shut to 1 open. What the stage holds is plain data the rig carries (`src/scene/stage.ts`,
@@ -1911,13 +1914,13 @@ Unit tests (`src/**/*.test.ts`, node environment, run by the root `pnpm test`):
   for again while the one before is shown), `bridge.test.ts` and `view.test.ts`
   (the view model, `loaderPercent` and `loaderLine`, the next five tracks in play order,
   `pickerLoad`, `sameLoadPercent` and `accentModelFor`);
-- the scene: `scene/model-contract.test.ts` (all three committed GLBs, and every measure of
+- the scene: `scene/model-contract.test.ts` (all four committed GLBs, and every measure of
   `src/testing/model-measures.ts` over them, loaded with three's GLTFLoader), `model.test.ts`
   (`downloadFraction`, and `downloadModel` on a fake fetch: its progress from the request to the
   end, a request of its own per load, the abort), `glb.test.ts`, `material-roles.test.ts` (every
   `SKIN_ROLES` entry maps a material to the role of its own name; every `CLEAR_ROLES` entry names a
   material with a role, each Clear part once), `materials.test.ts` (the roles' materials,
-  `leatherSheen`, `applySkin`, `applyLook` on both models, the silkscreen following the board, the
+  `leatherSheen`, `applySkin`, `applyLook` on every model, the silkscreen following the board, the
   live check's colours), `profiles.test.ts` (a profile per model, the suitcase's as it is framed
   and driven, the Clear's door, arm and flights, the Deck's plate about X, its clockwise disc, its
   screen and its flights straight up), `model-holder.test.ts` (`stepHeld` and the
@@ -1932,7 +1935,7 @@ Unit tests (`src/**/*.test.ts`, node environment, run by the root `pnpm test`):
   change alone, a change's failure logged and reported and the boot's to `onFail`, a stalled
   change's model let go through the holder, the watch ended as the compile lands, the stage told to
   `App`),
-  `stage.test.ts`, `rig.test.ts` (besides the poses: the door's hinge and turn, `modelArmAngle`,
+  `stage.test.ts`, `rig.test.ts` (besides the poses: the door's hinge and turn, `armAngleFor`,
   the seat's normal, and every way to and from the Clear's spindle through its door's opening,
   never through the shell's walls, and the Deck's flights: every slot's way up, the arrival from
   above and every way between a slot and the spindle clear of the case, the deck, its screen
