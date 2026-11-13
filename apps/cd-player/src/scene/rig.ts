@@ -10,7 +10,7 @@ import {
   type Texture,
 } from 'three';
 import type { ModelId } from '../models';
-import type { RequiredNode } from './contract';
+import type { SharedNode } from './contract';
 import { ARM_PLAY, ARM_REST, type DiscPose, type Pose } from './director';
 import type { PlayerModel } from './model';
 import { SCENE_PROFILES } from './profiles';
@@ -23,7 +23,7 @@ const RACK_NODES = [
   'rack_slot_2',
   'rack_slot_3',
   'rack_slot_4',
-] as const satisfies readonly RequiredNode[];
+] as const satisfies readonly SharedNode[];
 const ARM_LIFT_M = 0.006;
 const SPIN_RAD_S = (200 / 60) * 2 * Math.PI;
 /** Room between the turning case and the lid's lining, past the reach of its half-width. */

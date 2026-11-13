@@ -1,9 +1,15 @@
 import type { ModelId } from '../models';
+import type { Media } from './contract';
 
 export type Vec3 = readonly [number, number, number];
 
 /** What the scene needs to know of a model beyond its GLB. */
 export interface SceneProfile {
+  /**
+   * What the model plays: CDs, or records (a turntable). Its GLB is held to that kind's node
+   * contract (src/scene/contract.ts), and the scene mounts that kind's parts (PlayerRig.tsx).
+   */
+  media: Media;
   /**
    * Where the camera looks, from which way, and the half-width (`across`) and half-height (`up`)
    * of what it fits round its aim (metres): a sphere when they are equal.
@@ -56,6 +62,7 @@ const unit = (v: Vec3): Vec3 => {
 
 export const SCENE_PROFILES: Readonly<Record<ModelId, SceneProfile>> = {
   suitcase: {
+    media: 'cd',
     frame: {
       target: [0, 0.132, 0.01],
       direction: unit([-0.48, 0.338, 0.79]),
@@ -68,6 +75,7 @@ export const SCENE_PROFILES: Readonly<Record<ModelId, SceneProfile>> = {
     flight: { reach: { slot: 0.08, spindle: 0.08 }, aside: [-0.16, 0.06, 0] },
   },
   clear: {
+    media: 'cd',
     // Seen from the Clear hero still's camera (Blender's (-255, -880, 400) over its aim
     // (2, 10, 122), in three's axes): front left, above. The set is wide and low, so the camera
     // fits it by its own half-width and half-height, aimed a little left of and below the disc so
@@ -92,6 +100,7 @@ export const SCENE_PROFILES: Readonly<Record<ModelId, SceneProfile>> = {
     flight: { reach: { slot: 0.3, spindle: 0.1 }, aside: [0.1, 0.1, 0.1] },
   },
   deck: {
+    media: 'cd',
     // Seen from the Deck hero still's camera (Blender's (-320, -900, 480) over its aim (60, 0, 80),
     // in three's axes): front left, above. The set (the deck and the flight case right of it) is
     // wide and low: the camera fits it by its own half-width and half-height. It aims at the set's

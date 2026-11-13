@@ -22,10 +22,12 @@ import { etchColour, GOLD, traceColour } from './decor-colours';
 import type { Look } from '../looks';
 import { skinById, type Skin, type SkinRole } from '../skins';
 import {
-  DYNAMIC_MATERIALS,
   OPTIONAL_DYNAMIC_MATERIALS,
+  PRINTED_MATERIALS,
   type DynamicMaterial,
   type OptionalDynamicMaterial,
+  type PrintedMaterial,
+  type TurntableMaterial,
 } from './contract';
 import {
   CLEAR_ROLES,
@@ -36,7 +38,12 @@ import {
 } from './material-roles';
 import { leatherNormal, quiltNormal, weaveNormal } from './textures/grain';
 
-export type Slots = Record<DynamicMaterial, MeshPhysicalMaterial | MeshBasicMaterial>;
+/** A printed material, as the page paints it: a lit surface or a lamp. */
+export type Printable = MeshPhysicalMaterial | MeshBasicMaterial;
+/** A CD player's printed materials (DYNAMIC_MATERIALS in src/scene/contract.ts). */
+export type Slots = Record<DynamicMaterial, Printable>;
+/** A turntable's (TURNTABLE_MATERIALS). */
+export type TurntableSlots = Record<TurntableMaterial, Printable>;
 
 /** The runtime normal maps the roles tile (src/scene/textures/grain.ts). */
 export interface GrainMaps {
@@ -54,12 +61,11 @@ function skinRoleOf(name: string): SkinRole | undefined {
 }
 
 /** The optional dynamic materials this model has (the deck's LED ring and its print layer). */
-export type OptionalSlots = Partial<
-  Record<OptionalDynamicMaterial, MeshPhysicalMaterial | MeshBasicMaterial>
->;
+export type OptionalSlots = Partial<Record<OptionalDynamicMaterial, Printable>>;
 
 export interface UpgradedMaterials {
-  slots: Slots;
+  /** Every printed material the model has, of either kind: the loader holds the model to its own. */
+  slots: Partial<Record<PrintedMaterial, Printable>>;
   optionalSlots: OptionalSlots;
   /** Recolours the model's materials in place for a look (applyLook, below). */
   applyLook(look: Look): void;
@@ -412,7 +418,7 @@ export function upgradeMaterials(root: Object3D): UpgradedMaterials {
     weave: dataTexture(weaveNormal(128, 16), 128, 3),
   };
   const made = new Map<string, Material>();
-  const slots: Partial<Slots> = {};
+  const slots: Partial<Record<PrintedMaterial, Printable>> = {};
   const optionalSlots: OptionalSlots = {};
   root.traverse((object) => {
     const mesh = object as Mesh;
@@ -423,13 +429,11 @@ export function upgradeMaterials(root: Object3D): UpgradedMaterials {
     if (!material) {
       material = makeMaterial(role, source, maps);
       made.set(source.name, material);
-      if ((DYNAMIC_MATERIALS as readonly string[]).includes(source.name)) {
-        slots[source.name as DynamicMaterial] = material as
-          MeshPhysicalMaterial | MeshBasicMaterial;
+      if ((PRINTED_MATERIALS as readonly string[]).includes(source.name)) {
+        slots[source.name as PrintedMaterial] = material as Printable;
       }
       if ((OPTIONAL_DYNAMIC_MATERIALS as readonly string[]).includes(source.name)) {
-        optionalSlots[source.name as OptionalDynamicMaterial] = material as
-          MeshPhysicalMaterial | MeshBasicMaterial;
+        optionalSlots[source.name as OptionalDynamicMaterial] = material as Printable;
       }
     }
     source.dispose();
@@ -446,7 +450,7 @@ export function upgradeMaterials(root: Object3D): UpgradedMaterials {
     }
   });
   return {
-    slots: slots as Slots,
+    slots,
     optionalSlots,
     applyLook: (look: Look) => applyLook(made.values(), look),
     dispose: () => {

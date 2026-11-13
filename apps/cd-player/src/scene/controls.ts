@@ -1,9 +1,9 @@
 import type { PlayerAction } from '../actions';
-import type { RequiredNode } from './contract';
+import type { SharedNode } from './contract';
 import { TAP_SLOP_PX } from './orbit';
 
 /** The deck's keys: the `btn_` nodes of the model contract (src/scene/contract.ts). */
-export type ButtonNode = Extract<RequiredNode, `btn_${string}`>;
+export type ButtonNode = Extract<SharedNode, `btn_${string}`>;
 
 /** What each key does, by its GLB node. Mode is shuffle. */
 export const BUTTON_ACTIONS: Readonly<Record<ButtonNode, PlayerAction>> = {

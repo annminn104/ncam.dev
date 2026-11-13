@@ -1,13 +1,10 @@
 import type { Mesh, MeshBasicMaterial } from 'three';
-import type { RequiredNode } from './contract';
+import type { CdNode } from './contract';
 import type { PlayerModel } from './model';
 import { VU_OFF, VU_SEGMENTS } from './vu';
 
 /** The strip's segments, bottom to top: the `vu_seg_` nodes of the model contract. */
-export const VU_NODES = Array.from(
-  { length: VU_SEGMENTS },
-  (_, i) => `vu_seg_${i}` as RequiredNode,
-);
+export const VU_NODES = Array.from({ length: VU_SEGMENTS }, (_, i) => `vu_seg_${i}` as CdNode);
 
 const clones = new WeakMap<PlayerModel, MeshBasicMaterial[]>();
 

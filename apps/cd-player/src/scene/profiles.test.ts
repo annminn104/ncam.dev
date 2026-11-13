@@ -3,6 +3,12 @@ import { MODELS } from '../models';
 import { SCENE_PROFILES } from './profiles';
 
 describe('scene profiles', () => {
+  it('plays CDs on the suitcase, the Clear model and the Deck', () => {
+    for (const id of ['suitcase', 'clear', 'deck'] as const) {
+      expect(SCENE_PROFILES[id].media, id).toBe('cd');
+    }
+  });
+
   it('gives every model a profile', () => {
     for (const model of MODELS) expect(SCENE_PROFILES[model.id], model.id).toBeDefined();
   });

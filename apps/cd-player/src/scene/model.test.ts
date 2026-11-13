@@ -1,5 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
-import { downloadFraction, downloadModel } from './model';
+import { Group, Object3D } from 'three';
+import {
+  CD_NODES,
+  DYNAMIC_MATERIALS,
+  REQUIRED_NODES,
+  TURNTABLE_MATERIALS,
+  TURNTABLE_NODES,
+} from './contract';
+import { downloadFraction, downloadModel, readContract } from './model';
 
 const URL_ = 'https://cd-player.example/assets/cd-player.glb';
 const CHUNKS = [
@@ -143,5 +151,51 @@ describe('downloadFraction', () => {
     expect(downloadFraction({ lengthComputable: true, loaded: 900_000, total: 589_824 })).toBe(
       0.99,
     );
+  });
+});
+
+/** A root holding an empty for each name. */
+function rootWith(names: readonly string[]): Group {
+  const root = new Group();
+  for (const name of names) {
+    const node = new Object3D();
+    node.name = name;
+    root.add(node);
+  }
+  return root;
+}
+const slotsFor = (names: readonly string[]) => Object.fromEntries(names.map((name) => [name, {}]));
+
+describe('readContract', () => {
+  it('takes every node and print a CD player needs, and the optional nodes it has', () => {
+    const root = rootWith([...REQUIRED_NODES, 'door_hinge']);
+    const { nodes, missing } = readContract(root, slotsFor(DYNAMIC_MATERIALS), 'cd');
+    expect(missing).toEqual([]);
+    for (const name of [...REQUIRED_NODES, 'door_hinge'])
+      expect(nodes[name]?.name, name).toBe(name);
+    expect(nodes.jog_ring).toBeUndefined();
+  });
+
+  it('names each missing node, then each missing print', () => {
+    const root = rootWith(REQUIRED_NODES.filter((name) => name !== 'knob' && name !== 'tag'));
+    const slots = slotsFor(DYNAMIC_MATERIALS.filter((name) => name !== 'lcd_screen'));
+    expect(readContract(root, slots, 'cd').missing).toEqual(['knob', 'tag', 'lcd_screen']);
+  });
+
+  it('holds a turntable to its own list, and a CD player to its own', () => {
+    const turntable = rootWith(TURNTABLE_NODES);
+    expect(readContract(turntable, slotsFor(TURNTABLE_MATERIALS), 'vinyl').missing).toEqual([]);
+    expect(readContract(turntable, slotsFor(['art_disc', 'card_print']), 'vinyl').missing).toEqual([
+      'art_sleeve',
+    ]);
+    expect(
+      readContract(rootWith(REQUIRED_NODES), slotsFor(DYNAMIC_MATERIALS), 'vinyl').missing,
+    ).toEqual(['platter', 'arm_head', 'sleeve', 'sleeve_seat', 'art_sleeve']);
+    expect(readContract(turntable, slotsFor(TURNTABLE_MATERIALS), 'cd').missing).toEqual([
+      ...CD_NODES,
+      'art_booklet',
+      'tag_print',
+      'lcd_screen',
+    ]);
   });
 });

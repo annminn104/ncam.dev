@@ -4,8 +4,17 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 import type { Look } from '../looks';
 import type { ModelId, ModelProfile } from '../models';
-import { OPTIONAL_NODES, REQUIRED_NODES, type OptionalNode, type RequiredNode } from './contract';
+import {
+  MATERIALS_BY_MEDIA,
+  NODES_BY_MEDIA,
+  OPTIONAL_NODES,
+  type Media,
+  type OptionalNode,
+  type PrintedMaterial,
+  type RequiredNode,
+} from './contract';
 import { upgradeMaterials, type OptionalSlots, type Slots } from './materials';
+import { SCENE_PROFILES } from './profiles';
 
 /** The file a model URL names, for the errors and the logs: its last path segment. */
 function modelFile(url: string): string {
@@ -25,6 +34,8 @@ export class ModelContractError extends Error {
 
 export interface PlayerModel {
   id: ModelId;
+  /** What it plays (its profile's): the contract it was held to. */
+  media: Media;
   root: Group;
   /** The contract's nodes, and the optional ones this GLB has. */
   nodes: Record<RequiredNode, Object3D> & Partial<Record<OptionalNode, Object3D>>;
@@ -95,6 +106,32 @@ export async function downloadModel(
 }
 
 /**
+ * The nodes `root` holds of the contract for `media` (src/scene/contract.ts), with the optional
+ * ones it has, and every name it lacks: first each node, then each printed material that `slots`
+ * (what upgradeMaterials found) has no material for. A print missing at load would otherwise fail
+ * only at its first paint.
+ */
+export function readContract(
+  root: Object3D,
+  slots: Readonly<Partial<Record<PrintedMaterial, unknown>>>,
+  media: Media,
+): { nodes: Partial<Record<string, Object3D>>; missing: string[] } {
+  const nodes: Partial<Record<string, Object3D>> = {};
+  const missing: string[] = [];
+  for (const name of NODES_BY_MEDIA[media]) {
+    const node = root.getObjectByName(name);
+    if (node) nodes[name] = node;
+    else missing.push(name);
+  }
+  for (const name of MATERIALS_BY_MEDIA[media]) if (!slots[name]) missing.push(name);
+  for (const name of OPTIONAL_NODES) {
+    const node = root.getObjectByName(name);
+    if (node) nodes[name] = node;
+  }
+  return { nodes, missing };
+}
+
+/**
  * Loads the player `profile` names; `onProgress` hears the GLB's download as it goes (see `downloadModel`),
  * and `signal` aborts the download (a scene that lets go of the load).
  */
@@ -109,18 +146,6 @@ export async function loadPlayerModel(
   loader.setMeshoptDecoder(MeshoptDecoder);
   const gltf = await loader.parseAsync(data, LoaderUtils.extractUrlBase(url));
   const root = gltf.scene;
-  const nodes = {} as PlayerModel['nodes'];
-  const missing: string[] = [];
-  for (const name of REQUIRED_NODES) {
-    const node = root.getObjectByName(name);
-    if (node) nodes[name] = node;
-    else missing.push(name);
-  }
-  if (missing.length) throw new ModelContractError(missing, modelFile(url));
-  for (const name of OPTIONAL_NODES) {
-    const node = root.getObjectByName(name);
-    if (node) nodes[name] = node;
-  }
   root.traverse((object) => {
     const mesh = object as Mesh;
     if (mesh.isMesh) {
@@ -129,12 +154,19 @@ export async function loadPlayerModel(
     }
   });
   const materials = upgradeMaterials(root);
+  const media = SCENE_PROFILES[profile.id].media;
+  const { nodes, missing } = readContract(root, materials.slots, media);
+  if (missing.length) {
+    materials.dispose();
+    throw new ModelContractError(missing, modelFile(url));
+  }
   root.updateMatrixWorld(true);
   return {
     id: profile.id,
+    media,
     root,
-    nodes,
-    slots: materials.slots,
+    nodes: nodes as Record<RequiredNode, Object3D> & Partial<Record<OptionalNode, Object3D>>,
+    slots: materials.slots as Slots,
     optionalSlots: materials.optionalSlots,
     applyLook: materials.applyLook,
     dispose: () => {
