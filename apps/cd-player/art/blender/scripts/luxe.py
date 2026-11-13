@@ -7,7 +7,7 @@ luxe_arm.py (the tonearm) and luxe_stand.py (the record stand and the ledge), wh
 make_luxe_player calls, so all three are exec'd before it runs. Blender's axes as in parts.py: x
 right, y away from the viewer (the front faces -y), z up, millimetres through L(x, y, z). The
 deck's footprint is centred on the origin, standing on the floor on its four feet; the stand stands
-on its right, turned toward it, the ledge behind it on the left.
+on its right, square to it, the ledge behind it, behind the platter.
 
 The plinth is two lacquered tiers with rounded corners, a thin metal band proud round the top edge
 of each, a metal frame along the top's outline, on four metal feet ringed in rubber (luxe_plinth).
@@ -337,6 +337,8 @@ def make_luxe_player(name, disc_label, sleeve_art, look, rack_sleeves=None, play
     make_stand(name + "_stand", root, rack_sleeves, playlist, WEB)
     make_ledge(name + "_ledge", root)
     # Leaning back 15 degrees on the ledge: its front face's bottom edge just behind the lip (its
-    # mid-thickness 1.6 mm behind it), 0.5 mm over the bar, its back 0.4 mm off the legs.
-    make_sleeve(name + "_sleeve", sleeve_art, L(-150, 249.7, 158.2), (math.radians(75), 0, 0), parent=root)
+    # mid-thickness 1.6 mm behind it), 0.5 mm over the bar, its back 0.4 mm off the legs; its
+    # middle over the ledge's.
+    make_sleeve(name + "_sleeve", sleeve_art, L(LEDGE_AT[0], LEDGE_AT[1] + 44.7, 158.2), (math.radians(75), 0, 0),
+                parent=root)
     return root

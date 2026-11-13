@@ -5,12 +5,15 @@ Needs cdkit's, parts.py's, vinyl.py's and luxe.py's namespace (exec'd after luxe
 are vinyl.py's make_sleeve, the colours luxe.py's materials). Blender's axes as in parts.py,
 millimetres through L(x, y, z).
 
-The stand (`<name>`, its root on the floor at LS_AT, turned LS_TURN toward the deck and the
-viewer, as the Clear's stand is) is lacquered as the deck's body, its rails and bar metal. In its
-own frame (its front toward -y): five steps rising backward (`<name>_step_k`, a staircase whose
-step 0's front is the stand's front, nothing in front of it), a side panel either side of them
-(`<name>_panel_l`, `_r`) with a metal rail along its sloping top, and the back bar
-(`<name>_bar`) high at the back on two posts. The five rack slots (`<name>_rack_slot_k`, empties
+The stand (`<name>`, its root on the floor at LS_AT, square to the deck and facing the viewer:
+LS_TURN is 0) is lacquered as the deck's body, its rails and bar metal. A record and its sleeve
+leave a slot along its face, so the stand faces the viewer: turned toward the deck, a sleeve
+leaving it would run into the plinth beside it. In its own frame (its front toward -y): five steps
+rising backward (`<name>_step_k`, a staircase whose step 0's front is the stand's front, nothing
+in front of it), a low side panel either side of them (`<name>_panel_l`, `_r`, no taller than
+100 mm: a sleeve has 10 mm to each, and on its way to the ledge it is drawn sideways before it is
+out of the stand) with a metal rail along its sloping top, and the back bar (`<name>_bar`) high
+at the back on two posts. The five rack slots (`<name>_rack_slot_k`, empties
 in the record's frame) each hold a sleeve leaning back LS_LEAN, its bottom edge just behind step
 k's front edge and over its top, the record inside it: the first shows its whole cover, the
 others their top edges, LS_RISE apart; slot 4's leans on the bar. A render stands a sleeve in each
@@ -18,14 +21,16 @@ slot; the web build carries the slots empty, for the page to fill. The plaque on
 (`<name>_card`, an empty holding the page's `<name>_card_print`, 112 x 20 mm: the canvas's
 1024 x 182; a render letters it) carries the collection's name.
 
-The ledge (`<name>`, at (-150, 205) behind the deck, unturned) is a small metal easel: a bar on
+The ledge (`<name>`, at LEDGE_AT behind the platter, unturned) is a small metal easel: a bar on
 the floor, a lip along its front and two legs leaning back LS_LEAN, which the playing record's
-sleeve (make_luxe_player's `<player>_sleeve`) stands on, facing the viewer.
+sleeve (make_luxe_player's `<player>_sleeve`) stands on, facing the viewer. Behind the platter its
+sleeve's ends lie within the deck's width, so the whole set (the deck, the stand and the ledge) is
+0.82 m wide, which the page's camera frames on every canvas.
 """
 import math
 
 LS_AT = (420.0, 60.0)                 # the stand's root on the floor, right of the deck
-LS_TURN = math.radians(-18.0)         # turned toward the deck and the viewer, as the Clear's stand is
+LS_TURN = 0.0                         # square to the deck, facing the viewer
 LS_PITCH = 34.0                       # a step's depth: each slot 34 mm behind the one in front ...
 LS_RISE = 12.0                        # ... and 12 mm higher
 LS_BASE = 30.0                        # step 0's top
@@ -33,11 +38,11 @@ LS_INNER = 165.0                      # the steps span x +-165, between the side
 LS_FRONT = -85.0                      # step 0's front: the stand's front
 LS_BACK = 105.0                       # the last step's back: the stand's back
 LS_LEAN = math.radians(15.0)          # every sleeve leans back 15 degrees from upright
-LS_PANEL = (10.0, 90.0, 170.0)        # the side panels: thickness, height at the front, at the back
+LS_PANEL = (10.0, 60.0, 100.0)        # the side panels: thickness, height at the front, at the back
 LS_BAR = (93.0, 210.0, 4.0)           # the back bar: y, z, radius
 LS_SIDE = (math.radians(90), 0.0, math.radians(90))   # as deck.py's DK_SIDE: local x back, y up, z right
 LS_CARD = (15.0, 118.0, 26.0)         # the plaque: its middle's height on step 0's front, its plate
-LEDGE_AT = (-150.0, 205.0)            # the ledge's root on the floor, behind the deck at the platter's left
+LEDGE_AT = (-45.0, 205.0)             # the ledge's root on the floor, behind the deck, behind the platter
 LEDGE_BAR = (200.0, 24.0, 8.0)        # its bar: width, depth, height, its front at the root
 LEDGE_LIP = (3.0, 4.0)                # the lip along the bar's front: depth, height
 LEDGE_LEG = (80.0, 9.0, 2.5, 248.0)   # the legs: x either side, y on the bar, radius, the top's height
@@ -104,7 +109,7 @@ def stand_card(name, stand, playlist, web):
 
 
 def make_stand(name, root, rack_sleeves, playlist, web):
-    """The record stand under its root, the empty `name`, right of the deck and turned toward it:
+    """The record stand under its root, the empty `name`, right of the deck and square to it:
     its body, the five rack slots (a render stands a sleeve printed with rack_sleeves[k] in each;
     the record inside it is hidden by it, so a render leaves it out) and the plaque."""
     stand = empty(name, L(LS_AT[0], LS_AT[1], 0.0), (0.0, 0.0, LS_TURN), parent=root)

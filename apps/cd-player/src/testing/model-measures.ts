@@ -22,7 +22,7 @@ export const BOXES = {
   suitcase: { min: [-0.152, -0.003, -0.199], max: [0.152, 0.319, 0.152] },
   clear: { min: [-0.316, -0.001, -0.09], max: [0.333, 0.279, 0.069] },
   deck: { min: [-0.161, -0.001, -0.225], max: [0.417, 0.282, 0.224] },
-  luxe: { min: [-0.305, -0.001, -0.292], max: [0.619, 0.379, 0.191] },
+  luxe: { min: [-0.226, -0.001, -0.292], max: [0.596, 0.379, 0.191] },
 } as const satisfies Record<string, { min: Vec3; max: Vec3 }>;
 
 /**
@@ -186,10 +186,13 @@ export const LUXE_ARM = {
 /** Where the needle stands from the spindle at the lead-in and at the run-out (m). */
 export const LUXE_GROOVES = { leadIn: 0.146, runOut: 0.06 } as const;
 
-/** Luxe's record stand (`luxe_stand`), right of the deck and turned 18° toward it. */
+/**
+ * Luxe's record stand (`luxe_stand`), right of the deck and square to it, facing the viewer: a
+ * record and its sleeve leave a slot along its face, toward the viewer, never into the plinth.
+ */
 export const LUXE_STAND = {
   position: [0.42, 0, -0.06],
-  rotationY: (-18 * Math.PI) / 180,
+  rotationY: 0,
 } as const satisfies { position: Vec3; rotationY: number };
 
 /**
@@ -208,26 +211,30 @@ export const LUXE_STEPS: readonly Box[] = [0, 1, 2, 3, 4].map((k): Box => ({
   max: [0.165, 0.03 + 0.012 * k, 0.085 - 0.034 * k],
 }));
 
-/** The stand's side panels (`luxe_stand_panel_l`, `_r`), in its own frame. */
+/**
+ * The stand's side panels (`luxe_stand_panel_l`, `_r`), in its own frame: low (60 mm at the front,
+ * 100 mm at the back), 10 mm beside a sleeve.
+ */
 export const LUXE_PANELS: readonly [Box, Box] = [
-  { min: [-0.175, -0.0003, -0.10545], max: [-0.165, 0.17068, 0.08529] },
-  { min: [0.165, -0.0003, -0.10545], max: [0.175, 0.17068, 0.08529] },
+  { min: [-0.175, -0.0003, -0.10537], max: [-0.165, 0.10046, 0.08529] },
+  { min: [0.165, -0.0003, -0.10537], max: [0.175, 0.10046, 0.08529] },
 ];
 
 /** The stand's back bar (`luxe_stand_bar`), in its own frame, which slot 4's sleeve leans on. */
 export const LUXE_BAR: Box = { min: [-0.176, 0.206, -0.097], max: [0.176, 0.214, -0.089] };
 
 /**
- * Luxe's ledge behind the deck: the playing record's sleeve seat (`sleeve_seat`, where the
+ * Luxe's ledge behind the deck, behind the platter (its bar 14 mm behind the plinth, its sleeve's
+ * ends within the deck's width): the playing record's sleeve seat (`sleeve_seat`, where the
  * template `sleeve` stands too), and the easel's bar, lip and legs, in world space.
  */
 export const LUXE_LEDGE = {
-  seat: { position: [-0.15, 0.1582, -0.2497], rotationX: (75 * Math.PI) / 180 },
-  bar: { min: [-0.25, 0, -0.229], max: [-0.05, 0.008, -0.205] },
-  lip: { min: [-0.25, 0.008, -0.208], max: [-0.05, 0.012, -0.205] },
+  seat: { position: [-0.045, 0.1582, -0.2497], rotationX: (75 * Math.PI) / 180 },
+  bar: { min: [-0.145, 0, -0.229], max: [0.055, 0.008, -0.205] },
+  lip: { min: [-0.145, 0.008, -0.208], max: [0.055, 0.012, -0.205] },
   legs: [
-    { min: [-0.23249, 0.00535, -0.28073], max: [-0.22751, 0.24865, -0.21104] },
-    { min: [-0.07249, 0.00535, -0.28073], max: [-0.06751, 0.24865, -0.21104] },
+    { min: [-0.12749, 0.00535, -0.28073], max: [-0.12251, 0.24865, -0.21104] },
+    { min: [0.03251, 0.00535, -0.28073], max: [0.03749, 0.24865, -0.21104] },
   ],
 } as const satisfies {
   seat: { position: Vec3; rotationX: number };

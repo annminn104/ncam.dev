@@ -33,9 +33,10 @@ export const TEST_TURNTABLE: SceneProfile = {
 
 /**
  * The nodes the rig moves on a turntable, placed about as on Luxe (three's axes, metres): the
- * record on the platter and its seat, the template sleeve on the ledge and its seat, the stand
- * right of the deck turned 18° toward it with the five slots in it, the tonearm with its head,
- * the six keys and the plate. Its id is the suitcase's: the rig takes TEST_TURNTABLE as its profile.
+ * record on the platter and its seat, the template sleeve on the ledge behind the platter and its
+ * seat, the stand right of the deck and square to it with the five slots in it, the tonearm with
+ * its head, the six keys and the plate. Its id is the suitcase's: the rig takes TEST_TURNTABLE as
+ * its profile.
  */
 export function fakeTurntable() {
   const label = new MeshPhysicalMaterial({ name: 'art_disc' });
@@ -73,13 +74,12 @@ export function fakeTurntable() {
   cover.position.y = 0.0016;
   sleeve.add(cover);
   const sleeveSeat = named(new Object3D(), 'sleeve_seat');
-  sleeveSeat.position.set(-0.15, 0.158, -0.245);
+  sleeveSeat.position.set(-0.045, 0.158, -0.245);
   sleeveSeat.rotation.set((75 * Math.PI) / 180, 0, 0);
   sleeve.position.copy(sleeveSeat.position);
   sleeve.quaternion.copy(sleeveSeat.quaternion);
   const stand = named(new Group(), 'luxe_stand');
   stand.position.set(0.42, 0, -0.06);
-  stand.rotation.y = (-18 * Math.PI) / 180;
   const nodes: Partial<Record<TurntableNode, Object3D>> = {
     disc,
     disc_seat: seat,
