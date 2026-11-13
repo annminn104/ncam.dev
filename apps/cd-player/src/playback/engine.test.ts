@@ -96,10 +96,13 @@ function setup(options: SetupOptions = {}) {
   const timers: (() => void)[] = [];
   const delays: number[] = [];
   const cleared: unknown[] = [];
+  // The engine's clock (ms), moved on by `tick`.
+  let clock = 0;
   const engine = new PlayerEngine({
     client,
     bridge,
     createPlayer,
+    now: () => clock,
     ...(options.realTimers
       ? {}
       : {
@@ -128,6 +131,7 @@ function setup(options: SetupOptions = {}) {
     failSwap: () => failSwap(),
     swaps,
     cb: () => callbacks!,
+    tick: (ms: number) => void (clock += ms),
   };
 }
 
@@ -196,6 +200,69 @@ describe('PlayerEngine', () => {
     expect(engine.getSnapshot().seq.status).toBe('playing');
   });
 
+  // Seen live: the scene can be up, and Play pressed, before the collection's tracks are in.
+  describe('a play pressed while the collection still loads', () => {
+    function loading() {
+      const ctx = setup();
+      let land: () => void = () => {};
+      let refuse: () => void = () => {};
+      vi.mocked(ctx.client.collection).mockReturnValueOnce(
+        new Promise((resolve, reject) => {
+          land = () => resolve(collection);
+          refuse = () => reject(new SpotifyRequestError('upstream', 502));
+        }),
+      );
+      ctx.engine.open(ref);
+      return { ...ctx, land: () => land(), refuse: () => refuse() };
+    }
+
+    it('plays once the tracks are in', async () => {
+      const { engine, flush, createPlayer, land } = loading();
+      engine.user({ type: 'TOGGLE' });
+      expect(createPlayer).not.toHaveBeenCalled();
+      land();
+      await flush();
+      expect(createPlayer).toHaveBeenCalledWith('spotify:track:a', expect.anything());
+      expect(engine.getSnapshot().seq).toMatchObject({ status: 'swapping', cursor: 0 });
+    });
+
+    it('takes a second press back, and a Stop', async () => {
+      for (const second of [{ type: 'TOGGLE' }, { type: 'STOP' }] as SeqEvent[]) {
+        const { engine, flush, createPlayer, land } = loading();
+        engine.user({ type: 'TOGGLE' });
+        engine.user(second);
+        land();
+        await flush();
+        expect(createPlayer).not.toHaveBeenCalled();
+        expect(engine.getSnapshot().seq.status).toBe('idle');
+      }
+    });
+
+    it('does not carry it to another collection opened before the first lands', async () => {
+      const { engine, flush, createPlayer, land, client } = loading();
+      engine.user({ type: 'TOGGLE' });
+      engine.open({ type: 'album', id: 'other' });
+      await flush();
+      land();
+      await flush();
+      expect(client.collection).toHaveBeenCalledTimes(2);
+      expect(engine.getSnapshot().collection).not.toBeNull();
+      expect(createPlayer).not.toHaveBeenCalled();
+      expect(engine.getSnapshot().seq.status).toBe('idle');
+    });
+
+    it('forgets it when the collection fails, so a later load does not start by itself', async () => {
+      const { engine, flush, createPlayer, refuse } = loading();
+      engine.user({ type: 'TOGGLE' });
+      refuse();
+      await flush();
+      engine.open(ref);
+      await flush();
+      expect(engine.getSnapshot().collection).not.toBeNull();
+      expect(createPlayer).not.toHaveBeenCalled();
+    });
+  });
+
   it('asks for a press in the widget when playback does not start, and drops the hint when it does', async () => {
     const { engine, flush, swap, timers, cb } = setup();
     engine.open(ref);
@@ -231,6 +298,156 @@ describe('PlayerEngine', () => {
     cb().onEnded();
     expect(engine.getSnapshot().seq.status).toBe('swapping');
     expect(bridge.getView().current?.id).toBe('b');
+  });
+
+  // Right after a seek the embed posts its last report once more (seen live: the same position,
+  // ~15 ms after the seek), and the report from the target comes ~0.8 s later.
+  describe('a seek and the embed’s echo of its last report', () => {
+    const at = (positionMs: number, paused = false, uri = 'spotify:track:a') => ({
+      uri,
+      paused,
+      buffering: false,
+      positionMs,
+      durationMs: 30_000,
+    });
+    async function playingA() {
+      const ctx = setup();
+      ctx.engine.open(ref);
+      await ctx.flush();
+      ctx.engine.user({ type: 'PLAY' });
+      await ctx.flush();
+      ctx.swap();
+      await ctx.flush();
+      ctx.cb().onStarted('spotify:track:a');
+      ctx.cb().onUpdate(at(4047));
+      return ctx;
+    }
+
+    it.each([
+      { way: 'forward', to: 14_856, landed: 14_732 },
+      { way: 'back', to: 1500, landed: 1480 },
+    ])('keeps a seek $way through the echo, then takes the report from the target', async (t) => {
+      const { engine, bridge, cb, tick, flush } = await playingA();
+      engine.user({ type: 'SEEK', ms: t.to });
+      await flush();
+      tick(15);
+      cb().onUpdate(at(4047));
+      expect(engine.getSnapshot().seq.positionMs).toBe(t.to);
+      expect(bridge.getView().positionMs).toBe(t.to);
+      tick(785);
+      cb().onUpdate(at(t.landed));
+      expect(bridge.getView().positionMs).toBe(t.landed);
+      // Landed: any report counts again.
+      tick(1000);
+      cb().onUpdate(at(t.landed - 900));
+      expect(bridge.getView().positionMs).toBe(t.landed - 900);
+    });
+
+    it('takes the embed’s word again when no report reaches the target within 1.5 s', async () => {
+      const { engine, bridge, cb, tick, flush } = await playingA();
+      engine.user({ type: 'SEEK', ms: 20_000 });
+      await flush();
+      tick(1600);
+      cb().onUpdate(at(5600));
+      expect(bridge.getView().positionMs).toBe(5600);
+    });
+
+    it('lets a pause through inside the wait, which clears the watch on the end', async () => {
+      // The Spotify card's own pause, reported from where the embed was, 0.3 s after a seek.
+      const ctx = await playingA();
+      const { engine, cb, tick, flush, timers, delays } = ctx;
+      const watch = delays.lastIndexOf(30_000 - 4047 + 1500);
+      engine.user({ type: 'SEEK', ms: 14_856 });
+      await flush();
+      tick(300);
+      cb().onUpdate(at(4300, true));
+      // The report's own position is from before the seek: the slider keeps the seek's target.
+      expect(engine.getSnapshot().seq).toMatchObject({ status: 'paused', positionMs: 14_856 });
+      // The watch armed before the seek is cleared: going off now it ends nothing.
+      timers[watch]();
+      expect(engine.getSnapshot().seq).toMatchObject({ status: 'paused', cursor: 0 });
+    });
+
+    it('lets the embed’s answer to a pause pressed on the page through inside the wait', async () => {
+      const { engine, cb, tick, flush, timers, delays } = await playingA();
+      const watch = delays.lastIndexOf(30_000 - 4047 + 1500);
+      engine.user({ type: 'SEEK', ms: 14_856 });
+      engine.user({ type: 'PAUSE' });
+      await flush();
+      tick(40);
+      cb().onUpdate(at(4080, true));
+      timers[watch]();
+      expect(engine.getSnapshot().seq).toMatchObject({ status: 'paused', cursor: 0 });
+    });
+
+    it('ignores a buffering report inside the wait, which neither settles it nor lets the echo by', async () => {
+      const { engine, bridge, cb, tick, flush } = await playingA();
+      engine.user({ type: 'SEEK', ms: 14_856 });
+      await flush();
+      tick(10);
+      cb().onUpdate({ ...at(4047), buffering: true });
+      tick(10);
+      cb().onUpdate(at(4047));
+      expect(bridge.getView().positionMs).toBe(14_856);
+    });
+
+    it('keeps a Stop through the embed’s playing reports just after it', async () => {
+      // Stop 0.6 s into a track: the echo (playing, 600) and a report in flight (playing, 640)
+      // are both within a second of the start, and neither may end the stop.
+      const { engine, cb, tick, flush } = await playingA();
+      cb().onUpdate(at(600));
+      engine.user({ type: 'STOP' });
+      await flush();
+      tick(15);
+      cb().onUpdate(at(600));
+      tick(15);
+      cb().onUpdate(at(1000, true));
+      tick(10);
+      cb().onUpdate(at(640));
+      expect(engine.getSnapshot().seq).toMatchObject({ status: 'paused', stopped: true });
+    });
+
+    it('ends a Stop with a play: one sent from the page, or the card’s own after the wait', async () => {
+      const sent = await playingA();
+      sent.engine.user({ type: 'STOP' });
+      await sent.flush();
+      sent.tick(28);
+      sent.cb().onUpdate(at(1000, true));
+      sent.engine.user({ type: 'TOGGLE' });
+      sent.tick(200);
+      sent.cb().onUpdate(at(1190));
+      expect(sent.engine.getSnapshot().seq).toMatchObject({ status: 'playing', stopped: false });
+
+      const card = await playingA();
+      card.engine.user({ type: 'STOP' });
+      await card.flush();
+      card.tick(28);
+      card.cb().onUpdate(at(1000, true));
+      card.tick(1600);
+      card.cb().onUpdate(at(1300));
+      expect(card.engine.getSnapshot().seq).toMatchObject({ status: 'playing', stopped: false });
+    });
+
+    it('takes Stop’s paused report at the embed’s first second', async () => {
+      const { engine, bridge, cb, tick, flush } = await playingA();
+      engine.user({ type: 'STOP' });
+      await flush();
+      tick(28);
+      cb().onUpdate(at(1000, true));
+      expect(bridge.getView()).toMatchObject({ status: 'paused', positionMs: 1000 });
+    });
+
+    it('lets a new track’s reports through at once', async () => {
+      const { engine, bridge, cb, tick, flush, swap } = await playingA();
+      engine.user({ type: 'SEEK', ms: 14_856 });
+      engine.user({ type: 'NEXT' });
+      await flush();
+      swap();
+      await flush();
+      tick(300);
+      cb().onUpdate(at(500, false, 'spotify:track:b'));
+      expect(bridge.getView()).toMatchObject({ status: 'playing', positionMs: 500 });
+    });
   });
 
   it('takes the scene keys', async () => {

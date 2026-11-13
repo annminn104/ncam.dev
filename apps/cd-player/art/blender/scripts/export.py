@@ -1,8 +1,8 @@
 """blender --background --factory-startup --python export.py -- --out <file.glb>
 
-Builds the web scene of the model CDP_MODEL names (build_player.py, build_clear.py or
-build_deck.py) into the startup scene, turns curves and text into meshes, gives the tiled and
-printed materials UVs, and writes a GLB. art/pipeline/build.mjs runs it.
+Builds the web scene of the model CDP_MODEL names (build_player.py, build_clear.py,
+build_deck.py or build_luxe.py) into the startup scene, turns curves and text into meshes, gives
+the tiled and printed materials UVs, and writes a GLB. art/pipeline/build.mjs runs it.
 """
 import os
 import sys
@@ -18,9 +18,11 @@ MODEL = os.environ.get("CDP_MODEL", "suitcase")
 SCRIPTS = {"suitcase": ("cdkit.py", "parts.py", "build_player.py"),
            "clear": ("cdkit.py", "parts.py", "clear.py", "clear_board.py", "clear_decor.py", "build_clear.py"),
            "deck": ("cdkit.py", "parts.py", "deck.py", "deck_panel.py", "deck_case.py", "deck_print.py",
-                    "build_deck.py")}
+                    "build_deck.py"),
+           "luxe": ("cdkit.py", "parts.py", "vinyl.py", "luxe.py", "luxe_arm.py", "luxe_stand.py",
+                    "build_luxe.py")}
 if MODEL not in SCRIPTS:
-    raise SystemExit("export.py: CDP_MODEL must be suitcase, clear or deck, not %r" % MODEL)
+    raise SystemExit("export.py: CDP_MODEL must be suitcase, clear, deck or luxe, not %r" % MODEL)
 for _file in SCRIPTS[MODEL]:
     exec(compile(open(os.path.join(HERE, _file)).read(), _file, "exec"), globals())
 WEB = True  # cdkit's functions read it at call time
@@ -28,7 +30,7 @@ WEB = True  # cdkit's functions read it at call time
 # Box-mapped at TILE_M per UV unit: the page tiles its grain, quilt and weave maps over these.
 TILED = {"leather", "trim", "lining", "fabric", "strap", "deck", "grille"}
 # Planar over the mesh's own XY bounds: the canvas the page paints covers each print exactly.
-PLANAR = {"art_disc", "art_booklet", "card_print", "tag_print", "lcd_screen"}
+PLANAR = {"art_disc", "art_booklet", "art_sleeve", "card_print", "tag_print", "lcd_screen"}
 TILE_M = 0.05
 
 

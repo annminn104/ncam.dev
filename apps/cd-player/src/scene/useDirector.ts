@@ -1,9 +1,9 @@
 import { createLogger } from '@ncam/logger';
 import { useFrame } from '@react-three/fiber';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { SceneBridge } from '../bridge';
 import { posePlan, restingArm, restingPose, type Timeline } from './director';
-import { applyPose, type Rig } from './rig';
+import { applyPose, isTurntableRig, turntableRestFor, type Rig } from './rig';
 import {
   createSwapController,
   type DiscPrinter,
@@ -78,6 +78,7 @@ function report(
  */
 export function useDirector(rig: Rig, bridge: SceneBridge, printer: DiscPrinter): void {
   const changes = useRef<SwapController | null>(null);
+  const [reduced] = useState(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 
   useEffect(() => {
     const controller = createSwapController({
@@ -86,6 +87,7 @@ export function useDirector(rig: Rig, bridge: SceneBridge, printer: DiscPrinter)
       view: bridge.getView,
       reduced: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
       door: rig.door !== null,
+      booklet: rig.case !== null,
       hidden: () => document.hidden,
       clock,
       onPrintFailed: (error, view) =>
@@ -118,8 +120,11 @@ export function useDirector(rig: Rig, bridge: SceneBridge, printer: DiscPrinter)
     controller?.follow(view);
     const loaded = view.status === 'playing' || view.status === 'paused';
     const playing = view.status === 'playing';
-    const rest = restingArm(rig.shelf.spindle !== null, loaded, playing);
+    // A turntable's arm tracks the position and lifts when paused; a CD player's rests on the disc.
+    const rest = isTurntableRig(rig)
+      ? turntableRestFor(rig, view, reduced ? Infinity : dt, performance.now())
+      : restingArm(rig.shelf.spindle !== null, loaded, playing);
     if (controller?.frame((plan, t) => applyPose(rig, posePlan(plan, t, rest), dt))) return;
-    applyPose(rig, restingPose(rig.shelf, loaded, playing), dt);
+    applyPose(rig, restingPose(rig.shelf, loaded, playing, rest), dt);
   });
 }

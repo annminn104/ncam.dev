@@ -5,12 +5,14 @@ import {
   CLEAR_KEY,
   DECK_KEY,
   LOOK_SCRIPT,
+  LUXE_KEY,
   MODEL_KEY,
   PERSONAL_KEY,
   readClearLook,
   readDeckLook,
   readLast,
   readLookState,
+  readLuxeLook,
   readModel,
   readPersonal,
   readSkin,
@@ -21,11 +23,13 @@ import {
   writeClearLook,
   writeDeckLook,
   writeLast,
+  writeLuxeLook,
   writeModel,
   writePersonal,
   writeSkin,
 } from './persist';
 import { DECK_SWATCHES, DEFAULT_DECK_LOOK } from './deck-looks';
+import { DEFAULT_LUXE_LOOK, LUXE_SWATCHES } from './luxe-looks';
 import { DEFAULT_PERSONAL } from './personal';
 import { DEFAULT_COLLECTION, type CollectionRef } from './routes';
 import { SKINS } from './skins';
@@ -157,6 +161,24 @@ describe('the saved model and the Clear model’s colours', () => {
     expect(() => writeDeckLook(broken, look)).not.toThrow();
   });
 
+  it('round-trips Luxe’s look as JSON, part by part', () => {
+    const storage = memory();
+    const look = { body: 'rose', metal: 'chrome', light: 'amber' };
+    writeLuxeLook(storage, look);
+    expect(LUXE_KEY).toBe('ncam.cd-player.luxe');
+    expect(readLuxeLook(storage)).toEqual(look);
+    expect(readLuxeLook(memory({ [LUXE_KEY]: '{"body":"rose","metal":"brass"}' }))).toEqual({
+      ...DEFAULT_LUXE_LOOK,
+      body: 'rose',
+    });
+    for (const junk of ['{nope', '"luxe"', 'null', '[]']) {
+      expect(readLuxeLook(memory({ [LUXE_KEY]: junk })), junk).toEqual(DEFAULT_LUXE_LOOK);
+    }
+    expect(readLuxeLook(null)).toEqual(DEFAULT_LUXE_LOOK);
+    expect(readLuxeLook(broken)).toEqual(DEFAULT_LUXE_LOOK);
+    expect(() => writeLuxeLook(broken, look)).not.toThrow();
+  });
+
   it('round-trips the visitor’s pattern and name as JSON', () => {
     const storage = memory();
     const personal = { pattern: 'circuit' as const, name: 'Lan Anh' };
@@ -178,6 +200,7 @@ describe('the saved model and the Clear model’s colours', () => {
       [SKIN_KEY]: 'sage',
       [CLEAR_KEY]: '{"light":"lime"}',
       [DECK_KEY]: '{"light":"red"}',
+      [LUXE_KEY]: '{"metal":"rose"}',
       [PERSONAL_KEY]: '{"pattern":"waves","name":"Lan"}',
     });
     expect(readLookState(storage)).toEqual({
@@ -185,6 +208,7 @@ describe('the saved model and the Clear model’s colours', () => {
       skin: 'sage',
       clear: { ...DEFAULT_CLEAR_LOOK, light: 'lime' },
       deck: { ...DEFAULT_DECK_LOOK, light: 'red' },
+      luxe: { ...DEFAULT_LUXE_LOOK, metal: 'rose' },
       personal: { pattern: 'waves', name: 'Lan' },
     });
   });
@@ -256,6 +280,27 @@ describe('LOOK_SCRIPT', () => {
       const store: Record<string, string> = { [MODEL_KEY]: 'clear' };
       if (junk !== undefined) store[CLEAR_KEY] = junk;
       expect(paint(memory(store)), String(junk)).toEqual(pair(DEFAULT_CLEAR_LOOK.light));
+    }
+  });
+
+  it('paints the saved light’s pair on Luxe, its default light’s for junk', () => {
+    const pair = (id: string) => {
+      const light = LUXE_SWATCHES.light.find((l) => l.id === id)!;
+      return { '--cdp-accent': light.accent, '--cdp-on-accent': light.onAccent };
+    };
+    expect(paint(memory({ [MODEL_KEY]: 'luxe', [LUXE_KEY]: '{"light":"amber"}' }))).toEqual(
+      pair('amber'),
+    );
+    for (const junk of [
+      undefined,
+      '{nope',
+      '{"light":"neon"}',
+      '{"light":"__proto__"}',
+      '{"light":"lime"}',
+    ]) {
+      const store: Record<string, string> = { [MODEL_KEY]: 'luxe' };
+      if (junk !== undefined) store[LUXE_KEY] = junk;
+      expect(paint(memory(store)), String(junk)).toEqual(pair(DEFAULT_LUXE_LOOK.light));
     }
   });
 

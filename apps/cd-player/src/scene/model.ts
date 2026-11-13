@@ -4,8 +4,18 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 import type { Look } from '../looks';
 import type { ModelId, ModelProfile } from '../models';
-import { OPTIONAL_NODES, REQUIRED_NODES, type OptionalNode, type RequiredNode } from './contract';
-import { upgradeMaterials, type OptionalSlots, type Slots } from './materials';
+import {
+  MATERIALS_BY_MEDIA,
+  NODES_BY_MEDIA,
+  OPTIONAL_NODES,
+  type Media,
+  type OptionalNode,
+  type PrintedMaterial,
+  type RequiredNode,
+  type TurntableNode,
+} from './contract';
+import { upgradeMaterials, type OptionalSlots, type Slots, type TurntableSlots } from './materials';
+import { SCENE_PROFILES } from './profiles';
 
 /** The file a model URL names, for the errors and the logs: its last path segment. */
 function modelFile(url: string): string {
@@ -23,18 +33,32 @@ export class ModelContractError extends Error {
   }
 }
 
-export interface PlayerModel {
+/** What every loaded model has, whatever it plays. */
+interface LoadedModel {
   id: ModelId;
   root: Group;
-  /** The contract's nodes, and the optional ones this GLB has. */
-  nodes: Record<RequiredNode, Object3D> & Partial<Record<OptionalNode, Object3D>>;
-  slots: Slots;
-  /** The optional dynamic materials this GLB has (the deck's LED ring). */
+  /** The optional dynamic materials this GLB has (the LED ring, the Deck's print layer). */
   optionalSlots: OptionalSlots;
   /** Recolours the model for `look` in place: no reload, no new download (materials.ts). */
   applyLook(look: Look): void;
   dispose(): void;
 }
+
+/** A CD player: a CD player's nodes (src/scene/contract.ts), the optional ones it has, its five prints. */
+export interface CdModel extends LoadedModel {
+  media: 'cd';
+  nodes: Record<RequiredNode, Object3D> & Partial<Record<OptionalNode, Object3D>>;
+  slots: Slots;
+}
+
+/** A turntable: a turntable's nodes, the optional ones it has, its three prints. */
+export interface VinylModel extends LoadedModel {
+  media: 'vinyl';
+  nodes: Record<TurntableNode, Object3D> & Partial<Record<OptionalNode, Object3D>>;
+  slots: TurntableSlots;
+}
+
+export type PlayerModel = CdModel | VinylModel;
 
 /** What a progress event of the download carries (`ProgressEvent`'s fields). */
 export type DownloadProgress = Pick<ProgressEvent, 'lengthComputable' | 'loaded' | 'total'>;
@@ -95,6 +119,32 @@ export async function downloadModel(
 }
 
 /**
+ * The nodes `root` holds of the contract for `media` (src/scene/contract.ts), with the optional
+ * ones it has, and every name it lacks: first each node, then each printed material that `slots`
+ * (what upgradeMaterials found) has no material for. A print missing at load would otherwise fail
+ * only at its first paint.
+ */
+export function readContract(
+  root: Object3D,
+  slots: Readonly<Partial<Record<PrintedMaterial, unknown>>>,
+  media: Media,
+): { nodes: Partial<Record<string, Object3D>>; missing: string[] } {
+  const nodes: Partial<Record<string, Object3D>> = {};
+  const missing: string[] = [];
+  for (const name of NODES_BY_MEDIA[media]) {
+    const node = root.getObjectByName(name);
+    if (node) nodes[name] = node;
+    else missing.push(name);
+  }
+  for (const name of MATERIALS_BY_MEDIA[media]) if (!slots[name]) missing.push(name);
+  for (const name of OPTIONAL_NODES) {
+    const node = root.getObjectByName(name);
+    if (node) nodes[name] = node;
+  }
+  return { nodes, missing };
+}
+
+/**
  * Loads the player `profile` names; `onProgress` hears the GLB's download as it goes (see `downloadModel`),
  * and `signal` aborts the download (a scene that lets go of the load).
  */
@@ -109,18 +159,6 @@ export async function loadPlayerModel(
   loader.setMeshoptDecoder(MeshoptDecoder);
   const gltf = await loader.parseAsync(data, LoaderUtils.extractUrlBase(url));
   const root = gltf.scene;
-  const nodes = {} as PlayerModel['nodes'];
-  const missing: string[] = [];
-  for (const name of REQUIRED_NODES) {
-    const node = root.getObjectByName(name);
-    if (node) nodes[name] = node;
-    else missing.push(name);
-  }
-  if (missing.length) throw new ModelContractError(missing, modelFile(url));
-  for (const name of OPTIONAL_NODES) {
-    const node = root.getObjectByName(name);
-    if (node) nodes[name] = node;
-  }
   root.traverse((object) => {
     const mesh = object as Mesh;
     if (mesh.isMesh) {
@@ -129,12 +167,16 @@ export async function loadPlayerModel(
     }
   });
   const materials = upgradeMaterials(root);
+  const media = SCENE_PROFILES[profile.id].media;
+  const { nodes, missing } = readContract(root, materials.slots, media);
+  if (missing.length) {
+    materials.dispose();
+    throw new ModelContractError(missing, modelFile(url));
+  }
   root.updateMatrixWorld(true);
-  return {
+  const loaded: LoadedModel = {
     id: profile.id,
     root,
-    nodes,
-    slots: materials.slots,
     optionalSlots: materials.optionalSlots,
     applyLook: materials.applyLook,
     dispose: () => {
@@ -145,4 +187,12 @@ export async function loadPlayerModel(
       });
     },
   };
+  return media === 'cd'
+    ? { ...loaded, media, nodes: nodes as CdModel['nodes'], slots: materials.slots as Slots }
+    : {
+        ...loaded,
+        media,
+        nodes: nodes as VinylModel['nodes'],
+        slots: materials.slots as TurntableSlots,
+      };
 }

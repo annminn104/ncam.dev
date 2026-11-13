@@ -30,6 +30,8 @@ export interface SceneView {
   trackNo: number;
   total: number;
   status: Status;
+  /** Stop was pressed and the track waits, paused, at its start (the sequencer's `stopped`). */
+  stopped: boolean;
   positionMs: number;
   durationMs: number;
 }
@@ -41,6 +43,7 @@ export const EMPTY_VIEW: SceneView = {
   trackNo: 0,
   total: 0,
   status: 'idle',
+  stopped: false,
   positionMs: 0,
   durationMs: 0,
 };

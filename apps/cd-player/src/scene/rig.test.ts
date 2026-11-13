@@ -10,8 +10,11 @@ import {
   Vector3,
 } from 'three';
 import { describe, expect, it, vi } from 'vitest';
-import type { TrackView } from '../bridge';
+import { EMPTY_VIEW, type SceneView, type TrackView } from '../bridge';
+import type { Status } from '../playback/sequencer';
+import { fakeTurntable, TEST_TURNTABLE } from '../testing/fake-turntable';
 import {
+  BOXES,
   CLEAR_SEAT,
   CLEAR_SHELL,
   CLEAR_STAND,
@@ -21,8 +24,20 @@ import {
   DECK_SCREEN,
   DECK_SEAT,
   DECK_WELL,
+  LUXE_ARM,
+  LUXE_BAR,
+  LUXE_LEDGE,
+  LUXE_PANELS,
+  LUXE_PLATTER,
+  LUXE_PLINTH,
+  LUXE_RECORD,
+  LUXE_SEAT,
+  LUXE_SLEEVE,
+  LUXE_STAND,
+  LUXE_STEPS,
   clearSlot,
   deckSlot,
+  luxeSlot,
 } from '../testing/model-measures';
 import type { RequiredNode } from './contract';
 import {
@@ -37,9 +52,22 @@ import {
   type Pose,
 } from './director';
 import type { Slots } from './materials';
-import type { PlayerModel } from './model';
+import type { CdModel, VinylModel } from './model';
 import { SCENE_PROFILES } from './profiles';
-import { applyPose, doorAxis, modelArmAngle, rigFor, spinSense, turnDoor } from './rig';
+import {
+  applyPose,
+  armAngleFor,
+  doorAxis,
+  isCdRig,
+  isTurntableRig,
+  rigFor,
+  ringTargetMs,
+  spinSense,
+  turnDoor,
+  turntableRestFor,
+  type DiscCopy,
+  type Rig,
+} from './rig';
 import {
   DISC_COPIES,
   RACK_SLOTS,
@@ -135,8 +163,9 @@ function fakeModel() {
   const root = new Group();
   root.add(player);
   const dispose = vi.fn();
-  const model: PlayerModel = {
+  const model: CdModel = {
     id: 'suitcase',
+    media: 'cd',
     root,
     nodes: nodes as Record<RequiredNode, Object3D>,
     slots: {} as Slots,
@@ -166,11 +195,17 @@ function caseCorners(object: Object3D): Vector3[] {
   return corners;
 }
 
+/** A CD player's rig's jewel case, which it always has. */
+const jewelCase = (rig: Rig) => {
+  if (!rig.case) throw new Error('no case');
+  return rig.case;
+};
+
 describe('rigFor', () => {
   it('gives the seven discs and the booklet prints of their own, and disposes them with the model', () => {
     const { model, label, booklet, dispose } = fakeModel();
     const rig = rigFor(model);
-    const prints = [...rig.discs.map((disc) => disc.label), rig.case.booklet];
+    const prints = [...rig.discs.map((disc) => disc.label), jewelCase(rig).booklet];
     expect(rig.discs).toHaveLength(DISC_COPIES);
     expect(new Set(prints).size).toBe(DISC_COPIES + 1);
     expect(prints).not.toContain(label);
@@ -202,14 +237,14 @@ describe('rigFor', () => {
     });
     expect(rig.seat.quaternion.angleTo(model.nodes.disc_seat.quaternion)).toBeLessThan(1e-6);
     // The reach of its half-width and depth across the turn, and a centimetre.
-    expect(rig.case.lift).toBeCloseTo(Math.hypot(CASE_W / 2, CASE_DEEP) + 0.01, 6);
+    expect(jewelCase(rig).lift).toBeCloseTo(Math.hypot(CASE_W / 2, CASE_DEEP) + 0.01, 6);
   });
 });
 
-describe('modelArmAngle', () => {
+describe('armAngleFor', () => {
   it('is the director’s own angle for the suitcase', () => {
     for (const angle of [ARM_REST, -0.2, ARM_PLAY])
-      expect(modelArmAngle('suitcase', angle)).toBeCloseTo(angle, 12);
+      expect(armAngleFor(SCENE_PROFILES.suitcase.arm, angle)).toBeCloseTo(angle, 12);
   });
 
   it('is the identity only while the suitcase’s profile arm agrees with the director’s', () => {
@@ -217,9 +252,9 @@ describe('modelArmAngle', () => {
   });
 
   it('maps the director’s rest and play to the Clear model’s own', () => {
-    expect(modelArmAngle('clear', ARM_REST)).toBeCloseTo(0, 12);
-    expect(modelArmAngle('clear', ARM_PLAY)).toBeCloseTo(0.52, 12);
-    expect(modelArmAngle('clear', ARM_PLAY / 2)).toBeCloseTo(0.26, 12);
+    expect(armAngleFor(SCENE_PROFILES.clear.arm, ARM_REST)).toBeCloseTo(0, 12);
+    expect(armAngleFor(SCENE_PROFILES.clear.arm, ARM_PLAY)).toBeCloseTo(0.52, 12);
+    expect(armAngleFor(SCENE_PROFILES.clear.arm, ARM_PLAY / 2)).toBeCloseTo(0.26, 12);
   });
 });
 
@@ -230,7 +265,7 @@ describe('the door', () => {
     const hinge = named(new Object3D(), 'door_hinge');
     hinge.rotation.y = 0.1;
     model.root.add(hinge);
-    const clear: PlayerModel = {
+    const clear: CdModel = {
       ...model,
       id: 'clear',
       nodes: { ...model.nodes, door_hinge: hinge },
@@ -253,7 +288,7 @@ describe('the door', () => {
     const hinge = named(new Object3D(), 'door_hinge');
     hinge.rotation.x = 0.1;
     model.root.add(hinge);
-    const deck: PlayerModel = {
+    const deck: CdModel = {
       ...model,
       id: 'deck',
       nodes: { ...model.nodes, door_hinge: hinge },
@@ -348,7 +383,7 @@ describe('applyPose', () => {
       expect(copy.scale.x).toBe(1);
     }
     expect(rig.discs[6].object.visible).toBe(false);
-    expect(rig.last).toEqual({ armAngle: ARM_PLAY, spin: 0 });
+    expect(rig.last).toEqual({ armAngle: ARM_PLAY, spin: 0, armLift: 0 });
   });
 
   it('flies a disc from its slot onto the spindle, leaving and landing along each normal', () => {
@@ -441,7 +476,10 @@ describe('applyPose', () => {
     const rig = rigFor(model);
     // The suitcase's seat turns only about the vertical: its normal is straight up.
     expect(rig.seat.out.distanceTo(new Vector3(0, 1, 0))).toBeLessThan(1e-12);
-    expect(rig.flight.reach).toEqual(SCENE_PROFILES.suitcase.flight.reach);
+    expect(rig.flight.reach).toEqual({
+      ...SCENE_PROFILES.suitcase.flight.reach,
+      ledge: SCENE_PROFILES.suitcase.flight.reach.spindle,
+    });
     expect(rig.flight.aside.toArray()).toEqual(SCENE_PROFILES.suitcase.flight.aside);
   });
 
@@ -460,18 +498,20 @@ describe('applyPose', () => {
     });
     const flip = plan.flip!;
     const seat = lid.localToWorld(caseSeat.position.clone());
-    const normal = rig.case.out.clone().transformDirection(lid.matrixWorld);
+    const normal = jewelCase(rig).out.clone().transformDirection(lid.matrixWorld);
     for (let t = flip.start; t <= flip.end; t += 10) {
       applyPose(rig, posePlan(plan, t, restingArm(true, true, true)), 0);
-      rig.case.object.updateMatrixWorld(true);
-      for (const corner of caseCorners(rig.case.object)) {
+      jewelCase(rig).object.updateMatrixWorld(true);
+      for (const corner of caseCorners(jewelCase(rig).object)) {
         expect(corner.sub(seat).dot(normal), `t ${t}`).toBeGreaterThan(-1e-6);
       }
-      expect(rig.case.booklet.map, `t ${t}`).toBe(t >= flip.start + FLIP_EDGE_MS ? back : front);
+      expect(jewelCase(rig).booklet.map, `t ${t}`).toBe(
+        t >= flip.start + FLIP_EDGE_MS ? back : front,
+      );
     }
     // Back at rest the case sits in its seat again.
     applyPose(rig, restingPose(plan.after, true, true), 0);
-    expect(rig.case.object.position.distanceTo(rig.case.seat)).toBeLessThan(1e-9);
+    expect(jewelCase(rig).object.position.distanceTo(jewelCase(rig).seat)).toBeLessThan(1e-9);
   });
 });
 
@@ -497,7 +537,7 @@ describe('the Clear model’s flights', () => {
       slot.position.set(...position);
       slot.rotation.set(rotationX, 0, 0);
     });
-    const clear: PlayerModel = { ...model, id: 'clear' };
+    const clear: CdModel = { ...model, id: 'clear' };
     return rigFor(clear);
   }
 
@@ -636,7 +676,7 @@ describe('the Deck’s flights', () => {
       slot.position.set(...position);
       slot.rotation.set(rotationX, 0, 0);
     });
-    const deck: PlayerModel = { ...model, id: 'deck' };
+    const deck: CdModel = { ...model, id: 'deck' };
     lid.updateMatrixWorld(true);
     return { rig: rigFor(deck), toCase: lid.matrixWorld.clone().invert() };
   }
@@ -762,10 +802,452 @@ describe('the Deck’s flights', () => {
   });
 });
 
+describe('a turntable’s rig', () => {
+  it('carries the profile it is given, a CD player’s its own', () => {
+    const rig = rigFor(fakeTurntable().model, TEST_TURNTABLE);
+    expect(rig.profile).toBe(TEST_TURNTABLE);
+    expect(rigFor(fakeModel().model).profile).toBe(SCENE_PROFILES.suitcase);
+  });
+
+  it('has no jewel case, and poses with none', () => {
+    const rig = rigFor(fakeTurntable().model, TEST_TURNTABLE);
+    expect(rig.case).toBeNull();
+    const shelf = fillShelf(targetOf(lineup('a', 'b', 'c')));
+    expect(() => applyPose(rig, restingPose(shelf, true, true), 1 / 60)).not.toThrow();
+    expect(rig.discs[0].object.visible).toBe(true);
+  });
+
+  it('tells a turntable’s rig from a CD player’s', () => {
+    const turntable = rigFor(fakeTurntable().model, TEST_TURNTABLE);
+    const cd = rigFor(fakeModel().model);
+    expect([isCdRig(cd), isTurntableRig(cd)]).toEqual([true, false]);
+    expect([isCdRig(turntable), isTurntableRig(turntable)]).toEqual([false, true]);
+  });
+});
+
+describe('a turntable’s sleeves', () => {
+  const sleeveOf = (copy: DiscCopy) => {
+    if (!copy.sleeve) throw new Error('no sleeve');
+    return copy.sleeve;
+  };
+  function turntable() {
+    const parts = fakeTurntable();
+    const rig = rigFor(parts.model, TEST_TURNTABLE);
+    if (!rig.sleeveSeat) throw new Error('no ledge');
+    return { ...parts, rig, ledge: rig.sleeveSeat };
+  }
+
+  it('gives each of the seven records a sleeve with a print of its own, disposed with the model', () => {
+    const { rig, model, print, disposed } = turntable();
+    const prints = rig.discs.map((copy) => sleeveOf(copy).print);
+    expect(new Set(prints).size).toBe(DISC_COPIES);
+    expect(prints).not.toContain(print);
+    const spies = prints.map((material) => vi.spyOn(material, 'dispose'));
+    model.dispose();
+    expect(disposed()).toBe(1);
+    for (const spy of spies) expect(spy).toHaveBeenCalledTimes(1);
+  });
+
+  it('gives a CD player’s discs none, and no ledge', () => {
+    const rig = rigFor(fakeModel().model);
+    expect(rig.discs.every((copy) => copy.sleeve === null)).toBe(true);
+    expect(rig.sleeveSeat).toBeNull();
+  });
+
+  it('stands the ledge where the GLB has it, a sleeve coming down onto it from above', () => {
+    const { rig, sleeveSeat, ledge } = turntable();
+    expect(ledge.position.distanceTo(sleeveSeat.getWorldPosition(new Vector3()))).toBeLessThan(
+      1e-9,
+    );
+    expect(ledge.out.toArray()).toEqual([0, 1, 0]);
+    expect(rig.flight.reach.ledge).toBe(0.3);
+  });
+
+  it('rests the record on the platter and its sleeve on the ledge, and a rack record in its sleeve', () => {
+    const { rig, ledge } = turntable();
+    applyPose(rig, restingPose(fillShelf(targetOf(lineup('a', 'b'))), true, false), 0);
+    const [playing, next] = rig.discs;
+    expect(playing.object.position.distanceTo(rig.seat.position)).toBeLessThan(1e-9);
+    expect(sleeveOf(playing).object.position.distanceTo(ledge.position)).toBeLessThan(1e-9);
+    expect(sleeveOf(playing).object.quaternion.angleTo(ledge.quaternion)).toBeLessThan(1e-6);
+    expect(next.object.position.distanceTo(rig.slots[0].position)).toBeLessThan(1e-9);
+    expect(sleeveOf(next).object.position.distanceTo(next.object.position)).toBeLessThan(1e-9);
+    expect(sleeveOf(next).object.quaternion.angleTo(next.object.quaternion)).toBeLessThan(1e-6);
+  });
+
+  it('turns the record with the platter, and never its sleeve', () => {
+    const { rig, ledge } = turntable();
+    applyPose(rig, restingPose(fillShelf(targetOf(lineup('a'))), true, true), 0.45);
+    expect(rig.discs[0].object.quaternion.angleTo(rig.seat.quaternion)).toBeGreaterThan(1);
+    expect(sleeveOf(rig.discs[0]).object.quaternion.angleTo(ledge.quaternion)).toBeLessThan(1e-6);
+  });
+
+  it('takes a record and its sleeve out of sight together, shrinking alike', () => {
+    const { rig } = turntable();
+    applyPose(rig, only(0, { from: 'spindle', to: null, along: 0.7 }), 0);
+    const [copy] = rig.discs;
+    expect(copy.object.visible).toBe(true);
+    expect(sleeveOf(copy).object.visible).toBe(true);
+    expect(sleeveOf(copy).object.scale.x).toBeCloseTo(copy.object.scale.x, 12);
+    applyPose(rig, only(0, { from: 'spindle', to: null, along: 1 }), 0);
+    expect(copy.object.visible).toBe(false);
+    expect(sleeveOf(copy).object.visible).toBe(false);
+  });
+
+  it('flies a sleeve from its slot down onto the ledge from above as its record lands', () => {
+    const { rig, ledge } = turntable();
+    applyPose(rig, only(1, { from: 0, to: 'spindle', along: 0.95 }), 0);
+    const offset = sleeveOf(rig.discs[1]).object.position.clone().sub(ledge.position);
+    expect(offset.y).toBeGreaterThan(0);
+    expect(Math.hypot(offset.x, offset.z)).toBeLessThan(0.02);
+    const record = rig.discs[1].object.position.clone().sub(rig.seat.position);
+    expect(record.dot(rig.seat.out)).toBeGreaterThan(0);
+  });
+});
+
+describe('Luxe’s flights', () => {
+  /** A hair inside every box: a point on a face is not in the solid behind it. */
+  const HAIR = 1e-4;
+  type Box = { readonly min: readonly number[]; readonly max: readonly number[] };
+  const inBox = (p: Vector3, box: Box) =>
+    p.x > box.min[0] + HAIR &&
+    p.x < box.max[0] - HAIR &&
+    p.y > box.min[1] + HAIR &&
+    p.y < box.max[1] - HAIR &&
+    p.z > box.min[2] + HAIR &&
+    p.z < box.max[2] - HAIR;
+
+  /** A record's rim (Ø 300 mm) and a sleeve's outline (310 mm square), in their own frame: the face is local XZ. */
+  const RIM = Array.from({ length: 96 }, (_, k) => {
+    const turn = (k / 96) * 2 * Math.PI;
+    return new Vector3(LUXE_RECORD.radius * Math.cos(turn), 0, LUXE_RECORD.radius * Math.sin(turn));
+  });
+  const h = LUXE_SLEEVE.half;
+  const OUTLINE = Array.from({ length: 25 }, (_, k) => -h + (2 * h * k) / 24).flatMap((s) => [
+    new Vector3(-h, 0, s),
+    new Vector3(h, 0, s),
+    new Vector3(s, 0, -h),
+    new Vector3(s, 0, h),
+  ]);
+
+  /**
+   * The fake turntable posed as cd-player-luxe.glb: the record's seat on the platter's mat, the
+   * ledge's seat behind the platter, the stand right of the deck and square to it, and the five
+   * slots in the stand's frame (src/testing/model-measures.ts, which model-contract.test.ts holds
+   * to the GLB).
+   */
+  function luxeSet() {
+    const { model, seat, disc, sleeveSeat, sleeve, stand, slots } = fakeTurntable();
+    seat.position.set(...LUXE_SEAT.position);
+    seat.quaternion.identity();
+    disc.position.copy(seat.position);
+    disc.quaternion.copy(seat.quaternion);
+    sleeveSeat.position.set(...LUXE_LEDGE.seat.position);
+    sleeveSeat.rotation.set(LUXE_LEDGE.seat.rotationX, 0, 0);
+    sleeve.position.copy(sleeveSeat.position);
+    sleeve.quaternion.copy(sleeveSeat.quaternion);
+    stand.position.set(...LUXE_STAND.position);
+    stand.rotation.set(0, LUXE_STAND.rotationY, 0);
+    slots.forEach((slot, k) => {
+      const { position, rotationX } = luxeSlot(k);
+      slot.position.set(...position);
+      slot.rotation.set(rotationX, 0, 0);
+    });
+    model.root.updateMatrixWorld(true);
+    const luxe: VinylModel = { ...model, id: 'luxe' };
+    return { rig: rigFor(luxe), toStand: stand.matrixWorld.clone().invert() };
+  }
+
+  /**
+   * What a point stands in, if anything: the plinth, the platter, the arm at rest (what is drawn
+   * of it: its head's invisible hit shape stops nothing), the ledge, the stand.
+   */
+  function obstacle(p: Vector3, toStand: Matrix4): string | null {
+    if (inBox(p, LUXE_PLINTH)) return 'the plinth';
+    const [cx, , cz] = LUXE_PLATTER.centre;
+    if (
+      Math.hypot(p.x - cx, p.z - cz) < LUXE_PLATTER.radius - HAIR &&
+      p.y > LUXE_PLATTER.bottom + HAIR &&
+      p.y < LUXE_PLATTER.top - HAIR
+    ) {
+      return 'the platter';
+    }
+    if (inBox(p, LUXE_ARM.rest)) return 'the arm';
+    if ([LUXE_LEDGE.bar, LUXE_LEDGE.lip, ...LUXE_LEDGE.legs].some((box) => inBox(p, box))) {
+      return 'the ledge';
+    }
+    const local = p.clone().applyMatrix4(toStand);
+    if (LUXE_STEPS.some((box) => inBox(local, box))) return 'the stand’s steps';
+    if (LUXE_PANELS.some((box) => inBox(local, box))) return 'the stand’s sides';
+    if (inBox(local, LUXE_BAR)) return 'the stand’s bar';
+    return null;
+  }
+
+  function hits(object: Object3D, points: readonly Vector3[], toStand: Matrix4): string[] {
+    object.updateMatrixWorld(true);
+    const found = new Set<string>();
+    for (const point of points) {
+      const hit = obstacle(point.clone().applyMatrix4(object.matrixWorld), toStand);
+      if (hit) found.add(hit);
+    }
+    return [...found];
+  }
+
+  it('rests every record and sleeve clear of everything, in the rack, on the platter and the ledge', () => {
+    const { rig, toStand } = luxeSet();
+    applyPose(
+      rig,
+      restingPose(fillShelf(targetOf(lineup('a', 'b', 'c', 'd', 'e', 'f'))), true, false),
+      0,
+    );
+    rig.discs.slice(0, 6).forEach((copy, index) => {
+      expect(hits(copy.object, RIM, toStand), `record ${index}`).toEqual([]);
+      expect(hits(copy.sleeve!.object, OUTLINE, toStand), `sleeve ${index}`).toEqual([]);
+    });
+  });
+
+  it('leaves a slot along its face, and comes down onto the platter and the ledge from above', () => {
+    const { rig } = luxeSet();
+    for (const slot of rig.slots) {
+      expect(
+        slot.out.distanceTo(new Vector3(0, 1, 0).applyQuaternion(slot.quaternion)),
+      ).toBeLessThan(1e-12);
+    }
+    expect(rig.seat.out.distanceTo(new Vector3(0, 1, 0))).toBeLessThan(1e-12);
+    expect(rig.sleeveSeat?.out.toArray()).toEqual([0, 1, 0]);
+  });
+
+  it('flies every record and its sleeve clear of the plinth, the platter, the arm, the stand and the ledge', () => {
+    const { rig, toStand } = luxeSet();
+    const ways: [string, DiscPose['from'], DiscPose['to']][] = [
+      ...[0, 1, 2, 3, 4].map((slot): [string, DiscPose['from'], DiscPose['to']] => [
+        `slot ${slot} onto the platter`,
+        slot,
+        'spindle',
+      ]),
+      ['the platter back into slot 0', 'spindle', 0],
+      ...[1, 2, 3, 4].map((slot): [string, DiscPose['from'], DiscPose['to']] => [
+        `slot ${slot} down to slot ${slot - 1}`,
+        slot,
+        slot - 1,
+      ]),
+      ['the platter out of sight', 'spindle', null],
+      ['out of sight onto the platter', null, 'spindle'],
+    ];
+    for (const [way, from, to] of ways) {
+      for (let step = 0; step <= 200; step++) {
+        const along = step / 200;
+        applyPose(rig, only(1, { from, to, along }), 0);
+        const copy = rig.discs[1];
+        if (copy.object.visible) {
+          expect(hits(copy.object, RIM, toStand), `the record, ${way}, along ${along}`).toEqual([]);
+        }
+        if (copy.sleeve?.object.visible) {
+          expect(
+            hits(copy.sleeve.object, OUTLINE, toStand),
+            `the sleeve, ${way}, along ${along}`,
+          ).toEqual([]);
+        }
+      }
+    }
+  });
+
+  it('sends a record leaving the platter, and its sleeve the ledge, up, left and back', () => {
+    const { rig } = luxeSet();
+    applyPose(rig, only(0, { from: 'spindle', to: null, along: 0.3 }), 0);
+    const record = rig.discs[0].object.position.clone().sub(rig.seat.position);
+    const sleeve = rig.discs[0].sleeve!.object.position.clone().sub(rig.sleeveSeat!.position);
+    for (const offset of [record, sleeve]) {
+      expect(offset.y).toBeGreaterThan(0);
+      expect(offset.x).toBeLessThan(0);
+      expect(offset.z).toBeLessThan(0);
+    }
+  });
+
+  it('keeps the whole set inside the box the framing test frames', () => {
+    const { rig } = luxeSet();
+    applyPose(
+      rig,
+      restingPose(fillShelf(targetOf(lineup('a', 'b', 'c', 'd', 'e', 'f'))), true, false),
+      0,
+    );
+    for (const copy of rig.discs.slice(0, 6)) {
+      for (const point of [copy.object.position, copy.sleeve!.object.position]) {
+        expect(inBox(point, BOXES.luxe), point.toArray().join(', ')).toBe(true);
+      }
+    }
+  });
+});
+
+describe('the spin', () => {
+  it('turns a CD player’s disc at 200 rpm, as it always did, and has no platter', () => {
+    const rig = rigFor(fakeModel().model);
+    expect(rig.spinRate).toBeCloseTo((200 / 60) * 2 * Math.PI, 12);
+    applyPose(rig, restingPose(fillShelf(targetOf(lineup('a'))), true, true), 0.03);
+    expect(rig.spin).toBeCloseTo((200 / 60) * 2 * Math.PI * 0.03, 12);
+    expect(rig.platter).toBeNull();
+  });
+
+  it('turns a turntable’s record and its platter at 33⅓ rpm, clockwise seen from above', () => {
+    const { model, platter } = fakeTurntable();
+    const base = platter.rotation.y;
+    const rig = rigFor(model, TEST_TURNTABLE);
+    expect(rig.spinRate).toBeCloseTo((100 / 3 / 60) * 2 * Math.PI, 12);
+    // A quarter of a turn: 33⅓ rpm is 0.5556 turns a second.
+    applyPose(rig, restingPose(fillShelf(targetOf(lineup('a'))), true, true), 0.45);
+    expect(rig.spin).toBeCloseTo(-Math.PI / 2, 9);
+    expect(platter.rotation.y).toBeCloseTo(base - Math.PI / 2, 9);
+    const expected = rig.seat.quaternion
+      .clone()
+      .multiply(new Quaternion().setFromAxisAngle(new Vector3(0, 1, 0), -Math.PI / 2));
+    expect(rig.discs[0].object.quaternion.angleTo(expected)).toBeLessThan(1e-6);
+  });
+});
+
 describe('spinSense', () => {
   it('spins counter-clockwise seen from above unless the profile plays clockwise', () => {
     expect(spinSense({})).toBe(1);
     expect(spinSense({ clockwise: false })).toBe(1);
     expect(spinSense({ clockwise: true })).toBe(-1);
+  });
+});
+
+describe('a turntable’s arm', () => {
+  const view = (positionMs: number, status: Status = 'playing') => ({
+    ...EMPTY_VIEW,
+    current: track('a'),
+    status,
+    positionMs,
+    durationMs: 200_000,
+  });
+  function turntable() {
+    const rig = rigFor(fakeTurntable().model, TEST_TURNTABLE);
+    if (!isTurntableRig(rig)) throw new Error('not a turntable');
+    rig.shelf = fillShelf(targetOf(lineup('a')));
+    return rig;
+  }
+  const angleOf = (rig: ReturnType<typeof turntable>, armAngle: number) =>
+    armAngleFor(rig.profile.arm, armAngle);
+  /**
+   * The arm put on its groove for `at` at once (reduced motion): from its rest that is a long way,
+   * so the first step swings it there lifted and the next lowers it. Each pose is applied.
+   */
+  function settle(rig: ReturnType<typeof turntable>, at: SceneView) {
+    const swung = turntableRestFor(rig, at, Infinity, 0);
+    applyPose(rig, restingPose(rig.shelf, true, true, swung), 0);
+    const lowered = turntableRestFor(rig, at, Infinity, 0);
+    applyPose(rig, restingPose(rig.shelf, true, true, lowered), 0);
+    return { swung, lowered };
+  }
+
+  it('tracks from the lead-in at 0:00 to the run-out at the end, down, the platter turning', () => {
+    const rig = turntable();
+    const { swung, lowered: half } = settle(rig, view(100_000));
+    expect(swung.armLift).toBe(1);
+    expect(angleOf(rig, half.armAngle)).toBeCloseTo((-0.39 + -0.79) / 2, 9);
+    expect(half).toMatchObject({ armLift: 0, spin: 1 });
+    expect(angleOf(rig, turntableRestFor(rig, view(0), Infinity, 0).armAngle)).toBeCloseTo(
+      -0.39,
+      9,
+    );
+  });
+
+  it('stays down as it tracks frame by frame on a 30-second preview, through a buffering stall', () => {
+    const rig = turntable();
+    const at = (positionMs: number): SceneView => ({ ...view(positionMs), durationMs: 30_000 });
+    settle(rig, at(0));
+    // The embed reports every 250 ms, but buffers from 1 s to 3.5 s, the audio stalled with it and
+    // its updates dropped: the playhead runs on 2 s past the last report and holds, then the
+    // reports resume from 1 s and the groove jumps back.
+    const reported = (nowMs: number) => {
+      const played = nowMs < 1000 ? nowMs : nowMs < 3500 ? 1000 : nowMs - 2500;
+      return Math.floor(played / 250) * 250;
+    };
+    for (let frame = 1; frame <= 360; frame++) {
+      const nowMs = (frame * 1000) / 60;
+      const pose = turntableRestFor(rig, at(reported(nowMs)), 1 / 60, nowMs);
+      applyPose(rig, restingPose(rig.shelf, true, true, pose), 1 / 60);
+      expect(pose.armLift, `frame ${frame}`).toBe(0);
+    }
+    // 6 s in, 3.5 s of it played: on by that groove, a hair behind it as it eases.
+    expect(angleOf(rig, rig.last.armAngle)).toBeCloseTo(-0.39 - 0.4 * (3.5 / 30), 2);
+  });
+
+  it('lifts where it stands as it pauses, easing up rather than jumping', () => {
+    const rig = turntable();
+    settle(rig, view(100_000));
+    const step = turntableRestFor(rig, view(100_000, 'paused'), 1 / 60, 16);
+    expect(step.armLift).toBeGreaterThan(0);
+    expect(step.armLift).toBeLessThan(0.5);
+    expect(angleOf(rig, step.armAngle)).toBeCloseTo(-0.59, 9);
+  });
+
+  it('goes to its rest after Stop, though the embed reports the track at its first second', () => {
+    const rig = turntable();
+    settle(rig, view(100_000));
+    const stopped: SceneView = { ...view(1000, 'paused'), stopped: true };
+    const { swung, lowered } = settle(rig, stopped);
+    expect(swung).toMatchObject({ armAngle: ARM_REST, armLift: 1, spin: 0 });
+    expect(lowered).toMatchObject({ armAngle: ARM_REST, armLift: 0, spin: 0 });
+    // A pause there (not a stop) holds the arm lifted over its groove.
+    const paused = settle(rig, view(1000, 'paused')).lowered;
+    expect(angleOf(rig, paused.armAngle)).toBeCloseTo(-0.39 - 0.4 * (1000 / 200_000), 9);
+    expect(paused.armLift).toBe(1);
+  });
+
+  it('takes over from a change’s landing on the lead-in at 0:00 without a jump', () => {
+    const rig = turntable();
+    rig.last = { armAngle: ARM_PLAY, spin: 1, armLift: 0 };
+    const pose = turntableRestFor(rig, view(0), 1 / 60, 0);
+    expect(pose.armAngle).toBeCloseTo(ARM_PLAY, 12);
+    expect(pose.armLift).toBe(0);
+  });
+
+  it('holds a drag where the hand has it, lifting', () => {
+    const rig = turntable();
+    rig.armDrag = -0.7;
+    const pose = turntableRestFor(rig, view(10_000), 1 / 60, 0);
+    expect(angleOf(rig, pose.armAngle)).toBeCloseTo(-0.7, 12);
+    expect(pose.armLift).toBeGreaterThan(0);
+  });
+
+  it('notes the arm’s lift after a pose on a turntable, and never on a CD player', () => {
+    const rig = turntable();
+    applyPose(rig, { ...restingPose(rig.shelf, true, false), armLift: 0.5 }, 0);
+    expect(rig.last.armLift).toBe(0.5);
+    const cd = rigFor(fakeModel().model);
+    applyPose(cd, { ...restingPose(emptyShelf(), false, false), armLift: 0.5 }, 0);
+    expect(cd.last.armLift).toBe(0);
+    expect(cd.toneArm).toBeNull();
+  });
+});
+
+describe('ringTargetMs', () => {
+  it('is a CD player’s position, or its knob turn’s target', () => {
+    const rig = rigFor(fakeModel().model);
+    const view = {
+      ...EMPTY_VIEW,
+      status: 'playing' as const,
+      positionMs: 10_000,
+      durationMs: 60_000,
+    };
+    expect(ringTargetMs(rig, view, 0)).toBe(10_000);
+    rig.scrubMs = 5_000;
+    expect(ringTargetMs(rig, view, 0)).toBe(15_000);
+  });
+
+  it('is a turntable’s position carried on as it plays, or its arm drag’s target', () => {
+    const rig = rigFor(fakeTurntable().model, TEST_TURNTABLE);
+    const view = {
+      ...EMPTY_VIEW,
+      current: track('a'),
+      status: 'playing' as const,
+      positionMs: 10_000,
+      durationMs: 60_000,
+    };
+    expect(ringTargetMs(rig, view, 1000)).toBe(10_000);
+    expect(ringTargetMs(rig, view, 1500)).toBe(10_500);
+    rig.dragMs = 30_000;
+    expect(ringTargetMs(rig, view, 1500)).toBe(30_000);
   });
 });

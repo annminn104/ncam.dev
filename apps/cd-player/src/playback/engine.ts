@@ -51,6 +51,8 @@ export interface EngineDeps {
   hintMs?: number;
   setTimer?(fn: () => void, ms: number): unknown;
   clearTimer?(handle: unknown): void;
+  /** The clock (ms) a seek's settling is timed by; `performance.now()` when none is injected. */
+  now?(): number;
 }
 
 /** How many tracks ahead get their art and artist fetched: the rack in the lid shows five. */
@@ -63,6 +65,19 @@ const PLAYER_TIMEOUT_MS = 20_000;
  * embed reports an end well within a second, and a longer wait only stretches the silence.
  */
 const END_GRACE_MS = 1500;
+/**
+ * A seek settles once the embed reports a position near its target, or after this long (ms).
+ * Until then a report away from the target is the embed's echo of its last one (it posts that
+ * once more right after a seek, ~15 ms on, before its report from the target ~0.8 s later), and
+ * it is dropped: taken, it would put the slider, the displays and a turntable's arm back for that
+ * while. The bound keeps a seek the embed never carries out from freezing the view.
+ */
+const SEEK_SETTLE_MS = 1500;
+/**
+ * How near its target a report counts as the seek's (ms): the embed lands a little before it,
+ * and holds a seek under a second (Stop's) at its first second.
+ */
+const SEEK_NEAR_MS = 1000;
 
 /**
  * Playback outside React: the sequencer's state, the commands it emits (disc changes through the
@@ -87,6 +102,18 @@ export class PlayerEngine {
    */
   private endTimer: unknown = null;
   private endWatch = 0;
+  /** The last seek sent to the embed and when (`now()`), until a report settles it. */
+  private seeking: { ms: number; at: number } | null = null;
+  /** Whether the last report taken from the embed was paused; null since the last load. */
+  private lastPaused: boolean | null = null;
+  /** When Stop was last pressed (`now()`): the embed's playing reports just after it are dropped. */
+  private stopAt: number | null = null;
+  /**
+   * Play was pressed while the collection was still loading, with no tracks to play yet: the
+   * scene can be up before them (seen live, the press 15–40 ms early). It plays once they are in;
+   * a second press or Stop takes it back, a failed load forgets it.
+   */
+  private playOnLoad = false;
   private detachBridge: (() => void) | null = null;
   private disposed = false;
 
@@ -155,15 +182,22 @@ export class PlayerEngine {
     const { snapshot } = this;
     const here = sameCollection(snapshot.collection, ref) || snapshot.loading;
     if (sameCollection(snapshot.ref, ref) && here) return;
+    // A remembered Play belongs to the collection it was pressed for.
+    if (!sameCollection(snapshot.ref, ref)) this.playOnLoad = false;
     this.set({ ref, loading: true, error: null });
     this.deps.client.collection(ref).then(
       (collection) => {
         if (this.disposed || !sameCollection(this.snapshot.ref, ref)) return;
         this.set({ collection, loading: false });
         this.send({ type: 'LOAD', tracks: collection.tracks });
+        if (this.playOnLoad) {
+          this.playOnLoad = false;
+          this.user({ type: 'PLAY' });
+        }
       },
       (error: unknown) => {
         if (this.disposed || !sameCollection(this.snapshot.ref, ref)) return;
+        this.playOnLoad = false;
         this.set({
           loading: false,
           error: { message: requestErrorMessage(error, ref.type), retry: canRetry(error) },
@@ -177,7 +211,15 @@ export class PlayerEngine {
    * the player is built only when the reducer would start playback (a disc change or a load).
    */
   user(event: SeqEvent): void {
-    const { commands } = step(this.snapshot.seq, event);
+    const { seq, loading } = this.snapshot;
+    if (loading && seq.tracks.length === 0) {
+      // Nothing to play yet: Play (or the toggle) waits for the tracks, a toggle again or Stop
+      // takes it back (see `playOnLoad`).
+      if (event.type === 'PLAY') this.playOnLoad = true;
+      else if (event.type === 'TOGGLE') this.playOnLoad = !this.playOnLoad;
+      else if (event.type === 'STOP' || event.type === 'PAUSE') this.playOnLoad = false;
+    }
+    const { commands } = step(seq, event);
     if (commands.some((command) => command.type === 'swap' || command.type === 'load')) {
       this.prepare(event);
     }
@@ -191,6 +233,7 @@ export class PlayerEngine {
       this.clearEndWatch();
     }
     const { state, commands } = step(this.snapshot.seq, event);
+    if (event.type === 'STOP' && state.stopped) this.stopAt = this.now();
     if (state !== this.snapshot.seq) this.set({ seq: state });
     for (const command of commands) this.run(command);
     if (event.type === 'LOAD' || commands.some((command) => command.type === 'swap'))
@@ -233,13 +276,17 @@ export class PlayerEngine {
         // Right after a load the embed reports itself paused until the audio starts.
         if (this.awaitingStart && update.paused) return;
         if (update.buffering) return;
+        if (this.playsThroughStop(update)) return;
+        const taken = this.afterSeekEcho(update);
+        if (!taken) return;
+        this.lastPaused = taken.paused;
         this.send({
           type: 'PROGRESS',
-          positionMs: update.positionMs,
-          durationMs: update.durationMs,
-          paused: update.paused,
+          positionMs: taken.positionMs,
+          durationMs: taken.durationMs,
+          paused: taken.paused,
         });
-        this.watchEnd(update);
+        this.watchEnd(taken);
       },
       onEnded: () => this.send({ type: 'ENDED' }),
     });
@@ -259,7 +306,7 @@ export class PlayerEngine {
       const patch: Partial<EngineSnapshot> = { embed: 'blocked' };
       const { seq } = this.snapshot;
       if (current && seq.status !== 'idle') {
-        patch.seq = { ...seq, status: 'idle', positionMs: 0 };
+        patch.seq = { ...seq, status: 'idle', stopped: false, positionMs: 0 };
         this.swapToken++;
       }
       this.set(patch);
@@ -305,6 +352,8 @@ export class PlayerEngine {
       }
       case 'load':
         this.clearEndWatch();
+        this.seeking = null;
+        this.lastPaused = null;
         this.withPlayer((player) => {
           this.awaitingStart = true;
           player.load(command.uri);
@@ -318,9 +367,48 @@ export class PlayerEngine {
         this.withPlayer((player) => player.resume());
         return;
       case 'seek':
+        this.seeking = { ms: command.ms, at: this.now() };
         this.withPlayer((player) => player.seek(command.ms));
         return;
     }
+  }
+
+  /**
+   * Whether `update` is the embed's echo of where it was before the last seek: away from the
+   * seek's target while the seek has not settled (SEEK_SETTLE_MS), and as paused or playing as
+   * the last report taken (every echo seen live repeated it whole). A report near the target, or
+   * any report once the time is up, settles it; a pause or a play (the flag changing) is the
+   * embed's news, never an echo, and passes, so its watch on the end is cleared as it should be.
+   * Returns null for an echo (dropped), else the update to take: a flag change inside the wait
+   * keeps the seek's target as its position, since the report's own is from before the seek.
+   */
+  private afterSeekEcho(update: PlaybackUpdate): PlaybackUpdate | null {
+    if (!this.seeking) return update;
+    const since = this.now() - this.seeking.at;
+    const { ms } = this.seeking;
+    const near =
+      update.positionMs >= ms - SEEK_NEAR_MS && update.positionMs <= ms + SEEK_NEAR_MS + since;
+    if (near || since > SEEK_SETTLE_MS) {
+      this.seeking = null;
+      return update;
+    }
+    if (this.lastPaused === null || update.paused === this.lastPaused) return null;
+    return { ...update, positionMs: ms };
+  }
+
+  /**
+   * Whether `update` is a playing report that arrives just after Stop (SEEK_SETTLE_MS): the
+   * embed's echo or a report already in flight, which would otherwise end the stop (inside the
+   * track's first second it even counts as near Stop's seek to 0). A Play sent from the page ends
+   * the stop by itself, and the card's own play is taken once the time is up.
+   */
+  private playsThroughStop(update: PlaybackUpdate): boolean {
+    if (update.paused || !this.snapshot.seq.stopped || this.stopAt === null) return false;
+    return this.now() - this.stopAt <= SEEK_SETTLE_MS;
+  }
+
+  private now(): number {
+    return this.deps.now ? this.deps.now() : performance.now();
   }
 
   /**

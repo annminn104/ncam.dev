@@ -75,6 +75,21 @@ describe('import graphs', () => {
     }
   });
 
+  it('keeps the scene’s three-free modules off three and R3F', () => {
+    for (const entry of [
+      'scene/tonearm.ts',
+      'scene/playhead.ts',
+      'scene/grip.ts',
+      'scene/arm-drag.ts',
+    ]) {
+      const { bare } = graph(path.join(SRC, ...entry.split('/')));
+      expect(
+        [...bare].filter((s) => THREE.test(s)),
+        entry,
+      ).toEqual([]);
+    }
+  });
+
   it('walks the whole shell, so the checks above cannot pass vacuously', () => {
     const { files } = graph(path.join(SRC, 'ssr.tsx'));
     for (const file of [
@@ -85,6 +100,7 @@ describe('import graphs', () => {
       'shell/NowPlaying.tsx',
       'shell/LookPicker.tsx',
       'skins.ts',
+      'luxe-looks.ts',
       'playback/engine.ts',
       'server/initial.ts',
       'spotify/embed.ts',

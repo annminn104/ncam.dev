@@ -1,8 +1,22 @@
 import { describe, expect, it } from 'vitest';
 import { MODELS } from '../models';
+import { LUXE_ARM } from '../testing/model-measures';
 import { SCENE_PROFILES } from './profiles';
 
 describe('scene profiles', () => {
+  it('plays CDs on the suitcase, the Clear model and the Deck', () => {
+    for (const id of ['suitcase', 'clear', 'deck'] as const) {
+      expect(SCENE_PROFILES[id].media, id).toBe('cd');
+      expect(SCENE_PROFILES[id].arm.runOut, id).toBeUndefined();
+    }
+  });
+
+  it('spins the CD models’ discs at 200 rpm', () => {
+    for (const id of ['suitcase', 'clear', 'deck'] as const) {
+      expect(SCENE_PROFILES[id].rpm, id).toBe(200);
+    }
+  });
+
   it('gives every model a profile', () => {
     for (const model of MODELS) expect(SCENE_PROFILES[model.id], model.id).toBeDefined();
   });
@@ -61,5 +75,17 @@ describe('scene profiles', () => {
       expect(SCENE_PROFILES[id].knobTurnsDisc, id).toBeUndefined();
       expect(SCENE_PROFILES[id].clockwise, id).toBeUndefined();
     }
+  });
+
+  it('plays records on Luxe at 33⅓ rpm, clockwise, its arm on the measured grooves, with no door', () => {
+    const { media, rpm, clockwise, arm, door, frame, knobTurnsDisc, screen } = SCENE_PROFILES.luxe;
+    expect(media).toBe('vinyl');
+    expect(rpm).toBeCloseTo(100 / 3, 12);
+    expect(clockwise).toBe(true);
+    expect(arm).toEqual({ rest: 0, play: LUXE_ARM.leadIn, runOut: LUXE_ARM.runOut });
+    expect(door).toBeNull();
+    expect(knobTurnsDisc).toBeUndefined();
+    expect(screen).toBeUndefined();
+    expect(Math.hypot(...frame.direction)).toBeCloseTo(1, 12);
   });
 });

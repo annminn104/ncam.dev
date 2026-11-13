@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { CLEAR_SWATCHES, DEFAULT_CLEAR_LOOK } from '../clear-looks';
 import { DECK_SWATCHES, DEFAULT_DECK_LOOK } from '../deck-looks';
 import { DEFAULT_LOOK_STATE, lookLabel, lookOf, lookSwatch, type LookState } from '../looks';
+import { DEFAULT_LUXE_LOOK, LUXE_SWATCHES } from '../luxe-looks';
 import { DEFAULT_PERSONAL, PATTERNS } from '../personal';
 import type { ModelLoad } from '../scene-props';
 import { SKINS } from '../skins';
@@ -26,8 +27,20 @@ const menu = (look: LookState, load: ModelLoad | null = null, open = true) =>
   renderToString(createElement(LookMenu, { look, open, onChange: () => {}, load }));
 const groups = (html: string) =>
   [...html.matchAll(/role="radiogroup" aria-label="([^"]+)"/g)].map((m) => m[1]);
+/** Every element of a React element tree, depth first, so a test can find a group by its label. */
+const walk = (node: unknown, out: { props: Record<string, unknown> }[] = []) => {
+  if (Array.isArray(node)) for (const k of node) walk(k, out);
+  else if (node && typeof node === 'object') {
+    const el = node as { props?: Record<string, unknown> };
+    if (el.props) out.push(el as { props: Record<string, unknown> });
+    const kids = el.props?.children;
+    for (const k of Array.isArray(kids) ? kids : [kids]) walk(k, out);
+  }
+  return out;
+};
 const CLEAR: LookState = { ...DEFAULT_LOOK_STATE, model: 'clear' };
 const DECK: LookState = { ...DEFAULT_LOOK_STATE, model: 'deck' };
+const LUXE: LookState = { ...DEFAULT_LOOK_STATE, model: 'luxe' };
 const RADIO =
   /<button type="button" role="radio" aria-checked="(true|false)" tabindex="(0|-1)"[^>]*>(.*?)<\/button>/g;
 
@@ -121,16 +134,6 @@ describe('LookMenu', () => {
   it('changes only the Deck’s light when a light is picked', () => {
     const seen: LookState[] = [];
     const tree = LookMenu({ look: DECK, open: true, onChange: (n) => seen.push(n), load: null });
-    const walk = (node: unknown, out: { props: Record<string, unknown> }[] = []) => {
-      if (Array.isArray(node)) for (const k of node) walk(k, out);
-      else if (node && typeof node === 'object') {
-        const el = node as { props?: Record<string, unknown>; type?: unknown };
-        if (el.props) out.push(el as { props: Record<string, unknown> });
-        const kids = el.props?.children;
-        for (const k of Array.isArray(kids) ? kids : [kids]) walk(k, out);
-      }
-      return out;
-    };
     const lightGroup = walk(tree).find(
       (n) => (n.props.group as { label?: string } | undefined)?.label === 'Light',
     )!.props.group as { pick(id: string): void };
@@ -168,22 +171,39 @@ describe('LookMenu', () => {
     const seen: LookState[] = [];
     const look = { ...DECK, personal: { pattern: 'music' as const, name: 'Lan' } };
     const tree = LookMenu({ look, open: true, onChange: (n) => seen.push(n), load: null });
-    const walk = (node: unknown, out: { props: Record<string, unknown> }[] = []) => {
-      if (Array.isArray(node)) for (const k of node) walk(k, out);
-      else if (node && typeof node === 'object') {
-        const el = node as { props?: Record<string, unknown> };
-        if (el.props) out.push(el as { props: Record<string, unknown> });
-        const kids = el.props?.children;
-        for (const k of Array.isArray(kids) ? kids : [kids]) walk(k, out);
-      }
-      return out;
-    };
     const group = walk(tree).find(
       (n) => (n.props.group as { label?: string } | undefined)?.label === 'Pattern',
     )!.props.group as { pick(id: string): void };
     group.pick('graffiti');
     expect(seen).toEqual([{ ...look, personal: { pattern: 'graffiti', name: 'Lan' } }]);
     expect(DEFAULT_LOOK_STATE.personal).toEqual(DEFAULT_PERSONAL);
+  });
+
+  it('offers Luxe its Body, Metal and Light, as dots, no Pattern and no name', () => {
+    const html = menu(LUXE);
+    expect(groups(html)).toEqual(['Model', 'Body', 'Metal', 'Light']);
+    expect(html).not.toContain('<input');
+    const models = html.slice(
+      html.indexOf('aria-label="Model"'),
+      html.indexOf('aria-label="Body"'),
+    );
+    expect([...models.matchAll(/cdp-skin__name">([^<]+)</g)].map((m) => m[1])).toEqual([
+      'Suitcase',
+      'Clear',
+      'Deck',
+      'Luxe',
+    ]);
+    for (const s of LUXE_SWATCHES.metal) expect(html).toContain(`aria-label="${s.name}"`);
+  });
+
+  it('changes only Luxe’s metal when a metal is picked', () => {
+    const seen: LookState[] = [];
+    const tree = LookMenu({ look: LUXE, open: true, onChange: (n) => seen.push(n), load: null });
+    const metal = walk(tree).find(
+      (n) => (n.props.group as { label?: string } | undefined)?.label === 'Metal',
+    )!.props.group as { pick(id: string): void };
+    metal.pick('chrome');
+    expect(seen).toEqual([{ ...LUXE, luxe: { ...DEFAULT_LUXE_LOOK, metal: 'chrome' } }]);
   });
 
   it('is hidden while closed and shown while open', () => {

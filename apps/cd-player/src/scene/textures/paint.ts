@@ -7,7 +7,8 @@ import {
 import type { TrackView } from '../../bridge';
 import { clearSwatch } from '../../clear-looks';
 import { deckSwatch } from '../../deck-looks';
-import type { Look } from '../../looks';
+import { exhaustive, type Look } from '../../looks';
+import { luxeSwatch } from '../../luxe-looks';
 import type { Status } from '../../playback/sequencer';
 import { DECK_SCREEN, playedBars, screenTimes, WAVE_BARS, waveHeights } from './deck-screen';
 import {
@@ -52,6 +53,9 @@ export async function loadFaces(text?: string): Promise<void> {
     FACES.map((face) => document.fonts.load(face, text || undefined).catch(() => [])),
   );
 }
+
+/** The plate's canvas (the collection's name on the card_print slot), in pixels. */
+export const CARD_CANVAS = { width: 1024, height: 182 } as const;
 
 export function newCanvas(width: number, height: number): HTMLCanvasElement {
   const canvas = document.createElement('canvas');
@@ -102,11 +106,21 @@ function fitted(ctx: CanvasRenderingContext2D, text: string, max: number): strin
   return fitText((s) => ctx.measureText(s).width, text, max);
 }
 
+/** What a disc is, for its blank label: a CD's, or a record's. */
+export type DiscKind = 'cd' | 'record';
+
+/** The blank label's caption and the words round its rim, by kind. */
+const BLANK_LABEL: Readonly<Record<DiscKind, { caption: string; arc: string }>> = {
+  cd: { caption: 'CD·01  ·  COMPACT DISC', arc: 'ncam  ·  CD player  ·  side A' },
+  record: { caption: '33⅓ RPM  ·  LONG PLAY', arc: 'ncam  ·  turntable  ·  side A' },
+};
+
 /** The disc's label: the artist's photo, a darkened rim and the title and artist printed round it. */
 export function paintDisc(
   canvas: HTMLCanvasElement,
   image: HTMLImageElement | null,
   view: TrackView | null,
+  kind: DiscKind = 'cd',
 ): void {
   const ctx = context(canvas);
   const size = canvas.width;
@@ -133,16 +147,14 @@ export function paintDisc(
     ctx.font = title(Math.round(size * 0.09));
     ctx.fillText('ncam', r, r * 0.6);
     ctx.font = bold(Math.round(size * 0.026));
-    ctx.fillText('CD·01  ·  COMPACT DISC', r, r * 1.45);
+    ctx.fillText(BLANK_LABEL[kind].caption, r, r * 1.45);
   }
   const rim = ctx.createRadialGradient(r, r, r * 0.72, r, r, r);
   rim.addColorStop(0, 'rgba(0, 0, 0, 0)');
   rim.addColorStop(1, 'rgba(0, 0, 0, 0.5)');
   ctx.fillStyle = rim;
   ctx.fillRect(0, 0, size, size);
-  const text = (
-    view ? `${view.title}  ·  ${view.artists}` : 'ncam  ·  CD player  ·  side A'
-  ).toUpperCase();
+  const text = (view ? `${view.title}  ·  ${view.artists}` : BLANK_LABEL[kind].arc).toUpperCase();
   const radius = r * 0.9;
   ctx.font = bold(Math.round(size * 0.027));
   ctx.fillStyle = 'rgba(255, 255, 255, 0.92)';
@@ -157,6 +169,15 @@ export function paintDisc(
     ctx.fillText(char, 0, 0);
     ctx.restore();
   }
+}
+
+/** A record's label: the disc's print (the artist's photo, the title round it), a record's blank. */
+export function paintRecord(
+  canvas: HTMLCanvasElement,
+  image: HTMLImageElement | null,
+  view: TrackView | null,
+): void {
+  paintDisc(canvas, image, view, 'record');
 }
 
 /** The booklet behind the case's lid: the album art, or the page's own cover before any art. */
@@ -288,11 +309,23 @@ function drawDigits(
   }
 }
 
-/** The display's lit colour for a look: the suitcase's cyan, or the Clear model's or the Deck's light. */
+/**
+ * The display's lit colour for a look: the suitcase's cyan, or the Clear model's or the Deck's
+ * light, or Luxe's (its LED ring is painted in it).
+ */
 export function lcdColour(look: Look): string {
-  if (look.model === 'clear') return clearSwatch(look.clear, 'light').glow;
-  if (look.model === 'deck') return deckSwatch(look.deck, 'light').glow;
-  return LCD_ON;
+  switch (look.model) {
+    case 'suitcase':
+      return LCD_ON;
+    case 'clear':
+      return clearSwatch(look.clear, 'light').glow;
+    case 'deck':
+      return deckSwatch(look.deck, 'light').glow;
+    case 'luxe':
+      return luxeSwatch(look.luxe, 'light').glow;
+    default:
+      return exhaustive(look);
+  }
 }
 
 /** The deck's display: unlit "88 8:88" ghosts under the lit digits, as on a real LCD. */

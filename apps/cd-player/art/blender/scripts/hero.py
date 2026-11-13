@@ -1,13 +1,16 @@
-"""Cycles stills of the CD players, headless:
+"""Cycles stills of the CD players and the turntable, headless:
 
-    CDP_MODEL=suitcase|clear|deck CDP_HERO_VIEW=hero|lid|inside|top CDP_HERO_QUALITY=preview|final \\
+    CDP_MODEL=suitcase|clear|deck|luxe CDP_HERO_VIEW=hero|lid|inside|top|platter \\
+      CDP_HERO_QUALITY=preview|final \\
       /Applications/Blender.app/Contents/MacOS/Blender --background --factory-startup \\
       --python-exit-code 1 --python apps/cd-player/art/blender/scripts/hero.py
 
 CDP_MODEL picks the player: `suitcase` (the default), `clear` (clear.py, with its board in
-clear_board.py and its decorations in clear_decor.py) or `deck` (deck.py, with its screen, decor
+clear_board.py and its decorations in clear_decor.py), `deck` (deck.py, with its screen, decor
 and body detail in deck_panel.py, its flight case in deck_case.py and its print layer in
-deck_print.py). The Deck's print layer is the page's to paint, never Cycles': the owner's stills
+deck_print.py) or `luxe`, the turntable (luxe.py on vinyl.py's record, sleeve and LED ring, with
+its tonearm in luxe_arm.py and its record stand and ledge in luxe_stand.py). The Deck's print
+layer is the page's to paint, never Cycles': the owner's stills
 hide it. CDP_DECK_ATLAS=checker maps a debug atlas onto it instead (each region in its own colour,
 a 10 mm grid, a white corner where its row 0 and column 0 meet, its id), into art/.out/deck/debug/.
 The suitcase's views: `hero` is the three-quarter product still the design was approved from (the
@@ -16,7 +19,10 @@ into the open lid (the case, the rack and its discs, the strap and the plate).
 The Clear model's: `hero`, the three-quarter still of the player between its stand and its case,
 and `inside`, a close-up of the board, the LCD and the mechanism through the shell. The Deck's:
 `hero`, the three-quarter still of the deck and its flight case from the front left, and `top`,
-over the jog (the disc through the acrylic, the LED ring, the pads, the keys and the screen). `preview` is
+over the jog (the disc through the acrylic, the LED ring, the pads, the keys and the screen). Luxe's:
+`hero`, the three-quarter still of the deck and its record stand from the front left, a little
+above, and `platter`, over the platter (the record and its label, the strobe dots, the LED ring,
+the tonearm on the record, the keys). `preview` is
 800 x 600 at 24 samples, `final` 1600 x 1200 at 160; any other value of the model, the view or the
 quality stops the run with exit 1, naming the valid ones. The art it prints is the gallery's
 thumbnails (apps/portfolio/public/thumbnails), so anyone can rerun it. The suitcase's PNG lands in
@@ -25,9 +31,11 @@ the grid layout. CDP_SKIN=<id> (an id of src/skins.json) renders that skin inste
 art/.out/skins/<id>/. The Clear model renders its default look, or CDP_CLEAR_LOOK=<shell>,<frame>,
 <board>,<light> (ids of src/clear-looks.json), into art/.out/clear/<look>/clear-<view>-<quality>.png.
 The Deck renders its default look, or CDP_DECK_LOOK=<body>,<light> (ids of src/deck-looks.json),
-into art/.out/deck/<body>-<light>/deck-<view>-<quality>.png. Each model takes its own colours only:
-CDP_SKIN with another model, CDP_CLEAR_LOOK with another, or CDP_DECK_LOOK with another stops the
-run too. Also runs in a live Blender through tools/bl.py.
+into art/.out/deck/<body>-<light>/deck-<view>-<quality>.png. Luxe renders its default look, or
+CDP_LUXE_LOOK=<body>,<metal>,<light> (ids of src/luxe-looks.json), into
+art/.out/luxe/<body>-<metal>-<light>/luxe-<view>-<quality>.png. Each model takes its own colours
+only: CDP_SKIN with another model, CDP_CLEAR_LOOK with another, CDP_DECK_LOOK with another, or
+CDP_LUXE_LOOK with another stops the run too. Also runs in a live Blender through tools/bl.py.
 """
 import math
 import os
@@ -51,17 +59,24 @@ def setting(name, default, valid):
     return value
 
 
-VIEWS = {"suitcase": ("hero", "lid"), "clear": ("hero", "inside"), "deck": ("hero", "top")}
+VIEWS = {"suitcase": ("hero", "lid"), "clear": ("hero", "inside"), "deck": ("hero", "top"),
+         "luxe": ("hero", "platter")}
 MODEL = setting("CDP_MODEL", "suitcase", tuple(VIEWS))
 VIEW = setting("CDP_HERO_VIEW", "hero", VIEWS[MODEL])
 QUALITY = setting("CDP_HERO_QUALITY", "preview", ("preview", "final"))
 SKIN = os.environ.get("CDP_SKIN")  # an id of src/skins.json; unset renders Blush, empty is an error
 CLEAR_LOOK = os.environ.get("CDP_CLEAR_LOOK")  # shell,frame,board,light ids of src/clear-looks.json
 DECK_LOOK = os.environ.get("CDP_DECK_LOOK")  # body,light ids of src/deck-looks.json
+LUXE_LOOK = os.environ.get("CDP_LUXE_LOOK")  # body,metal,light ids of src/luxe-looks.json
 DECK_ATLAS = os.environ.get("CDP_DECK_ATLAS")  # `checker`: the Deck's print layer shows its debug atlas
 if DECK_ATLAS is not None and (DECK_ATLAS != "checker" or os.environ.get("CDP_MODEL") != "deck"):
     raise SystemExit("hero.py: CDP_DECK_ATLAS must be checker, with CDP_MODEL=deck, not %r" % DECK_ATLAS)
 # Each model takes its own colours: another's setting would be ignored unannounced.
+if MODEL == "luxe" and (SKIN is not None or CLEAR_LOOK is not None or DECK_LOOK is not None):
+    raise SystemExit("hero.py: Luxe takes CDP_LUXE_LOOK=<body>,<metal>,<light>, not CDP_SKIN, "
+                     "CDP_CLEAR_LOOK or CDP_DECK_LOOK")
+if MODEL != "luxe" and LUXE_LOOK is not None:
+    raise SystemExit("hero.py: CDP_LUXE_LOOK colours Luxe (CDP_MODEL=luxe), not the %s" % MODEL)
 if MODEL == "clear" and SKIN is not None:
     raise SystemExit("hero.py: CDP_SKIN colours the suitcase; the Clear model takes "
                      "CDP_CLEAR_LOOK=<shell>,<frame>,<board>,<light>, not CDP_SKIN=%r" % SKIN)
@@ -151,6 +166,25 @@ def deck_flags():
         for attr in ("visible_camera", "visible_diffuse", "visible_transmission", "visible_volume_scatter",
                      "visible_shadow"):
             setattr(ob, attr, False)
+    return m
+
+
+def luxe_flags():
+    """Luxe's flags, as a photographer flags a lacquered product, so that a gloss black reads black,
+    not chrome, and the record black. Dark cards on the floor in front of the deck and left of it,
+    which glossy rays alone see (out of the camera's sight, casting no shadow, lighting nothing),
+    keep the lacquered front and left side from mirroring the bright floor (clear of the feet, the
+    ledge and the stand). The rim light lights the scene but stays out of every glossy reflection:
+    from the hero camera its reflection would lie across the whole top and the record, and a flag
+    that casts no shadow cannot hide a light's own reflection."""
+    m = mat("flag", (0.012, 0.012, 0.014, 1), rough=0.9)
+    for name, loc, size in (("flag_floor", L(0, -925, 0.6), (2400.0, 1450.0)),
+                            ("flag_floor_left", L(-864, 0, 0.6), (1272.0, 400.0))):
+        ob = rbox(name, (size[0], size[1], 1.0), m, loc=loc)
+        for attr in ("visible_camera", "visible_diffuse", "visible_transmission", "visible_volume_scatter",
+                     "visible_shadow"):
+            setattr(ob, attr, False)
+    bpy.data.objects["rim"].visible_glossy = False
     return m
 
 
@@ -318,7 +352,33 @@ def deck_scene():
     return OUT + "deck/%s/deck-%s-%s.png" % (look_ids, VIEW, QUALITY)
 
 
-PNG = {"clear": clear_scene, "deck": deck_scene}.get(MODEL, suitcase_scene)()
+def luxe_scene():
+    for f in ("vinyl.py", "luxe.py", "luxe_arm.py", "luxe_stand.py"):
+        exec(compile(open(BASE + "/" + f).read(), f, "exec"), globals())
+    look, ids = luxe_look(LUXE_LOOK)
+    new_scene("cd_player_luxe", res=(1600, 1200), samples=128)
+    build_luxe_materials(look)
+    label = image_mat("art_disc", THUMBS + "holodex.jpg", 100, 100, coat=0.3, rough=0.35)
+    cover = image_mat("art_sleeve", THUMBS + "garden-home.jpg", 309, 309, coat=0.2)
+    rack = [image_mat("art_rack_sleeve_%d" % i, THUMBS + f, 309, 309, coat=0.2) for i, f in enumerate(
+        ("chess.jpg", "mini-store.jpg", "garden-home.jpg", "cd-player.jpg", "holodex.jpg"))]
+    M["card_print"] = mat("card_print", (0.92, 0.9, 0.88, 1), rough=0.4)
+    floor = rbox("floor", (5000, 5000, 10), M["floor"], loc=L(0, 0, -5))
+    floor.is_shadow_catcher = True
+    make_luxe_player("luxe", label, cover, look, rack)
+    studio()
+    luxe_flags()
+    if VIEW == "platter":
+        # Over the platter from in front: the record and its label, the LED ring, the tonearm on
+        # the record, the keys along the frame's bottom edge.
+        camera("cam", L(-45, -360, 720), L(-45, 15, 100), lens=50, fstop=8.0, focus=L(-45, 10, 100))
+    else:
+        # Front left, a little above: the deck, its record stand and the ledge behind it.
+        camera("cam", L(-520, -1250, 620), L(150, 40, 110), lens=50, fstop=7.1, focus=L(0, -40, 110))
+    return OUT + "luxe/%s/luxe-%s-%s.png" % ("-".join(ids[p] for p in LUXE_PARTS), VIEW, QUALITY)
+
+
+PNG = {"clear": clear_scene, "deck": deck_scene, "luxe": luxe_scene}.get(MODEL, suitcase_scene)()
 os.makedirs(os.path.dirname(PNG), exist_ok=True)
 if QUALITY == "final":
     render(PNG, res=(1600, 1200), samples=160)

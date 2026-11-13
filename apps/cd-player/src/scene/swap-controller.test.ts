@@ -39,7 +39,9 @@ const freshStage = (): StageState => ({
 const flush = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
 
 /** A controller on a fake clock whose prints land (or fail) when the test says. */
-function harness(options: { reduced?: boolean; hidden?: boolean; door?: boolean } = {}) {
+function harness(
+  options: { reduced?: boolean; hidden?: boolean; door?: boolean; booklet?: boolean } = {},
+) {
   const stage = freshStage();
   /** The page as the controller sees it: hidden or not, and the bridge's view. */
   const page = { hidden: options.hidden ?? false, view: lineup(null) };
@@ -86,6 +88,7 @@ function harness(options: { reduced?: boolean; hidden?: boolean; door?: boolean 
     view: () => page.view,
     reduced: options.reduced ?? false,
     door: options.door ?? false,
+    booklet: options.booklet ?? true,
     hidden: () => page.hidden,
     clock,
     onPrintFailed: failed,
@@ -189,6 +192,20 @@ describe('createSwapController: seat', () => {
 });
 
 describe('createSwapController: a change', () => {
+  it('prints and turns no booklet for a model without a jewel case', async () => {
+    const h = harness({ booklet: false });
+    h.controller.seat(lineup('a', 'b', 'c'));
+    h.page.view = lineup('b', 'c', 'd');
+    const done = h.controller.swap(track('b'));
+    h.landAll();
+    await flush();
+    h.frame(DURATION.next);
+    await done;
+    expect(h.booklets).toEqual([]);
+    expect(h.stage.bookletFront).toBe(0);
+    expect(h.stage.shelf.booklet?.id).toBe('b');
+  });
+
   it('runs next: holds its first pose until the prints are in, plays the timeline, hands the shelf over', async () => {
     const h = await seated(FULL);
     const change = h.swap(NEXT, 'b');
@@ -273,6 +290,7 @@ describe('createSwapController: a change', () => {
       view: () => lineup('b', 'c'),
       reduced: false,
       door: false,
+      booklet: true,
       hidden: () => false,
       clock: { now: () => 0, after: () => () => {} },
       onPrintFailed: failed,

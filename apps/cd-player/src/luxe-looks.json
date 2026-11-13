@@ -1,0 +1,65 @@
+{
+  "body": [
+    {
+      "id": "pink",
+      "name": "Pink lacquer",
+      "colour": "#f2b6c6",
+      "metalness": 0,
+      "roughness": 0.2,
+      "coat": 1
+    },
+    {
+      "id": "silver",
+      "name": "Brushed silver",
+      "colour": "#c9ccd1",
+      "metalness": 1,
+      "roughness": 0.34,
+      "coat": 0
+    },
+    {
+      "id": "rose",
+      "name": "Brushed rose gold",
+      "colour": "#d9a493",
+      "metalness": 1,
+      "roughness": 0.34,
+      "coat": 0
+    },
+    {
+      "id": "black",
+      "name": "Gloss black",
+      "colour": "#15151a",
+      "metalness": 0,
+      "roughness": 0.15,
+      "coat": 1
+    }
+  ],
+  "metal": [
+    {
+      "id": "gold",
+      "name": "Polished gold",
+      "colour": "#e3c27a",
+      "metalness": 1,
+      "roughness": 0.18
+    },
+    { "id": "chrome", "name": "Chrome", "colour": "#e8eaee", "metalness": 1, "roughness": 0.08 },
+    { "id": "rose", "name": "Rose gold", "colour": "#e6b0a0", "metalness": 1, "roughness": 0.18 }
+  ],
+  "light": [
+    { "id": "pink", "name": "Pink", "glow": "#ff79b0", "accent": "#efa3c0", "onAccent": "#2c111d" },
+    {
+      "id": "amber",
+      "name": "Amber",
+      "glow": "#ffb347",
+      "accent": "#f0c27e",
+      "onAccent": "#2b1d08"
+    },
+    { "id": "ice", "name": "Ice", "glow": "#7fd8ff", "accent": "#9fd3ea", "onAccent": "#0e2430" },
+    {
+      "id": "violet",
+      "name": "Violet",
+      "glow": "#b48cff",
+      "accent": "#c8b4f2",
+      "onAccent": "#1e1430"
+    }
+  ]
+}

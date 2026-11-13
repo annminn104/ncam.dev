@@ -11,7 +11,8 @@
     "typecheck": "tsc --noEmit",
     "art:build": "node art/pipeline/build.mjs",
     "art:build:clear": "node art/pipeline/build.mjs clear",
-    "art:build:deck": "node art/pipeline/build.mjs deck"
+    "art:build:deck": "node art/pipeline/build.mjs deck",
+    "art:build:luxe": "node art/pipeline/build.mjs luxe"
   },
   "dependencies": {
     "@fontsource-variable/fraunces": "^5.3.0",

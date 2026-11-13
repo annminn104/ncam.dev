@@ -19,22 +19,36 @@ export interface SurfaceMakers {
   texture(canvas: HTMLCanvasElement): CanvasTexture;
 }
 
-export function makeSurfaces(make: SurfaceMakers) {
+export function makeSurfaces(
+  make: SurfaceMakers,
+  kind: { booklet?: boolean; sleeves?: boolean } = {},
+) {
   const disc = Array.from({ length: DISC_COPIES }, () => make.canvas(FIRST_SIZE, FIRST_SIZE));
-  const booklet = [
-    make.canvas(BOOKLET_PX, BOOKLET_PX),
-    make.canvas(BOOKLET_PX, BOOKLET_PX),
-  ] as const;
+  // A turntable has no jewel case: no booklet to print.
+  const booklet: HTMLCanvasElement[] =
+    kind.booklet === false
+      ? []
+      : [make.canvas(BOOKLET_PX, BOOKLET_PX), make.canvas(BOOKLET_PX, BOOKLET_PX)];
+  // A turntable's records each have a sleeve, printed with them and sized as they are.
+  const sleeve: HTMLCanvasElement[] = kind.sleeves
+    ? Array.from({ length: DISC_COPIES }, () => make.canvas(FIRST_SIZE, FIRST_SIZE))
+    : [];
   return {
-    canvases: { disc, booklet },
+    canvases: { disc, booklet, sleeve },
     textures: {
       disc: disc.map((canvas) => make.texture(canvas)),
-      booklet: [make.texture(booklet[0]), make.texture(booklet[1])] as const,
+      booklet: booklet.map((canvas) => make.texture(canvas)),
+      sleeve: sleeve.map((canvas) => make.texture(canvas)),
     },
   };
 }
 
 export type Surfaces = ReturnType<typeof makeSurfaces>;
+
+/** The booklet's sides the surfaces have: both, or none for a model without a jewel case. */
+export function bookletSides(surfaces: Surfaces): readonly (0 | 1)[] {
+  return surfaces.canvases.booklet.length ? [0, 1] : [];
+}
 
 /** What each surface was last asked to print, so the hook prints it again as its art comes in. */
 export interface Printed {
@@ -75,29 +89,53 @@ export interface PrinterDeps {
   load(view: TrackView): Promise<PrintLoad>;
   paintDisc: PaintPrint;
   paintBooklet: PaintPrint;
+  /** A turntable's sleeve, printed with each print of its record: paint.ts's paintBooklet (the album art). */
+  paintSleeve?: PaintPrint;
   onFailed(view: TrackView, error: unknown): void;
 }
 
-/** Makes copy `index` `size` px square: a new size needs a new texture on the GPU. */
+export type BlankPaints = Pick<PrinterDeps, 'paintDisc' | 'paintSleeve'>;
+
+/** Makes copy `index`'s print, and its sleeve's, `size` px square: a new size needs a new texture. */
 function sizeDisc(surfaces: Surfaces, index: number, size: number): void {
-  const canvas = surfaces.canvases.disc[index];
-  if (canvas.width === size) return;
-  canvas.width = size;
-  canvas.height = size;
-  surfaces.textures.disc[index].dispose();
+  const pairs = [
+    [surfaces.canvases.disc[index], surfaces.textures.disc[index]],
+    [surfaces.canvases.sleeve[index], surfaces.textures.sleeve[index]],
+  ] as const;
+  for (const [canvas, texture] of pairs) {
+    if (!canvas || !texture || canvas.width === size) continue;
+    canvas.width = size;
+    canvas.height = size;
+    texture.dispose();
+  }
 }
 
-/** A copy without its art yet: the page's own label, with the track's name round it if it has one. */
+/** Copy `index`'s sleeve, where it has one: `picture` (the album art) or, for null, the blank cover. */
+function paintSleeve(
+  surfaces: Surfaces,
+  paints: BlankPaints,
+  index: number,
+  picture: HTMLImageElement | null,
+  view: TrackView | null,
+): void {
+  const canvas = surfaces.canvases.sleeve[index];
+  if (!canvas || !paints.paintSleeve) return;
+  paints.paintSleeve(canvas, picture, view);
+  surfaces.textures.sleeve[index].needsUpdate = true;
+}
+
+/** A copy without its art yet: the page's own label (and sleeve), with the track's name if it has one. */
 export function blankDisc(
   surfaces: Surfaces,
-  paint: PaintPrint,
+  paints: BlankPaints,
   index: number,
   view: TrackView | null,
   size: number,
 ): void {
   sizeDisc(surfaces, index, size);
-  paint(surfaces.canvases.disc[index], null, view);
+  paints.paintDisc(surfaces.canvases.disc[index], null, view);
   surfaces.textures.disc[index].needsUpdate = true;
+  paintSleeve(surfaces, paints, index, null, view);
 }
 
 export function blankBooklet(
@@ -120,6 +158,7 @@ export function makePrinter(
     sizeDisc(surfaces, index, size);
     deps.paintDisc(surfaces.canvases.disc[index], photo ?? art, view);
     surfaces.textures.disc[index].needsUpdate = true;
+    paintSleeve(surfaces, deps, index, art, view);
     printed.current.landed[index] = true;
     // Printed in the fallback faces: print it again once the page's are in, unless a newer
     // print has taken the copy meanwhile.
@@ -147,7 +186,7 @@ export function makePrinter(
       // Another track: its name goes on at once, round the blank label, its art once it loads.
       // So no copy ever shows a track it no longer carries.
       if (printed.current.disc[index]?.id !== view.id) {
-        blankDisc(surfaces, deps.paintDisc, index, view, size);
+        blankDisc(surfaces, deps, index, view, size);
         printed.current.landed[index] = false;
       }
       printed.current.disc[index] = view;
@@ -155,6 +194,7 @@ export function makePrinter(
       return discPrint(index, view, size, signal);
     },
     booklet: (side, view, signal) => {
+      if (!surfaces.canvases.booklet[side]) return Promise.resolve();
       if (!view || printed.current.booklet[side]?.id !== view.id) {
         blankBooklet(surfaces, deps.paintBooklet, side, view);
         printed.current.bookletLanded[side] = false;

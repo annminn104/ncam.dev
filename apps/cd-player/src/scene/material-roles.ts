@@ -1,5 +1,6 @@
 import type { ClearPart } from '../clear-looks';
 import type { DeckPart } from '../deck-looks';
+import type { LuxePart } from '../luxe-looks';
 import type { SkinRole } from '../skins';
 
 /**
@@ -27,7 +28,9 @@ export type MaterialRole =
   | 'pcb'
   | 'etch'
   | 'gold'
-  | 'decal';
+  | 'decal'
+  | 'lacquer'
+  | 'hit';
 
 export const MATERIAL_ROLES: Readonly<Record<string, MaterialRole>> = {
   leather: 'leather',
@@ -88,6 +91,16 @@ export const MATERIAL_ROLES: Readonly<Record<string, MaterialRole>> = {
   deck_pattern: 'decal',
   rca_red: 'plastic',
   rca_white: 'plastic',
+  luxe_body: 'lacquer',
+  luxe_metal: 'frame',
+  luxe_light: 'emissive',
+  vinyl: 'gloss-black',
+  platter_mat: 'matte',
+  strobe: 'matte',
+  cartridge: 'plastic',
+  sleeve_paper: 'matte',
+  arm_hit: 'hit',
+  art_sleeve: 'print',
 };
 
 /**
@@ -118,4 +131,14 @@ export const CLEAR_ROLES: Readonly<Record<string, ClearPart>> = {
 export const DECK_ROLES: Readonly<Record<string, DeckPart>> = {
   deck_body: 'body',
   deck_light: 'light',
+};
+
+/**
+ * GLB material name → Luxe's part that colours it (src/luxe-looks.ts); the stand shares the
+ * body's and the metal's.
+ */
+export const LUXE_ROLES: Readonly<Record<string, LuxePart>> = {
+  luxe_body: 'body',
+  luxe_metal: 'metal',
+  luxe_light: 'light',
 };

@@ -1,9 +1,10 @@
 /**
  * The players a visitor can pick under Player: the suitcase (the default, with its four skins),
- * the Clear model and the Deck (their colours chosen part by part). Three-free on purpose
- * (src/ssr-graph.test.ts); the scene's own numbers per model are in src/scene/profiles.ts.
+ * the Clear model, the Deck and Luxe, a turntable (their colours chosen part by part).
+ * Three-free on purpose (src/ssr-graph.test.ts); the scene's own numbers per model are in
+ * src/scene/profiles.ts.
  */
-export type ModelId = 'suitcase' | 'clear' | 'deck';
+export type ModelId = 'suitcase' | 'clear' | 'deck' | 'luxe';
 export type LookKind = 'skins' | 'parts';
 
 export interface ModelProfile {
@@ -12,7 +13,7 @@ export interface ModelProfile {
   name: string;
   /** The GLB's path under public/. */
   glb: string;
-  /** How its colours are chosen: the suitcase's skins, or the parts of the Clear model and the Deck. */
+  /** How its colours are chosen: the suitcase's skins, or the parts of the Clear model, the Deck and Luxe. */
   looks: LookKind;
 }
 
@@ -23,6 +24,7 @@ export const MODELS: readonly ModelProfile[] = [
   { id: 'suitcase', name: 'Suitcase', glb: 'assets/cd-player.glb', looks: 'skins' },
   { id: 'clear', name: 'Clear', glb: 'assets/cd-player-clear.glb', looks: 'parts' },
   { id: 'deck', name: 'Deck', glb: 'assets/cd-player-deck.glb', looks: 'parts' },
+  { id: 'luxe', name: 'Luxe', glb: 'assets/cd-player-luxe.glb', looks: 'parts' },
 ];
 
 /** The model with that id; anything else is the default. */

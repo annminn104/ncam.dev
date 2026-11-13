@@ -18,9 +18,30 @@ import {
   DECK_SEAT,
   DECK_WELL,
   deckSlot,
+  LUXE_ARM,
+  LUXE_GROOVES,
+  LUXE_LEDGE,
+  LUXE_PANELS,
+  LUXE_BAR,
+  LUXE_PLATTER,
+  LUXE_PLINTH,
+  LUXE_RECORD,
+  LUXE_SEAT,
+  LUXE_SLEEVE,
+  LUXE_STAND,
+  LUXE_STEPS,
+  luxeSlot,
 } from '../testing/model-measures';
 import { RACK_SLOTS } from './stage';
-import { DYNAMIC_MATERIALS, REQUIRED_NODES } from './contract';
+import {
+  CD_MATERIALS,
+  CD_NODES,
+  DYNAMIC_MATERIALS,
+  REQUIRED_NODES,
+  TURNTABLE_MATERIALS,
+  TURNTABLE_NODES,
+  VINYL_NODES,
+} from './contract';
 import { readGlbJson, triangleCount } from './glb';
 import { CLEAR_ROLES, MATERIAL_ROLES, SKIN_ROLES } from './material-roles';
 import deckAtlas from './textures/deck-atlas.json';
@@ -240,6 +261,7 @@ describe('public/assets/cd-player-clear.glb (art/pipeline/build.mjs clear)', () 
 });
 
 const DECK_GLB = fileURLToPath(new URL('../../public/assets/cd-player-deck.glb', import.meta.url));
+const LUXE_GLB = fileURLToPath(new URL('../../public/assets/cd-player-luxe.glb', import.meta.url));
 
 describe('public/assets/cd-player-deck.glb (art/pipeline/build.mjs deck)', () => {
   const json = readGlbJson(new Uint8Array(readFileSync(DECK_GLB)));
@@ -440,6 +462,132 @@ describe('public/assets/cd-player-deck.glb (art/pipeline/build.mjs deck)', () =>
   });
 });
 
+describe('public/assets/cd-player-luxe.glb (art/pipeline/build.mjs luxe)', () => {
+  const json = readGlbJson(new Uint8Array(readFileSync(LUXE_GLB)));
+  const index = new Map(json.nodes.map((node, i) => [node.name ?? '', i]));
+  const node = (name: string) => json.nodes[index.get(name) ?? -1];
+  const parentOf = (name: string) =>
+    json.nodes.find((candidate) => candidate.children?.includes(index.get(name) ?? -1))?.name;
+  const under = (name: string, ancestor: string): boolean => {
+    for (let at = parentOf(name); at; at = parentOf(at)) if (at === ancestor) return true;
+    return false;
+  };
+  /** Every material of the primitives under `name`, at any depth. */
+  const materialsUnder = (name: string): Set<string> => {
+    const found = new Set<string>();
+    const visit = (at: number) => {
+      const here = json.nodes[at];
+      if (here.mesh !== undefined) {
+        for (const primitive of json.meshes[here.mesh].primitives) {
+          if (primitive.material !== undefined) {
+            found.add(json.materials[primitive.material].name ?? '');
+          }
+        }
+      }
+      for (const child of here.children ?? []) visit(child);
+    };
+    const start = index.get(name);
+    if (start !== undefined) visit(start);
+    return found;
+  };
+
+  it('has every node a turntable needs, its ring and its stylus, and none of a CD player’s own', () => {
+    const names = new Set(json.nodes.map((n) => n.name));
+    for (const name of [...TURNTABLE_NODES, 'jog_ring', 'stylus']) {
+      expect(names.has(name), name).toBe(true);
+    }
+    for (const name of [...CD_NODES, 'door_hinge']) expect(names.has(name), name).toBe(false);
+  });
+
+  it('has a turntable’s prints, the ring’s, a role for every material, and the three a look colours', () => {
+    const names = json.materials.map((material) => material.name ?? '');
+    for (const name of [...TURNTABLE_MATERIALS, 'jog_ring']) expect(names).toContain(name);
+    for (const name of CD_MATERIALS) expect(names).not.toContain(name);
+    for (const name of names) expect(MATERIAL_ROLES[name], name).toBeDefined();
+    for (const name of ['luxe_body', 'luxe_metal', 'luxe_light'])
+      expect(names, name).toContain(name);
+  });
+
+  it('keeps the UVs of every printed primitive and of the ring', () => {
+    const printed = new Set<string>([...TURNTABLE_MATERIALS, 'jog_ring']);
+    const seen = new Set<string>();
+    for (const mesh of json.meshes) {
+      for (const primitive of mesh.primitives) {
+        const name =
+          primitive.material === undefined ? '' : (json.materials[primitive.material].name ?? '');
+        if (!printed.has(name)) continue;
+        seen.add(name);
+        expect(primitive.attributes.TEXCOORD_0, name).toBeDefined();
+      }
+    }
+    expect([...seen].sort()).toEqual([...printed].sort());
+  });
+
+  it('turns the keys, the platter and the arm on empties that carry their parts', () => {
+    for (const pivot of [
+      'btn_prev',
+      'btn_next',
+      'btn_play',
+      'btn_stop',
+      'btn_rpt',
+      'btn_mode',
+      'platter',
+      'arm_pivot',
+      'arm_head',
+    ]) {
+      expect(node(pivot), pivot).toBeDefined();
+      expect(node(pivot).mesh, pivot).toBeUndefined();
+      expect(node(pivot).children?.length ?? 0, pivot).toBeGreaterThan(0);
+    }
+  });
+
+  it('hangs the head under the arm, with its stylus and a hit shape drawn nowhere', () => {
+    expect(under('arm_head', 'arm_pivot')).toBe(true);
+    expect(parentOf('stylus')).toBe('arm_head');
+    expect(node('stylus').mesh).toBeUndefined();
+    expect(materialsUnder('arm_head')).toContain('arm_hit');
+    expect(MATERIAL_ROLES.arm_hit).toBe('hit');
+  });
+
+  it('makes the record of vinyl and its label, the sleeve of card and its cover, neither on the platter', () => {
+    expect(materialsUnder('disc')).toEqual(new Set(['vinyl', 'art_disc']));
+    expect(materialsUnder('sleeve')).toEqual(new Set(['sleeve_paper', 'art_sleeve']));
+    expect(under('disc', 'platter')).toBe(false);
+    expect(under('sleeve', 'luxe_stand')).toBe(false);
+  });
+
+  it('hangs the five rack slots and the plate from the stand', () => {
+    for (let i = 0; i < 5; i += 1) {
+      expect(parentOf(`rack_slot_${i}`)).toBe('luxe_stand');
+      expect(node(`rack_slot_${i}`).mesh).toBeUndefined();
+    }
+    expect(under('card', 'luxe_stand')).toBe(true);
+    expect(materialsUnder('card')).toContain('card_print');
+  });
+
+  it('prints ▶ and ‖ as two meshes on the play key, in the light', () => {
+    for (const icon of ['icon_play', 'icon_pause']) {
+      expect(node(icon).mesh, icon).toBeDefined();
+      expect(parentOf(icon), icon).toBe('btn_play');
+      expect(materialsUnder(icon), icon).toEqual(new Set(['luxe_light']));
+    }
+  });
+
+  it('draws its LED ring as one mesh in its own material', () => {
+    const mesh = node('jog_ring').mesh;
+    expect(mesh).toBeDefined();
+    expect(materialsUnder('jog_ring')).toEqual(new Set(['jog_ring']));
+    expect(json.meshes[mesh ?? -1].primitives).toHaveLength(1);
+  });
+
+  it('stays inside its budget, meshopt-compressed, with meshes on leaf nodes only', () => {
+    expect(statSync(LUXE_GLB).size).toBeLessThanOrEqual(4 * 1024 * 1024);
+    expect(triangleCount(json)).toBeLessThanOrEqual(150_000);
+    expect(json.extensionsUsed).toContain('EXT_meshopt_compression');
+    for (const n of json.nodes) if (n.children?.length) expect(n.mesh, n.name).toBeUndefined();
+  });
+});
+
 /** A committed GLB as the page loads it: three's GLTFLoader with the meshopt decoder. */
 async function loadScene(file: string): Promise<Object3D> {
   const bytes = readFileSync(file);
@@ -501,7 +649,7 @@ function expectTurn(actual: Quaternion, expected: Euler, at: string) {
 }
 
 describe('the GLBs as the scene tests measure them (src/testing/model-measures.ts)', () => {
-  const models = { suitcase: GLB, clear: CLEAR_GLB, deck: DECK_GLB } as const;
+  const models = { suitcase: GLB, clear: CLEAR_GLB, deck: DECK_GLB, luxe: LUXE_GLB } as const;
   const scenes: Partial<Record<keyof typeof models, Object3D>> = {};
   beforeAll(async () => {
     for (const [id, file] of Object.entries(models)) {
@@ -514,14 +662,19 @@ describe('the GLBs as the scene tests measure them (src/testing/model-measures.t
     return loaded;
   };
 
-  for (const id of ['suitcase', 'clear', 'deck'] as const) {
-    it(`frames the ${id}’s whole set by its box, a disc in each rack slot, rounded out to the millimetre`, () => {
+  for (const id of ['suitcase', 'clear', 'deck', 'luxe'] as const) {
+    it(`frames the ${id}’s whole set by its box, a disc, and on Luxe its sleeve, in each rack slot, rounded out to the millimetre`, () => {
       const set = scene(id);
       const box = new Box3().setFromPoints(vertices(set));
-      const disc = node(set, 'disc');
+      const items = id === 'luxe' ? ['disc', 'sleeve'] : ['disc'];
       for (let slot = 0; slot < RACK_SLOTS; slot++) {
-        for (const point of vertices(disc, node(set, `rack_slot_${slot}`).matrixWorld)) {
-          box.expandByPoint(point);
+        for (const item of items) {
+          for (const point of vertices(
+            node(set, item),
+            node(set, `rack_slot_${slot}`).matrixWorld,
+          )) {
+            box.expandByPoint(point);
+          }
         }
       }
       const [min, max] = [box.min.toArray(), box.max.toArray()];
@@ -538,7 +691,7 @@ describe('the GLBs as the scene tests measure them (src/testing/model-measures.t
 
   // The play key's two icons, told apart by their meshes: ▶ is one triangle, whose faces cross the
   // key's centre line (x = 0 in the key's own frame), and ‖ is two bars, one on each side of it.
-  for (const id of ['suitcase', 'clear', 'deck'] as const) {
+  for (const id of ['suitcase', 'clear', 'deck', 'luxe'] as const) {
     it(`draws the ${id}’s icon_play as a triangle across the key and icon_pause as two bars apart`, () => {
       const set = scene(id);
       const toKey = node(set, 'btn_play').matrixWorld.clone().invert();
@@ -771,6 +924,138 @@ describe('the GLBs as the scene tests measure them (src/testing/model-measures.t
     expect(Math.min(...radii)).toBeCloseTo(DECK_WELL.radius, PLACES);
     expect(Math.min(...well.map((p) => p.y))).toBeCloseTo(DECK_WELL.floor, PLACES);
     expect(DECK_WELL.centre[1]).toBe(DECK_WELL.floor);
+  });
+
+  for (const id of ['suitcase', 'clear', 'deck'] as const) {
+    it(`gives the ${id} none of a turntable’s own nodes`, () => {
+      for (const name of VINYL_NODES) {
+        expect(scene(id).getObjectByName(name), name).toBeUndefined();
+      }
+    });
+  }
+
+  /** The box of `object`'s meshes in world space, or in the frame `into` maps world points to. */
+  const meshBox = (object: Object3D, into?: Matrix4): Box3 => {
+    const box = new Box3();
+    for (const point of vertices(object)) {
+      box.expandByPoint(into ? point.applyMatrix4(into) : point);
+    }
+    return box;
+  };
+
+  /** The box of the meshes under `object` that are drawn, in world space: a hit shape is not. */
+  const drawnBox = (object: Object3D): Box3 => {
+    const box = new Box3();
+    object.traverse((child) => {
+      const mesh = child as Mesh;
+      if (!mesh.isMesh) return;
+      const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+      if (materials.every((material) => MATERIAL_ROLES[material.name] === 'hit')) return;
+      const position = mesh.geometry.getAttribute('position');
+      for (let i = 0; i < position.count; i++) {
+        box.expandByPoint(
+          new Vector3().fromBufferAttribute(position, i).applyMatrix4(mesh.matrixWorld),
+        );
+      }
+    });
+    return box;
+  };
+
+  it('seats Luxe’s record on its platter’s mat, its up the world’s, its label clear of the vinyl', () => {
+    const set = scene('luxe');
+    for (const name of ['disc_seat', 'disc']) {
+      expectPosition(node(set, name), LUXE_SEAT.position, name);
+      expectTurn(node(set, name).getWorldQuaternion(new Quaternion()), new Euler(0, 0, 0), name);
+    }
+    const vinyl = meshBox(node(set, 'luxe_disc_vinyl'));
+    const label = meshBox(node(set, 'luxe_disc_label'));
+    expect((vinyl.max.x - vinyl.min.x) / 2).toBeCloseTo(LUXE_RECORD.radius, 3);
+    expect((label.max.x - label.min.x) / 2).toBeCloseTo(LUXE_RECORD.label, 3);
+    expect(label.min.y - vinyl.max.y).toBeCloseTo(LUXE_RECORD.labelLift, 4);
+    expect(vinyl.min.y).toBeCloseTo(LUXE_PLATTER.top, 4);
+    expect(LUXE_SEAT.position[1] - vinyl.min.y).toBeCloseTo(LUXE_RECORD.half, 4);
+  });
+
+  it('stands Luxe’s rack in its stand where the rig test flies its records, and its sleeve on the ledge', () => {
+    const set = scene('luxe');
+    const stand = node(set, 'luxe_stand');
+    expectPosition(stand, LUXE_STAND.position, 'luxe_stand');
+    expectTurn(
+      stand.getWorldQuaternion(new Quaternion()),
+      new Euler(0, LUXE_STAND.rotationY, 0),
+      'luxe_stand',
+    );
+    for (let k = 0; k < RACK_SLOTS; k++) {
+      const slot = node(set, `rack_slot_${k}`);
+      const expected = luxeSlot(k);
+      for (let axis = 0; axis < 3; axis++) {
+        expect(slot.position.getComponent(axis), `slot ${k}, axis ${axis}`).toBeCloseTo(
+          expected.position[axis],
+          PLACES,
+        );
+      }
+      expectTurn(slot.quaternion, new Euler(expected.rotationX, 0, 0), `slot ${k}`);
+    }
+    for (const name of ['sleeve_seat', 'sleeve']) {
+      expectPosition(node(set, name), LUXE_LEDGE.seat.position, name);
+      expectTurn(
+        node(set, name).getWorldQuaternion(new Quaternion()),
+        new Euler(LUXE_LEDGE.seat.rotationX, 0, 0),
+        name,
+      );
+    }
+    const sleeve = node(set, 'sleeve');
+    const card = meshBox(node(set, 'luxe_sleeve_card'), sleeve.matrixWorld.clone().invert());
+    expect((card.max.x - card.min.x) / 2).toBeCloseTo(LUXE_SLEEVE.half, 3);
+  });
+
+  it('spans Luxe’s plinth, platter, arm at rest, stand and ledge', () => {
+    const set = scene('luxe');
+    expectBox(meshBox(node(set, 'luxe_deck_body')), LUXE_PLINTH, 'the plinth');
+    const platter = meshBox(node(set, 'platter'));
+    expect((platter.max.x - platter.min.x) / 2).toBeCloseTo(LUXE_PLATTER.radius, 3);
+    expect((platter.max.x + platter.min.x) / 2).toBeCloseTo(LUXE_PLATTER.centre[0], 3);
+    expect((platter.max.z + platter.min.z) / 2).toBeCloseTo(LUXE_PLATTER.centre[2], 3);
+    expect(platter.min.y).toBeCloseTo(LUXE_PLATTER.bottom, PLACES);
+    expect(meshBox(node(set, 'luxe_platter_mat')).max.y).toBeCloseTo(LUXE_PLATTER.top, PLACES);
+    expectPosition(node(set, 'arm_pivot'), LUXE_ARM.pivot, 'arm_pivot');
+    expectBox(
+      drawnBox(node(set, 'arm_pivot')).union(drawnBox(node(set, 'luxe_arm_base'))),
+      LUXE_ARM.rest,
+      'the arm at rest',
+    );
+    const toStand = node(set, 'luxe_stand').matrixWorld.clone().invert();
+    LUXE_STEPS.forEach((step, k) =>
+      expectBox(meshBox(node(set, `luxe_stand_step_${k}`), toStand), step, `step ${k}`),
+    );
+    ['luxe_stand_panel_l', 'luxe_stand_panel_r'].forEach((name, k) =>
+      expectBox(meshBox(node(set, name), toStand), LUXE_PANELS[k], name),
+    );
+    expectBox(meshBox(node(set, 'luxe_stand_bar'), toStand), LUXE_BAR, 'the bar');
+    expectBox(meshBox(node(set, 'luxe_ledge_bar')), LUXE_LEDGE.bar, 'the ledge’s bar');
+    expectBox(meshBox(node(set, 'luxe_ledge_lip')), LUXE_LEDGE.lip, 'the ledge’s lip');
+    ['luxe_ledge_leg_l', 'luxe_ledge_leg_r'].forEach((name, k) =>
+      expectBox(meshBox(node(set, name)), LUXE_LEDGE.legs[k], name),
+    );
+  });
+
+  it('puts Luxe’s needle on the outer groove at the lead-in and by the label at the run-out', () => {
+    const set = scene('luxe');
+    const pivot = node(set, 'arm_pivot');
+    const seat = node(set, 'disc_seat').getWorldPosition(new Vector3());
+    const base = pivot.rotation.y;
+    const tipAt = (angle: number) => {
+      pivot.rotation.y = base + angle;
+      pivot.updateMatrixWorld(true);
+      return node(set, 'stylus').getWorldPosition(new Vector3());
+    };
+    const radius = (tip: Vector3) => Math.hypot(tip.x - seat.x, tip.z - seat.z);
+    const leadIn = tipAt(LUXE_ARM.leadIn);
+    expect(radius(leadIn)).toBeCloseTo(LUXE_GROOVES.leadIn, 3);
+    expect(leadIn.y).toBeCloseTo(seat.y + LUXE_RECORD.half, 3);
+    expect(radius(tipAt(LUXE_ARM.runOut))).toBeCloseTo(LUXE_GROOVES.runOut, 3);
+    expect(radius(tipAt(0))).toBeGreaterThan(LUXE_RECORD.radius + 0.01);
+    tipAt(0);
   });
 
   describe('the Clear’s shell, whose walls the rig test keeps the discs out of', () => {

@@ -3,36 +3,32 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { SceneBridge } from '../../bridge';
 import type { Status } from '../../playback/sequencer';
 import { scrubTargetMs } from '../controls';
+import type { CdModel } from '../model';
 import type { Rig } from '../rig';
+import { collectionLabel, printInFaces } from './collection-print';
 import {
+  CARD_CANVAS,
   canvasTexture,
-  FACES_WAIT_MS,
-  jogRingLit,
   loadFaces,
   newCanvas,
   paintCard,
   paintDeckScreen,
-  paintJogRing,
   paintLcd,
   paintTag,
   setMap,
 } from './paint';
-import { SCENE_PROFILES } from '../profiles';
 import { DECK_SCREEN, playedBars } from './deck-screen';
-import { settlesWithin } from './painter';
 
 function makeSurfaces() {
-  const card = newCanvas(1024, 182);
+  const card = newCanvas(CARD_CANVAS.width, CARD_CANVAS.height);
   const tag = newCanvas(512, 768);
   const lcd = newCanvas(256, 112);
-  const ring = newCanvas(480, 8);
   return {
-    canvases: { card, tag, lcd, ring },
+    canvases: { card, tag, lcd },
     textures: {
       card: canvasTexture(card),
       tag: canvasTexture(tag),
       lcd: canvasTexture(lcd),
-      ring: canvasTexture(ring),
     },
   };
 }
@@ -57,8 +53,6 @@ interface Shown {
     status: Status | null;
     colour: string | null;
   };
-  /** The deck's LED ring: how many segments are lit, and in what colour. */
-  ring: { lit: number; colour: string | null };
 }
 
 const NONE = '\u0000';
@@ -75,20 +69,19 @@ const nothingShown = (): Shown => ({
     status: null,
     colour: null,
   },
-  ring: { lit: -1, colour: null },
 });
 
 /**
- * Prints the bridge's view on the player's other prints: the plate with the collection's name,
+ * A CD player's prints beyond the discs and the booklet: the plate with the collection's name,
  * the luggage tag, and the display, at most once a second and whenever its colour changes. While
  * the knob is turning, the display shows the turn's target time. The discs and the booklet are
- * useDiscPrints'.
+ * useDiscPrints', and the LED ring useJogRing's.
  */
-export function useSceneTextures(rig: Rig, bridge: SceneBridge, lcdColour: string): void {
+export function useSceneTextures(rig: Rig<CdModel>, bridge: SceneBridge, lcdColour: string): void {
   const [surfaces] = useState(makeSurfaces);
   const shown = useRef<Shown>(nothingShown());
   // The deck's big screen replaces the LCD: its canvas is made for that model only.
-  const deckScreen = SCENE_PROFILES[rig.model.id].screen === 'deck';
+  const deckScreen = rig.profile.screen === 'deck';
   const screen = useMemo(() => {
     if (!deckScreen) return null;
     const canvas = newCanvas(DECK_SCREEN.width, DECK_SCREEN.height);
@@ -102,12 +95,10 @@ export function useSceneTextures(rig: Rig, bridge: SceneBridge, lcdColour: strin
     setMap(rig.model.slots.tag_print, textures.tag);
     setMap(rig.model.slots.card_print, textures.card);
     setMap(rig.model.slots.lcd_screen, screen ? screen.texture : textures.lcd);
-    const ring = rig.model.optionalSlots.jog_ring;
-    if (ring) setMap(ring, textures.ring);
     shown.current = nothingShown();
     paintCard(canvases.card, null);
     paintTag(canvases.tag, null);
-    const all = [textures.tag, textures.card, textures.lcd, textures.ring];
+    const all = [textures.tag, textures.card, textures.lcd];
     if (screen) all.push(screen.texture);
     for (const texture of all) texture.needsUpdate = true;
     return () => {
@@ -120,23 +111,19 @@ export function useSceneTextures(rig: Rig, bridge: SceneBridge, lcdColour: strin
     let live = true;
     const update = () => {
       const view = bridge.getView();
-      const card = view.collection ? `${view.collection.name}\n${view.collection.subtitle}` : '';
+      const card = collectionLabel(view.collection);
       if (card !== shown.current.card) {
         shown.current.card = card;
-        const faces = loadFaces(card);
-        const printCard = () => {
-          if (shown.current.card !== card) return;
-          paintCard(canvases.card, view.collection);
-          textures.card.needsUpdate = true;
-          paintTag(canvases.tag, view.collection);
-          textures.tag.needsUpdate = true;
-        };
-        // A font that stalls does not hold the card: it goes out in the fallback faces at worst,
-        // and again once the page's are in.
-        void settlesWithin(faces, FACES_WAIT_MS).then((inTime) => {
-          printCard();
-          if (!inTime) void faces.then(printCard);
-        });
+        printInFaces(
+          card,
+          () => shown.current.card,
+          () => {
+            paintCard(canvases.card, view.collection);
+            textures.card.needsUpdate = true;
+            paintTag(canvases.tag, view.collection);
+            textures.tag.needsUpdate = true;
+          },
+        );
       }
     };
     update();
@@ -156,16 +143,6 @@ export function useSceneTextures(rig: Rig, bridge: SceneBridge, lcdColour: strin
   useFrame(() => {
     const view = bridge.getView();
     const target = scrubTargetMs(view.positionMs, view.durationMs, rig.scrubMs);
-    if (rig.model.optionalSlots.jog_ring) {
-      const ring = shown.current.ring;
-      const lit = jogRingLit(target, view.durationMs);
-      if (ring.lit !== lit || ring.colour !== lcdColour) {
-        ring.lit = lit;
-        ring.colour = lcdColour;
-        paintJogRing(surfaces.canvases.ring, lit, lcdColour);
-        surfaces.textures.ring.needsUpdate = true;
-      }
-    }
     const lcd = shown.current.lcd;
     const second = Math.floor(target / 1000);
     const bar = screen ? playedBars(target, view.durationMs) : -1;

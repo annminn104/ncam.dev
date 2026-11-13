@@ -1,6 +1,7 @@
 import { clearSwatch } from '../clear-looks';
 import { deckSwatch } from '../deck-looks';
-import type { Look } from '../looks';
+import { exhaustive, type Look } from '../looks';
+import { luxeSwatch } from '../luxe-looks';
 import type { Status } from '../playback/sequencer';
 
 /**
@@ -28,14 +29,26 @@ export const VU_COLOURS: readonly string[] = [
 
 /**
  * The strip's colours for a look: the suitcase's amber to red, or the Clear model's or the Deck's
- * light in ten brightening steps (sRGB, the last being the glow itself).
+ * light in ten brightening steps (sRGB, the last being the glow itself). Luxe has no strip: its
+ * case is the compiler's, true to its light.
  */
 export function vuColours(look: Look): readonly string[] {
-  if (look.model === 'suitcase') return VU_COLOURS;
-  const glow =
-    look.model === 'clear'
-      ? clearSwatch(look.clear, 'light').glow
-      : deckSwatch(look.deck, 'light').glow;
+  switch (look.model) {
+    case 'suitcase':
+      return VU_COLOURS;
+    case 'clear':
+      return lightSteps(clearSwatch(look.clear, 'light').glow);
+    case 'deck':
+      return lightSteps(deckSwatch(look.deck, 'light').glow);
+    case 'luxe':
+      return lightSteps(luxeSwatch(look.luxe, 'light').glow);
+    default:
+      return exhaustive(look);
+  }
+}
+
+/** A light's glow in VU_SEGMENTS steps brightening from 45 % of it to the glow itself (sRGB). */
+function lightSteps(glow: string): readonly string[] {
   const channel = (at: number, k: number) =>
     Math.round(parseInt(glow.slice(at, at + 2), 16) * k)
       .toString(16)

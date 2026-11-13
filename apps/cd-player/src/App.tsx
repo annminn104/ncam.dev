@@ -28,6 +28,7 @@ import {
   safeStorage,
   writeClearLook,
   writeDeckLook,
+  writeLuxeLook,
   writePersonal,
   writeLast,
   writeModel,
@@ -156,6 +157,7 @@ export default function App({ controller, initial = null, assetBase = '', initia
       writeSkin(storage, next.skin);
       writeClearLook(storage, next.clear);
       writeDeckLook(storage, next.deck);
+      writeLuxeLook(storage, next.luxe);
       writePersonal(storage, next.personal);
       // Kept at once while nothing is on the stage (the boot loads it), else once it is on show.
       // A pattern or a name typed is no model choice: the keeper is not asked again.
@@ -167,8 +169,11 @@ export default function App({ controller, initial = null, assetBase = '', initia
   // on every playback, progress and boot update.
   // Only the model's own fields: the visitor's pattern and name (`personal`) go to the Deck's print
   // layer, and each key typed in the name must not recolour the player.
-  const { model, skin, clear, deck } = lookState;
-  const look = useMemo(() => lookOf({ model, skin, clear, deck }), [model, skin, clear, deck]);
+  const { model, skin, clear, deck, luxe } = lookState;
+  const look = useMemo(
+    () => lookOf({ model, skin, clear, deck, luxe }),
+    [model, skin, clear, deck, luxe],
+  );
   // The page settled and the scene did not start by itself (a software rasteriser, reduced
   // motion): "Open the player" stands where the loader was until the visitor starts it.
   const [manual, setManual] = useState(false);
@@ -217,8 +222,9 @@ export default function App({ controller, initial = null, assetBase = '', initia
   // (nothing is on the stage, the boot loads it, and LOOK_SCRIPT has painted the saved one). Colour
   // changes within the model on show turn the page at once.
   const accent = useMemo(
-    () => lookAccent(lookOf({ model: accentModelFor(live, onShow, model), skin, clear, deck })),
-    [model, skin, clear, deck, live, onShow],
+    () =>
+      lookAccent(lookOf({ model: accentModelFor(live, onShow, model), skin, clear, deck, luxe })),
+    [model, skin, clear, deck, luxe, live, onShow],
   );
   const onModel = useCallback(
     (load: ModelLoad) => {

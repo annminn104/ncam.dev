@@ -14,6 +14,7 @@ import {
   paintDisc,
   paintJogRing,
   paintLcd,
+  paintRecord,
   paintTag,
 } from './paint';
 
@@ -171,8 +172,12 @@ describe('the lines of text', () => {
 });
 
 describe('lcdColour', () => {
-  it('is the suitcase’s cyan, or the Clear model’s or the Deck’s light', () => {
+  it('is the suitcase’s cyan, or the Clear model’s, the Deck’s or Luxe’s light', () => {
     expect(lcdColour({ model: 'deck', deck: { body: 'black', light: 'violet' } })).toBe('#b48cff');
+    // The colour Luxe's LED ring is painted in.
+    expect(lcdColour({ model: 'luxe', luxe: { body: 'pink', metal: 'gold', light: 'ice' } })).toBe(
+      '#7fd8ff',
+    );
     expect(lcdColour({ model: 'suitcase', skin: 'blush' })).toBe(LCD_ON);
     expect(lcdColour({ model: 'clear', clear: DEFAULT_CLEAR_LOOK })).toBe(
       clearSwatch(DEFAULT_CLEAR_LOOK, 'light').glow,
@@ -264,5 +269,19 @@ describe('paintDeckScreen', () => {
       LCD_ON,
     );
     for (const text of ['--', 'No disc', '-:--']) expect(texts).toContain(text);
+  });
+});
+
+describe('paintDisc', () => {
+  it('prints a record’s blank label as a record’s, and a CD’s as a CD’s', () => {
+    const cd = recorder(512);
+    paintDisc(cd.canvas, null, null);
+    expect(cd.texts).toContain('CD·01  ·  COMPACT DISC');
+    expect(cd.texts.join('')).toContain('NCAM  ·  CD PLAYER  ·  SIDE A');
+    const record = recorder(512);
+    paintRecord(record.canvas, null, null);
+    expect(record.texts).toContain('33⅓ RPM  ·  LONG PLAY');
+    expect(record.texts).not.toContain('CD·01  ·  COMPACT DISC');
+    expect(record.texts.join('')).toContain('NCAM  ·  TURNTABLE  ·  SIDE A');
   });
 });

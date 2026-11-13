@@ -1,9 +1,9 @@
 import type { PlayerAction } from '../actions';
-import type { RequiredNode } from './contract';
+import type { SharedNode } from './contract';
 import { TAP_SLOP_PX } from './orbit';
 
 /** The deck's keys: the `btn_` nodes of the model contract (src/scene/contract.ts). */
-export type ButtonNode = Extract<RequiredNode, `btn_${string}`>;
+export type ButtonNode = Extract<SharedNode, `btn_${string}`>;
 
 /** What each key does, by its GLB node. Mode is shuffle. */
 export const BUTTON_ACTIONS: Readonly<Record<ButtonNode, PlayerAction>> = {
@@ -18,7 +18,8 @@ export const BUTTON_ACTIONS: Readonly<Record<ButtonNode, PlayerAction>> = {
 /** The keys, in the order above. */
 export const BUTTON_NODES = Object.keys(BUTTON_ACTIONS) as ButtonNode[];
 
-export type Hit = { kind: 'button'; node: ButtonNode; action: PlayerAction } | { kind: 'knob' };
+export type Hit =
+  { kind: 'button'; node: ButtonNode; action: PlayerAction } | { kind: 'knob' } | { kind: 'arm' };
 
 interface Named {
   name: string;
@@ -27,12 +28,16 @@ interface Named {
 
 const isButton = (name: string): name is ButtonNode => Object.hasOwn(BUTTON_ACTIONS, name);
 
-/** The control a hit mesh belongs to: the first key or knob among it and its parents. */
+/**
+ * The control a hit mesh belongs to: the first key, knob or tonearm head (a turntable's
+ * `arm_head`, whose larger hit shape is its child) among it and its parents.
+ */
 export function hitFor(object: Named | null): Hit | null {
   for (let node = object; node; node = node.parent) {
     const { name } = node;
     if (isButton(name)) return { kind: 'button', node: name, action: BUTTON_ACTIONS[name] };
     if (name === 'knob') return { kind: 'knob' };
+    if (name === 'arm_head') return { kind: 'arm' };
   }
   return null;
 }

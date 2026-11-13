@@ -16,27 +16,36 @@ import {
   type Object3D,
   type Texture,
 } from 'three';
-import { clearSwatch } from '../clear-looks';
-import { deckSwatch } from '../deck-looks';
+import { clearSwatch, type ClearLook } from '../clear-looks';
+import { deckSwatch, type DeckLook } from '../deck-looks';
 import { etchColour, GOLD, traceColour } from './decor-colours';
-import type { Look } from '../looks';
+import { exhaustive, type Look } from '../looks';
+import { luxeSwatch, type LuxeLook } from '../luxe-looks';
 import { skinById, type Skin, type SkinRole } from '../skins';
 import {
-  DYNAMIC_MATERIALS,
   OPTIONAL_DYNAMIC_MATERIALS,
+  PRINTED_MATERIALS,
   type DynamicMaterial,
   type OptionalDynamicMaterial,
+  type PrintedMaterial,
+  type TurntableMaterial,
 } from './contract';
 import {
   CLEAR_ROLES,
   DECK_ROLES,
+  LUXE_ROLES,
   MATERIAL_ROLES,
   SKIN_ROLES,
   type MaterialRole,
 } from './material-roles';
 import { leatherNormal, quiltNormal, weaveNormal } from './textures/grain';
 
-export type Slots = Record<DynamicMaterial, MeshPhysicalMaterial | MeshBasicMaterial>;
+/** A printed material, as the page paints it: a lit surface or a lamp. */
+export type Printable = MeshPhysicalMaterial | MeshBasicMaterial;
+/** A CD player's printed materials (DYNAMIC_MATERIALS in src/scene/contract.ts). */
+export type Slots = Record<DynamicMaterial, Printable>;
+/** A turntable's (TURNTABLE_MATERIALS). */
+export type TurntableSlots = Record<TurntableMaterial, Printable>;
 
 /** The runtime normal maps the roles tile (src/scene/textures/grain.ts). */
 export interface GrainMaps {
@@ -54,12 +63,11 @@ function skinRoleOf(name: string): SkinRole | undefined {
 }
 
 /** The optional dynamic materials this model has (the deck's LED ring and its print layer). */
-export type OptionalSlots = Partial<
-  Record<OptionalDynamicMaterial, MeshPhysicalMaterial | MeshBasicMaterial>
->;
+export type OptionalSlots = Partial<Record<OptionalDynamicMaterial, Printable>>;
 
 export interface UpgradedMaterials {
-  slots: Slots;
+  /** Every printed material the model has, of either kind: the loader holds the model to its own. */
+  slots: Partial<Record<PrintedMaterial, Printable>>;
   optionalSlots: OptionalSlots;
   /** Recolours the model's materials in place for a look (applyLook, below). */
   applyLook(look: Look): void;
@@ -250,6 +258,12 @@ export function makeMaterial(
         color: new Color('#ffffff'),
         toneMapped: false,
       });
+    case 'lacquer':
+      // Luxe's body: the GLB's finish under a clearcoat, which a look sets (its swatch's `coat`).
+      return physical(source, { clearcoat: 1, clearcoatRoughness: 0.05 });
+    case 'hit':
+      // A larger, invisible shape a finger can take (a turntable's arm head): raycast, never drawn.
+      return new MeshBasicMaterial({ name: source.name, visible: false });
     case 'decal':
       // The Deck's personal prints (src/scene/textures): one atlas, cut out by its alpha so that the
       // prints draw in the opaque pass (the jog's acrylic sees the rim's through its transmission),
@@ -303,29 +317,69 @@ const SILK_LUMA_SWITCH = 0.45;
  * Recolours `materials` in place for `look`: the suitcase's skin roles from its skin (as
  * `applySkin` did), or the Clear model's parts from their swatches, its silkscreen following the
  * board and its `trace` and `etch` the board and the shell, or the Deck's body and light from theirs
- * (its other materials, the print layer included, stay as they are). Uniforms only.
+ * (its other materials, the print layer included, stay as they are), or Luxe's body (its lacquer's
+ * coat too), metal and light from theirs. Each model's look touches its own materials only.
+ * Uniforms only.
  */
 export function applyLook(materials: Iterable<Material>, look: Look): void {
-  if (look.model === 'suitcase') {
-    applySkin(materials, skinById(look.skin));
-    return;
+  switch (look.model) {
+    case 'suitcase':
+      applySkin(materials, skinById(look.skin));
+      return;
+    case 'clear':
+      applyClearLook(materials, look.clear);
+      return;
+    case 'deck':
+      applyDeckLook(materials, look.deck);
+      return;
+    case 'luxe':
+      applyLuxeLook(materials, look.luxe);
+      return;
+    default:
+      exhaustive(look);
   }
-  if (look.model === 'deck') {
-    for (const material of materials) {
-      const part = Object.hasOwn(DECK_ROLES, material.name) ? DECK_ROLES[material.name] : undefined;
-      if (part === 'body') {
-        const body = deckSwatch(look.deck, 'body');
-        const surface = material as MeshPhysicalMaterial;
-        surface.color.set(body.colour);
-        surface.metalness = body.metalness;
-        surface.roughness = body.roughness;
-      } else if (part === 'light') {
-        (material as MeshBasicMaterial).color.set(deckSwatch(look.deck, 'light').glow);
-      }
+}
+
+/** The Deck's body and light from their swatches. */
+function applyDeckLook(materials: Iterable<Material>, deck: DeckLook): void {
+  for (const material of materials) {
+    const part = Object.hasOwn(DECK_ROLES, material.name) ? DECK_ROLES[material.name] : undefined;
+    if (part === 'body') {
+      const body = deckSwatch(deck, 'body');
+      const surface = material as MeshPhysicalMaterial;
+      surface.color.set(body.colour);
+      surface.metalness = body.metalness;
+      surface.roughness = body.roughness;
+    } else if (part === 'light') {
+      (material as MeshBasicMaterial).color.set(deckSwatch(deck, 'light').glow);
     }
-    return;
   }
-  const board = clearSwatch(look.clear, 'board').colour;
+}
+
+/**
+ * Luxe's body (its finish and its lacquer's coat), its metal and its light from their swatches;
+ * its stand wears the same body and metal. Every other material stays as it is.
+ */
+function applyLuxeLook(materials: Iterable<Material>, luxe: LuxeLook): void {
+  for (const material of materials) {
+    const part = Object.hasOwn(LUXE_ROLES, material.name) ? LUXE_ROLES[material.name] : undefined;
+    if (part === 'light') {
+      (material as MeshBasicMaterial).color.set(luxeSwatch(luxe, 'light').glow);
+      continue;
+    }
+    if (!part) continue;
+    const surface = material as MeshPhysicalMaterial;
+    const finish = luxeSwatch(luxe, part);
+    surface.color.set(finish.colour);
+    surface.metalness = finish.metalness;
+    surface.roughness = finish.roughness;
+    if (part === 'body') surface.clearcoat = luxeSwatch(luxe, 'body').coat;
+  }
+}
+
+/** The Clear model's parts from their swatches. */
+function applyClearLook(materials: Iterable<Material>, clear: ClearLook): void {
+  const board = clearSwatch(clear, 'board').colour;
   for (const material of materials) {
     if (material.name === 'silk') {
       const { r, g, b } = new Color(board);
@@ -340,7 +394,7 @@ export function applyLook(materials: Iterable<Material>, look: Look): void {
       continue;
     }
     if (material.name === 'etch') {
-      const { tint } = clearSwatch(look.clear, 'shell');
+      const { tint } = clearSwatch(clear, 'shell');
       (material as MeshPhysicalMaterial).color.set(etchColour(tint));
       continue;
     }
@@ -348,17 +402,17 @@ export function applyLook(materials: Iterable<Material>, look: Look): void {
     if (!part) continue;
     const surface = material as MeshPhysicalMaterial;
     if (part === 'shell') {
-      const { tint } = clearSwatch(look.clear, 'shell');
+      const { tint } = clearSwatch(clear, 'shell');
       surface.color.set(tint);
     } else if (part === 'frame') {
-      const frame = clearSwatch(look.clear, 'frame');
+      const frame = clearSwatch(clear, 'frame');
       surface.color.set(frame.colour);
       surface.metalness = frame.metalness;
       surface.roughness = frame.roughness;
     } else if (part === 'board') {
       surface.color.set(board);
     } else {
-      (material as MeshBasicMaterial).color.set(clearSwatch(look.clear, 'light').glow);
+      (material as MeshBasicMaterial).color.set(clearSwatch(clear, 'light').glow);
     }
   }
 }
@@ -366,7 +420,7 @@ export function applyLook(materials: Iterable<Material>, look: Look): void {
 /**
  * The materials under `root` a look recolours, by name, as sRGB hex (for the live check): a skin's
  * roles on the suitcase, the Clear model's parts, its silkscreen and its `trace` and `etch`, the
- * Deck's body and light.
+ * Deck's body and light, and Luxe's body, metal and light.
  */
 export function skinColours(root: Object3D): Record<string, string> {
   const colours: Record<string, string> = {};
@@ -379,6 +433,7 @@ export function skinColours(root: Object3D): Record<string, string> {
       skinRoleOf(name) ||
       Object.hasOwn(CLEAR_ROLES, name) ||
       Object.hasOwn(DECK_ROLES, name) ||
+      Object.hasOwn(LUXE_ROLES, name) ||
       name === 'silk' ||
       name === 'trace' ||
       name === 'etch'
@@ -412,7 +467,7 @@ export function upgradeMaterials(root: Object3D): UpgradedMaterials {
     weave: dataTexture(weaveNormal(128, 16), 128, 3),
   };
   const made = new Map<string, Material>();
-  const slots: Partial<Slots> = {};
+  const slots: Partial<Record<PrintedMaterial, Printable>> = {};
   const optionalSlots: OptionalSlots = {};
   root.traverse((object) => {
     const mesh = object as Mesh;
@@ -423,13 +478,11 @@ export function upgradeMaterials(root: Object3D): UpgradedMaterials {
     if (!material) {
       material = makeMaterial(role, source, maps);
       made.set(source.name, material);
-      if ((DYNAMIC_MATERIALS as readonly string[]).includes(source.name)) {
-        slots[source.name as DynamicMaterial] = material as
-          MeshPhysicalMaterial | MeshBasicMaterial;
+      if ((PRINTED_MATERIALS as readonly string[]).includes(source.name)) {
+        slots[source.name as PrintedMaterial] = material as Printable;
       }
       if ((OPTIONAL_DYNAMIC_MATERIALS as readonly string[]).includes(source.name)) {
-        optionalSlots[source.name as OptionalDynamicMaterial] = material as
-          MeshPhysicalMaterial | MeshBasicMaterial;
+        optionalSlots[source.name as OptionalDynamicMaterial] = material as Printable;
       }
     }
     source.dispose();
@@ -440,13 +493,14 @@ export function upgradeMaterials(root: Object3D): UpgradedMaterials {
     if (
       (material as MeshPhysicalMaterial).transmission > 0 ||
       role === 'etch' ||
-      role === 'decal'
+      role === 'decal' ||
+      role === 'hit'
     ) {
       mesh.castShadow = false;
     }
   });
   return {
-    slots: slots as Slots,
+    slots,
     optionalSlots,
     applyLook: (look: Look) => applyLook(made.values(), look),
     dispose: () => {

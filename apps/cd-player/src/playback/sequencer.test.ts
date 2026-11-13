@@ -124,6 +124,41 @@ describe('sequencer', () => {
     expect(stopped.commands).toEqual([{ type: 'pause' }, { type: 'seek', ms: 0 }]);
   });
 
+  describe('stopped, as its own state (the embed reports a stopped track at its first second)', () => {
+    const at = (positionMs: number, paused: boolean): SeqEvent => ({
+      type: 'PROGRESS',
+      positionMs,
+      durationMs: 30_000,
+      paused,
+    });
+
+    it('STOP says stopped, and the embed’s paused report from its first second keeps it so', () => {
+      const stopped = run(playingAt(0), { type: 'STOP' });
+      expect(stopped.stopped).toBe(true);
+      expect(run(stopped, at(1000, true))).toMatchObject({
+        status: 'paused',
+        positionMs: 1000,
+        stopped: true,
+      });
+    });
+
+    it.each<{ how: string; events: SeqEvent[] }>([
+      { how: 'Play', events: [{ type: 'PLAY' }] },
+      { how: 'a seek', events: [{ type: 'SEEK', ms: 8000 }] },
+      { how: 'the embed playing', events: [at(1200, false)] },
+      { how: 'Next', events: [{ type: 'NEXT' }] },
+    ])('ends with $how', ({ events }) => {
+      expect(run(playingAt(0), { type: 'STOP' }, at(1000, true), ...events).stopped).toBe(false);
+    });
+
+    it('is not a pause, even in the first second', () => {
+      expect(initialSeq().stopped).toBe(false);
+      const early = run(playingAt(0), at(400, false), { type: 'PAUSE' }, at(400, true));
+      expect(early).toMatchObject({ status: 'paused', positionMs: 400, stopped: false });
+      expect(run(playingAt(0), { type: 'PAUSE' }).stopped).toBe(false);
+    });
+  });
+
   it('SELECT restarts the current track, refuses unplayable ones', () => {
     expect(step(playingAt(0), { type: 'SELECT', index: 0 }).commands).toEqual([
       { type: 'seek', ms: 0 },

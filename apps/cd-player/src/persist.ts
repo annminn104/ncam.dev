@@ -1,6 +1,7 @@
 import { CLEAR_SWATCHES, clearLookFrom, DEFAULT_CLEAR_LOOK, type ClearLook } from './clear-looks';
 import { DECK_SWATCHES, deckLookFrom, DEFAULT_DECK_LOOK, type DeckLook } from './deck-looks';
 import type { LookState } from './looks';
+import { DEFAULT_LUXE_LOOK, LUXE_SWATCHES, luxeLookFrom, type LuxeLook } from './luxe-looks';
 import { DEFAULT_MODEL, modelById, type ModelId } from './models';
 import { DEFAULT_PERSONAL, personalFrom, type Personal } from './personal';
 import { DEFAULT_COLLECTION, SPOTIFY_ID, sameCollection, type CollectionRef } from './routes';
@@ -65,6 +66,8 @@ export const MODEL_KEY = 'ncam.cd-player.model';
 export const CLEAR_KEY = 'ncam.cd-player.clear';
 /** The Deck's colours, part by part (src/deck-looks.ts), as JSON. */
 export const DECK_KEY = 'ncam.cd-player.deck';
+/** Luxe's colours, part by part (src/luxe-looks.ts), as JSON. */
+export const LUXE_KEY = 'ncam.cd-player.luxe';
 
 /** The saved model; nothing saved, an id no model has, or storage that throws is the suitcase. */
 export function readModel(storage: ReadStore | null): ModelId {
@@ -122,6 +125,25 @@ export function writeDeckLook(storage: WriteStore | null, look: DeckLook): void 
   }
 }
 
+/** The saved Luxe colours, part by part; a part that is missing or unknown is its default. */
+export function readLuxeLook(storage: ReadStore | null): LuxeLook {
+  try {
+    const raw = storage?.getItem(LUXE_KEY);
+    return luxeLookFrom(raw ? (JSON.parse(raw) as unknown) : null);
+  } catch {
+    // Unreadable storage or JSON that does not parse is no saved look.
+    return DEFAULT_LUXE_LOOK;
+  }
+}
+
+export function writeLuxeLook(storage: WriteStore | null, look: LuxeLook): void {
+  try {
+    storage?.setItem(LUXE_KEY, JSON.stringify(look));
+  } catch {
+    // A full or blocked storage just forgets.
+  }
+}
+
 export const PERSONAL_KEY = 'ncam.cd-player.personal';
 
 /** The visitor's saved pattern and name (src/personal.ts): junk is no saved marks. */
@@ -144,8 +166,8 @@ export function writePersonal(storage: WriteStore | null, personal: Personal): v
 }
 
 /**
- * Everything saved: the model, the suitcase's skin, the Clear model's and the Deck's colours, and
- * the visitor's pattern and name.
+ * Everything saved: the model, the suitcase's skin, the colours of the Clear model, the Deck and
+ * Luxe, and the visitor's pattern and name.
  */
 export function readLookState(storage: ReadStore | null): LookState {
   return {
@@ -153,6 +175,7 @@ export function readLookState(storage: ReadStore | null): LookState {
     skin: readSkin(storage),
     clear: readClearLook(storage),
     deck: readDeckLook(storage),
+    luxe: readLuxeLook(storage),
     personal: readPersonal(storage),
   };
 }
@@ -163,6 +186,9 @@ const LIGHT_PAIRS = Object.fromEntries(
 );
 const DECK_LIGHT_PAIRS = Object.fromEntries(
   DECK_SWATCHES.light.map((light) => [light.id, [light.accent, light.onAccent]]),
+);
+const LUXE_LIGHT_PAIRS = Object.fromEntries(
+  LUXE_SWATCHES.light.map((light) => [light.id, [light.accent, light.onAccent]]),
 );
 
 // What JSON.stringify leaves as it is but an inline script must not hold: `<`, `>` and `/` (a string
@@ -185,7 +211,7 @@ export function scriptLiteral(value: unknown): string {
 /**
  * The accent pair of the saved look on `.cdp-root` before the first paint: the text of the inline
  * script App renders as the root's first child, which the browser runs as it parses the server's
- * markup. It paints the saved light's pair when the saved model is the Clear one or the Deck (its
+ * markup. It paints the saved light's pair when the saved model is the Clear one, the Deck or Luxe (its
  * default light's where the saved colours name none) and the saved skin's pair otherwise. The server and
  * the first client render are in the suitcase's Blush, so the trees match, and the page's pastel
  * is made from the accent: without it a saved Sage or a saved pink light would paint Blush's whole
@@ -198,12 +224,14 @@ export function scriptLiteral(value: unknown): string {
  */
 export const LOOK_SCRIPT = `(function(){try{var s=${scriptLiteral(SKIN_PAIRS)},l=${scriptLiteral(
   LIGHT_PAIRS,
-)},d=${scriptLiteral(DECK_LIGHT_PAIRS)},t=localStorage,h=Object.prototype.hasOwnProperty,a=0,k,m=t.getItem(${scriptLiteral(
+)},d=${scriptLiteral(DECK_LIGHT_PAIRS)},x=${scriptLiteral(LUXE_LIGHT_PAIRS)},t=localStorage,h=Object.prototype.hasOwnProperty,a=0,k,m=t.getItem(${scriptLiteral(
   MODEL_KEY,
 )});if(m==='clear'){try{k=JSON.parse(t.getItem(${scriptLiteral(CLEAR_KEY)})).light}catch(e){}a=typeof k==='string'&&h.call(l,k)?l[k]:l[${scriptLiteral(
   DEFAULT_CLEAR_LOOK.light,
 )}]}else if(m==='deck'){try{k=JSON.parse(t.getItem(${scriptLiteral(DECK_KEY)})).light}catch(e){}a=typeof k==='string'&&h.call(d,k)?d[k]:d[${scriptLiteral(
   DEFAULT_DECK_LOOK.light,
+)}]}else if(m==='luxe'){try{k=JSON.parse(t.getItem(${scriptLiteral(LUXE_KEY)})).light}catch(e){}a=typeof k==='string'&&h.call(x,k)?x[k]:x[${scriptLiteral(
+  DEFAULT_LUXE_LOOK.light,
 )}]}else{k=t.getItem(${scriptLiteral(SKIN_KEY)});a=k&&h.call(s,k)?s[k]:0}if(a){var r=document.currentScript.parentNode.style;r.setProperty('--cdp-accent',a[0]);r.setProperty('--cdp-on-accent',a[1])}}catch(e){}})();`;
 
 /**

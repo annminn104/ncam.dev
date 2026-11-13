@@ -1,7 +1,14 @@
 import type { CanvasTexture } from 'three';
 import { describe, expect, it } from 'vitest';
 import type { TrackView } from '../../bridge';
-import { makePrinter, makeSurfaces, nothingPrinted, type PrintLoad } from './disc-printer';
+import { DISC_COPIES } from '../stage';
+import {
+  bookletSides,
+  makePrinter,
+  makeSurfaces,
+  nothingPrinted,
+  type PrintLoad,
+} from './disc-printer';
 
 const track = (id: string): TrackView => ({
   id,
@@ -30,23 +37,29 @@ const nameOf = (image: HTMLImageElement | null) =>
   image ? (image as unknown as { name: string }).name : null;
 
 /** The printer on fake canvases and textures; each load waits until the test finishes it. */
-function harness() {
+function harness({
+  booklet = true,
+  sleeves = false,
+}: { booklet?: boolean; sleeves?: boolean } = {}) {
   const textures: FakeTexture[] = [];
-  const surfaces = makeSurfaces({
-    canvas: (width, height) => ({ width, height }) as FakeCanvas as unknown as HTMLCanvasElement,
-    texture: () => {
-      const texture = { uploads: 0, disposed: 0 };
-      textures.push(texture);
-      return {
-        set needsUpdate(value: boolean) {
-          if (value) texture.uploads++;
-        },
-        dispose: () => {
-          texture.disposed++;
-        },
-      } as unknown as CanvasTexture;
+  const surfaces = makeSurfaces(
+    {
+      canvas: (width, height) => ({ width, height }) as FakeCanvas as unknown as HTMLCanvasElement,
+      texture: () => {
+        const texture = { uploads: 0, disposed: 0 };
+        textures.push(texture);
+        return {
+          set needsUpdate(value: boolean) {
+            if (value) texture.uploads++;
+          },
+          dispose: () => {
+            texture.disposed++;
+          },
+        } as unknown as CanvasTexture;
+      },
     },
-  });
+    { booklet, sleeves },
+  );
   const loads: { id: string; finish(loaded?: Partial<PrintLoad>): void }[] = [];
   /** Every paint: the surface, its size then, the picture (null: the blank) and the track. */
   const painted: [surface: string, size: number, picture: string | null, track: string | null][] =
@@ -54,8 +67,16 @@ function harness() {
   const failed: [string, unknown][] = [];
   const where = (canvas: HTMLCanvasElement) => {
     const disc = surfaces.canvases.disc.indexOf(canvas);
-    return disc >= 0 ? `disc ${disc}` : `booklet ${surfaces.canvases.booklet.indexOf(canvas)}`;
+    if (disc >= 0) return `disc ${disc}`;
+    const sleeve = surfaces.canvases.sleeve.indexOf(canvas);
+    if (sleeve >= 0) return `sleeve ${sleeve}`;
+    return `booklet ${surfaces.canvases.booklet.indexOf(canvas)}`;
   };
+  const record = (
+    canvas: HTMLCanvasElement,
+    image: HTMLImageElement | null,
+    view: TrackView | null,
+  ) => painted.push([where(canvas), canvas.width, nameOf(image), view?.id ?? null]);
   const printed = { current: nothingPrinted() };
   const printer = makePrinter(surfaces, printed, {
     load: (view) =>
@@ -65,16 +86,53 @@ function harness() {
           finish: (loaded = {}) => resolve({ art: null, photo: null, late: null, ...loaded }),
         });
       }),
-    paintDisc: (canvas, image, view) =>
-      painted.push([where(canvas), canvas.width, nameOf(image), view?.id ?? null]),
-    paintBooklet: (canvas, image, view) =>
-      painted.push([where(canvas), canvas.width, nameOf(image), view?.id ?? null]),
+    paintDisc: record,
+    paintBooklet: record,
+    ...(sleeves ? { paintSleeve: record } : {}),
     onFailed: (view, error) => failed.push([view.id, error]),
   });
   return { surfaces, textures, loads, painted, failed, printed, printer };
 }
 
 describe('the disc printer', () => {
+  it('prints a turntable’s sleeve with each print of its record: the album art, at its size', async () => {
+    const h = harness({ booklet: false, sleeves: true });
+    const done = h.printer.disc(2, { ...track('a'), artistUrl: 'photo of a' }, 1024);
+    expect(h.painted).toEqual([
+      ['disc 2', 1024, null, 'a'],
+      ['sleeve 2', 1024, null, 'a'],
+    ]);
+    h.loads[0].finish({ art: picture('art of a'), photo: picture('photo of a') });
+    await done;
+    expect(h.painted.slice(2)).toEqual([
+      ['disc 2', 1024, 'photo of a', 'a'],
+      ['sleeve 2', 1024, 'art of a', 'a'],
+    ]);
+  });
+
+  it('sizes a sleeve with its record, a new size a new texture', async () => {
+    const h = harness({ booklet: false, sleeves: true });
+    const small = h.printer.disc(1, track('a'), 512);
+    h.loads[0].finish();
+    await small;
+    expect(h.surfaces.canvases.sleeve[1].width).toBe(512);
+    const big = h.printer.disc(1, track('a'), 1024);
+    h.loads[1].finish();
+    await big;
+    expect(h.surfaces.canvases.sleeve[1].width).toBe(1024);
+    const sleeveTexture = h.textures[DISC_COPIES + 1];
+    expect(sleeveTexture.disposed).toBe(1);
+  });
+
+  it('makes no sleeves for a CD player, and paints none', async () => {
+    const h = harness();
+    expect(h.surfaces.canvases.sleeve).toEqual([]);
+    const done = h.printer.disc(0, track('a'), 512);
+    h.loads[0].finish({ art: picture('art of a') });
+    await done;
+    expect(h.painted.map(([surface]) => surface)).toEqual(['disc 0', 'disc 0']);
+  });
+
   it('blanks a copy with its new track’s name at once, then prints the art once it has loaded', async () => {
     const h = harness();
     const done = h.printer.disc(2, track('a'), 512);
@@ -140,6 +198,15 @@ describe('the disc printer', () => {
       ['booklet 1', 1024, null, 'a'],
       ['booklet 1', 1024, null, null],
     ]);
+  });
+
+  it('makes no booklet for a model without a jewel case, and prints none', async () => {
+    const h = harness({ booklet: false });
+    expect(h.surfaces.canvases.booklet).toEqual([]);
+    expect(bookletSides(h.surfaces)).toEqual([]);
+    await h.printer.booklet(0, track('a'));
+    expect(h.painted).toEqual([]);
+    expect(bookletSides(harness().surfaces)).toEqual([0, 1]);
   });
 
   it('prints again once the page’s fonts are in what went out in the fallback faces', async () => {

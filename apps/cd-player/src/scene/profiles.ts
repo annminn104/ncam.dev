@@ -1,9 +1,17 @@
 import type { ModelId } from '../models';
+import type { Media } from './contract';
 
 export type Vec3 = readonly [number, number, number];
 
 /** What the scene needs to know of a model beyond its GLB. */
 export interface SceneProfile {
+  /**
+   * What the model plays: CDs, or records (a turntable). Its GLB is held to that kind's node
+   * contract (src/scene/contract.ts), and the scene mounts that kind's parts (PlayerRig.tsx).
+   */
+  media: Media;
+  /** How fast the disc turns while it plays (turns a minute): a CD player's 200, a record's 33⅓. */
+  rpm: number;
   /**
    * Where the camera looks, from which way, and the half-width (`across`) and half-height (`up`)
    * of what it fits round its aim (metres): a sphere when they are equal.
@@ -11,8 +19,12 @@ export interface SceneProfile {
   frame: { target: Vec3; direction: Vec3; across: number; up: number };
   /** The camera's near plane (metres); absent, framing.ts's NEAR. */
   near?: number;
-  /** The arm's angles about its pivot's Y: at rest and over the disc. */
-  arm: { rest: number; play: number };
+  /**
+   * The arm's angles about its pivot's Y: at rest and over the disc. A turntable's `play` is the
+   * lead-in (the needle over the record's outer groove) and `runOut` the needle by the label; the
+   * arm tracks between them as the track plays (src/scene/tonearm.ts).
+   */
+  arm: { rest: number; play: number; runOut?: number };
   /**
    * How far the door swings open about its hinge's own axis (radians): Y, unless `axis` says X
    * (the deck's jog plate lifts about its back edge). null: no door.
@@ -35,9 +47,11 @@ export interface SceneProfile {
    * next along each one's normal (the spindle's is its seat's own), the Bézier's handles reaching
    * `reach.slot` out of a rack slot and `reach.spindle` out of the spindle; a disc leaving the
    * spindle goes out of sight at `aside` from its seat, where one from the side comes from too.
+   * A turntable's sleeve comes down onto its ledge from `reach.ledge` above it (absent:
+   * `reach.spindle`), and leaves it the same way.
    */
   flight: {
-    reach: { slot: number; spindle: number };
+    reach: { slot: number; spindle: number; ledge?: number };
     aside: Vec3;
     /**
      * Which way a disc leaves and reaches a rack slot: along the slot's own normal, the disc's
@@ -56,6 +70,8 @@ const unit = (v: Vec3): Vec3 => {
 
 export const SCENE_PROFILES: Readonly<Record<ModelId, SceneProfile>> = {
   suitcase: {
+    media: 'cd',
+    rpm: 200,
     frame: {
       target: [0, 0.132, 0.01],
       direction: unit([-0.48, 0.338, 0.79]),
@@ -68,6 +84,8 @@ export const SCENE_PROFILES: Readonly<Record<ModelId, SceneProfile>> = {
     flight: { reach: { slot: 0.08, spindle: 0.08 }, aside: [-0.16, 0.06, 0] },
   },
   clear: {
+    media: 'cd',
+    rpm: 200,
     // Seen from the Clear hero still's camera (Blender's (-255, -880, 400) over its aim
     // (2, 10, 122), in three's axes): front left, above. The set is wide and low, so the camera
     // fits it by its own half-width and half-height, aimed a little left of and below the disc so
@@ -92,6 +110,8 @@ export const SCENE_PROFILES: Readonly<Record<ModelId, SceneProfile>> = {
     flight: { reach: { slot: 0.3, spindle: 0.1 }, aside: [0.1, 0.1, 0.1] },
   },
   deck: {
+    media: 'cd',
+    rpm: 200,
     // Seen from the Deck hero still's camera (Blender's (-320, -900, 480) over its aim (60, 0, 80),
     // in three's axes): front left, above. The set (the deck and the flight case right of it) is
     // wide and low: the camera fits it by its own half-width and half-height. It aims at the set's
@@ -125,5 +145,40 @@ export const SCENE_PROFILES: Readonly<Record<ModelId, SceneProfile>> = {
     clockwise: true,
     // The big 16:9 screen instead of the segment LCD.
     screen: 'deck',
+  },
+  luxe: {
+    media: 'vinyl',
+    rpm: 100 / 3,
+    // Seen from the Luxe hero still's camera (Blender's (-520, -1250, 620) over its aim
+    // (150, 40, 110), in three's axes): front left, a little above. The set (the deck, the stand on
+    // its right, the ledge behind) is wide and low: the camera fits it by its own half-width and
+    // half-height. It aims right of and behind the deck's middle (x 0.2, toward the stand; y 0.14,
+    // 0.37 of the set's height), from where the orbit's ends keep the whole set 2 % inside the
+    // canvas and the pan at 3× never loses it (src/scene/framing.test.ts holds them).
+    frame: {
+      target: [0.2, 0.14, -0.07],
+      direction: unit([-0.67, 0.51, 1.29]),
+      across: 0.52,
+      up: 0.49,
+    },
+    // The set is deep (0.48 m) as well as wide (0.82 m): the foil's depth steps on a narrow canvas,
+    // where the camera stands 4 m back, need this near plane, and the orbit's worst corner still
+    // stands 0.24 m past it (0.05 m at 3×, the pan at its extremes).
+    near: 1.1,
+    // About the arm pivot's Y: 0 is its rest post; the lead-in puts the needle 146 mm from the
+    // spindle, the run-out 60 mm (luxe_arm.py's, measured as LUXE_ARM in
+    // src/testing/model-measures.ts, which the profile test holds these two to).
+    arm: { rest: 0, play: -0.3905, runOut: -0.7865 },
+    door: null,
+    clockwise: true,
+    // A record and its sleeve leave a slot along its face, toward the viewer (the stand faces the
+    // viewer, open at the front), 50 cm of handle: a sleeve has 10 mm to each of the stand's low
+    // sides, and the way's pull toward the ledge draws it that far sideways before it is out of the
+    // stand, then it must pass over the plinth and the arm. The record comes down onto the platter
+    // from 15 cm above it, the sleeve onto the ledge from 50 cm, high over the arm. Out of sight
+    // they go up, left and a centimetre back: further back, a sleeve rising off the ledge would cut
+    // its legs (src/scene/rig.test.ts flies every way against the plinth, the platter, the arm, the
+    // stand and the ledge).
+    flight: { reach: { slot: 0.5, spindle: 0.15, ledge: 0.5 }, aside: [-0.1, 0.15, -0.01] },
   },
 };
