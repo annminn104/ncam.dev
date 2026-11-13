@@ -1,9 +1,9 @@
 /**
  * What the scene's tests know of the committed GLBs (public/assets/cd-player.glb and
- * cd-player-clear.glb and cd-player-deck.glb), in three's Y-up metres, as three's GLTFLoader loads them:
+ * cd-player-clear.glb, cd-player-deck.glb and cd-player-luxe.glb), in three's Y-up metres, as three's GLTFLoader loads them:
  * src/scene/framing.test.ts frames each model's box and sweeps the Clear's door, and
  * src/scene/rig.test.ts poses the Clear's seat and stand and flies its discs past its shell's walls
- * (the Deck's are read the same way).
+ * (the Deck's and Luxe's are read the same way).
  * src/scene/model-contract.test.ts holds the GLBs to every number here, so a rebuild that moves one
  * fails it: measure it again then (that test's helpers do), and change it here.
  */
@@ -15,12 +15,14 @@ type Vec3 = readonly [number, number, number];
  * the page puts there (they lie within the lid's or the stand's own extent), rounded out to the
  * millimetre. The suitcase's is the player, lid open, centred at x = 0; the Clear's is the player,
  * its plinth, handle and knob, the stand, the jewel case and its easel; the Deck's is the deck, its
- * jewel case on the right, and the flight case (turned 18°) whose rack its discs wait in.
+ * jewel case on the right, and the flight case (turned 18°) whose rack its discs wait in; Luxe's is
+ * the turntable, its arm at rest, its ledge and its stand, with a record and its sleeve in each slot.
  */
 export const BOXES = {
   suitcase: { min: [-0.152, -0.003, -0.199], max: [0.152, 0.319, 0.152] },
   clear: { min: [-0.316, -0.001, -0.09], max: [0.333, 0.279, 0.069] },
   deck: { min: [-0.161, -0.001, -0.225], max: [0.417, 0.282, 0.224] },
+  luxe: { min: [-0.305, -0.001, -0.292], max: [0.619, 0.379, 0.191] },
 } as const satisfies Record<string, { min: Vec3; max: Vec3 }>;
 
 /**
@@ -137,3 +139,99 @@ export const DECK_CASE = {
   max: [0.092, 0.2815, 0.1045],
   turn: (-18 * Math.PI) / 180,
 } as const satisfies { min: Vec3; max: Vec3; turn: number };
+
+/** Luxe's record seat (`disc_seat`, where its `disc` lies too): on the platter's mat, its up the world's. */
+export const LUXE_SEAT = {
+  position: [-0.045, 0.1017, -0.01],
+  up: [0, 1, 0],
+} as const satisfies { position: Vec3; up: Vec3 };
+
+/** A record (vinyl.py): 300 mm across, a 100 mm label 0.1 mm clear of the vinyl, 1.8 mm thick. */
+export const LUXE_RECORD = { radius: 0.15, label: 0.05, labelLift: 0.0001, half: 0.0009 } as const;
+
+/** A sleeve (vinyl.py): 310 mm square. */
+export const LUXE_SLEEVE = { half: 0.155 } as const;
+
+/** Luxe's platter (`platter`): its spindle's foot, its radius to the rim, its bottom and its mat's top. */
+export const LUXE_PLATTER = {
+  centre: [-0.045, 0.084, -0.01],
+  radius: 0.15585,
+  bottom: 0.084,
+  top: 0.1008,
+} as const satisfies { centre: Vec3; radius: number; bottom: number; top: number };
+
+/** Luxe's plinth (`luxe_deck_body`): the tiers, bands, frame, feet, keys, LED ring and decor. */
+export const LUXE_PLINTH = {
+  min: [-0.2258, 0, -0.1908],
+  max: [0.2258, 0.094, 0.1908],
+} as const satisfies { min: Vec3; max: Vec3 };
+
+/**
+ * Luxe's tonearm: its pivot, the box of the arm and its fixed base at rest (on its rest post), and
+ * its turns about the pivot's Y onto the lead-in groove and the run-out (luxe_arm.py's, printed by
+ * build_luxe.py; src/scene/profiles.ts's luxe profile carries the same two).
+ */
+export const LUXE_ARM = {
+  pivot: [0.15, 0.118, -0.11],
+  rest: { min: [0.11667, 0.08, -0.16506], max: [0.18501, 0.134, 0.14276] },
+  leadIn: -0.3905,
+  runOut: -0.7865,
+} as const satisfies {
+  pivot: Vec3;
+  rest: { min: Vec3; max: Vec3 };
+  leadIn: number;
+  runOut: number;
+};
+
+/** Where the needle stands from the spindle at the lead-in and at the run-out (m). */
+export const LUXE_GROOVES = { leadIn: 0.146, runOut: 0.06 } as const;
+
+/** Luxe's record stand (`luxe_stand`), right of the deck and turned 18° toward it. */
+export const LUXE_STAND = {
+  position: [0.42, 0, -0.06],
+  rotationY: (-18 * Math.PI) / 180,
+} as const satisfies { position: Vec3; rotationY: number };
+
+/**
+ * Luxe's rack slot `k` (`rack_slot_k`, in the stand's own frame): each 12 mm above and 34 mm
+ * behind the one before it, every sleeve leaning back 15°.
+ */
+export function luxeSlot(k: number): { position: Vec3; rotationX: number } {
+  return { position: [0, 0.1802 + 0.012 * k, 0.0439 - 0.034 * k], rotationX: (75 * Math.PI) / 180 };
+}
+
+type Box = { min: Vec3; max: Vec3 };
+
+/** The stand's steps (`luxe_stand_step_k`), in its own frame: a staircase rising toward its back. */
+export const LUXE_STEPS: readonly Box[] = [0, 1, 2, 3, 4].map((k): Box => ({
+  min: [-0.165, 0, k === 4 ? -0.105 : 0.051 - 0.034 * k],
+  max: [0.165, 0.03 + 0.012 * k, 0.085 - 0.034 * k],
+}));
+
+/** The stand's side panels (`luxe_stand_panel_l`, `_r`), in its own frame. */
+export const LUXE_PANELS: readonly [Box, Box] = [
+  { min: [-0.175, -0.0003, -0.10545], max: [-0.165, 0.17068, 0.08529] },
+  { min: [0.165, -0.0003, -0.10545], max: [0.175, 0.17068, 0.08529] },
+];
+
+/** The stand's back bar (`luxe_stand_bar`), in its own frame, which slot 4's sleeve leans on. */
+export const LUXE_BAR: Box = { min: [-0.176, 0.206, -0.097], max: [0.176, 0.214, -0.089] };
+
+/**
+ * Luxe's ledge behind the deck: the playing record's sleeve seat (`sleeve_seat`, where the
+ * template `sleeve` stands too), and the easel's bar, lip and legs, in world space.
+ */
+export const LUXE_LEDGE = {
+  seat: { position: [-0.15, 0.1582, -0.2497], rotationX: (75 * Math.PI) / 180 },
+  bar: { min: [-0.25, 0, -0.229], max: [-0.05, 0.008, -0.205] },
+  lip: { min: [-0.25, 0.008, -0.208], max: [-0.05, 0.012, -0.205] },
+  legs: [
+    { min: [-0.23249, 0.00535, -0.28073], max: [-0.22751, 0.24865, -0.21104] },
+    { min: [-0.07249, 0.00535, -0.28073], max: [-0.06751, 0.24865, -0.21104] },
+  ],
+} as const satisfies {
+  seat: { position: Vec3; rotationX: number };
+  bar: Box;
+  lip: Box;
+  legs: readonly [Box, Box];
+};

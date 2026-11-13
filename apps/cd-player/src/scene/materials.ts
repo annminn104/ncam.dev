@@ -256,6 +256,12 @@ export function makeMaterial(
         color: new Color('#ffffff'),
         toneMapped: false,
       });
+    case 'lacquer':
+      // Luxe's body: the GLB's finish under a clearcoat, which a look sets (its swatch's `coat`).
+      return physical(source, { clearcoat: 1, clearcoatRoughness: 0.05 });
+    case 'hit':
+      // A larger, invisible shape a finger can take (a turntable's arm head): raycast, never drawn.
+      return new MeshBasicMaterial({ name: source.name, visible: false });
     case 'decal':
       // The Deck's personal prints (src/scene/textures): one atlas, cut out by its alpha so that the
       // prints draw in the opaque pass (the jog's acrylic sees the rim's through its transmission),
@@ -458,7 +464,8 @@ export function upgradeMaterials(root: Object3D): UpgradedMaterials {
     if (
       (material as MeshPhysicalMaterial).transmission > 0 ||
       role === 'etch' ||
-      role === 'decal'
+      role === 'decal' ||
+      role === 'hit'
     ) {
       mesh.castShadow = false;
     }

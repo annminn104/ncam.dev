@@ -97,6 +97,29 @@ describe('makeMaterial', () => {
     expect(decal.polygonOffsetUnits).toBe(-4);
     expect(decal.visible).toBe(false);
   });
+
+  it('lacquers Luxe’s body, its coat for the look to set', () => {
+    const lacquer = makeMaterial(
+      'lacquer',
+      new MeshStandardMaterial({ name: 'luxe_body' }),
+      maps,
+    ) as MeshPhysicalMaterial;
+    expect(lacquer.clearcoat).toBe(1);
+    expect(lacquer.clearcoatRoughness).toBe(0.05);
+  });
+
+  it('makes a hit shape drawn nowhere, and keeps it out of the shadow map', () => {
+    const hit = makeMaterial('hit', new MeshStandardMaterial({ name: 'arm_hit' }), maps);
+    expect(hit).toBeInstanceOf(MeshBasicMaterial);
+    expect(hit.visible).toBe(false);
+    const root = new Group();
+    const mesh = meshOf('arm_hit');
+    mesh.castShadow = true;
+    root.add(mesh);
+    const upgraded = upgradeMaterials(root);
+    expect(mesh.castShadow).toBe(false);
+    upgraded.dispose();
+  });
 });
 
 describe('upgradeMaterials', () => {
