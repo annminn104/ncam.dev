@@ -109,6 +109,20 @@ describe('makeMaterial', () => {
     expect(lacquer.clearcoatRoughness).toBe(0.05);
   });
 
+  it('glazes the ornament’s enamel over its own colour and roughness', () => {
+    const source = new MeshStandardMaterial({
+      name: 'enamel_rose',
+      color: '#d94f6b',
+      roughness: 0.22,
+    });
+    const enamel = makeMaterial('enamel', source, maps) as MeshPhysicalMaterial;
+    expect(enamel.color.getHex()).toBe(source.color.getHex());
+    expect(enamel.roughness).toBe(0.22);
+    expect(enamel.metalness).toBe(0);
+    expect(enamel.clearcoat).toBe(0.7);
+    expect(enamel.clearcoatRoughness).toBe(0.08);
+  });
+
   it('makes a hit shape drawn nowhere, and keeps it out of the shadow map', () => {
     const hit = makeMaterial('hit', new MeshStandardMaterial({ name: 'arm_hit' }), maps);
     expect(hit).toBeInstanceOf(MeshBasicMaterial);
