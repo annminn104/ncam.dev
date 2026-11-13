@@ -49,6 +49,7 @@ import {
   isTurntableRig,
   modelArmAngle,
   rigFor,
+  ringTargetMs,
   spinSense,
   turnDoor,
   turntableRestFor,
@@ -1019,5 +1020,35 @@ describe('a turntable’s arm', () => {
     applyPose(cd, { ...restingPose(emptyShelf(), false, false), armLift: 0.5 }, 0);
     expect(cd.last.armLift).toBe(0);
     expect(cd.toneArm).toBeNull();
+  });
+});
+
+describe('ringTargetMs', () => {
+  it('is a CD player’s position, or its knob turn’s target', () => {
+    const rig = rigFor(fakeModel().model);
+    const view = {
+      ...EMPTY_VIEW,
+      status: 'playing' as const,
+      positionMs: 10_000,
+      durationMs: 60_000,
+    };
+    expect(ringTargetMs(rig, view, 0)).toBe(10_000);
+    rig.scrubMs = 5_000;
+    expect(ringTargetMs(rig, view, 0)).toBe(15_000);
+  });
+
+  it('is a turntable’s position carried on as it plays, or its arm drag’s target', () => {
+    const rig = rigFor(fakeTurntable().model, TEST_TURNTABLE);
+    const view = {
+      ...EMPTY_VIEW,
+      current: track('a'),
+      status: 'playing' as const,
+      positionMs: 10_000,
+      durationMs: 60_000,
+    };
+    expect(ringTargetMs(rig, view, 1000)).toBe(10_000);
+    expect(ringTargetMs(rig, view, 1500)).toBe(10_500);
+    rig.dragMs = 30_000;
+    expect(ringTargetMs(rig, view, 1500)).toBe(30_000);
   });
 });

@@ -33,6 +33,13 @@ describe('PlayerRig', () => {
     expect(body('TurntableParts')).toContain('useControls(');
   });
 
+  it('drags a turntable’s arm in its own parts, and lights the ring for every model', () => {
+    expect(calls('useArmDrag')).toBe(1);
+    expect(body('TurntableParts')).toContain('useArmDrag(');
+    expect(calls('useJogRing')).toBe(1);
+    expect(body('PlayerRig')).toContain('useJogRing(');
+  });
+
   it('picks the parts by the media of the model on show', () => {
     expect(body('PlayerRig')).toMatch(/if \(isCdRig\(rig\)\) return <CdPlayerParts/);
     expect(body('PlayerRig')).toMatch(/if \(isTurntableRig\(rig\)\) return <TurntableParts/);

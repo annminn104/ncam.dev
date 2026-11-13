@@ -8,12 +8,10 @@ import type { Rig } from '../rig';
 import { collectionLabel, printInFaces } from './collection-print';
 import {
   canvasTexture,
-  jogRingLit,
   loadFaces,
   newCanvas,
   paintCard,
   paintDeckScreen,
-  paintJogRing,
   paintLcd,
   paintTag,
   setMap,
@@ -25,14 +23,12 @@ function makeSurfaces() {
   const card = newCanvas(1024, 182);
   const tag = newCanvas(512, 768);
   const lcd = newCanvas(256, 112);
-  const ring = newCanvas(480, 8);
   return {
-    canvases: { card, tag, lcd, ring },
+    canvases: { card, tag, lcd },
     textures: {
       card: canvasTexture(card),
       tag: canvasTexture(tag),
       lcd: canvasTexture(lcd),
-      ring: canvasTexture(ring),
     },
   };
 }
@@ -57,8 +53,6 @@ interface Shown {
     status: Status | null;
     colour: string | null;
   };
-  /** The deck's LED ring: how many segments are lit, and in what colour. */
-  ring: { lit: number; colour: string | null };
 }
 
 const NONE = '\u0000';
@@ -75,14 +69,13 @@ const nothingShown = (): Shown => ({
     status: null,
     colour: null,
   },
-  ring: { lit: -1, colour: null },
 });
 
 /**
  * A CD player's prints beyond the discs and the booklet: the plate with the collection's name,
  * the luggage tag, and the display, at most once a second and whenever its colour changes. While
  * the knob is turning, the display shows the turn's target time. The discs and the booklet are
- * useDiscPrints'.
+ * useDiscPrints', and the LED ring useJogRing's.
  */
 export function useSceneTextures(rig: Rig<CdModel>, bridge: SceneBridge, lcdColour: string): void {
   const [surfaces] = useState(makeSurfaces);
@@ -102,12 +95,10 @@ export function useSceneTextures(rig: Rig<CdModel>, bridge: SceneBridge, lcdColo
     setMap(rig.model.slots.tag_print, textures.tag);
     setMap(rig.model.slots.card_print, textures.card);
     setMap(rig.model.slots.lcd_screen, screen ? screen.texture : textures.lcd);
-    const ring = rig.model.optionalSlots.jog_ring;
-    if (ring) setMap(ring, textures.ring);
     shown.current = nothingShown();
     paintCard(canvases.card, null);
     paintTag(canvases.tag, null);
-    const all = [textures.tag, textures.card, textures.lcd, textures.ring];
+    const all = [textures.tag, textures.card, textures.lcd];
     if (screen) all.push(screen.texture);
     for (const texture of all) texture.needsUpdate = true;
     return () => {
@@ -152,16 +143,6 @@ export function useSceneTextures(rig: Rig<CdModel>, bridge: SceneBridge, lcdColo
   useFrame(() => {
     const view = bridge.getView();
     const target = scrubTargetMs(view.positionMs, view.durationMs, rig.scrubMs);
-    if (rig.model.optionalSlots.jog_ring) {
-      const ring = shown.current.ring;
-      const lit = jogRingLit(target, view.durationMs);
-      if (ring.lit !== lit || ring.colour !== lcdColour) {
-        ring.lit = lit;
-        ring.colour = lcdColour;
-        paintJogRing(surfaces.canvases.ring, lit, lcdColour);
-        surfaces.textures.ring.needsUpdate = true;
-      }
-    }
     const lcd = shown.current.lcd;
     const second = Math.floor(target / 1000);
     const bar = screen ? playedBars(target, view.durationMs) : -1;

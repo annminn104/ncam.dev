@@ -12,6 +12,7 @@ import {
 import type { SceneView } from '../bridge';
 import type { ModelId } from '../models';
 import type { SharedNode } from './contract';
+import { scrubTargetMs } from './controls';
 import {
   ARM_PLAY,
   ARM_REST,
@@ -22,7 +23,7 @@ import {
   type Pose,
 } from './director';
 import type { CdModel, PlayerModel, VinylModel } from './model';
-import { createPlayhead, type Playhead } from './playhead';
+import { createPlayhead, type Playhead, type PlayheadView } from './playhead';
 import { SCENE_PROFILES, type SceneProfile } from './profiles';
 import { DISC_COPIES, emptyShelf, type Place, type StageState } from './stage';
 import { directorAngle, grooveAngle, grooveShare, toneArmOf, type ToneArm } from './tonearm';
@@ -116,6 +117,8 @@ export interface Rig<M extends PlayerModel = PlayerModel> extends StageState {
   playhead: Playhead;
   /** The arm's angle an arm drag holds, about its pivot from the GLB's pose; null between drags. */
   armDrag: number | null;
+  /** An arm drag's target (ms) while one goes on, for the LED ring; null between drags. */
+  dragMs: number | null;
   /** The door's hinge, for a model with one: where it is shut, and the turn that opens it. */
   door: { node: Object3D; base: number; angle: number; axis: 'x' | 'y' } | null;
   /** How far the door stood open at the last pose: 0 shut … 1 open; 0 for a model without one. */
@@ -312,6 +315,7 @@ export function rigFor(model: PlayerModel, profile: SceneProfile = SCENE_PROFILE
     toneArm: model.media === 'vinyl' ? toneArmOf(profile) : null,
     playhead: createPlayhead(),
     armDrag: null,
+    dragMs: null,
     door:
       nodes.door_hinge && door
         ? {
@@ -547,4 +551,14 @@ export function turntableRestFor(
   );
   const from = { armAngle: rig.last.armAngle, armLift: rig.last.armLift ?? 0, spin: rig.last.spin };
   return easeArm(from, target, dtS, rig.armDrag !== null);
+}
+
+/**
+ * The time a model's LED ring shows: an arm drag's target while one goes on; else a turntable's
+ * position as it plays, carried on frame by frame; else a CD player's (its knob turn's target).
+ */
+export function ringTargetMs(rig: Rig, view: PlayheadView, nowMs: number): number {
+  if (rig.dragMs !== null) return rig.dragMs;
+  if (rig.toneArm) return rig.playhead.read(view, nowMs);
+  return scrubTargetMs(view.positionMs, view.durationMs, rig.scrubMs);
 }

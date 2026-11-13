@@ -9,7 +9,9 @@ import { useCardPrint } from './textures/useCardPrint';
 import { useDiscPrints } from './textures/useDiscPrints';
 import { lcdColour } from './textures/paint';
 import { useDeckPattern } from './textures/useDeckPattern';
+import { useJogRing } from './textures/useJogRing';
 import { useSceneTextures } from './textures/useSceneTextures';
+import { useArmDrag } from './useArmDrag';
 import { useControls } from './useControls';
 import { useDirector } from './useDirector';
 import { useKnob } from './useKnob';
@@ -37,6 +39,7 @@ function useReadyProbe(onReady: () => void) {
 
 export function PlayerRig({ model, bridge, look, personal, onReady }: Props) {
   const rig = useMemo(() => rigFor(model), [model]);
+  useJogRing(rig, bridge, lcdColour(look));
   useDeckPattern(rig, bridge, look, personal);
   const printer = useDiscPrints(rig, bridge);
   useDirector(rig, bridge, printer);
@@ -68,9 +71,13 @@ function CdPlayerParts({
   return <primitive object={rig.model.root} {...handlers} />;
 }
 
-/** What only a turntable has: its plate's print. It holds the model on the stage, with the keys. */
+/**
+ * What only a turntable has: its plate's print and the tonearm's drag. It holds the model on the
+ * stage, with the keys' handlers and the arm's grip.
+ */
 function TurntableParts({ rig, bridge }: { rig: Rig<VinylModel>; bridge: SceneBridge }) {
   useCardPrint(rig, bridge);
-  const handlers = useControls(rig, bridge, null);
+  const arm = useArmDrag(rig, bridge);
+  const handlers = useControls(rig, bridge, arm);
   return <primitive object={rig.model.root} {...handlers} />;
 }

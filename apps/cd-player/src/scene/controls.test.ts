@@ -26,7 +26,7 @@ const chain = (...names: string[]): Node => {
 };
 
 describe('controls', () => {
-  it('finds the key or the knob above a hit mesh', () => {
+  it('finds the key, the knob or the tonearm head above a hit mesh', () => {
     expect(hitFor(chain('player', 'btn_play', 'player_btn_cap_play'))).toEqual({
       kind: 'button',
       node: 'btn_play',
@@ -35,6 +35,8 @@ describe('controls', () => {
     expect(hitFor(chain('player', 'knob', 'player_knob_body'))).toEqual({ kind: 'knob' });
     expect(hitFor(chain('player', 'player_frame'))).toBeNull();
     expect(hitFor(null)).toBeNull();
+    expect(hitFor(chain('luxe', 'arm_pivot', 'arm_head', 'luxe_arm_hit'))).toEqual({ kind: 'arm' });
+    expect(hitFor(chain('luxe', 'arm_pivot', 'luxe_arm_tube'))).toBeNull();
   });
 
   it('turns the knob into seconds: a full turn is 30 s', () => {

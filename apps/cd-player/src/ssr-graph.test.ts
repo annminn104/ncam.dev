@@ -76,7 +76,12 @@ describe('import graphs', () => {
   });
 
   it('keeps the scene’s three-free modules off three and R3F', () => {
-    for (const entry of ['scene/tonearm.ts', 'scene/playhead.ts', 'scene/grip.ts']) {
+    for (const entry of [
+      'scene/tonearm.ts',
+      'scene/playhead.ts',
+      'scene/grip.ts',
+      'scene/arm-drag.ts',
+    ]) {
       const { bare } = graph(path.join(SRC, ...entry.split('/')));
       expect(
         [...bare].filter((s) => THREE.test(s)),
