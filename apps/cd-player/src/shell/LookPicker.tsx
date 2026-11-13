@@ -11,6 +11,7 @@ import {
 } from '../clear-looks';
 import { DECK_PART_NAMES, DECK_PARTS, DECK_SWATCHES } from '../deck-looks';
 import { exhaustive, lookLabel, lookOf, lookSwatch, type LookState } from '../looks';
+import { LUXE_PART_NAMES, LUXE_PARTS, LUXE_SWATCHES } from '../luxe-looks';
 import { MODELS, modelById, type ModelId } from '../models';
 import { cleanName, NAME_FALLBACK, PATTERNS, type PatternId } from '../personal';
 import type { ModelLoad } from '../scene-props';
@@ -90,8 +91,8 @@ function swatchColour(swatch: ShellSwatch | FrameSwatch | BoardSwatch | LightSwa
 }
 
 /**
- * The menu's groups: the model, then the suitcase's skins, the Deck's parts and patterns or the
- * Clear model's.
+ * The menu's groups: the model, then the suitcase's skins, the Deck's parts and patterns, the
+ * Clear model's parts or Luxe's.
  */
 function groupsFor(look: LookState, onChange: (next: LookState) => void): Group[] {
   const model: Group = {
@@ -149,6 +150,21 @@ function groupsFor(look: LookState, onChange: (next: LookState) => void): Group[
           })),
           value: look.clear[part],
           pick: (id: string) => onChange({ ...look, clear: { ...look.clear, [part]: id } }),
+        })),
+      ];
+    case 'luxe':
+      return [
+        model,
+        ...LUXE_PARTS.map((part) => ({
+          label: LUXE_PART_NAMES[part],
+          variant: 'dots' as const,
+          options: LUXE_SWATCHES[part].map((s) => ({
+            id: s.id,
+            name: s.name,
+            swatch: swatchColour(s),
+          })),
+          value: look.luxe[part],
+          pick: (id: string) => onChange({ ...look, luxe: { ...look.luxe, [part]: id } }),
         })),
       ];
     default:

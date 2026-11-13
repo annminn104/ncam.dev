@@ -115,4 +115,13 @@ describe('vuColours', () => {
     expect(colours).toHaveLength(VU_SEGMENTS);
     expect(colours[VU_SEGMENTS - 1]).toBe('#b48cff');
   });
+
+  it('lights Luxe’s steps in its light, the last the glow itself (Luxe has no strip: the compiler’s case)', () => {
+    const colours = vuColours({
+      model: 'luxe',
+      luxe: { body: 'pink', metal: 'gold', light: 'amber' },
+    });
+    expect(colours).toHaveLength(VU_SEGMENTS);
+    expect(colours[VU_SEGMENTS - 1]).toBe('#ffb347');
+  });
 });

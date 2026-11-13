@@ -20,6 +20,7 @@ import { clearSwatch, type ClearLook } from '../clear-looks';
 import { deckSwatch, type DeckLook } from '../deck-looks';
 import { etchColour, GOLD, traceColour } from './decor-colours';
 import { exhaustive, type Look } from '../looks';
+import { luxeSwatch, type LuxeLook } from '../luxe-looks';
 import { skinById, type Skin, type SkinRole } from '../skins';
 import {
   OPTIONAL_DYNAMIC_MATERIALS,
@@ -32,6 +33,7 @@ import {
 import {
   CLEAR_ROLES,
   DECK_ROLES,
+  LUXE_ROLES,
   MATERIAL_ROLES,
   SKIN_ROLES,
   type MaterialRole,
@@ -315,7 +317,9 @@ const SILK_LUMA_SWITCH = 0.45;
  * Recolours `materials` in place for `look`: the suitcase's skin roles from its skin (as
  * `applySkin` did), or the Clear model's parts from their swatches, its silkscreen following the
  * board and its `trace` and `etch` the board and the shell, or the Deck's body and light from theirs
- * (its other materials, the print layer included, stay as they are). Uniforms only.
+ * (its other materials, the print layer included, stay as they are), or Luxe's body (its lacquer's
+ * coat too), metal and light from theirs. Each model's look touches its own materials only.
+ * Uniforms only.
  */
 export function applyLook(materials: Iterable<Material>, look: Look): void {
   switch (look.model) {
@@ -327,6 +331,9 @@ export function applyLook(materials: Iterable<Material>, look: Look): void {
       return;
     case 'deck':
       applyDeckLook(materials, look.deck);
+      return;
+    case 'luxe':
+      applyLuxeLook(materials, look.luxe);
       return;
     default:
       exhaustive(look);
@@ -346,6 +353,27 @@ function applyDeckLook(materials: Iterable<Material>, deck: DeckLook): void {
     } else if (part === 'light') {
       (material as MeshBasicMaterial).color.set(deckSwatch(deck, 'light').glow);
     }
+  }
+}
+
+/**
+ * Luxe's body (its finish and its lacquer's coat), its metal and its light from their swatches;
+ * its stand wears the same body and metal. Every other material stays as it is.
+ */
+function applyLuxeLook(materials: Iterable<Material>, luxe: LuxeLook): void {
+  for (const material of materials) {
+    const part = Object.hasOwn(LUXE_ROLES, material.name) ? LUXE_ROLES[material.name] : undefined;
+    if (part === 'light') {
+      (material as MeshBasicMaterial).color.set(luxeSwatch(luxe, 'light').glow);
+      continue;
+    }
+    if (!part) continue;
+    const surface = material as MeshPhysicalMaterial;
+    const finish = luxeSwatch(luxe, part);
+    surface.color.set(finish.colour);
+    surface.metalness = finish.metalness;
+    surface.roughness = finish.roughness;
+    if (part === 'body') surface.clearcoat = luxeSwatch(luxe, 'body').coat;
   }
 }
 
@@ -392,7 +420,7 @@ function applyClearLook(materials: Iterable<Material>, clear: ClearLook): void {
 /**
  * The materials under `root` a look recolours, by name, as sRGB hex (for the live check): a skin's
  * roles on the suitcase, the Clear model's parts, its silkscreen and its `trace` and `etch`, the
- * Deck's body and light.
+ * Deck's body and light, and Luxe's body, metal and light.
  */
 export function skinColours(root: Object3D): Record<string, string> {
   const colours: Record<string, string> = {};
@@ -405,6 +433,7 @@ export function skinColours(root: Object3D): Record<string, string> {
       skinRoleOf(name) ||
       Object.hasOwn(CLEAR_ROLES, name) ||
       Object.hasOwn(DECK_ROLES, name) ||
+      Object.hasOwn(LUXE_ROLES, name) ||
       name === 'silk' ||
       name === 'trace' ||
       name === 'etch'

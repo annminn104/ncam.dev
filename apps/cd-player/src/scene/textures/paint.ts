@@ -8,6 +8,7 @@ import type { TrackView } from '../../bridge';
 import { clearSwatch } from '../../clear-looks';
 import { deckSwatch } from '../../deck-looks';
 import { exhaustive, type Look } from '../../looks';
+import { luxeSwatch } from '../../luxe-looks';
 import type { Status } from '../../playback/sequencer';
 import { DECK_SCREEN, playedBars, screenTimes, WAVE_BARS, waveHeights } from './deck-screen';
 import {
@@ -305,7 +306,10 @@ function drawDigits(
   }
 }
 
-/** The display's lit colour for a look: the suitcase's cyan, or the Clear model's or the Deck's light. */
+/**
+ * The display's lit colour for a look: the suitcase's cyan, or the Clear model's or the Deck's
+ * light, or Luxe's (its LED ring is painted in it).
+ */
 export function lcdColour(look: Look): string {
   switch (look.model) {
     case 'suitcase':
@@ -314,6 +318,8 @@ export function lcdColour(look: Look): string {
       return clearSwatch(look.clear, 'light').glow;
     case 'deck':
       return deckSwatch(look.deck, 'light').glow;
+    case 'luxe':
+      return luxeSwatch(look.luxe, 'light').glow;
     default:
       return exhaustive(look);
   }

@@ -1,6 +1,7 @@
 import { clearSwatch } from '../clear-looks';
 import { deckSwatch } from '../deck-looks';
 import { exhaustive, type Look } from '../looks';
+import { luxeSwatch } from '../luxe-looks';
 import type { Status } from '../playback/sequencer';
 
 /**
@@ -28,7 +29,8 @@ export const VU_COLOURS: readonly string[] = [
 
 /**
  * The strip's colours for a look: the suitcase's amber to red, or the Clear model's or the Deck's
- * light in ten brightening steps (sRGB, the last being the glow itself).
+ * light in ten brightening steps (sRGB, the last being the glow itself). Luxe has no strip: its
+ * case is the compiler's, true to its light.
  */
 export function vuColours(look: Look): readonly string[] {
   switch (look.model) {
@@ -38,6 +40,8 @@ export function vuColours(look: Look): readonly string[] {
       return lightSteps(clearSwatch(look.clear, 'light').glow);
     case 'deck':
       return lightSteps(deckSwatch(look.deck, 'light').glow);
+    case 'luxe':
+      return lightSteps(luxeSwatch(look.luxe, 'light').glow);
     default:
       return exhaustive(look);
   }

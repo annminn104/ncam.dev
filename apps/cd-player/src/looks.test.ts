@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { clearSwatch, DEFAULT_CLEAR_LOOK } from './clear-looks';
 import { DEFAULT_DECK_LOOK } from './deck-looks';
+import { DEFAULT_LUXE_LOOK } from './luxe-looks';
 import { DEFAULT_PERSONAL } from './personal';
 import { DEFAULT_LOOK_STATE, exhaustive, lookAccent, lookLabel, lookOf, lookSwatch } from './looks';
 import { skinById } from './skins';
@@ -12,6 +13,7 @@ describe('looks', () => {
       skin: 'blush',
       clear: DEFAULT_CLEAR_LOOK,
       deck: DEFAULT_DECK_LOOK,
+      luxe: DEFAULT_LUXE_LOOK,
       personal: DEFAULT_PERSONAL,
     });
     expect(lookOf(DEFAULT_LOOK_STATE)).toEqual({ model: 'suitcase', skin: 'blush' });
@@ -55,6 +57,15 @@ describe('looks', () => {
     expect(lookAccent(look)).toEqual({ accent: '#f2aaa5', onAccent: '#2c0f0d' });
     expect(lookSwatch(look)).toBe('#ff5a52');
     expect(lookLabel(look)).toBe('Player: Deck, Red light');
+  });
+
+  it('draws Luxe in its own colours, its light the page’s accent', () => {
+    const luxe = { body: 'black', metal: 'chrome', light: 'violet' };
+    const look = lookOf({ ...DEFAULT_LOOK_STATE, model: 'luxe', luxe });
+    expect(look).toEqual({ model: 'luxe', luxe });
+    expect(lookAccent(look)).toEqual({ accent: '#c8b4f2', onAccent: '#1e1430' });
+    expect(lookSwatch(look)).toBe('#b48cff');
+    expect(lookLabel(look)).toBe('Player: Luxe, Violet light');
   });
 
   it('names a model no switch has a case for, should one ever get past the compiler', () => {

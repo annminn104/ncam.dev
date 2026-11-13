@@ -172,8 +172,12 @@ describe('the lines of text', () => {
 });
 
 describe('lcdColour', () => {
-  it('is the suitcase’s cyan, or the Clear model’s or the Deck’s light', () => {
+  it('is the suitcase’s cyan, or the Clear model’s, the Deck’s or Luxe’s light', () => {
     expect(lcdColour({ model: 'deck', deck: { body: 'black', light: 'violet' } })).toBe('#b48cff');
+    // The colour Luxe's LED ring is painted in.
+    expect(lcdColour({ model: 'luxe', luxe: { body: 'pink', metal: 'gold', light: 'ice' } })).toBe(
+      '#7fd8ff',
+    );
     expect(lcdColour({ model: 'suitcase', skin: 'blush' })).toBe(LCD_ON);
     expect(lcdColour({ model: 'clear', clear: DEFAULT_CLEAR_LOOK })).toBe(
       clearSwatch(DEFAULT_CLEAR_LOOK, 'light').glow,

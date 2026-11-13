@@ -1,5 +1,6 @@
 import { clearSwatch, DEFAULT_CLEAR_LOOK, type ClearLook } from './clear-looks';
 import { deckSwatch, DEFAULT_DECK_LOOK, type DeckLook } from './deck-looks';
+import { DEFAULT_LUXE_LOOK, luxeSwatch, type LuxeLook } from './luxe-looks';
 import { DEFAULT_MODEL, type ModelId } from './models';
 import { DEFAULT_PERSONAL, type Personal } from './personal';
 import { DEFAULT_SKIN, skinById, type SkinId } from './skins';
@@ -8,7 +9,8 @@ import { DEFAULT_SKIN, skinById, type SkinId } from './skins';
 export type Look =
   | { model: 'suitcase'; skin: SkinId }
   | { model: 'clear'; clear: ClearLook }
-  | { model: 'deck'; deck: DeckLook };
+  | { model: 'deck'; deck: DeckLook }
+  | { model: 'luxe'; luxe: LuxeLook };
 
 /** Everything the visitor chose, per model, so each model comes back in its own last colours. */
 export interface LookState {
@@ -16,6 +18,7 @@ export interface LookState {
   skin: SkinId;
   clear: ClearLook;
   deck: DeckLook;
+  luxe: LuxeLook;
   /** The visitor's pattern and name (src/personal.ts). */
   personal: Personal;
 }
@@ -25,6 +28,7 @@ export const DEFAULT_LOOK_STATE: LookState = {
   skin: DEFAULT_SKIN,
   clear: DEFAULT_CLEAR_LOOK,
   deck: DEFAULT_DECK_LOOK,
+  luxe: DEFAULT_LUXE_LOOK,
   personal: DEFAULT_PERSONAL,
 };
 
@@ -38,7 +42,7 @@ export function exhaustive(value: never): never {
 }
 
 /** The look the scene draws: the model's own colours only, never the visitor's pattern or name. */
-export function lookOf(state: Pick<LookState, 'model' | 'skin' | 'clear' | 'deck'>): Look {
+export function lookOf(state: Pick<LookState, 'model' | 'skin' | 'clear' | 'deck' | 'luxe'>): Look {
   switch (state.model) {
     case 'suitcase':
       return { model: 'suitcase', skin: state.skin };
@@ -46,6 +50,8 @@ export function lookOf(state: Pick<LookState, 'model' | 'skin' | 'clear' | 'deck
       return { model: 'clear', clear: state.clear };
     case 'deck':
       return { model: 'deck', deck: state.deck };
+    case 'luxe':
+      return { model: 'luxe', luxe: state.luxe };
     default:
       return exhaustive(state.model);
   }
@@ -56,7 +62,7 @@ export interface AccentPair {
   onAccent: string;
 }
 
-/** The page's accent pair: the skin's, or the Clear model's or the Deck's light's. */
+/** The page's accent pair: the skin's, or the light's of the Clear model, the Deck or Luxe. */
 export function lookAccent(look: Look): AccentPair {
   const pair = ({ accent, onAccent }: AccentPair): AccentPair => ({ accent, onAccent });
   switch (look.model) {
@@ -66,6 +72,8 @@ export function lookAccent(look: Look): AccentPair {
       return pair(clearSwatch(look.clear, 'light'));
     case 'deck':
       return pair(deckSwatch(look.deck, 'light'));
+    case 'luxe':
+      return pair(luxeSwatch(look.luxe, 'light'));
     default:
       return exhaustive(look);
   }
@@ -80,6 +88,8 @@ export function lookSwatch(look: Look): string {
       return clearSwatch(look.clear, 'light').glow;
     case 'deck':
       return deckSwatch(look.deck, 'light').glow;
+    case 'luxe':
+      return luxeSwatch(look.luxe, 'light').glow;
     default:
       return exhaustive(look);
   }
@@ -94,6 +104,8 @@ export function lookLabel(look: Look): string {
       return `Player: Clear, ${clearSwatch(look.clear, 'light').name} light`;
     case 'deck':
       return `Player: Deck, ${deckSwatch(look.deck, 'light').name} light`;
+    case 'luxe':
+      return `Player: Luxe, ${luxeSwatch(look.luxe, 'light').name} light`;
     default:
       return exhaustive(look);
   }

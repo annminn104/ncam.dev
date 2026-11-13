@@ -1,5 +1,6 @@
 import type { ClearPart } from '../clear-looks';
 import type { DeckPart } from '../deck-looks';
+import type { LuxePart } from '../luxe-looks';
 import type { SkinRole } from '../skins';
 
 /**
@@ -130,4 +131,14 @@ export const CLEAR_ROLES: Readonly<Record<string, ClearPart>> = {
 export const DECK_ROLES: Readonly<Record<string, DeckPart>> = {
   deck_body: 'body',
   deck_light: 'light',
+};
+
+/**
+ * GLB material name → Luxe's part that colours it (src/luxe-looks.ts); the stand shares the
+ * body's and the metal's.
+ */
+export const LUXE_ROLES: Readonly<Record<string, LuxePart>> = {
+  luxe_body: 'body',
+  luxe_metal: 'metal',
+  luxe_light: 'light',
 };

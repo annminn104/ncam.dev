@@ -16,6 +16,7 @@ import {
 import { describe, expect, it } from 'vitest';
 import { CLEAR_SWATCHES, clearSwatch, type ClearLook } from '../clear-looks';
 import { deckSwatch } from '../deck-looks';
+import { luxeSwatch } from '../luxe-looks';
 import { SKINS, skinById, type Skin } from '../skins';
 import { DYNAMIC_MATERIALS } from './contract';
 import { etchColour, traceColour } from './decor-colours';
@@ -425,6 +426,53 @@ describe('applyLook', () => {
       expect(skinColours(root)).toEqual({
         deck_body: deckSwatch(deck, 'body').colour,
         deck_light: deckSwatch(deck, 'light').glow,
+      });
+    });
+  });
+
+  describe('Luxe', () => {
+    const luxe = { body: 'silver', metal: 'rose', light: 'ice' };
+    const luxeMaterials = () => ({
+      body: new MeshPhysicalMaterial({ name: 'luxe_body', clearcoat: 1 }),
+      metal: new MeshPhysicalMaterial({ name: 'luxe_metal' }),
+      light: new MeshBasicMaterial({ name: 'luxe_light' }),
+      vinyl: new MeshPhysicalMaterial({ name: 'vinyl' }),
+      deck: new MeshPhysicalMaterial({ name: 'deck_body' }),
+    });
+
+    it('colours the body (its coat too), the metal and the light from their swatches', () => {
+      const m = luxeMaterials();
+      applyLook(Object.values(m), { model: 'luxe', luxe });
+      const body = luxeSwatch(luxe, 'body');
+      expect(hex(m.body.color)).toBe(body.colour);
+      expect([m.body.metalness, m.body.roughness, m.body.clearcoat]).toEqual([
+        body.metalness,
+        body.roughness,
+        0,
+      ]);
+      const metal = luxeSwatch(luxe, 'metal');
+      expect(hex(m.metal.color)).toBe(metal.colour);
+      expect([m.metal.metalness, m.metal.roughness]).toEqual([metal.metalness, metal.roughness]);
+      expect(hex(m.light.color)).toBe(luxeSwatch(luxe, 'light').glow);
+      applyLook(Object.values(m), { model: 'luxe', luxe: { ...luxe, body: 'pink' } });
+      expect(m.body.clearcoat).toBe(1);
+    });
+
+    it('leaves every other material alone, and is left alone by the other looks', () => {
+      const m = luxeMaterials();
+      const before = { vinyl: hex(m.vinyl.color), deck: hex(m.deck.color) };
+      applyLook(Object.values(m), { model: 'luxe', luxe });
+      expect({ vinyl: hex(m.vinyl.color), deck: hex(m.deck.color) }).toEqual(before);
+      const body = hex(m.body.color);
+      applyLook(Object.values(m), { model: 'deck', deck: { body: 'white', light: 'red' } });
+      expect(hex(m.body.color)).toBe(body);
+      const root = new Group();
+      for (const material of [m.body, m.metal, m.light, m.vinyl])
+        root.add(new Mesh(new BoxGeometry(), material));
+      expect(skinColours(root)).toEqual({
+        luxe_body: luxeSwatch(luxe, 'body').colour,
+        luxe_metal: luxeSwatch(luxe, 'metal').colour,
+        luxe_light: luxeSwatch(luxe, 'light').glow,
       });
     });
   });

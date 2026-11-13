@@ -1,6 +1,7 @@
 import { CLEAR_SWATCHES, clearLookFrom, DEFAULT_CLEAR_LOOK, type ClearLook } from './clear-looks';
 import { DECK_SWATCHES, deckLookFrom, DEFAULT_DECK_LOOK, type DeckLook } from './deck-looks';
 import type { LookState } from './looks';
+import { DEFAULT_LUXE_LOOK, luxeLookFrom, type LuxeLook } from './luxe-looks';
 import { DEFAULT_MODEL, modelById, type ModelId } from './models';
 import { DEFAULT_PERSONAL, personalFrom, type Personal } from './personal';
 import { DEFAULT_COLLECTION, SPOTIFY_ID, sameCollection, type CollectionRef } from './routes';
@@ -65,6 +66,8 @@ export const MODEL_KEY = 'ncam.cd-player.model';
 export const CLEAR_KEY = 'ncam.cd-player.clear';
 /** The Deck's colours, part by part (src/deck-looks.ts), as JSON. */
 export const DECK_KEY = 'ncam.cd-player.deck';
+/** Luxe's colours, part by part (src/luxe-looks.ts), as JSON. */
+export const LUXE_KEY = 'ncam.cd-player.luxe';
 
 /** The saved model; nothing saved, an id no model has, or storage that throws is the suitcase. */
 export function readModel(storage: ReadStore | null): ModelId {
@@ -122,6 +125,25 @@ export function writeDeckLook(storage: WriteStore | null, look: DeckLook): void 
   }
 }
 
+/** The saved Luxe colours, part by part; a part that is missing or unknown is its default. */
+export function readLuxeLook(storage: ReadStore | null): LuxeLook {
+  try {
+    const raw = storage?.getItem(LUXE_KEY);
+    return luxeLookFrom(raw ? (JSON.parse(raw) as unknown) : null);
+  } catch {
+    // Unreadable storage or JSON that does not parse is no saved look.
+    return DEFAULT_LUXE_LOOK;
+  }
+}
+
+export function writeLuxeLook(storage: WriteStore | null, look: LuxeLook): void {
+  try {
+    storage?.setItem(LUXE_KEY, JSON.stringify(look));
+  } catch {
+    // A full or blocked storage just forgets.
+  }
+}
+
 export const PERSONAL_KEY = 'ncam.cd-player.personal';
 
 /** The visitor's saved pattern and name (src/personal.ts): junk is no saved marks. */
@@ -144,8 +166,8 @@ export function writePersonal(storage: WriteStore | null, personal: Personal): v
 }
 
 /**
- * Everything saved: the model, the suitcase's skin, the Clear model's and the Deck's colours, and
- * the visitor's pattern and name.
+ * Everything saved: the model, the suitcase's skin, the colours of the Clear model, the Deck and
+ * Luxe, and the visitor's pattern and name.
  */
 export function readLookState(storage: ReadStore | null): LookState {
   return {
@@ -153,6 +175,7 @@ export function readLookState(storage: ReadStore | null): LookState {
     skin: readSkin(storage),
     clear: readClearLook(storage),
     deck: readDeckLook(storage),
+    luxe: readLuxeLook(storage),
     personal: readPersonal(storage),
   };
 }

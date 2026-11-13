@@ -1,9 +1,11 @@
 /**
  * The players a visitor can pick under Player: the suitcase (the default, with its four skins),
- * the Clear model and the Deck (their colours chosen part by part). Three-free on purpose
- * (src/ssr-graph.test.ts); the scene's own numbers per model are in src/scene/profiles.ts.
+ * the Clear model and the Deck (their colours chosen part by part). Luxe, a turntable, has its id,
+ * its profile and its colours already, and joins the picker (`MODELS`) once its scene is wired.
+ * Three-free on purpose (src/ssr-graph.test.ts); the scene's own numbers per model are in
+ * src/scene/profiles.ts.
  */
-export type ModelId = 'suitcase' | 'clear' | 'deck';
+export type ModelId = 'suitcase' | 'clear' | 'deck' | 'luxe';
 export type LookKind = 'skins' | 'parts';
 
 export interface ModelProfile {

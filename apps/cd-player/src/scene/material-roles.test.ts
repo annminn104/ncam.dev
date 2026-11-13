@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { CLEAR_PARTS } from '../clear-looks';
-import { CLEAR_ROLES, MATERIAL_ROLES, SKIN_ROLES } from './material-roles';
+import { LUXE_PARTS } from '../luxe-looks';
+import { CLEAR_ROLES, LUXE_ROLES, MATERIAL_ROLES, SKIN_ROLES } from './material-roles';
 
 describe('SKIN_ROLES', () => {
   // The Cycles renders (build_materials in art/blender/scripts/parts.py) colour each skin role
@@ -15,5 +16,12 @@ describe('CLEAR_ROLES', () => {
   it('names materials the model has a role for, and each Clear part exactly once', () => {
     for (const name of Object.keys(CLEAR_ROLES)) expect(MATERIAL_ROLES[name], name).toBeDefined();
     expect(Object.values(CLEAR_ROLES).sort()).toEqual([...CLEAR_PARTS].sort());
+  });
+});
+
+describe('LUXE_ROLES', () => {
+  it('names materials the model has a role for, and each Luxe part exactly once', () => {
+    for (const name of Object.keys(LUXE_ROLES)) expect(MATERIAL_ROLES[name], name).toBeDefined();
+    expect(Object.values(LUXE_ROLES).sort()).toEqual([...LUXE_PARTS].sort());
   });
 });

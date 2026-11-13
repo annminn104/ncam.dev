@@ -146,4 +146,30 @@ export const SCENE_PROFILES: Readonly<Record<ModelId, SceneProfile>> = {
     // The big 16:9 screen instead of the segment LCD.
     screen: 'deck',
   },
+  luxe: {
+    media: 'vinyl',
+    rpm: 100 / 3,
+    // Seen from the Luxe hero still's camera (Blender's (-520, -1250, 620) over its aim
+    // (150, 40, 110), in three's axes): front left, a little above. The set (the deck, the stand on
+    // its right, the ledge behind) is wide and low: the camera fits it by its own half-width and
+    // half-height (src/scene/framing.test.ts holds them).
+    frame: {
+      target: [0.17, 0.13, -0.03],
+      direction: unit([-0.67, 0.51, 1.29]),
+      across: 0.46,
+      up: 0.3,
+    },
+    near: 0.8,
+    // About the arm pivot's Y: 0 is its rest post; the lead-in puts the needle 146 mm from the
+    // spindle, the run-out 60 mm (luxe_arm.py's, measured as LUXE_ARM in
+    // src/testing/model-measures.ts, which the profile test holds these two to).
+    arm: { rest: 0, play: -0.3905, runOut: -0.7865 },
+    door: null,
+    clockwise: true,
+    // A record and its sleeve leave a slot along its face (the stand is open at the front), the
+    // record comes down onto the platter from 15 cm above it, and the sleeve onto the ledge from
+    // 30 cm; out of sight they go up, left and back, away from the deck (src/scene/rig.test.ts
+    // flies every way against the plinth, the arm, the stand and the ledge).
+    flight: { reach: { slot: 0.3, spindle: 0.15, ledge: 0.3 }, aside: [-0.1, 0.15, -0.1] },
+  },
 };
