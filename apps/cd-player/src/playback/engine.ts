@@ -104,6 +104,10 @@ export class PlayerEngine {
   private endWatch = 0;
   /** The last seek sent to the embed and when (`now()`), until a report settles it. */
   private seeking: { ms: number; at: number } | null = null;
+  /** Whether the last report taken from the embed was paused; null since the last load. */
+  private lastPaused: boolean | null = null;
+  /** When Stop was last pressed (`now()`): the embed's playing reports just after it are dropped. */
+  private stopAt: number | null = null;
   /**
    * Play was pressed while the collection was still loading, with no tracks to play yet: the
    * scene can be up before them (seen live, the press 15–40 ms early). It plays once they are in;
@@ -227,6 +231,7 @@ export class PlayerEngine {
       this.clearEndWatch();
     }
     const { state, commands } = step(this.snapshot.seq, event);
+    if (event.type === 'STOP' && state.stopped) this.stopAt = this.now();
     if (state !== this.snapshot.seq) this.set({ seq: state });
     for (const command of commands) this.run(command);
     if (event.type === 'LOAD' || commands.some((command) => command.type === 'swap'))
@@ -269,7 +274,8 @@ export class PlayerEngine {
         // Right after a load the embed reports itself paused until the audio starts.
         if (this.awaitingStart && update.paused) return;
         if (update.buffering) return;
-        if (this.echoesBeforeSeek(update)) return;
+        if (this.playsThroughStop(update) || this.echoesBeforeSeek(update)) return;
+        this.lastPaused = update.paused;
         this.send({
           type: 'PROGRESS',
           positionMs: update.positionMs,
@@ -343,6 +349,7 @@ export class PlayerEngine {
       case 'load':
         this.clearEndWatch();
         this.seeking = null;
+        this.lastPaused = null;
         this.withPlayer((player) => {
           this.awaitingStart = true;
           player.load(command.uri);
@@ -364,8 +371,10 @@ export class PlayerEngine {
 
   /**
    * Whether `update` is the embed's echo of where it was before the last seek: away from the
-   * seek's target while the seek has not settled (SEEK_SETTLE_MS). A report near the target, or
-   * any report once the time is up, settles it.
+   * seek's target while the seek has not settled (SEEK_SETTLE_MS), and as paused or playing as
+   * the last report taken (every echo seen live repeated it whole). A report near the target, or
+   * any report once the time is up, settles it; a pause or a play (the flag changing) is the
+   * embed's news, never an echo, and passes, so its watch on the end is cleared as it should be.
    */
   private echoesBeforeSeek(update: PlaybackUpdate): boolean {
     if (!this.seeking) return false;
@@ -377,7 +386,18 @@ export class PlayerEngine {
       this.seeking = null;
       return false;
     }
-    return true;
+    return this.lastPaused === null || update.paused === this.lastPaused;
+  }
+
+  /**
+   * Whether `update` is a playing report that arrives just after Stop (SEEK_SETTLE_MS): the
+   * embed's echo or a report already in flight, which would otherwise end the stop (inside the
+   * track's first second it even counts as near Stop's seek to 0). A Play sent from the page ends
+   * the stop by itself, and the card's own play is taken once the time is up.
+   */
+  private playsThroughStop(update: PlaybackUpdate): boolean {
+    if (update.paused || !this.snapshot.seq.stopped || this.stopAt === null) return false;
+    return this.now() - this.stopAt <= SEEK_SETTLE_MS;
   }
 
   private now(): number {

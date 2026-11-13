@@ -2109,7 +2109,11 @@ site"), in this order:
   before its report from the target ~0.8 s later. Taken, it put the slider, the displays and the
   tonearm back for that while, so the engine drops a report away from the last seek's target
   (`echoesBeforeSeek`) until one lands within `SEEK_NEAR_MS` of it or `SEEK_SETTLE_MS` (1.5 s)
-  passes; a load ends the wait.
+  passes; a load ends the wait. Only a report as paused or playing as the last one taken is
+  dropped (every echo seen repeated it whole): a pause or a play inside the wait passes, and its
+  watch on the end with it. Just after Stop a playing report (the echo, or one in flight, which
+  inside the first second even counts as near Stop's seek to 0) is dropped for as long
+  (`playsThroughStop`), so it cannot end the stop; a Play from the page ends it by itself.
 - **Spotify's iFrame API script** (`SpotifyEmbedController`) holds commands while its iframe loads
   and sends them on the iframe's READY, so a command to a player still loading is not lost. Its
   `loadUri` never skips the uri it already holds (`currentUri` is never set): every call loads the

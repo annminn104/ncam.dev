@@ -339,6 +339,81 @@ describe('PlayerEngine', () => {
       expect(bridge.getView().positionMs).toBe(5600);
     });
 
+    it('lets a pause through inside the wait, which clears the watch on the end', async () => {
+      // The Spotify card's own pause, reported from where the embed was, 0.3 s after a seek.
+      const ctx = await playingA();
+      const { engine, cb, tick, flush, timers, delays } = ctx;
+      const watch = delays.lastIndexOf(30_000 - 4047 + 1500);
+      engine.user({ type: 'SEEK', ms: 14_856 });
+      await flush();
+      tick(300);
+      cb().onUpdate(at(4300, true));
+      expect(engine.getSnapshot().seq).toMatchObject({ status: 'paused', positionMs: 4300 });
+      // The watch armed before the seek is cleared: going off now it ends nothing.
+      timers[watch]();
+      expect(engine.getSnapshot().seq).toMatchObject({ status: 'paused', cursor: 0 });
+    });
+
+    it('lets the embed’s answer to a pause pressed on the page through inside the wait', async () => {
+      const { engine, cb, tick, flush, timers, delays } = await playingA();
+      const watch = delays.lastIndexOf(30_000 - 4047 + 1500);
+      engine.user({ type: 'SEEK', ms: 14_856 });
+      engine.user({ type: 'PAUSE' });
+      await flush();
+      tick(40);
+      cb().onUpdate(at(4080, true));
+      timers[watch]();
+      expect(engine.getSnapshot().seq).toMatchObject({ status: 'paused', cursor: 0 });
+    });
+
+    it('ignores a buffering report inside the wait, which neither settles it nor lets the echo by', async () => {
+      const { engine, bridge, cb, tick, flush } = await playingA();
+      engine.user({ type: 'SEEK', ms: 14_856 });
+      await flush();
+      tick(10);
+      cb().onUpdate({ ...at(4047), buffering: true });
+      tick(10);
+      cb().onUpdate(at(4047));
+      expect(bridge.getView().positionMs).toBe(14_856);
+    });
+
+    it('keeps a Stop through the embed’s playing reports just after it', async () => {
+      // Stop 0.6 s into a track: the echo (playing, 600) and a report in flight (playing, 640)
+      // are both within a second of the start, and neither may end the stop.
+      const { engine, cb, tick, flush } = await playingA();
+      cb().onUpdate(at(600));
+      engine.user({ type: 'STOP' });
+      await flush();
+      tick(15);
+      cb().onUpdate(at(600));
+      tick(15);
+      cb().onUpdate(at(1000, true));
+      tick(10);
+      cb().onUpdate(at(640));
+      expect(engine.getSnapshot().seq).toMatchObject({ status: 'paused', stopped: true });
+    });
+
+    it('ends a Stop with a play: one sent from the page, or the card’s own after the wait', async () => {
+      const sent = await playingA();
+      sent.engine.user({ type: 'STOP' });
+      await sent.flush();
+      sent.tick(28);
+      sent.cb().onUpdate(at(1000, true));
+      sent.engine.user({ type: 'TOGGLE' });
+      sent.tick(200);
+      sent.cb().onUpdate(at(1190));
+      expect(sent.engine.getSnapshot().seq).toMatchObject({ status: 'playing', stopped: false });
+
+      const card = await playingA();
+      card.engine.user({ type: 'STOP' });
+      await card.flush();
+      card.tick(28);
+      card.cb().onUpdate(at(1000, true));
+      card.tick(1600);
+      card.cb().onUpdate(at(1300));
+      expect(card.engine.getSnapshot().seq).toMatchObject({ status: 'playing', stopped: false });
+    });
+
     it('takes Stop’s paused report at the embed’s first second', async () => {
       const { engine, bridge, cb, tick, flush } = await playingA();
       engine.user({ type: 'STOP' });
