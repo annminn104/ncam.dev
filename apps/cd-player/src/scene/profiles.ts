@@ -10,6 +10,8 @@ export interface SceneProfile {
    * contract (src/scene/contract.ts), and the scene mounts that kind's parts (PlayerRig.tsx).
    */
   media: Media;
+  /** How fast the disc turns while it plays (turns a minute): a CD player's 200, a record's 33⅓. */
+  rpm: number;
   /**
    * Where the camera looks, from which way, and the half-width (`across`) and half-height (`up`)
    * of what it fits round its aim (metres): a sphere when they are equal.
@@ -63,6 +65,7 @@ const unit = (v: Vec3): Vec3 => {
 export const SCENE_PROFILES: Readonly<Record<ModelId, SceneProfile>> = {
   suitcase: {
     media: 'cd',
+    rpm: 200,
     frame: {
       target: [0, 0.132, 0.01],
       direction: unit([-0.48, 0.338, 0.79]),
@@ -76,6 +79,7 @@ export const SCENE_PROFILES: Readonly<Record<ModelId, SceneProfile>> = {
   },
   clear: {
     media: 'cd',
+    rpm: 200,
     // Seen from the Clear hero still's camera (Blender's (-255, -880, 400) over its aim
     // (2, 10, 122), in three's axes): front left, above. The set is wide and low, so the camera
     // fits it by its own half-width and half-height, aimed a little left of and below the disc so
@@ -101,6 +105,7 @@ export const SCENE_PROFILES: Readonly<Record<ModelId, SceneProfile>> = {
   },
   deck: {
     media: 'cd',
+    rpm: 200,
     // Seen from the Deck hero still's camera (Blender's (-320, -900, 480) over its aim (60, 0, 80),
     // in three's axes): front left, above. The set (the deck and the flight case right of it) is
     // wide and low: the camera fits it by its own half-width and half-height. It aims at the set's

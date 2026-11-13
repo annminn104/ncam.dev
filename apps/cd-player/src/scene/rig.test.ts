@@ -805,6 +805,31 @@ describe('a turntable’s rig', () => {
   });
 });
 
+describe('the spin', () => {
+  it('turns a CD player’s disc at 200 rpm, as it always did, and has no platter', () => {
+    const rig = rigFor(fakeModel().model);
+    expect(rig.spinRate).toBeCloseTo((200 / 60) * 2 * Math.PI, 12);
+    applyPose(rig, restingPose(fillShelf(targetOf(lineup('a'))), true, true), 0.03);
+    expect(rig.spin).toBeCloseTo((200 / 60) * 2 * Math.PI * 0.03, 12);
+    expect(rig.platter).toBeNull();
+  });
+
+  it('turns a turntable’s record and its platter at 33⅓ rpm, clockwise seen from above', () => {
+    const { model, platter } = fakeTurntable();
+    const base = platter.rotation.y;
+    const rig = rigFor(model, TEST_TURNTABLE);
+    expect(rig.spinRate).toBeCloseTo((100 / 3 / 60) * 2 * Math.PI, 12);
+    // A quarter of a turn: 33⅓ rpm is 0.5556 turns a second.
+    applyPose(rig, restingPose(fillShelf(targetOf(lineup('a'))), true, true), 0.45);
+    expect(rig.spin).toBeCloseTo(-Math.PI / 2, 9);
+    expect(platter.rotation.y).toBeCloseTo(base - Math.PI / 2, 9);
+    const expected = rig.seat.quaternion
+      .clone()
+      .multiply(new Quaternion().setFromAxisAngle(new Vector3(0, 1, 0), -Math.PI / 2));
+    expect(rig.discs[0].object.quaternion.angleTo(expected)).toBeLessThan(1e-6);
+  });
+});
+
 describe('spinSense', () => {
   it('spins counter-clockwise seen from above unless the profile plays clockwise', () => {
     expect(spinSense({})).toBe(1);

@@ -9,6 +9,12 @@ describe('scene profiles', () => {
     }
   });
 
+  it('spins the CD models’ discs at 200 rpm', () => {
+    for (const id of ['suitcase', 'clear', 'deck'] as const) {
+      expect(SCENE_PROFILES[id].rpm, id).toBe(200);
+    }
+  });
+
   it('gives every model a profile', () => {
     for (const model of MODELS) expect(SCENE_PROFILES[model.id], model.id).toBeDefined();
   });

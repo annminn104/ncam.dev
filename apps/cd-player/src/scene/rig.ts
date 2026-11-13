@@ -25,7 +25,6 @@ const RACK_NODES = [
   'rack_slot_4',
 ] as const satisfies readonly SharedNode[];
 const ARM_LIFT_M = 0.006;
-const SPIN_RAD_S = (200 / 60) * 2 * Math.PI;
 /** Room between the turning case and the lid's lining, past the reach of its half-width. */
 const CASE_FLIP_MARGIN_M = 0.01;
 /** A disc this small is out of sight. */
@@ -74,6 +73,10 @@ export interface Rig<M extends PlayerModel = PlayerModel> extends StageState {
   knobTurn: number;
   /** 1, or -1 for a profile that plays clockwise. */
   spinSense: 1 | -1;
+  /** The disc's spin at full speed, radians a second: its profile's rpm. */
+  spinRate: number;
+  /** A turntable's platter: its node, and its turn as the GLB has it; it turns with the record. */
+  platter: { node: Object3D; base: number } | null;
   arm: { node: Object3D; baseRotationY: number; baseY: number };
   /** The door's hinge, for a model with one: where it is shut, and the turn that opens it. */
   door: { node: Object3D; base: number; angle: number; axis: 'x' | 'y' } | null;
@@ -226,6 +229,11 @@ export function rigFor(model: PlayerModel, profile: SceneProfile = SCENE_PROFILE
     scrubMs: null,
     knobTurn: 0,
     spinSense: spinSense(profile),
+    spinRate: (profile.rpm / 60) * 2 * Math.PI,
+    platter:
+      model.media === 'vinyl'
+        ? { node: model.nodes.platter, base: model.nodes.platter.rotation.y }
+        : null,
     arm: {
       node: nodes.arm_pivot,
       baseRotationY: nodes.arm_pivot.rotation.y,
@@ -407,7 +415,8 @@ export function modelArmAngle(model: ModelId, angle: number): number {
 export function applyPose(rig: Rig, pose: Pose, dt: number): void {
   rig.arm.node.rotation.y = rig.arm.baseRotationY + armAngleFor(rig.profile.arm, pose.armAngle);
   rig.arm.node.position.y = rig.arm.baseY + pose.armLift * ARM_LIFT_M;
-  rig.spin = (rig.spin + dt * SPIN_RAD_S * pose.spin * rig.spinSense) % (2 * Math.PI);
+  rig.spin = (rig.spin + dt * rig.spinRate * pose.spin * rig.spinSense) % (2 * Math.PI);
+  if (rig.platter) rig.platter.node.rotation.y = rig.platter.base + rig.spin;
   rig.last.armAngle = pose.armAngle;
   rig.last.spin = pose.spin;
   rig.discs.forEach((copy, index) => placeDisc(rig, copy, pose.discs[index] ?? null));

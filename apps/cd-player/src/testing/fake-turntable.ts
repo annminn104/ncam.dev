@@ -22,6 +22,7 @@ function named<T extends Object3D>(object: T, name: string): T {
  */
 export const TEST_TURNTABLE: SceneProfile = {
   media: 'vinyl',
+  rpm: 100 / 3,
   frame: { target: [0.17, 0.13, -0.03], direction: [0, 0.6, 0.8], across: 0.46, up: 0.3 },
   near: 0.8,
   arm: { rest: 0, play: -0.39 },
