@@ -182,6 +182,8 @@ export class PlayerEngine {
     const { snapshot } = this;
     const here = sameCollection(snapshot.collection, ref) || snapshot.loading;
     if (sameCollection(snapshot.ref, ref) && here) return;
+    // A remembered Play belongs to the collection it was pressed for.
+    if (!sameCollection(snapshot.ref, ref)) this.playOnLoad = false;
     this.set({ ref, loading: true, error: null });
     this.deps.client.collection(ref).then(
       (collection) => {
@@ -274,15 +276,17 @@ export class PlayerEngine {
         // Right after a load the embed reports itself paused until the audio starts.
         if (this.awaitingStart && update.paused) return;
         if (update.buffering) return;
-        if (this.playsThroughStop(update) || this.echoesBeforeSeek(update)) return;
-        this.lastPaused = update.paused;
+        if (this.playsThroughStop(update)) return;
+        const taken = this.afterSeekEcho(update);
+        if (!taken) return;
+        this.lastPaused = taken.paused;
         this.send({
           type: 'PROGRESS',
-          positionMs: update.positionMs,
-          durationMs: update.durationMs,
-          paused: update.paused,
+          positionMs: taken.positionMs,
+          durationMs: taken.durationMs,
+          paused: taken.paused,
         });
-        this.watchEnd(update);
+        this.watchEnd(taken);
       },
       onEnded: () => this.send({ type: 'ENDED' }),
     });
@@ -375,18 +379,21 @@ export class PlayerEngine {
    * the last report taken (every echo seen live repeated it whole). A report near the target, or
    * any report once the time is up, settles it; a pause or a play (the flag changing) is the
    * embed's news, never an echo, and passes, so its watch on the end is cleared as it should be.
+   * Returns null for an echo (dropped), else the update to take: a flag change inside the wait
+   * keeps the seek's target as its position, since the report's own is from before the seek.
    */
-  private echoesBeforeSeek(update: PlaybackUpdate): boolean {
-    if (!this.seeking) return false;
+  private afterSeekEcho(update: PlaybackUpdate): PlaybackUpdate | null {
+    if (!this.seeking) return update;
     const since = this.now() - this.seeking.at;
     const { ms } = this.seeking;
     const near =
       update.positionMs >= ms - SEEK_NEAR_MS && update.positionMs <= ms + SEEK_NEAR_MS + since;
     if (near || since > SEEK_SETTLE_MS) {
       this.seeking = null;
-      return false;
+      return update;
     }
-    return this.lastPaused === null || update.paused === this.lastPaused;
+    if (this.lastPaused === null || update.paused === this.lastPaused) return null;
+    return { ...update, positionMs: ms };
   }
 
   /**

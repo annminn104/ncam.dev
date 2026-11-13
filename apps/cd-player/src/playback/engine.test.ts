@@ -238,6 +238,19 @@ describe('PlayerEngine', () => {
       }
     });
 
+    it('does not carry it to another collection opened before the first lands', async () => {
+      const { engine, flush, createPlayer, land, client } = loading();
+      engine.user({ type: 'TOGGLE' });
+      engine.open({ type: 'album', id: 'other' });
+      await flush();
+      land();
+      await flush();
+      expect(client.collection).toHaveBeenCalledTimes(2);
+      expect(engine.getSnapshot().collection).not.toBeNull();
+      expect(createPlayer).not.toHaveBeenCalled();
+      expect(engine.getSnapshot().seq.status).toBe('idle');
+    });
+
     it('forgets it when the collection fails, so a later load does not start by itself', async () => {
       const { engine, flush, createPlayer, refuse } = loading();
       engine.user({ type: 'TOGGLE' });
@@ -348,7 +361,8 @@ describe('PlayerEngine', () => {
       await flush();
       tick(300);
       cb().onUpdate(at(4300, true));
-      expect(engine.getSnapshot().seq).toMatchObject({ status: 'paused', positionMs: 4300 });
+      // The report's own position is from before the seek: the slider keeps the seek's target.
+      expect(engine.getSnapshot().seq).toMatchObject({ status: 'paused', positionMs: 14_856 });
       // The watch armed before the seek is cleared: going off now it ends nothing.
       timers[watch]();
       expect(engine.getSnapshot().seq).toMatchObject({ status: 'paused', cursor: 0 });
