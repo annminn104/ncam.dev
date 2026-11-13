@@ -152,24 +152,33 @@ export const SCENE_PROFILES: Readonly<Record<ModelId, SceneProfile>> = {
     // Seen from the Luxe hero still's camera (Blender's (-520, -1250, 620) over its aim
     // (150, 40, 110), in three's axes): front left, a little above. The set (the deck, the stand on
     // its right, the ledge behind) is wide and low: the camera fits it by its own half-width and
-    // half-height (src/scene/framing.test.ts holds them).
+    // half-height. It aims right of and behind the deck's middle (x 0.2, toward the stand; y 0.14,
+    // 0.37 of the set's height), from where the orbit's ends keep the whole set 2 % inside the
+    // canvas and the pan at 3× never loses it (src/scene/framing.test.ts holds them).
     frame: {
-      target: [0.17, 0.13, -0.03],
+      target: [0.2, 0.14, -0.07],
       direction: unit([-0.67, 0.51, 1.29]),
-      across: 0.46,
-      up: 0.3,
+      across: 0.52,
+      up: 0.49,
     },
-    near: 0.8,
+    // The set is deep (0.48 m) as well as wide (0.82 m): the foil's depth steps on a narrow canvas,
+    // where the camera stands 4 m back, need this near plane, and the orbit's worst corner still
+    // stands 0.24 m past it (0.05 m at 3×, the pan at its extremes).
+    near: 1.1,
     // About the arm pivot's Y: 0 is its rest post; the lead-in puts the needle 146 mm from the
     // spindle, the run-out 60 mm (luxe_arm.py's, measured as LUXE_ARM in
     // src/testing/model-measures.ts, which the profile test holds these two to).
     arm: { rest: 0, play: -0.3905, runOut: -0.7865 },
     door: null,
     clockwise: true,
-    // A record and its sleeve leave a slot along its face (the stand is open at the front), the
-    // record comes down onto the platter from 15 cm above it, and the sleeve onto the ledge from
-    // 30 cm; out of sight they go up, left and back, away from the deck (src/scene/rig.test.ts
-    // flies every way against the plinth, the arm, the stand and the ledge).
-    flight: { reach: { slot: 0.3, spindle: 0.15, ledge: 0.3 }, aside: [-0.1, 0.15, -0.1] },
+    // A record and its sleeve leave a slot along its face, toward the viewer (the stand faces the
+    // viewer, open at the front), 50 cm of handle: a sleeve has 10 mm to each of the stand's low
+    // sides, and the way's pull toward the ledge draws it that far sideways before it is out of the
+    // stand, then it must pass over the plinth and the arm. The record comes down onto the platter
+    // from 15 cm above it, the sleeve onto the ledge from 50 cm, high over the arm. Out of sight
+    // they go up, left and a centimetre back: further back, a sleeve rising off the ledge would cut
+    // its legs (src/scene/rig.test.ts flies every way against the plinth, the platter, the arm, the
+    // stand and the ledge).
+    flight: { reach: { slot: 0.5, spindle: 0.15, ledge: 0.5 }, aside: [-0.1, 0.15, -0.01] },
   },
 };

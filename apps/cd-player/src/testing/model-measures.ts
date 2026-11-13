@@ -169,11 +169,13 @@ export const LUXE_PLINTH = {
 /**
  * Luxe's tonearm: its pivot, the box of the arm and its fixed base at rest (on its rest post), and
  * its turns about the pivot's Y onto the lead-in groove and the run-out (luxe_arm.py's, printed by
- * build_luxe.py; src/scene/profiles.ts's luxe profile carries the same two).
+ * build_luxe.py; src/scene/profiles.ts's luxe profile carries the same two). The box is of what
+ * is drawn: the head's invisible hit shape (`arm_hit`, 52 × 40 × 26 mm round the head, which
+ * reaches 5 mm further left and 11 mm further forward) stops no record or sleeve.
  */
 export const LUXE_ARM = {
   pivot: [0.15, 0.118, -0.11],
-  rest: { min: [0.11667, 0.08, -0.16506], max: [0.18501, 0.134, 0.14276] },
+  rest: { min: [0.122, 0.08, -0.16506], max: [0.18501, 0.134, 0.13149] },
   leadIn: -0.3905,
   runOut: -0.7865,
 } as const satisfies {

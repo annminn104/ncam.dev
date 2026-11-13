@@ -14,6 +14,7 @@ import { EMPTY_VIEW, type SceneView, type TrackView } from '../bridge';
 import type { Status } from '../playback/sequencer';
 import { fakeTurntable, TEST_TURNTABLE } from '../testing/fake-turntable';
 import {
+  BOXES,
   CLEAR_SEAT,
   CLEAR_SHELL,
   CLEAR_STAND,
@@ -23,8 +24,20 @@ import {
   DECK_SCREEN,
   DECK_SEAT,
   DECK_WELL,
+  LUXE_ARM,
+  LUXE_BAR,
+  LUXE_LEDGE,
+  LUXE_PANELS,
+  LUXE_PLATTER,
+  LUXE_PLINTH,
+  LUXE_RECORD,
+  LUXE_SEAT,
+  LUXE_SLEEVE,
+  LUXE_STAND,
+  LUXE_STEPS,
   clearSlot,
   deckSlot,
+  luxeSlot,
 } from '../testing/model-measures';
 import type { RequiredNode } from './contract';
 import {
@@ -39,7 +52,7 @@ import {
   type Pose,
 } from './director';
 import type { Slots } from './materials';
-import type { CdModel } from './model';
+import type { CdModel, VinylModel } from './model';
 import { SCENE_PROFILES } from './profiles';
 import {
   applyPose,
@@ -890,6 +903,180 @@ describe('a turntable’s sleeves', () => {
     expect(Math.hypot(offset.x, offset.z)).toBeLessThan(0.02);
     const record = rig.discs[1].object.position.clone().sub(rig.seat.position);
     expect(record.dot(rig.seat.out)).toBeGreaterThan(0);
+  });
+});
+
+describe('Luxe’s flights', () => {
+  /** A hair inside every box: a point on a face is not in the solid behind it. */
+  const HAIR = 1e-4;
+  type Box = { readonly min: readonly number[]; readonly max: readonly number[] };
+  const inBox = (p: Vector3, box: Box) =>
+    p.x > box.min[0] + HAIR &&
+    p.x < box.max[0] - HAIR &&
+    p.y > box.min[1] + HAIR &&
+    p.y < box.max[1] - HAIR &&
+    p.z > box.min[2] + HAIR &&
+    p.z < box.max[2] - HAIR;
+
+  /** A record's rim (Ø 300 mm) and a sleeve's outline (310 mm square), in their own frame: the face is local XZ. */
+  const RIM = Array.from({ length: 96 }, (_, k) => {
+    const turn = (k / 96) * 2 * Math.PI;
+    return new Vector3(LUXE_RECORD.radius * Math.cos(turn), 0, LUXE_RECORD.radius * Math.sin(turn));
+  });
+  const h = LUXE_SLEEVE.half;
+  const OUTLINE = Array.from({ length: 25 }, (_, k) => -h + (2 * h * k) / 24).flatMap((s) => [
+    new Vector3(-h, 0, s),
+    new Vector3(h, 0, s),
+    new Vector3(s, 0, -h),
+    new Vector3(s, 0, h),
+  ]);
+
+  /**
+   * The fake turntable posed as cd-player-luxe.glb: the record's seat on the platter's mat, the
+   * ledge's seat behind the platter, the stand right of the deck and square to it, and the five
+   * slots in the stand's frame (src/testing/model-measures.ts, which model-contract.test.ts holds
+   * to the GLB).
+   */
+  function luxeSet() {
+    const { model, seat, disc, sleeveSeat, sleeve, stand, slots } = fakeTurntable();
+    seat.position.set(...LUXE_SEAT.position);
+    seat.quaternion.identity();
+    disc.position.copy(seat.position);
+    disc.quaternion.copy(seat.quaternion);
+    sleeveSeat.position.set(...LUXE_LEDGE.seat.position);
+    sleeveSeat.rotation.set(LUXE_LEDGE.seat.rotationX, 0, 0);
+    sleeve.position.copy(sleeveSeat.position);
+    sleeve.quaternion.copy(sleeveSeat.quaternion);
+    stand.position.set(...LUXE_STAND.position);
+    stand.rotation.set(0, LUXE_STAND.rotationY, 0);
+    slots.forEach((slot, k) => {
+      const { position, rotationX } = luxeSlot(k);
+      slot.position.set(...position);
+      slot.rotation.set(rotationX, 0, 0);
+    });
+    model.root.updateMatrixWorld(true);
+    const luxe: VinylModel = { ...model, id: 'luxe' };
+    return { rig: rigFor(luxe), toStand: stand.matrixWorld.clone().invert() };
+  }
+
+  /**
+   * What a point stands in, if anything: the plinth, the platter, the arm at rest (what is drawn
+   * of it: its head's invisible hit shape stops nothing), the ledge, the stand.
+   */
+  function obstacle(p: Vector3, toStand: Matrix4): string | null {
+    if (inBox(p, LUXE_PLINTH)) return 'the plinth';
+    const [cx, , cz] = LUXE_PLATTER.centre;
+    if (
+      Math.hypot(p.x - cx, p.z - cz) < LUXE_PLATTER.radius - HAIR &&
+      p.y > LUXE_PLATTER.bottom + HAIR &&
+      p.y < LUXE_PLATTER.top - HAIR
+    ) {
+      return 'the platter';
+    }
+    if (inBox(p, LUXE_ARM.rest)) return 'the arm';
+    if ([LUXE_LEDGE.bar, LUXE_LEDGE.lip, ...LUXE_LEDGE.legs].some((box) => inBox(p, box))) {
+      return 'the ledge';
+    }
+    const local = p.clone().applyMatrix4(toStand);
+    if (LUXE_STEPS.some((box) => inBox(local, box))) return 'the stand’s steps';
+    if (LUXE_PANELS.some((box) => inBox(local, box))) return 'the stand’s sides';
+    if (inBox(local, LUXE_BAR)) return 'the stand’s bar';
+    return null;
+  }
+
+  function hits(object: Object3D, points: readonly Vector3[], toStand: Matrix4): string[] {
+    object.updateMatrixWorld(true);
+    const found = new Set<string>();
+    for (const point of points) {
+      const hit = obstacle(point.clone().applyMatrix4(object.matrixWorld), toStand);
+      if (hit) found.add(hit);
+    }
+    return [...found];
+  }
+
+  it('rests every record and sleeve clear of everything, in the rack, on the platter and the ledge', () => {
+    const { rig, toStand } = luxeSet();
+    applyPose(
+      rig,
+      restingPose(fillShelf(targetOf(lineup('a', 'b', 'c', 'd', 'e', 'f'))), true, false),
+      0,
+    );
+    rig.discs.slice(0, 6).forEach((copy, index) => {
+      expect(hits(copy.object, RIM, toStand), `record ${index}`).toEqual([]);
+      expect(hits(copy.sleeve!.object, OUTLINE, toStand), `sleeve ${index}`).toEqual([]);
+    });
+  });
+
+  it('leaves a slot along its face, and comes down onto the platter and the ledge from above', () => {
+    const { rig } = luxeSet();
+    for (const slot of rig.slots) {
+      expect(
+        slot.out.distanceTo(new Vector3(0, 1, 0).applyQuaternion(slot.quaternion)),
+      ).toBeLessThan(1e-12);
+    }
+    expect(rig.seat.out.distanceTo(new Vector3(0, 1, 0))).toBeLessThan(1e-12);
+    expect(rig.sleeveSeat?.out.toArray()).toEqual([0, 1, 0]);
+  });
+
+  it('flies every record and its sleeve clear of the plinth, the platter, the arm, the stand and the ledge', () => {
+    const { rig, toStand } = luxeSet();
+    const ways: [string, DiscPose['from'], DiscPose['to']][] = [
+      ...[0, 1, 2, 3, 4].map((slot): [string, DiscPose['from'], DiscPose['to']] => [
+        `slot ${slot} onto the platter`,
+        slot,
+        'spindle',
+      ]),
+      ['the platter back into slot 0', 'spindle', 0],
+      ...[1, 2, 3, 4].map((slot): [string, DiscPose['from'], DiscPose['to']] => [
+        `slot ${slot} down to slot ${slot - 1}`,
+        slot,
+        slot - 1,
+      ]),
+      ['the platter out of sight', 'spindle', null],
+      ['out of sight onto the platter', null, 'spindle'],
+    ];
+    for (const [way, from, to] of ways) {
+      for (let step = 0; step <= 200; step++) {
+        const along = step / 200;
+        applyPose(rig, only(1, { from, to, along }), 0);
+        const copy = rig.discs[1];
+        if (copy.object.visible) {
+          expect(hits(copy.object, RIM, toStand), `the record, ${way}, along ${along}`).toEqual([]);
+        }
+        if (copy.sleeve?.object.visible) {
+          expect(
+            hits(copy.sleeve.object, OUTLINE, toStand),
+            `the sleeve, ${way}, along ${along}`,
+          ).toEqual([]);
+        }
+      }
+    }
+  });
+
+  it('sends a record leaving the platter, and its sleeve the ledge, up, left and back', () => {
+    const { rig } = luxeSet();
+    applyPose(rig, only(0, { from: 'spindle', to: null, along: 0.3 }), 0);
+    const record = rig.discs[0].object.position.clone().sub(rig.seat.position);
+    const sleeve = rig.discs[0].sleeve!.object.position.clone().sub(rig.sleeveSeat!.position);
+    for (const offset of [record, sleeve]) {
+      expect(offset.y).toBeGreaterThan(0);
+      expect(offset.x).toBeLessThan(0);
+      expect(offset.z).toBeLessThan(0);
+    }
+  });
+
+  it('keeps the whole set inside the box the framing test frames', () => {
+    const { rig } = luxeSet();
+    applyPose(
+      rig,
+      restingPose(fillShelf(targetOf(lineup('a', 'b', 'c', 'd', 'e', 'f'))), true, false),
+      0,
+    );
+    for (const copy of rig.discs.slice(0, 6)) {
+      for (const point of [copy.object.position, copy.sleeve!.object.position]) {
+        expect(inBox(point, BOXES.luxe), point.toArray().join(', ')).toBe(true);
+      }
+    }
   });
 });
 

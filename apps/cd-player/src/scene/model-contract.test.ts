@@ -943,6 +943,24 @@ describe('the GLBs as the scene tests measure them (src/testing/model-measures.t
     return box;
   };
 
+  /** The box of the meshes under `object` that are drawn, in world space: a hit shape is not. */
+  const drawnBox = (object: Object3D): Box3 => {
+    const box = new Box3();
+    object.traverse((child) => {
+      const mesh = child as Mesh;
+      if (!mesh.isMesh) return;
+      const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+      if (materials.every((material) => MATERIAL_ROLES[material.name] === 'hit')) return;
+      const position = mesh.geometry.getAttribute('position');
+      for (let i = 0; i < position.count; i++) {
+        box.expandByPoint(
+          new Vector3().fromBufferAttribute(position, i).applyMatrix4(mesh.matrixWorld),
+        );
+      }
+    });
+    return box;
+  };
+
   it('seats Luxe’s record on its platter’s mat, its up the world’s, its label clear of the vinyl', () => {
     const set = scene('luxe');
     for (const name of ['disc_seat', 'disc']) {
@@ -1002,7 +1020,7 @@ describe('the GLBs as the scene tests measure them (src/testing/model-measures.t
     expect(meshBox(node(set, 'luxe_platter_mat')).max.y).toBeCloseTo(LUXE_PLATTER.top, PLACES);
     expectPosition(node(set, 'arm_pivot'), LUXE_ARM.pivot, 'arm_pivot');
     expectBox(
-      meshBox(node(set, 'arm_pivot')).union(meshBox(node(set, 'luxe_arm_base'))),
+      drawnBox(node(set, 'arm_pivot')).union(drawnBox(node(set, 'luxe_arm_base'))),
       LUXE_ARM.rest,
       'the arm at rest',
     );
