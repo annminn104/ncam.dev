@@ -1,7 +1,13 @@
 import type { CanvasTexture } from 'three';
 import { describe, expect, it } from 'vitest';
 import type { TrackView } from '../../bridge';
-import { makePrinter, makeSurfaces, nothingPrinted, type PrintLoad } from './disc-printer';
+import {
+  bookletSides,
+  makePrinter,
+  makeSurfaces,
+  nothingPrinted,
+  type PrintLoad,
+} from './disc-printer';
 
 const track = (id: string): TrackView => ({
   id,
@@ -30,23 +36,26 @@ const nameOf = (image: HTMLImageElement | null) =>
   image ? (image as unknown as { name: string }).name : null;
 
 /** The printer on fake canvases and textures; each load waits until the test finishes it. */
-function harness() {
+function harness({ booklet = true }: { booklet?: boolean } = {}) {
   const textures: FakeTexture[] = [];
-  const surfaces = makeSurfaces({
-    canvas: (width, height) => ({ width, height }) as FakeCanvas as unknown as HTMLCanvasElement,
-    texture: () => {
-      const texture = { uploads: 0, disposed: 0 };
-      textures.push(texture);
-      return {
-        set needsUpdate(value: boolean) {
-          if (value) texture.uploads++;
-        },
-        dispose: () => {
-          texture.disposed++;
-        },
-      } as unknown as CanvasTexture;
+  const surfaces = makeSurfaces(
+    {
+      canvas: (width, height) => ({ width, height }) as FakeCanvas as unknown as HTMLCanvasElement,
+      texture: () => {
+        const texture = { uploads: 0, disposed: 0 };
+        textures.push(texture);
+        return {
+          set needsUpdate(value: boolean) {
+            if (value) texture.uploads++;
+          },
+          dispose: () => {
+            texture.disposed++;
+          },
+        } as unknown as CanvasTexture;
+      },
     },
-  });
+    { booklet },
+  );
   const loads: { id: string; finish(loaded?: Partial<PrintLoad>): void }[] = [];
   /** Every paint: the surface, its size then, the picture (null: the blank) and the track. */
   const painted: [surface: string, size: number, picture: string | null, track: string | null][] =
@@ -140,6 +149,15 @@ describe('the disc printer', () => {
       ['booklet 1', 1024, null, 'a'],
       ['booklet 1', 1024, null, null],
     ]);
+  });
+
+  it('makes no booklet for a model without a jewel case, and prints none', async () => {
+    const h = harness({ booklet: false });
+    expect(h.surfaces.canvases.booklet).toEqual([]);
+    expect(bookletSides(h.surfaces)).toEqual([]);
+    await h.printer.booklet(0, track('a'));
+    expect(h.painted).toEqual([]);
+    expect(bookletSides(harness().surfaces)).toEqual([0, 1]);
   });
 
   it('prints again once the page’s fonts are in what went out in the fallback faces', async () => {

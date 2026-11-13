@@ -55,6 +55,8 @@ export interface SwapControllerOptions {
   reduced: boolean;
   /** The model has a door: its plans wait for it (withDoor). */
   door: boolean;
+  /** The model has a jewel case: its booklet is printed and turned. A turntable has none. */
+  booklet: boolean;
   /** Whether the page is hidden now (a background tab, a locked phone): no frame runs then. */
   hidden(): boolean;
   clock: SwapClock;
@@ -241,7 +243,10 @@ export function createSwapController(options: SwapControllerOptions): SwapContro
       const after = view();
       const change = classifyChange(lineupOf(stage.shelf), after, to);
       begin(
-        planChange(change, stage.shelf, targetOf(after, to), stage.last, { door: options.door }),
+        planChange(change, stage.shelf, targetOf(after, to), stage.last, {
+          door: options.door,
+          booklet: options.booklet,
+        }),
         resolve,
       );
     });
@@ -261,7 +266,7 @@ export function createSwapController(options: SwapControllerOptions): SwapContro
         const track = disc === null ? null : shelf.tracks[disc];
         if (disc !== null && track) void give({ disc, view: track, size: sizeFor(slot), at: 0 });
       });
-      void printBooklet(stage.bookletFront, shelf.booklet);
+      if (options.booklet) void printBooklet(stage.bookletFront, shelf.booklet);
     },
     follow: (next) => {
       if (disposed || current || !stage.filled) return;
@@ -278,7 +283,13 @@ export function createSwapController(options: SwapControllerOptions): SwapContro
       if (key === followed) return;
       followed = key;
       const change = classifyChange(lineupOf(stage.shelf), next, null);
-      begin(planChange(change, stage.shelf, target, stage.last, { door: options.door }), () => {});
+      begin(
+        planChange(change, stage.shelf, target, stage.last, {
+          door: options.door,
+          booklet: options.booklet,
+        }),
+        () => {},
+      );
     },
     frame: (pose) => {
       const change = current;

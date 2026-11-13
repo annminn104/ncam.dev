@@ -421,3 +421,32 @@ describe('the door (a model that has one)', () => {
     expect(restingPose(fillShelf(targetOf(lineup('a', 'b'))), true, true).door).toBe(0);
   });
 });
+
+describe('a model without a jewel case', () => {
+  it('turns no booklet, every disc move and the arm as a cased model\u2019s', () => {
+    const shelf = fillShelf(targetOf(lineup('a', 'b', 'c', 'd', 'e', 'f')));
+    const after = lineup('b', 'c', 'd', 'e', 'f', 'g');
+    const change = classifyChange(lineupOf(shelf), after, track('b'));
+    const target = targetOf(after, track('b'));
+    const caseless = planChange(change, shelf, target, PLAYING, { booklet: false });
+    const cased = planChange(change, shelf, target, PLAYING);
+    expect(caseless.flip).toBeNull();
+    expect(cased.flip).not.toBeNull();
+    expect(caseless.moves).toEqual(cased.moves);
+    expect(caseless.arm).toEqual(cased.arm);
+    expect(caseless.duration).toBe(DURATION.next);
+    // The shelf still notes the booklet's track, as the swap controller compares it.
+    expect(caseless.after.booklet?.id).toBe('b');
+  });
+
+  it('ends a cascade when its discs are done, not when a booklet would have turned', () => {
+    const shelf = fillShelf(targetOf(lineup(null, 'a', 'b', 'c', 'd', 'e')));
+    const after = lineup(null, 'v', 'w', 'x', 'y', 'z');
+    const change = classifyChange(lineupOf(shelf), after, null);
+    const cased = planChange(change, shelf, targetOf(after), RESTING);
+    const caseless = planChange(change, shelf, targetOf(after), RESTING, { booklet: false });
+    expect(cased.timeline).toBe('cascade');
+    expect(cased.duration).toBe(1050 + FLIP_MS);
+    expect(caseless.duration).toBe(DURATION.cascade);
+  });
+});

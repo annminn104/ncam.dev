@@ -274,13 +274,15 @@ function timelineFor(change: ChangeOf, shelf: Shelf, target: Target): Timeline {
  * the last pose left the arm and the spin. Every plan ends with the shelf exactly as `target`
  * says: a slot whose incoming disc does not hold its track gets a new disc, on a copy out of sight
  * by then (a spare one, else one this change sends away, PRINT_LEAD_MS before it shows again).
+ * `options.booklet` false: the model has no jewel case (a turntable), so no booklet turns and the
+ * plan keeps its own length.
  */
 export function planChange(
   change: ChangeOf,
   shelf: Shelf,
   target: Target,
   last: { armAngle: number; spin: number },
-  options?: { door?: boolean },
+  options?: { door?: boolean; booklet?: boolean },
 ): Plan {
   const timeline = timelineFor(change, shelf, target);
   const timing = TIMING[timeline];
@@ -428,9 +430,10 @@ export function planChange(
           back: lands ? timing.armIn : null,
         }
       : null;
-  const flip = sameTrack(shelf.booklet, target.booklet)
-    ? null
-    : { start: timing.flip, end: timing.flip + FLIP_MS, booklet: target.booklet };
+  const flip =
+    options?.booklet === false || sameTrack(shelf.booklet, target.booklet)
+      ? null
+      : { start: timing.flip, end: timing.flip + FLIP_MS, booklet: target.booklet };
   moves.sort((a, b) => a.start - b.start);
   const duration = Math.max(DURATION[timeline], flip?.end ?? 0, ...moves.map((move) => move.end));
   const after: Shelf = {

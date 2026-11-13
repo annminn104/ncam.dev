@@ -9,6 +9,7 @@ import {
   blankDisc,
   FIRST_SIZE,
   makePrinter,
+  bookletSides,
   makeSurfaces,
   nothingPrinted,
   type Printed,
@@ -56,7 +57,9 @@ const PAGE: PrinterDeps = { load: loadPrint, paintDisc, paintBooklet, onFailed: 
  * once the page's fonts are in.
  */
 export function useDiscPrints(rig: Rig, bridge: SceneBridge): DiscPrinter {
-  const [surfaces] = useState(() => makeSurfaces({ canvas: newCanvas, texture: canvasTexture }));
+  const [surfaces] = useState(() =>
+    makeSurfaces({ canvas: newCanvas, texture: canvasTexture }, { booklet: rig.case !== null }),
+  );
   const printed = useRef<Printed>(nothingPrinted());
   // State, not a memo: React may drop a memo, and the painter's order of prints with it.
   const [printer] = useState(() => makePrinter(surfaces, printed, PAGE));
@@ -77,8 +80,7 @@ export function useDiscPrints(rig: Rig, bridge: SceneBridge): DiscPrinter {
       for (let index = 0; index < DISC_COPIES; index++) {
         blankDisc(surfaces, paintDisc, index, null, FIRST_SIZE);
       }
-      blankBooklet(surfaces, paintBooklet, 0, null);
-      blankBooklet(surfaces, paintBooklet, 1, null);
+      for (const side of bookletSides(surfaces)) blankBooklet(surfaces, paintBooklet, side, null);
     }
     const all = [...textures.disc, ...textures.booklet];
     for (const texture of all) texture.needsUpdate = true;
@@ -102,7 +104,7 @@ export function useDiscPrints(rig: Rig, bridge: SceneBridge): DiscPrinter {
             .catch((error: unknown) => reportFailed(again, error));
         }
       }
-      for (const side of [0, 1] as const) {
+      for (const side of bookletSides(surfaces)) {
         const again = reprintFor(printed.current.booklet[side], view);
         if (again) {
           printer.booklet(side, again).catch((error: unknown) => reportFailed(again, error));
@@ -125,7 +127,7 @@ export function useDiscPrints(rig: Rig, bridge: SceneBridge): DiscPrinter {
           );
         }
       }
-      for (const side of [0, 1] as const) {
+      for (const side of bookletSides(surfaces)) {
         if (!printed.current.bookletLanded[side]) {
           blankBooklet(surfaces, paintBooklet, side, printed.current.booklet[side]);
         }

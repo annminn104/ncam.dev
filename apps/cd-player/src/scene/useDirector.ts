@@ -86,6 +86,7 @@ export function useDirector(rig: Rig, bridge: SceneBridge, printer: DiscPrinter)
       view: bridge.getView,
       reduced: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
       door: rig.door !== null,
+      booklet: rig.case !== null,
       hidden: () => document.hidden,
       clock,
       onPrintFailed: (error, view) =>

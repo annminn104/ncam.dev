@@ -19,22 +19,28 @@ export interface SurfaceMakers {
   texture(canvas: HTMLCanvasElement): CanvasTexture;
 }
 
-export function makeSurfaces(make: SurfaceMakers) {
+export function makeSurfaces(make: SurfaceMakers, kind: { booklet?: boolean } = {}) {
   const disc = Array.from({ length: DISC_COPIES }, () => make.canvas(FIRST_SIZE, FIRST_SIZE));
-  const booklet = [
-    make.canvas(BOOKLET_PX, BOOKLET_PX),
-    make.canvas(BOOKLET_PX, BOOKLET_PX),
-  ] as const;
+  // A turntable has no jewel case: no booklet to print.
+  const booklet: HTMLCanvasElement[] =
+    kind.booklet === false
+      ? []
+      : [make.canvas(BOOKLET_PX, BOOKLET_PX), make.canvas(BOOKLET_PX, BOOKLET_PX)];
   return {
     canvases: { disc, booklet },
     textures: {
       disc: disc.map((canvas) => make.texture(canvas)),
-      booklet: [make.texture(booklet[0]), make.texture(booklet[1])] as const,
+      booklet: booklet.map((canvas) => make.texture(canvas)),
     },
   };
 }
 
 export type Surfaces = ReturnType<typeof makeSurfaces>;
+
+/** The booklet's sides the surfaces have: both, or none for a model without a jewel case. */
+export function bookletSides(surfaces: Surfaces): readonly (0 | 1)[] {
+  return surfaces.canvases.booklet.length ? [0, 1] : [];
+}
 
 /** What each surface was last asked to print, so the hook prints it again as its art comes in. */
 export interface Printed {
@@ -155,6 +161,7 @@ export function makePrinter(
       return discPrint(index, view, size, signal);
     },
     booklet: (side, view, signal) => {
+      if (!surfaces.canvases.booklet[side]) return Promise.resolve();
       if (!view || printed.current.booklet[side]?.id !== view.id) {
         blankBooklet(surfaces, deps.paintBooklet, side, view);
         printed.current.bookletLanded[side] = false;
