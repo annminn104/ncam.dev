@@ -28,7 +28,12 @@ the sleeve of the record that plays comes down onto a ledge behind the platter. 
 at 33⅓ rpm, clockwise; the tonearm tracks the song from the lead-in to the run-out, lifts when
 paused and rests on its post when stopped, and a drag of its head seeks: the needle drops where
 the head is let go. An LED ring round the platter shows the progress (or a drag's target). Its
-body (a lacquer or a brushed metal), its metal and its light take a colour each.
+body (a lacquer or a brushed metal), its metal and its light take a colour each. It is dressed in
+colourful cloisonné ornament (enamel flowers, scrolls and pearl rows outlined in its metal) on its
+two tiers, its top, the stand and the ledge, and at the deck top's back left a porcelain ballerina
+stands en pointe on a fluted pedestal, a music-box dancer who turns with the platter: she
+pirouettes while the record plays and stands still when it stops. The suitcase wears the same kit,
+enamel florals on its tub, its deck top and its lid's lining.
 
 The stack: React 19, React Three Fiber 9 and three 0.187 (in the lazy scene chunk only), zod (in
 the server code only), `@ncam/logger`, and Manrope (the page's text) and Fraunces (the canvas
@@ -452,14 +457,16 @@ the status (‖ while `playing` or `swapping`, ▶ while `paused`, `idle` and be
 `visible` is written only when the answer changes). `lid_hinge` is the
 suitcase's lid, the Clear's stand and the Deck's flight case (the page moves none of them).
 `OPTIONAL_NODES` are the nodes a model may have, the door `door_hinge` of the Clear and of the Deck
-(its jog plate) and the Deck's LED ring `jog_ring`: the loader takes each one it finds, and the rig
-drives `door_hinge` where the model's profile has a door (below). `DYNAMIC_MATERIALS` are the five
-materials the page paints (`art_disc`, `art_booklet`, `card_print`, `tag_print`, `lcd_screen`);
+(its jog plate), the Deck's LED ring `jog_ring` and Luxe's `dancer` (the ballerina's turning top):
+the loader takes each one it finds, and the rig drives `door_hinge` where the model's profile has a
+door and turns `dancer` with the platter (below); a model without them is whole.
+`DYNAMIC_MATERIALS` are the five materials the page paints (`art_disc`, `art_booklet`,
+`card_print`, `tag_print`, `lcd_screen`);
 `OPTIONAL_DYNAMIC_MATERIALS` the two only the Deck has (`jog_ring` and the print layer
 `deck_pattern`), which the loader hands the rig as `PlayerModel.optionalSlots`.
 `loadPlayerModel(profile, url, …)` (`src/scene/model.ts`, GLTFLoader with the meshopt decoder)
-throws `ModelContractError` naming what is missing. `src/scene/model-contract.test.ts` reads both
-committed GLBs. The suitcase's: every required node, every printed material and a role for every
+throws `ModelContractError` naming what is missing. `src/scene/model-contract.test.ts` reads the
+four committed GLBs. The suitcase's: every required node, every printed material and a role for every
 material, a material for every skin role, UVs on every printed and tiled primitive, the rack slots
 as empties under the lid, the tag's and the VU segments' materials, the deck's printed marks off
 the keys and the knob, the tonearm's moving parts under `arm_pivot` and its rest on the deck, none
@@ -470,7 +477,10 @@ printed material, a role for every material and the four materials a look colour
 materials, the budget, and meshes on leaf nodes only. The Deck's: every required node, its door
 and its ring, the five slots in the flight case under `lid_hinge`, the plate (`door_hinge`)
 turning about the world's X with the knob on it, the print layer's material, and every print
-mesh's UVs inside its region of the atlas (see "The Deck's print layer"). All three, loaded with
+mesh's UVs inside its region of the atlas (see "The Deck's print layer"). Luxe's, among the rest:
+its `dancer`, an empty of the player's root (as the platter is), apart from the deck's body and
+the pedestal, whose figure is the fixed porcelain, standing where `LUXE_DANCER` says, her up the
+world's, with the box of her full turn. All of them, loaded with
 three's GLTFLoader as the page loads them, are also held to every number the scene's tests pose
 and frame them by (`src/testing/model-measures.ts`): each model's box with a disc in each rack
 slot, rounded out to the millimetre, the Clear's door hinge and shut box, its seat, its stand and
@@ -535,13 +545,17 @@ materials take the roles above (`door_glass` crystal, `light` emissive, `chip` g
 normals; `SKIN_ROLES` maps the suitcase's seven recolourable materials (`leather`, `trim`,
 `thread`, `lining`, `hardware`, `deck`, `grille`) to the skins' roles, and `CLEAR_ROLES` the
 Clear's four (`clear_shell`, `clear_frame`, `board`, `light`) to its parts; `trace` (pcb), `etch`
-(frosted) and `gold` (fixed metal) are the decoration roles. A name without a role falls back to
-plastic, but the contract test fails first. A look then recolours the materials those two name, in
-place (see "Looks"). The studio is in `PlayerScene.tsx`: a PMREM'd `RoomEnvironment`
-(`scene.environmentIntensity` sets every material's reflections), a key light that casts (2048 px
-shadow map, 1024 on a narrow screen), a rim and a hemisphere light, AgX tone mapping, a device pixel
-ratio of at most 2 (1.5 on a narrow screen), a transparent canvas and a shadow-only floor, so the
-page's backdrop shows round the player.
+(frosted) and `gold` (fixed metal) are the decoration roles. Two more are fixed, recoloured by no
+skin and no look: enamel (the cloisonné ornament's six `enamel_rose`, `_coral`, `_butter`,
+`_leaf`, `_sky` and `_ivory`, the GLB's colour and roughness under a 0.7 clearcoat) and porcelain
+(Luxe's dancer, `porcelain` and `porcelain_blush`, under a thicker glaze, a 0.8 coat). A name
+without a role falls back to plastic, but the contract test fails first. A look then recolours the
+materials `SKIN_ROLES` and `CLEAR_ROLES` name, in place (see "Looks"). The studio is in
+`PlayerScene.tsx`: a PMREM'd `RoomEnvironment` (`scene.environmentIntensity` sets every
+material's reflections), a key light that casts (2048 px shadow map, 1024 on a narrow screen), a
+rim and a hemisphere light, AgX tone mapping, a device pixel ratio of at most 2 (1.5 on a narrow
+screen), a transparent canvas and a shadow-only floor, so the page's backdrop shows round the
+player.
 
 **The rig** (`src/scene/rig.ts`, `rigFor`, one per model, from its profile): **seven disc copies**
 (one on the spindle, five in the rack, one leaving), each with its own `art_disc` material so each
@@ -629,9 +643,28 @@ booklet's track, the collection) and where the last pose left the arm.
   `sleeve`). The ledge stands behind the deck, so a sleeve reaching it along the ledge's face would
   cut through the plinth: the sleeve's seat keeps its pose but its `out` is the world's up, its
   handle `flight.reach.ledge`, so it comes down onto the ledge from above (and rises off it the same
-  way). The record's way to the platter is the CD disc's. A sleeve is printed with its record
-  (`disc-printer.ts`: the album art, cropped square, or a blank cover), and a record without its art
-  prints "33⅓ RPM · LONG PLAY" where a CD prints "CD·01 · COMPACT DISC".
+  way). The ledge's landing is also `plumb` (`Landing.plumb`): on a way between a slot and the
+  ledge the sleeve draws in over the ledge across its `out` while it is still high (`plumbOver`,
+  over `PLUMB_DRAW`, 30 % to 92 % of the way, mirrored for a way off the ledge, a quintic ease so
+  its speed and acceleration run on unbroken; along `out` it keeps to its Bézier, and the flight
+  to its timing). By 80 % of the way it stands within 5 mm of its place over the ledge, its lowest
+  edge still over the dancer's top, so it comes down from straight above: the plain Bézier swept
+  its lower left corner through the dancer's tutu. The ways out of sight and back keep their
+  Bézier, which clears her. The record's way to the platter is the CD disc's. A sleeve is printed
+  with its record (`disc-printer.ts`: the album art, cropped square, or a blank cover), and a
+  record without its art prints "33⅓ RPM · LONG PLAY" where a CD prints "CD·01 · COMPACT DISC".
+- **The dancer.** `Rig.dancer` is Luxe's `dancer` (the optional node: the empty that carries the
+  ballerina's turning disc and figure, its up the world's) and its turn as the GLB has it, or null
+  on a model without one (the suitcase, the Clear, the Deck). `applyPose` turns it by the platter's
+  own `rig.spin`, beside the platter's line, so she pirouettes at 33⅓ rpm, clockwise, while the
+  record plays, and stops by the same ease whenever the platter stops. Nothing else reads her.
+  `rig.test.ts` checks it on the committed GLBs (`src/testing/clearance.ts`'s `glbModel` builds a
+  model as the loader does) and flies every Luxe way and resting pose against her turn: no record
+  or sleeve comes within 5 mm of the upright cylinder `LUXE_DANCER`'s box bounds (radius 31.93 mm
+  round her axis, 80 to 207 mm up), measured to within half a millimetre (`closestToCylinder`).
+  The cylinder, not the box: a record rising off the platter out of sight passes over the box's
+  corner nearest the platter, which she never reaches. The closest is that record, 8.6 mm off; a
+  sleeve keeps 20.6 mm.
 - **The tonearm** (`scene/tonearm.ts`, `scene/playhead.ts`, three-free). `toneArmOf(profile)` is
   the arm's three angles (`rest`, `leadIn`, `runOut`); `grooveShare`, `grooveAngle`, `inGrooves`,
   `grooveMs` and `directorAngle` turn a position into an angle and back. The playhead
@@ -1347,7 +1380,9 @@ both use them.
   (every metal fitting: the caps, clasps, rivets, D-rings, nameplate, grille frame, feet, hinges,
   bezel and the tonearm's metal), `deck` and `grille` (the slotted plate on the front; the dark
   cloth behind it, `fabric`, stays dark). The keys, the arm, the disc well, the chrome, the knob,
-  the speaker cloth, the strap and the prints keep Blender's colours in every skin. `CLEAR_ROLES`
+  the speaker cloth, the strap and the prints keep Blender's colours in every skin. The ornament's
+  wire is `hardware`, so it follows the skin's metal; its enamel (`enamel_*`) keeps its colours
+  under every skin, as it does on Luxe under every look. `CLEAR_ROLES`
   gives each Clear part one material: `clear_shell` (the shell's plates, band and grilles) the
   shell, `clear_frame` (the plinth, the door's bezel, pull and hinge, the keys' deck and caps, the
   lozenge grooves on the plinth and the deck, the handle, the knob's ring, the speaker cones and the
@@ -1503,6 +1538,8 @@ art/blender/scripts/  cdkit.py (geometry helpers, Principled materials, millimet
                       crystal case, the suitcase with its hardware, handle and tag, deck details,
                       tonearm, quilted lid, strap, rack and plate; build_materials(palette)),
                       build_player.py (the suitcase's web scene, with the names the page drives),
+                      ornament.py (the cloisonné ornament kit: the fixed enamel palette, the faces
+                      a layout is laid on, the motifs), suitcase_ornament.py (the suitcase's),
                       clear.py (the Clear model, on parts.py's disc and case;
                       build_clear_materials(look)), clear_board.py (its board), clear_decor.py
                       (its decorations), build_clear.py (its web scene: the same names and the
@@ -1513,10 +1550,12 @@ art/blender/scripts/  cdkit.py (geometry helpers, Principled materials, millimet
                       door's and the ring's), vinyl.py (every turntable's record, sleeve and LED
                       ring), luxe.py (Luxe, on parts.py and vinyl.py; build_luxe_materials(look)),
                       luxe_arm.py (its tonearm), luxe_stand.py (its record stand and ledge),
-                      build_luxe.py (its web scene: the turntable's names and the ring's),
+                      luxe_ornament.py (its ornament), luxe_dancer.py (its dancer and her
+                      pedestal), build_luxe.py (its web scene: the turntable's names, the
+                      ring's and the dancer's),
                       export.py (the background entry: CDP_MODEL picks the build), hero.py (the
                       Cycles stills: the suitcase's hero and lid views, the Clear's hero and
-                      inside, the Deck's hero and top, Luxe's hero and platter)
+                      inside, the Deck's hero and top, Luxe's hero, platter and dancer)
 art/blender/tools/    bl.py: a client for a running Blender's add-on socket (design sessions only)
 art/pipeline/         build.mjs: Blender headless, then gltf-transform (given clear, deck or
                       luxe, that model's)
@@ -1529,12 +1568,18 @@ art/.out/             scratch: the raw exports, the renders and one-off scripts 
 passes on to Blender as `CDP_MODEL=clear`, `CDP_MODEL=deck` or `CDP_MODEL=luxe`) need **Blender
 5.2.2 LTS** (`/Applications/Blender.app`, or `BLENDER_BIN`) and run it with `--background
 --factory-startup --python-exit-code 1` (Blender exits 0 when a script raises) on `export.py`,
-which execs `cdkit.py`, `parts.py` and `build_player.py` for the suitcase, or `cdkit.py`,
-`parts.py`, `clear.py`, `clear_board.py`, `clear_decor.py` and `build_clear.py` for the Clear, or
-`cdkit.py`, `parts.py`, `deck.py`, `deck_panel.py`, `deck_case.py`, `deck_print.py` and
-`build_deck.py` for the Deck, or `cdkit.py`, `parts.py`, `vinyl.py`, `luxe.py`, `luxe_arm.py`,
-`luxe_stand.py` and `build_luxe.py` for Luxe, in that order and into one namespace (any other
-`CDP_MODEL` stops it), sets
+which execs `cdkit.py`, `parts.py`, `ornament.py`, `suitcase_ornament.py` and `build_player.py`
+for the suitcase, or `cdkit.py`, `parts.py`, `clear.py`, `clear_board.py`, `clear_decor.py` and
+`build_clear.py` for the Clear, or `cdkit.py`, `parts.py`, `deck.py`, `deck_panel.py`,
+`deck_case.py`, `deck_print.py` and `build_deck.py` for the Deck, or `cdkit.py`, `parts.py`,
+`ornament.py`, `vinyl.py`, `luxe.py`, `luxe_arm.py`, `luxe_stand.py`, `luxe_ornament.py`,
+`luxe_dancer.py` and `build_luxe.py` for Luxe, in that order and into one namespace (any other
+`CDP_MODEL` stops it; `hero.py` execs the same but for the web scene's `build_*.py`).
+`ornament.py` comes right after `parts.py`: it reads `cdkit.py`'s helpers and `parts.py`'s
+`smooth_path`, and nothing of any model. `parts.py`'s `make_player` dresses the suitcase in its
+ornament (`suitcase_ornament.py`'s), so every suitcase build execs both ornament scripts before it
+builds; the Clear and the Deck exec `parts.py` too but never call `make_player`, so they need
+neither. It sets
 **`WEB = True`** (cdkit's web quality: about half the segments, bevels at a resolution of 2 at
 most, none of the Cycles-only shader tricks: the leather grain, the lining's quilt and the cloth's
 weave are normal maps the page makes at runtime), turns curves and text into meshes, gives the
@@ -1544,15 +1589,18 @@ at one unit per 5 cm and the printed ones (`art_disc`, `art_booklet`, `card_prin
 `art/.out/cd-player-clear.raw.glb` or `art/.out/cd-player-deck.raw.glb`. gltf-transform then dedups accessors, meshes and textures
 (never materials: the prints start identical and would merge into one), welds, prunes (keeping
 the empty pivots, and the UVs that no texture in the file uses yet) and meshopt-compresses it into
-`public/assets/cd-player.glb`, `public/assets/cd-player-clear.glb` or
-`public/assets/cd-player-deck.glb`, all **committed** (about 100,633 triangles and 777 KB for the
-suitcase, 132,715 and 965 KB for the Clear and 719 KB for the Deck, at the time of writing).
-**The budget** (`model-contract.test.ts`, for each): 4 MB, 150k triangles,
+`public/assets/cd-player.glb`, `public/assets/cd-player-clear.glb`,
+`public/assets/cd-player-deck.glb` or `public/assets/cd-player-luxe.glb`, all **committed**
+(about 124,348 triangles and 940,104 bytes for the suitcase with its ornament, 132,715 and 965 KB
+for the Clear, 719 KB for the Deck, and 73,689 triangles and 602,816 bytes for Luxe with its
+ornament and its dancer, at the time of writing). **The budget** (`model-contract.test.ts`, for each): 4 MB, 150k triangles,
 `EXT_meshopt_compression`, and meshes only on leaf nodes, so quantisation never scales a pivot.
-Rebuild a model after any change to its scripts (`cdkit.py` and `parts.py` are every model's). The
-lettering (the suitcase's deck, the Clear's logos, silkscreen and keys) uses macOS fonts (Avenir
-Next, DIN Alternate and Futura, loaded by `use_scene` in `cdkit.py`); elsewhere Blender's own font
-stands in and the GLB changes.
+Luxe has one of its own, 650,000 bytes and 80,000 triangles, and the suitcase's ornament may add
+200,000 bytes at most to the 795,088 it weighed without it. Rebuild a model after any change to
+its scripts (`cdkit.py` and `parts.py` are every model's, `ornament.py` the suitcase's and
+Luxe's). The lettering (the suitcase's deck, the Clear's logos, silkscreen and keys) uses macOS
+fonts (Avenir Next, DIN Alternate and Futura, loaded by `use_scene` in `cdkit.py`); elsewhere
+Blender's own font stands in and the GLB changes.
 
 **What the scripts parent where.** In the suitcase the deck's printed marks are the deck's
 children, never a key's or the knob's; the tonearm's moving parts (yoke, pin, tube, counterweight,
@@ -1565,6 +1613,26 @@ material `vu`; the handle sits on the tub's front between the clasps and the tag
 left D-ring over the grille. `model-contract.test.ts` holds the parenting. The lid's layout is the
 cascade (`RACK_LAYOUT` in `parts.py`); the grid without the crystal case is the other branch of
 the same code.
+
+**The ornament** (`ornament.py`, the kit; `suitcase_ornament.py` and `luxe_ornament.py`, the two
+layouts on it). Cloisonné in low relief: motifs (camellias, daisies, roses, leaves and sprays,
+acanthus, C- and S-scrolls, a rocaille shell, pearl rows, vines and garlands) outlined in a metal
+wire that the caller names, so it follows the model's metal (`hardware` on the suitcase,
+`luxe_metal` on Luxe), and filled with the fixed enamel palette (`build_enamel_materials()`, role
+`enamel`). A layout is drawn in millimetres in a face's own frame (`Plane`, `Wall` round a
+vertical extrusion, `Tube` round a cylinder) and laid by `lay`; every part stands 0.02 mm off its
+face and none past 0.9 mm, and an `Ornament` merges a group's parts into one mesh per material
+hanging from it (`*_orn_*`). Each layout stops the run if a region's ornament strays into a part
+the page drives or a keep-out (the suitcase's well, keys, knob, clasps, handle, the lining under
+the case, the strap and the rack; Luxe's keys, logo, LED ring and the arm's rest and sweep). The
+suitcase's tub and deck ornament (`player_tub_orn_*`, `player_deck_orn_*`) hang from the player's
+root, its lining's (`player_lid_orn_*`) from the lid; Luxe's hangs from the group it decorates
+(the deck, the stand, the ledge). `src/scene/ornament-clearance.test.ts` loads each GLB as the page
+does and holds every ornament vertex 5 mm or more off every record and sleeve (Luxe) and every
+disc (the suitcase), at rest and at every step of every way the rig flies, each item measured in
+its own frame (a solid disc, or the sleeve's box) and the distance scaled back to the world's for
+a copy the rig shrinks or grows; the helpers are `src/testing/clearance.ts`'s, which `rig.test.ts`
+shares.
 
 **The Clear model** (`clear.py`, in `parts.py`'s axes and millimetres, with its disc and case; its
 board and its decorations are scripts of their own, `clear_board.py` and `clear_decor.py`, which
@@ -1667,9 +1735,10 @@ builds (`write_deck_atlas`, `deck_atlas_regions`, which stops the run on a layou
 gutters or densities) and `art/pipeline/build.mjs` formats it with the repository's Prettier, so a
 Deck build changes that file too: commit it with the GLB.
 
-**Luxe** (`luxe.py`, on `cdkit.py`, `parts.py` and `vinyl.py`; its tonearm is `luxe_arm.py`'s and
-its record stand and ledge `luxe_stand.py`'s, which `export.py` and `hero.py` exec after it into
-the same namespace, `make_luxe_player` calling into both). `vinyl.py` is every turntable's: the
+**Luxe** (`luxe.py`, on `cdkit.py`, `parts.py`, `ornament.py` and `vinyl.py`; its tonearm is
+`luxe_arm.py`'s, its record stand and ledge `luxe_stand.py`'s, its ornament `luxe_ornament.py`'s
+and its dancer `luxe_dancer.py`'s, which `export.py` and `hero.py` exec after it into the same
+namespace, `make_luxe_player` calling into all of them). `vinyl.py` is every turntable's: the
 record (`make_record`: 300 mm of vinyl with a lead-in edge and track gaps, its label printed on it
 0.1 mm clear of the vinyl, `LABEL_LIFT`), the sleeve (`make_sleeve`, 310 mm square, its cover the
 page's `art_sleeve`) and the LED ring (`led_ring`, with its own copy of the Deck's `ring_sector`,
@@ -1681,18 +1750,29 @@ pivot `arm_pivot` that the page turns, with the head (`arm_head`, the cartridge,
 `stylus`, and in the web build the invisible `arm_hit`) and a rest post at the needle's rest
 point; the stand on the right, square to the deck and facing the viewer, five steps rising backward
 with the five rack slots (`rack_slot_0` … `rack_slot_4`, each sleeve leaning back 15°), and the
-ledge behind the platter where the playing record's sleeve stands (`sleeve_seat`). It is 380 mm
-deep. `build_luxe.py` renames the objects to the contract's names (`PIVOTS`: `luxe_arm` →
-`arm_pivot`, `luxe_arm_head` → `arm_head`, `luxe_stand_rack_slot_i` → `rack_slot_i`, …), adds
-the empties `disc_seat` and `sleeve_seat`, stops the run naming an object that is missing, and prints
+ledge behind the platter where the playing record's sleeve stands (`sleeve_seat`); the deck is
+380 mm deep. At the deck top's back left corner (`LX_DANCER`) stands the dancer's pedestal, a
+fluted metal drum 19 mm in radius and 20 mm tall with a pearl row round each moulding and an
+enamel garland round its frieze, hanging from the body group; on it the empty `luxe_dancer`,
+under the player's root as the platter is, carries a 2 mm metal disc and the porcelain ballerina,
+105 mm from her pointe to her fingertips: en pointe, her arms en haut, a bun and a tiara, no
+face, and a plate tutu 64 mm across over three ruffled frills with enamel roses round its edge.
+She is the fixed `porcelain` and `porcelain_blush` (the bodice, the pointe shoes, the frills), her
+tiara, the bodice's trim and the tutu's edge `luxe_metal`; her body is a skin modifier's hull
+under subdivision, applied, and decimated in the web build. `luxe_dancer.py` stops the run if the
+pedestal comes within 2 mm of the frame or 15 mm of the LED ring, if the garland leaves its
+frieze, or if her reach comes within 20 mm of the record's edge. `build_luxe.py` renames the
+objects to the contract's names (`PIVOTS`: `luxe_arm` → `arm_pivot`, `luxe_arm_head` →
+`arm_head`, `luxe_stand_rack_slot_i` → `rack_slot_i`, `luxe_dancer` → `dancer`, …), adds the
+empties `disc_seat` and `sleeve_seat`, stops the run naming an object that is missing, and prints
 the arm's two angles (`build_luxe: lead-in … rad, run-out … rad`, `LUXE_ARM_LEAD_IN` and
 `LUXE_ARM_RUN_OUT` in `luxe_arm.py`) and the triangle count: the profile's `arm.play` and
 `arm.runOut` (`src/scene/profiles.ts`) must equal them (`profiles.test.ts` holds them to the
 measured ones), so copy them over after any change to the arm. Its colours are `luxe_look(spec)`'s,
 read out of `src/luxe-looks.json` (a part or a field the file lacks stops the run); the web build
 is at rest (the arm on its post, the record on the platter, the sleeve on the ledge, the slots
-empty, the prints plain), a render plays (the arm 30 % of the way in, 30 of the ring's 48 lit, ‖
-alone on the play key, five sleeves in the stand).
+empty, the dancer facing the viewer, the prints plain), a render plays (the arm 30 % of the way
+in, 30 of the ring's 48 lit, ‖ alone on the play key, five sleeves in the stand).
 
 **Materials, skins and looks.** `build_materials(palette)` makes every suitcase material; the
 seven the skins recolour (`SKIN_ROLES` in `parts.py`: `leather`, `trim`, `thread`, `lining`,
@@ -1702,13 +1782,15 @@ seven the skins recolour (`SKIN_ROLES` in `parts.py`: `leather`, `trim`, `thread
 the Clear's on top of `build_materials()` (the disc's and the case's): the four a look colours,
 from the swatches `clear_look(spec)` reads out of `src/clear-looks.json` (a part or a field the
 file lacks stops the run, naming what is wrong), and the fixed ones of the parts inside, the
-silkscreen white, and dark on the white board.
+silkscreen white, and dark on the white board. `build_enamel_materials()` (`ornament.py`) makes
+the ornament's six enamels, and `build_luxe_materials(look)` (`luxe.py`) the dancer's two
+porcelains among Luxe's: fixed colours that no skin and no look changes.
 
 `hero.py` renders the Cycles stills headless (Metal through `enable_gpu` in `cdkit.py`; the first
 run compiles the kernels for about two minutes; `render()` renders by scene name under
 `--background`):
 
-    CDP_MODEL=suitcase|clear|deck|luxe CDP_HERO_VIEW=hero|lid|inside|top|platter \
+    CDP_MODEL=suitcase|clear|deck|luxe CDP_HERO_VIEW=hero|lid|inside|top|platter|dancer \
       CDP_HERO_QUALITY=preview|final \
       /Applications/Blender.app/Contents/MacOS/Blender --background --factory-startup \
       --python-exit-code 1 --python apps/cd-player/art/blender/scripts/hero.py
@@ -1720,7 +1802,9 @@ the mechanism through the shell; the Deck's `hero` is the three-quarter still of
 flight case from the front left, `top` a look down on the deck; Luxe's `hero` is the three-quarter
 still of the deck and its record stand from the front left, a little above, `platter` a close-up
 over the platter (the record and its label, the strobe dots, the LED ring, the arm on the record,
-the keys). `preview` is 800 × 600 at 24 samples, `final` 1600 × 1200 at 160.
+the keys), and `dancer` (Luxe's alone) a close-up of the dancer on her pedestal from the hero
+camera's side, a little lower (her pose, the tutu's frills and roses, the pedestal's garland).
+`preview` is 800 × 600 at 24 samples, `final` 1600 × 1200 at 160.
 Any other value of the model, the view or the quality (an empty one too) stops the run with exit 1
 before anything is built, naming the valid ones; so does an unknown `CDP_SKIN`, a `CDP_CLEAR_LOOK`
 that is not four ids of `src/clear-looks.json`, a `CDP_DECK_LOOK` that is not `<body>,<light>`
@@ -1939,7 +2023,9 @@ Unit tests (`src/**/*.test.ts`, node environment, run by the root `pnpm test`):
   the seat's normal, and every way to and from the Clear's spindle through its door's opening,
   never through the shell's walls, and the Deck's flights: every slot's way up, the arrival from
   above and every way between a slot and the spindle clear of the case, the deck, its screen
-  module and the lifted plate), `director.test.ts` (with the door: open while a disc leaves or
+  module and the lifted plate), `ornament-clearance.test.ts` (every ornament vertex 5 mm or more
+  off Luxe's records and sleeves and the suitcase's discs, at rest and along every way; see "The
+  ornament"), `director.test.ts` (with the door: open while a disc leaves or
   reaches the spindle, shut at both ends, a plan that waits for it), `swap-controller.test.ts`
   (besides every kind of change: a swap into another collection, a list of one track, two tracks
   on Repeat, a first play that waits for a door), `framing.test.ts` (each model's box over every
@@ -1978,17 +2064,23 @@ Unit tests (`src/**/*.test.ts`, node environment, run by the root `pnpm test`):
   again once the fonts are in; `useSceneTextures`, read from its source: the defaults printed once
   per rig, the display reprinted for a new colour).
 - the turntable: `contract.test.ts` (each name in one list only, the CD player's lists exactly as
-  they were, a turntable with no knob, lid, case, tag or VU strip), `model-contract.test.ts` on
+  they were, a turntable with no knob, lid, case, tag or VU strip, and `dancer` an optional node
+  that no media needs: a turntable without it is whole), `model-contract.test.ts` on
   `cd-player-luxe.glb` (every node of a turntable and its ring and stylus, none of a CD player's
   own, the prints and the three materials a look colours, UVs on every printed primitive and the
   ring, the keys, platter and arm on empties that carry their parts, the head under the arm with
   its stylus and its hit shape, the record of vinyl and the sleeve of card, the rack slots and the
-  plate on the stand, the budget) and, through `model-measures.ts`, Luxe's measures (the record
-  on the platter's mat with its label clear of the vinyl, the rack and the ledge where the rig
-  test flies, the box of the plinth, platter, arm, stand and ledge, the needle on the outer groove
-  at the lead-in and by the label at the run-out); `rig.test.ts` (on the fake turntable and on
-  Luxe's measures: every flight of a record and a sleeve clear of the plinth, the platter, the arm,
-  the stand and the ledge), `framing.test.ts` (Luxe framed on every canvas and across the orbit and
+  plate on the stand, the dancer on an empty of the root apart from the deck and its pedestal, in
+  fixed porcelain, the budget of its own) and, through `model-measures.ts`, Luxe's measures (the
+  record on the platter's mat with its label clear of the vinyl, the rack and the ledge where the
+  rig test flies, the box of the plinth, platter, arm, stand and ledge, the dancer where she stands
+  with the box of her full turn, the needle on the outer groove at the lead-in and by the label at
+  the run-out); `rig.test.ts` (on the fake turntable and on Luxe's measures: every flight of a
+  record and a sleeve clear of the plinth, the platter, the arm, the stand and the ledge, and 5 mm
+  or more off the dancer's turn at rest and at every step, a sleeve drawn in over the ledge before
+  it comes down; on the committed GLBs, the dancer turning with the platter by the same spin and
+  sense, stopping with it on Pause, and absent from the suitcase, the Clear and the Deck),
+  `framing.test.ts` (Luxe framed on every canvas and across the orbit and
   the pan), `tonearm.test.ts` (the arm's angles, the groove's share, the held angle, the needle's
   ms), `playhead.test.ts` (carried on while playing, held otherwise, capped at `PLAYHEAD_HOLD_MS`,
   anchored again by a new report, track or status), `grip.test.ts` (one pointer, one release, a
