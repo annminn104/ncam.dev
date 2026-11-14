@@ -15,10 +15,7 @@ import {
   type DiscShape,
   type Measure,
 } from '../testing/clearance';
-import { fakeTurntable } from '../testing/fake-turntable';
-import { LUXE_LEDGE, LUXE_SEAT, LUXE_STAND, luxeSlot } from '../testing/model-measures';
 import { restingPose, type DiscPose, type Pose } from './director';
-import type { VinylModel } from './model';
 import { applyPose, rigFor, type Rig } from './rig';
 import { emptyShelf, fillShelf, targetOf, type Lineup } from './stage';
 
@@ -43,7 +40,7 @@ import { emptyShelf, fillShelf, targetOf, type Lineup } from './stage';
  */
 
 /** Steps along each flight (rig.test.ts takes 200). */
-const STEPS = 120;
+const STEPS = 200;
 
 const track = (id: string): TrackView => ({
   id,
@@ -64,41 +61,28 @@ function only(disc: number, pose: DiscPose): Pose {
   return { ...rest, discs: rest.discs.map((_, index) => (index === disc ? pose : null)) };
 }
 
-/** The fake turntable posed as cd-player-luxe.glb (as rig.test.ts's Luxe set). */
-function luxeRig(): Rig {
-  const { model, seat, disc, sleeveSeat, sleeve, stand, slots } = fakeTurntable();
-  seat.position.set(...LUXE_SEAT.position);
-  seat.quaternion.identity();
-  disc.position.copy(seat.position);
-  disc.quaternion.copy(seat.quaternion);
-  sleeveSeat.position.set(...LUXE_LEDGE.seat.position);
-  sleeveSeat.rotation.set(LUXE_LEDGE.seat.rotationX, 0, 0);
-  sleeve.position.copy(sleeveSeat.position);
-  sleeve.quaternion.copy(sleeveSeat.quaternion);
-  stand.position.set(...LUXE_STAND.position);
-  stand.rotation.set(0, LUXE_STAND.rotationY, 0);
-  slots.forEach((slot, k) => {
-    const { position, rotationX } = luxeSlot(k);
-    slot.position.set(...position);
-    slot.rotation.set(rotationX, 0, 0);
-  });
-  model.root.updateMatrixWorld(true);
-  const luxe: VinylModel = { ...model, id: 'luxe' };
-  return rigFor(luxe);
+/**
+ * cd-player-luxe.glb as the page loads it, with its ornament, and the rig built from its own
+ * nodes.
+ */
+async function luxeSet(): Promise<{ rig: Rig; ornament: Vector3[] }> {
+  const root = await loadGlb(glbOf('luxe'));
+  const model = glbModel(root, 'luxe');
+  return { rig: rigFor(model), ornament: ornamentOf(root) };
 }
 
 describe('Luxe’s ornament and its records and sleeves', () => {
-  let ornament: Vector3[] = [];
+  let set: Awaited<ReturnType<typeof luxeSet>>;
   beforeAll(async () => {
-    ornament = ornamentOf(await loadGlb(glbOf('luxe')));
+    set = await luxeSet();
   });
 
   it('loads the deck’s, the stand’s and the ledge’s ornament', () => {
-    expect(ornament.length).toBeGreaterThan(10_000);
+    expect(set.ornament.length).toBeGreaterThan(10_000);
   });
 
   it('keeps 5 mm off every record and sleeve at rest: in the rack, on the platter and on the ledge', () => {
-    const rig = luxeRig();
+    const { rig, ornament } = set;
     applyPose(
       rig,
       restingPose(fillShelf(targetOf(lineup('a', 'b', 'c', 'd', 'e', 'f'))), true, false),
@@ -117,7 +101,7 @@ describe('Luxe’s ornament and its records and sleeves', () => {
   });
 
   it('keeps 5 mm off every record and its sleeve at every step of every flight', () => {
-    const rig = luxeRig();
+    const { rig, ornament } = set;
     const ways: [string, DiscPose['from'], DiscPose['to']][] = [
       ...[0, 1, 2, 3, 4].map((slot): [string, DiscPose['from'], DiscPose['to']] => [
         `slot ${slot} onto the platter`,

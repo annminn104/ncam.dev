@@ -20,13 +20,13 @@ metal keys with engraved icons; at the back left a porcelain ballerina turns on 
 (luxe_dancer.py, at LX_DANCER); the ncam logo stands at the front right. The tonearm (luxe_arm.py)
 stands at the back right.
 
-Every part of the deck hangs from the body group (`<name>_deck_body`, the keys, the LED ring and
-the dancer's pedestal included) but the platter, the record, the tonearm and the dancer
-(`<name>_dancer`, which the page turns), which hang from the player's root, as the stand, the
-ledge and the sleeve do. Cloisonné enamel ornament (luxe_ornament.py: scrolls,
-camellias, daisies, roses and leaves in wire of the look's metal on a fixed enamel palette) dresses
-the plinth's lower tier, a pearl row and roses ring its upper tier, two sprays lie on the top, and
-the stand and the ledge carry their own; each hangs from the group it decorates.
+Every part of the deck hangs from the body group (`<name>_deck_body`, the keys, the LED ring and the
+dancer's pedestal included) but the platter, the record, the tonearm and the dancer
+(`<name>_dancer`, which the page turns), which hang from the player's root, as the stand, the ledge
+and the sleeve do. Cloisonné enamel ornament (luxe_ornament.py: scrolls, camellias, daisies, roses
+and leaves in wire of the look's metal on a fixed enamel palette) dresses the plinth's lower tier, a
+pearl row and roses ring its upper tier, two sprays lie on the top, and the stand and the ledge
+carry their own; each hangs from the group it decorates.
 
 Its colours come from src/luxe-looks.json (luxe_look): build_luxe_materials(look) makes the body's,
 the metal's and the light's materials and the fixed ones. The web build (WEB) carries what the page

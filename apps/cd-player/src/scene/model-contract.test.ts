@@ -1,8 +1,6 @@
 import { readFileSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { Box3, Euler, Matrix4, Quaternion, Vector3, type Mesh, type Object3D } from 'three';
-import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { beforeAll, describe, expect, it } from 'vitest';
 import {
   BOXES,
@@ -33,6 +31,7 @@ import {
   LUXE_STEPS,
   luxeSlot,
 } from '../testing/model-measures';
+import { loadGlb } from '../testing/clearance';
 import { RACK_SLOTS } from './stage';
 import {
   CD_MATERIALS,
@@ -387,7 +386,7 @@ describe('public/assets/cd-player-deck.glb (art/pipeline/build.mjs deck)', () =>
     /** Half a pixel: the meshes are exact millimetres and the regions whole pixels. */
     const SLACK = 0.5;
     const covered = new Set<string>();
-    const set = await loadScene(DECK_GLB);
+    const set = await loadGlb(DECK_GLB);
     let primitives = 0;
     set.traverse((child) => {
       const mesh = child as Mesh;
@@ -422,7 +421,7 @@ describe('public/assets/cd-player-deck.glb (art/pipeline/build.mjs deck)', () =>
     type Point = readonly [number, number];
     const triangles: Record<string, (readonly [Point, Point, Point])[]> = {};
     const vertexList: Record<string, Point[]> = {};
-    const set = await loadScene(DECK_GLB);
+    const set = await loadGlb(DECK_GLB);
     set.traverse((child) => {
       const mesh = child as Mesh;
       if (!mesh.isMesh) return;
@@ -676,17 +675,6 @@ describe('public/assets/cd-player-luxe.glb (art/pipeline/build.mjs luxe)', () =>
   });
 });
 
-/** A committed GLB as the page loads it: three's GLTFLoader with the meshopt decoder. */
-async function loadScene(file: string): Promise<Object3D> {
-  const bytes = readFileSync(file);
-  const loader = new GLTFLoader();
-  loader.setMeshoptDecoder(MeshoptDecoder);
-  const data = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
-  const gltf = await loader.parseAsync(data as ArrayBuffer, '');
-  gltf.scene.updateMatrixWorld(true);
-  return gltf.scene;
-}
-
 /**
  * Every vertex of `object`'s meshes in world space, or, given `pose`, with `object`'s own frame
  * placed there instead, as the rig places a copy of the disc in a rack slot.
@@ -741,7 +729,7 @@ describe('the GLBs as the scene tests measure them (src/testing/model-measures.t
   const scenes: Partial<Record<keyof typeof models, Object3D>> = {};
   beforeAll(async () => {
     for (const [id, file] of Object.entries(models)) {
-      scenes[id as keyof typeof models] = await loadScene(file);
+      scenes[id as keyof typeof models] = await loadGlb(file);
     }
   });
   const scene = (id: keyof typeof models): Object3D => {

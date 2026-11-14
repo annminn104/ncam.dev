@@ -2,26 +2,25 @@
 
 ## What this is
 
-**CD Player**: any Spotify playlist or album, played on a 3D turntable or CD player of the
-visitor's choice. Luxe, the turntable, is the default (below). The three CD players are the
-suitcase in four colourways (Blush, its own default, Sage, Cream and Cherry); the Clear, an
-upright, see-through player whose shell, frame, board and light each take a colour of their own;
-and the Deck, a DJ CD deck whose clear acrylic jog plate lies over the disc, with a big 16:9
-screen, a body and a light that take a colour each, and a pattern and a name of the visitor's own
-printed on it. The next five discs wait in a rack, in the suitcase's open
-lid, on a stand beside the Clear or standing in the foam of the Deck's flight case, each printed
-with its first artist's photo, and when a track is about to play the next disc flies from rack
-slot 0 onto the spindle, on the Clear through a round glass door that opens for it, on the Deck
-lifted out of its case and down into the well once the jog plate has lifted. A crystal case shows the album art on its booklet (beside the suitcase's
-rack, on an easel on the Clear's other side), a plate and a luggage tag on the handle name the
-collection, and the page behind the player is a pastel of its accent (the skin's, or the light's
-of the Clear, the Deck or Luxe) with the album art blurred into it. The server renders that page
-in the default look, Luxe's pink light its accent, with a loader where the
-player will stand, never a picture of it, and the scene fades in over the loader once it is
-drawn. Beside it, "Popular on Spotify" offers twelve of Spotify's own playlists a press away. A
-self-contained Module Federation remote (`cd_player`, :9006) that the host mounts at
-`/projects/cd-player`. The default collection is the playlist `37i9dQZEVXbMDoHDwVN2tF`,
-"Top 50 - Global" (`DEFAULT_COLLECTION` in `src/routes.ts`).
+**CD Player**: any Spotify playlist or album, played on a 3D turntable or CD player of the visitor's
+choice. Luxe, the turntable, is the default (below). The three CD players are the suitcase in four
+colourways (Blush, its own default, Sage, Cream and Cherry); the Clear, an upright, see-through
+player whose shell, frame, board and light each take a colour of their own; and the Deck, a DJ CD
+deck whose clear acrylic jog plate lies over the disc, with a big 16:9 screen, a body and a light
+that take a colour each, and a pattern and a name of the visitor's own printed on it. The next five
+discs wait in a rack, in the suitcase's open lid, on a stand beside the Clear or standing in the
+foam of the Deck's flight case, each printed with its first artist's photo, and when a track is
+about to play the next disc flies from rack slot 0 onto the spindle, on the Clear through a round
+glass door that opens for it, on the Deck lifted out of its case and down into the well once the jog
+plate has lifted. A crystal case shows the album art on its booklet (beside the suitcase's rack, on
+an easel on the Clear's other side), a plate and a luggage tag on the handle name the collection,
+and the page behind the player is a pastel of its accent (the skin's, or the light's of the Clear,
+the Deck or Luxe) with the album art blurred into it. The server renders that page in the default
+look, Luxe's pink light its accent, with a loader where the player will stand, never a picture of
+it, and the scene fades in over the loader once it is drawn. Beside it, "Popular on Spotify" offers
+twelve of Spotify's own playlists a press away. A self-contained Module Federation remote
+(`cd_player`, :9006) that the host mounts at `/projects/cd-player`. The default collection is the
+playlist `37i9dQZEVXbMDoHDwVN2tF`, "Top 50 - Global" (`DEFAULT_COLLECTION` in `src/routes.ts`).
 
 **Luxe**, the fourth model in the Player menu, is the first turntable: it plays records, not CDs.
 It is the default (the owner's choice, 2026-11-14): a visitor who never chose a model sees Luxe in
@@ -1622,7 +1621,7 @@ the empty pivots, and the UVs that no texture in the file uses yet) and meshopt-
 `public/assets/cd-player.glb`, `public/assets/cd-player-clear.glb`,
 `public/assets/cd-player-deck.glb` or `public/assets/cd-player-luxe.glb`, all **committed**
 (about 124,348 triangles and 940,104 bytes for the suitcase with its ornament, 132,715 and 965 KB
-for the Clear, 719 KB for the Deck, and 73,689 triangles and 602,816 bytes for Luxe with its
+for the Clear, 702 KB for the Deck, and 73,689 triangles and 602,816 bytes for Luxe with its
 ornament and its dancer, at the time of writing). **The budget** (`model-contract.test.ts`, for
 each): 4 MB, 150k triangles, `EXT_meshopt_compression`, and meshes only on leaf nodes, so
 quantisation never scales a pivot.

@@ -59,11 +59,10 @@ hand.
   round a vertical extrusion, `Tube(p0, p1, radius, ref)` round a cylinder), the motifs (camellia,
   daisy, five-petal rose, leaf, leaf spray, acanthus, C- and S-scrolls, rocaille shell, pearl row,
   vine, a vine round a tube, a garland), each outlined in the wire material its caller passes, and
-  `lay(orn, face, items, wire)` with `mirrored(items)` for symmetric layouts and
-  `shifted(items, da, db)` to move one; a vine's flower can sit at its stem's end (`along` None).
-  Low relief (enamel 0.58 mm proud at most, wire 0.78, a bead's flattened cap 0.9), every part
-  0.02 mm off its face, and nothing past 0.9 mm (an `Ornament` stops the run on a part that would
-  stand further);
+  `lay(orn, face, items, wire)` with `mirrored(items)` for symmetric layouts and `shifted(items, da,
+db)` to move one; a vine's flower can sit at its stem's end (`along` None). Low relief (enamel
+  0.58 mm proud at most, wire 0.78, a bead's flattened cap 0.9), every part 0.02 mm off its face,
+  and nothing past 0.9 mm (an `Ornament` stops the run on a part that would stand further);
   `Ornament(name, parent)` merges one group's into a mesh per material hanging from it, and
   `hold(orn, since, lo, hi, what)` stops the run unless what a model laid lies in a box. Its
   docstring has the signatures.
@@ -151,7 +150,7 @@ They write `public/assets/cd-player.glb`, `public/assets/cd-player-clear.glb`,
 `pipeline/build.mjs` hands the model to `export.py` as `CDP_MODEL`).
 `src/scene/model-contract.test.ts` checks each one's names, materials, where things are parented
 and the budget (150k triangles, 4 MB). The committed suitcase is about 124,348 triangles and
-920 KB with its ornament (about 23,715 of the triangles), the Clear model about 132,715 and 965 KB,
+918 KB with its ornament (about 23,715 of the triangles), the Clear model about 132,715 and 965 KB,
 the Deck about 81,762 and 702 KB, the Luxe turntable about 73,689 and 589 KB with its ornament and
 its dancer (KB of 1024 bytes; about 28,239 of the triangles are the ornament's and 17,700 the
 dancer's, her pedestal included). Luxe has a budget of its own: 650,000 bytes and 80,000 triangles;

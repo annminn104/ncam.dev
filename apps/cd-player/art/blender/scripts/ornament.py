@@ -32,7 +32,7 @@ enamel is at most 0.58 mm proud and the wire 0.78, under the 0.8 mm of Luxe's ba
 pearl_row) is the one round part: a flattened sphere's cap, its centre under the face and its top
 PROUD off it, the cap carried on BEAD_FOOT under the face, hidden, so that it never floats over a
 faceted corner (a 1.4 mm bead's foot is 1.31 mm round). Nothing stands more than PROUD (0.9 mm, the
-spec's cap) off its face: an Ornament stops the run on a part that would.
+cap) off its face: an Ornament stops the run on a part that would.
 
 Ornament(name, parent) collects one group's ornament (a deck's body, a stand, a ledge); done()
 merges it into one mesh per material (`<name>_<material>`, the beads `<name>_<material>_beads`,
@@ -332,6 +332,9 @@ class Ornament:
         """The box ((x, y, z) mm, least and most) of every vertex laid since `since` (a count of
         them, len(orn.placed) taken before), for a caller that holds its ornament to a region."""
         pts = self.placed[since:]
+        if not pts:
+            raise SystemExit("ornament.py: %s laid nothing since vertex %d, so it has no extent"
+                             % (self.name, since))
         return (Vector([min(p[i] for p in pts) for i in range(3)]), Vector([max(p[i] for p in pts) for i in range(3)]))
 
     def _bm(self, material, smooth=False):

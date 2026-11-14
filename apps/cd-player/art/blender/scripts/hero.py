@@ -7,15 +7,14 @@
 
 CDP_MODEL picks the player: `suitcase` (the default; parts.py, its ornament in suitcase_ornament.py,
 on ornament.py's kit), `clear` (clear.py, with its board in clear_board.py and its decorations in
-clear_decor.py), `deck` (deck.py, with its screen, decor
-and body detail in deck_panel.py, its flight case in deck_case.py and its print layer in
-deck_print.py) or `luxe`, the turntable (luxe.py on vinyl.py's record, sleeve and LED ring, with
-its tonearm in luxe_arm.py, its record stand and ledge in luxe_stand.py, its ornament in
-luxe_ornament.py, on ornament.py's kit, and its dancer and her pedestal in luxe_dancer.py). The
-Deck's print layer is the page's to paint, never
-Cycles': the owner's stills hide it. CDP_DECK_ATLAS=checker maps a debug atlas onto it instead
-(each region in its own colour, a 10 mm grid, a white corner where its row 0 and column 0 meet, its
-id), into art/.out/deck/debug/.
+clear_decor.py), `deck` (deck.py, with its screen, decor and body detail in deck_panel.py, its
+flight case in deck_case.py and its print layer in deck_print.py) or `luxe`, the turntable (luxe.py
+on vinyl.py's record, sleeve and LED ring, with its tonearm in luxe_arm.py, its record stand and
+ledge in luxe_stand.py, its ornament in luxe_ornament.py, on ornament.py's kit, and its dancer and
+her pedestal in luxe_dancer.py). The Deck's print layer is the page's to paint, never Cycles': the
+owner's stills hide it. CDP_DECK_ATLAS=checker maps a debug atlas onto it instead (each region in
+its own colour, a 10 mm grid, a white corner where its row 0 and column 0 meet, its id), into
+art/.out/deck/debug/.
 The suitcase's views: `hero` is the three-quarter product still the design was approved from (the
 lid open, a disc spinning, five more in the rack, a stack of cases beside it); `lid` looks straight
 into the open lid (the case, the rack and its discs, the strap and the plate).

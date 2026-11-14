@@ -615,7 +615,7 @@ def luxe_dancer(name, root):
     _merge(figure, head, 0)
     _merge(metal, tiara)
 
-    # The tutu at her hips: the plate and the two frills, the outer one's metal edge, the roses.
+    # The tutu at her hips: the plate and the three frills, the outer one's metal edge, the roses.
     z_plate = at((0.0, 0.0, DANCER_PLATE_Z)).z
     tutu = bmesh.new()
     rim = None
