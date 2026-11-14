@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "CD Player — any Spotify playlist or album on a 3D suitcase CD player, played through Spotify's embed, packaged as a self-contained React Module Federation remote.",
+  "description": "CD Player — any Spotify playlist or album on a 3D turntable or CD player, played through Spotify's embed, packaged as a self-contained React Module Federation remote.",
   "scripts": {
     "dev": "vite",
     "build": "vite build --app",

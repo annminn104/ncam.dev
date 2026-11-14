@@ -3,12 +3,12 @@
 ## What this is
 
 **CD Player**: any Spotify playlist or album, played on a 3D turntable or CD player of the
-visitor's choice: Luxe, the turntable and the default (below), or one of three CD players, the
-suitcase in four colourways, Blush (its own default), Sage, Cream and Cherry, or the Clear
-model, an upright, see-through player whose shell, frame, board and light
-each take a colour of their own, or the Deck, a DJ CD deck whose clear acrylic jog plate lies over
-the disc, with a big 16:9 screen, a body and a light that take a colour each, and a pattern and a
-name of the visitor's own printed on it. The next five discs wait in a rack, in the suitcase's open
+visitor's choice. Luxe, the turntable, is the default (below). The three CD players are the
+suitcase in four colourways (Blush, its own default, Sage, Cream and Cherry); the Clear, an
+upright, see-through player whose shell, frame, board and light each take a colour of their own;
+and the Deck, a DJ CD deck whose clear acrylic jog plate lies over the disc, with a big 16:9
+screen, a body and a light that take a colour each, and a pattern and a name of the visitor's own
+printed on it. The next five discs wait in a rack, in the suitcase's open
 lid, on a stand beside the Clear or standing in the foam of the Deck's flight case, each printed
 with its first artist's photo, and when a track is about to play the next disc flies from rack
 slot 0 onto the spindle, on the Clear through a round glass door that opens for it, on the Deck
