@@ -287,12 +287,26 @@ describe('leatherSheen', () => {
   });
 });
 
+/** The ornament's enamel as the GLB carries it (art/blender/scripts/ornament.py's ENAMEL). */
+const ENAMEL = {
+  enamel_rose: 'd94f6b',
+  enamel_coral: 'f2896b',
+  enamel_butter: 'f4c95d',
+  enamel_leaf: '5e9e6e',
+  enamel_sky: '3fa7b5',
+  enamel_ivory: 'f6f0e6',
+};
+
 describe('applySkin', () => {
-  /** Every material a skin recolours, two no skin touches (in colours of their own), a print. */
+  /**
+   * Every material a skin recolours, two no skin touches (in colours of their own), a print, and the
+   * ornament's enamel.
+   */
   function scene() {
     const root = new Group();
     for (const name of Object.keys(SKIN_ROLES)) root.add(meshOf(name));
     root.add(meshOf('chrome', '#8090a0'), meshOf('btn', '#d0c0b0'), meshOf('art_disc'));
+    for (const [name, colour] of Object.entries(ENAMEL)) root.add(meshOf(name, `#${colour}`));
     return { root, upgraded: upgradeMaterials(root) };
   }
   function materialOf(root: Group, name: string): MeshPhysicalMaterial {
@@ -323,6 +337,23 @@ describe('applySkin', () => {
     expect(materialOf(root, 'chrome').color.getHexString()).toBe('8090a0');
     expect(materialOf(root, 'btn').color.getHexString()).toBe('d0c0b0');
     expect(materialOf(root, 'art_disc').color.getHexString()).toBe('ffffff');
+    upgraded.dispose();
+  });
+
+  it('keeps the ornament’s enamel its own under every skin, while its wire takes the hardware', () => {
+    const { root, upgraded } = scene();
+    for (const skin of SKINS) {
+      upgraded.applyLook({ model: 'suitcase', skin: skin.id });
+      for (const [name, colour] of Object.entries(ENAMEL)) {
+        expect(materialOf(root, name).color.getHexString(), `${skin.id}: ${name}`).toBe(colour);
+      }
+      expect(materialOf(root, 'hardware').color.getHexString(), skin.id).toBe(
+        skin.palette.hardware.slice(1),
+      );
+      expect(Object.keys(skinColours(root)).filter((name) => name.startsWith('enamel_'))).toEqual(
+        [],
+      );
+    }
     upgraded.dispose();
   });
 

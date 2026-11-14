@@ -175,6 +175,42 @@ describe('public/assets/cd-player.glb (art/pipeline/build.mjs)', () => {
     expect(json.extensionsUsed).toContain('EXT_meshopt_compression');
   });
 
+  // The ornament (art/blender/scripts/suitcase_ornament.py) grows the file by 200 KB at most.
+  it('stays within 200 KB of the 795,088 bytes it weighed before its ornament', () => {
+    expect(statSync(GLB).size).toBeLessThanOrEqual(795_088 + 200_000);
+  });
+
+  it('hangs its ornament from the root and the lid, in the skin’s hardware and a fixed enamel palette', () => {
+    const enamel = ['rose', 'coral', 'butter', 'leaf', 'sky', 'ivory'].map((c) => `enamel_${c}`);
+    const groups = {
+      player_tub_orn_: 'player',
+      player_deck_orn_: 'player',
+      player_lid_orn_: 'lid_hinge',
+    };
+    const seen = new Set<string>();
+    for (const [prefix, group] of Object.entries(groups)) {
+      const parts = json.nodes.filter((n) => n.name?.startsWith(prefix));
+      expect(parts.length, prefix).toBeGreaterThan(0);
+      for (const part of parts) {
+        expect(parentOf(part.name ?? ''), part.name).toBe(group);
+        expect(part.mesh, part.name).toBeDefined();
+        for (const primitive of json.meshes[part.mesh ?? -1].primitives) {
+          const material =
+            primitive.material === undefined ? '' : (json.materials[primitive.material].name ?? '');
+          expect(['hardware', ...enamel], `${part.name}: ${material}`).toContain(material);
+          seen.add(material);
+        }
+      }
+    }
+    expect([...seen].sort()).toEqual(['hardware', ...enamel].sort());
+    // The wire follows the skin's metal; the enamel is the same under every skin.
+    expect(SKIN_ROLES.hardware).toBe('hardware');
+    for (const name of enamel) {
+      expect(MATERIAL_ROLES[name], name).toBe('enamel');
+      expect(SKIN_ROLES[name], name).toBeUndefined();
+    }
+  });
+
   it('keeps meshes on leaf nodes, so quantisation never scales a pivot', () => {
     for (const node of json.nodes)
       if (node.children?.length) expect(node.mesh, node.name).toBeUndefined();

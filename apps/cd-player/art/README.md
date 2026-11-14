@@ -12,7 +12,9 @@ hand.
   its luggage tag, the deck's chrome ring, screws and VU strip, the tonearm, the quilted lid with
   its strap, the five-slot rack and the plate. `build_materials(palette)` makes every material;
   the seven the skins recolour take their colours from a palette of sRGB hex values (`BLUSH` by
-  default).
+  default). `make_player` dresses the suitcase in its ornament (`suitcase_ornament.py`), so the
+  suitcase's builds exec `ornament.py` and `suitcase_ornament.py` after this file; the Clear and the
+  Deck exec it too but never call `make_player`.
 - `blender/scripts/build_player.py`: the web scene, with the names the page drives
   (`src/scene/contract.ts`).
 - `blender/scripts/clear.py`: the Clear model, on `parts.py`'s disc and case: a clear
@@ -62,6 +64,22 @@ hand.
   and nothing past 0.9 mm (an `Ornament` stops the run on a part that would stand further);
   `Ornament(name, parent)` merges one group's into a mesh per material hanging from it. Its
   docstring has the signatures.
+- `blender/scripts/suitcase_ornament.py`: the suitcase's ornament on `ornament.py`'s kit, its wire
+  in `hardware` (so it follows the skin's metal) and its enamel fixed under every skin: under the
+  seam, a camellia either side of the handle between its mount and the clasp, and from each clasp a
+  vine with daisies, camellias and roses round the front corner and along the side; a bouquet
+  medallion on each side (a pearl-set oval, a camellia, roses and daisies tied with a bow, C-scrolls,
+  leaf sprays and acanthus); a small daisy spray in each corner of the deck top; and on the lid's
+  lining a thin vine border round its free edge, floral sprays in its two free corners (the bottom
+  left, and the top left under the strap), a camellia between the plate and the rack and a vine
+  between the strap and the case. The rack's frame takes the lining's whole right half, so its two
+  corners there are bare. The tub's and the deck's ornament (`player_tub_orn_*`,
+  `player_deck_orn_*`) hang from the player's root, the lining's (`player_lid_orn_*`) from the lid.
+  It stops the run if a region's ornament strays (out of the band under the seam, into the handle's
+  mounts, the clasps, the grille's border or the corner caps; on the deck into the well, the keys,
+  the knob, the display, the tonearm and its sweep, the screws or the lettering; on the lining under
+  the case, its clips, the strap, the plate or the rack); every part keeps 5 mm off a disc, resting
+  or flying (`src/scene/ornament-clearance.test.ts` holds it).
 - `blender/scripts/vinyl.py`: what every turntable shares: the 12-inch record (vinyl and its
   label), its sleeve and the LED ring round the platter.
 - `blender/scripts/luxe.py`: Luxe, on `parts.py` and `vinyl.py`: a lacquered two-tier plinth, the
@@ -126,11 +144,12 @@ They write `public/assets/cd-player.glb`, `public/assets/cd-player-clear.glb`,
 `public/assets/cd-player-deck.glb` and `public/assets/cd-player-luxe.glb` (all committed;
 `pipeline/build.mjs` hands the model to `export.py` as `CDP_MODEL`).
 `src/scene/model-contract.test.ts` checks each one's names, materials, where things are parented
-and the budget (150k triangles, 4 MB). The committed suitcase is about 100,633 triangles and
-776 KB, the Clear model about 132,715 and 965 KB, the Deck about 81,762 and 702 KB, the Luxe
+and the budget (150k triangles, 4 MB). The committed suitcase is about 124,136 triangles and
+920 KB with its ornament (about 23,503 of the triangles), the Clear model about 132,715 and 965 KB, the Deck about 81,762 and 702 KB, the Luxe
 turntable about 73,689 and 589 KB with its ornament and its dancer (KB of 1024 bytes; about 28,239
 of the triangles are the ornament's and 17,700 the dancer's, her pedestal included). Luxe has a
-budget of its own: 650,000 bytes and 80,000 triangles. Rebuild a
+budget of its own: 650,000 bytes and 80,000 triangles; the suitcase's ornament may add 200,000
+bytes at most to the 795,088 it weighed without it. Rebuild a
 model after any change to its scripts
 (`cdkit.py` and `parts.py` are every model's, `vinyl.py` every turntable's; the Deck's build also
 rewrites `src/scene/textures/deck-atlas.json`, which is committed with the GLB).
@@ -155,7 +174,8 @@ renders another skin with `hero.py`, into `.out/skins/<id>/v2-<view>-<quality>.p
       --python-exit-code 1 --python blender/scripts/hero.py
 
 The skins change only the seven materials named after the skin roles; every other material keeps
-the colour `build_materials()` gives it.
+the colour `build_materials()` gives it. The ornament's wire is `hardware`, so it follows the skin;
+its enamel (`enamel_*`) keeps its colour under every skin.
 
 ## The Clear model
 

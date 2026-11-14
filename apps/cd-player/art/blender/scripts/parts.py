@@ -13,6 +13,10 @@ the lining is rotated (pi, 0, 0), so its local +z faces the visitor and its loca
 RACK_LAYOUT picks how the lid is laid out: "cascade" keeps the crystal case on the left and
 cascades the five discs up the right half; "grid" has no case and fills the lid with the discs,
 two below and three above.
+
+make_player dresses the suitcase in its cloisonné ornament (suitcase_ornament.py, on ornament.py's
+kit), so whatever builds the suitcase execs those two after this file. The Clear and the Deck exec
+this file too but never call make_player, and get none of it.
 """
 import json
 import math
@@ -629,4 +633,6 @@ def make_player(name, disc_label, booklet, rack_labels=None, lid_open=100.0, arm
         keyhole_clasp(f"{name}_clasp_{side}", root, lid, sx * 95.0)
     handle(name + "_handle", root)
     luggage_tag(name + "_tag", root, playlist, web)
+    # --- the ornament: the tub's and the deck's on the root, the lining's on the lid
+    suitcase_ornament(name, root, lid)
     return root

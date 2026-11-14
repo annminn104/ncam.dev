@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { Matrix4, Vector3, type Mesh, type Object3D } from 'three';
+import { Matrix4, Quaternion, Vector3, type Group, type Mesh, type Object3D } from 'three';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { beforeAll, describe, expect, it } from 'vitest';
@@ -14,8 +14,10 @@ import {
   LUXE_STAND,
   luxeSlot,
 } from '../testing/model-measures';
+import { REQUIRED_NODES, type RequiredNode } from './contract';
 import { restingPose, type DiscPose, type Pose } from './director';
-import type { VinylModel } from './model';
+import type { Slots } from './materials';
+import type { CdModel, VinylModel } from './model';
 import { applyPose, rigFor, type Rig } from './rig';
 import { emptyShelf, fillShelf, targetOf, type Lineup } from './stage';
 
@@ -28,6 +30,13 @@ import { emptyShelf, fillShelf, targetOf, type Lineup } from './stage';
  * (310 mm square, 3 thick); the ledge's legs and the sleeves lean 15°, so no axis-aligned box would
  * do. The closest today: the ledge legs' vines, which keep to the legs' backs, the sleeve on the
  * ledge leaning 0.4 mm off their fronts.
+ *
+ * The suitcase's ornament (art/blender/scripts/suitcase_ornament.py: every `*_orn_*` node of
+ * cd-player.glb, on the tub, the deck and the lid's lining) keeps 5 mm or more off every disc the
+ * same way: resting on the spindle and in the rack, and at every step of every way between the
+ * spindle and a slot, between two slots, and out of sight and back. The suitcase is loaded as the
+ * page loads it, its rig built from its own nodes, and each disc is measured as a solid disc of the
+ * GLB's own disc's radius and faces, scaled with it as it shrinks away or grows in.
  */
 
 const LUXE_GLB = fileURLToPath(new URL('../../public/assets/cd-player-luxe.glb', import.meta.url));
@@ -188,6 +197,163 @@ describe('Luxe’s ornament and its records and sleeves (spec §5)', () => {
             `the sleeve, ${way}, along ${along}`,
           ).toBeGreaterThan(CLEARANCE);
         }
+      }
+    }
+  });
+});
+
+const SUITCASE_GLB = fileURLToPath(new URL('../../public/assets/cd-player.glb', import.meta.url));
+
+/** The GLB's disc in its own frame (its face local XZ): its radius and its two faces' heights. */
+interface DiscShape {
+  radius: number;
+  bottom: number;
+  top: number;
+}
+
+/** The world-space vertices of every ornament mesh under `root`. */
+function ornamentOf(root: Object3D): Vector3[] {
+  const out: Vector3[] = [];
+  root.traverse((child: Object3D) => {
+    const mesh = child as Mesh;
+    if (!mesh.isMesh || !mesh.name.includes('_orn_')) return;
+    const position = mesh.geometry.getAttribute('position');
+    for (let i = 0; i < position.count; i++) {
+      out.push(new Vector3().fromBufferAttribute(position, i).applyMatrix4(mesh.matrixWorld));
+    }
+  });
+  return out;
+}
+
+/** `disc`'s meshes measured in its own frame. */
+function discShape(disc: Object3D): DiscShape {
+  const toDisc = new Matrix4().copy(disc.matrixWorld).invert();
+  const shape = { radius: 0, bottom: Infinity, top: -Infinity };
+  const p = new Vector3();
+  disc.traverse((child: Object3D) => {
+    const mesh = child as Mesh;
+    if (!mesh.isMesh) return;
+    const position = mesh.geometry.getAttribute('position');
+    const matrix = toDisc.clone().multiply(mesh.matrixWorld);
+    for (let i = 0; i < position.count; i++) {
+      p.fromBufferAttribute(position, i).applyMatrix4(matrix);
+      shape.radius = Math.max(shape.radius, Math.hypot(p.x, p.z));
+      shape.bottom = Math.min(shape.bottom, p.y);
+      shape.top = Math.max(shape.top, p.y);
+    }
+  });
+  return shape;
+}
+
+/**
+ * cd-player.glb as the page loads it (GLTFLoader with meshopt), with its ornament and its disc
+ * measured before the rig takes the disc for its copies, and the rig built from its own nodes.
+ */
+async function suitcaseSet(): Promise<{ rig: Rig; ornament: Vector3[]; disc: DiscShape }> {
+  const bytes = readFileSync(SUITCASE_GLB);
+  const loader = new GLTFLoader();
+  loader.setMeshoptDecoder(MeshoptDecoder);
+  const data = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+  const gltf = await loader.parseAsync(data as ArrayBuffer, '');
+  const root: Group = gltf.scene;
+  root.updateMatrixWorld(true);
+  const nodes: Partial<Record<RequiredNode, Object3D>> = {};
+  for (const name of REQUIRED_NODES) {
+    const node = root.getObjectByName(name);
+    if (!node) throw new Error(`cd-player.glb has no ${name}`);
+    nodes[name] = node;
+  }
+  const ornament = ornamentOf(root);
+  const disc = discShape(nodes.disc!);
+  const model: CdModel = {
+    id: 'suitcase',
+    media: 'cd',
+    root,
+    nodes: nodes as CdModel['nodes'],
+    slots: {} as Slots,
+    optionalSlots: {},
+    dispose: () => {},
+    applyLook: () => {},
+  };
+  return { rig: rigFor(model), ornament, disc };
+}
+
+describe('the suitcase’s ornament and its discs', () => {
+  let set: Awaited<ReturnType<typeof suitcaseSet>>;
+  beforeAll(async () => {
+    set = await suitcaseSet();
+  });
+
+  /**
+   * The least distance from the ornament to the solid disc `object` poses (scaled with it), or
+   * Infinity when none of the ornament is within the clearance of it.
+   */
+  function closest(object: Object3D): number {
+    object.updateMatrixWorld(true);
+    const position = new Vector3();
+    const quaternion = new Quaternion();
+    const scale = new Vector3();
+    object.matrixWorld.decompose(position, quaternion, scale);
+    const k = scale.x;
+    const { radius, bottom, top } = set.disc;
+    const reach =
+      (Math.hypot(radius, Math.max(Math.abs(bottom), Math.abs(top))) * k + CLEARANCE) ** 2;
+    const back = quaternion.clone().invert();
+    const local = new Vector3();
+    let least = Infinity;
+    for (const p of set.ornament) {
+      if (p.distanceToSquared(position) > reach) continue;
+      local.copy(p).sub(position).applyQuaternion(back);
+      const radial = Math.max(Math.hypot(local.x, local.z) - radius * k, 0);
+      const across = Math.max(bottom * k - local.y, local.y - top * k, 0);
+      least = Math.min(least, Math.hypot(radial, across));
+    }
+    return least;
+  }
+
+  it('loads the tub’s, the deck’s and the lining’s ornament, and the disc it measures', () => {
+    expect(set.ornament.length).toBeGreaterThan(10_000);
+    // parts.py's disc: 120 mm across, 1.2 mm of polycarbonate under its 0.8 mm stacking ring.
+    expect(set.disc.radius).toBeCloseTo(0.06, 4);
+    expect(set.disc.top - set.disc.bottom).toBeCloseTo(0.0014, 4);
+  });
+
+  it('keeps 5 mm off every disc at rest: on the spindle and in the rack', () => {
+    const { rig } = set;
+    applyPose(
+      rig,
+      restingPose(fillShelf(targetOf(lineup('a', 'b', 'c', 'd', 'e', 'f'))), true, false),
+      0,
+    );
+    rig.discs.slice(0, 6).forEach((copy, index) => {
+      expect(copy.object.visible, `disc ${index}`).toBe(true);
+      expect(closest(copy.object), `disc ${index}`).toBeGreaterThan(CLEARANCE);
+    });
+  });
+
+  it('keeps 5 mm off a disc at every step of every way it flies', () => {
+    const { rig } = set;
+    const slots = [0, 1, 2, 3, 4] as const;
+    const ways: [string, DiscPose['from'], DiscPose['to']][] = [
+      ...slots.flatMap((slot): [string, DiscPose['from'], DiscPose['to']][] => [
+        [`slot ${slot} onto the spindle`, slot, 'spindle'],
+        [`the spindle back into slot ${slot}`, 'spindle', slot],
+      ]),
+      ...[1, 2, 3, 4].map((slot): [string, DiscPose['from'], DiscPose['to']] => [
+        `slot ${slot} down to slot ${slot - 1}`,
+        slot,
+        slot - 1,
+      ]),
+      ['the spindle out of sight', 'spindle', null],
+      ['out of sight onto the spindle', null, 'spindle'],
+    ];
+    for (const [way, from, to] of ways) {
+      for (let step = 0; step <= STEPS; step++) {
+        const along = step / STEPS;
+        applyPose(rig, only(1, { from, to, along }), 0);
+        const copy = rig.discs[1];
+        if (!copy.object.visible) continue;
+        expect(closest(copy.object), `${way}, along ${along}`).toBeGreaterThan(CLEARANCE);
       }
     }
   });

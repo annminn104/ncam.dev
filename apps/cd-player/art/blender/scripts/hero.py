@@ -5,8 +5,9 @@
       /Applications/Blender.app/Contents/MacOS/Blender --background --factory-startup \\
       --python-exit-code 1 --python apps/cd-player/art/blender/scripts/hero.py
 
-CDP_MODEL picks the player: `suitcase` (the default), `clear` (clear.py, with its board in
-clear_board.py and its decorations in clear_decor.py), `deck` (deck.py, with its screen, decor
+CDP_MODEL picks the player: `suitcase` (the default; parts.py, its ornament in suitcase_ornament.py,
+on ornament.py's kit), `clear` (clear.py, with its board in clear_board.py and its decorations in
+clear_decor.py), `deck` (deck.py, with its screen, decor
 and body detail in deck_panel.py, its flight case in deck_case.py and its print layer in
 deck_print.py) or `luxe`, the turntable (luxe.py on vinyl.py's record, sleeve and LED ring, with
 its tonearm in luxe_arm.py, its record stand and ledge in luxe_stand.py, its ornament in
@@ -192,6 +193,8 @@ def luxe_flags():
 
 
 def suitcase_scene():
+    for f in ("ornament.py", "suitcase_ornament.py"):
+        exec(compile(open(BASE + "/" + f).read(), f, "exec"), globals())
     new_scene("cd_player_suitcase", res=(1600, 1200), samples=128)
     build_materials(skin_palette(SKIN) if SKIN is not None else None)
 

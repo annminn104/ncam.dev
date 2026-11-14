@@ -15,7 +15,7 @@ ARGS = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
 OUT = ARGS[ARGS.index("--out") + 1]
 
 MODEL = os.environ.get("CDP_MODEL", "suitcase")
-SCRIPTS = {"suitcase": ("cdkit.py", "parts.py", "build_player.py"),
+SCRIPTS = {"suitcase": ("cdkit.py", "parts.py", "ornament.py", "suitcase_ornament.py", "build_player.py"),
            "clear": ("cdkit.py", "parts.py", "clear.py", "clear_board.py", "clear_decor.py", "build_clear.py"),
            "deck": ("cdkit.py", "parts.py", "deck.py", "deck_panel.py", "deck_case.py", "deck_print.py",
                     "build_deck.py"),
