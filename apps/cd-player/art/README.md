@@ -86,10 +86,12 @@ hand.
   `luxe_dancer`, which the web build names `dancer` and the page turns. She is porcelain, 105 mm
   from her pointe to her fingertips: en pointe on her left leg, her right in retiré, her arms en
   haut, a bun and a tiara, no face. Her body is a skin modifier's hull round a skeleton under two
-  levels of subdivision, applied, and decimated in the web build. Her plate tutu is 64 mm across:
-  a flat plate with enamel roses round its scalloped edge over two ruffled frills, the outer one's
-  edge in metal. Her colours are the fixed `porcelain` and `porcelain_blush` (the bodice and the
-  pointe shoes); the tiara, the bodice's trim and the tutu's edge follow the look's metal. The
+  levels of subdivision, applied, and decimated in the web build, cut along its seams first so
+  that each material edge is exact. Her plate tutu is 64 mm across: a flat plate with enamel roses
+  round its scalloped edge over three nested ruffled frills, the outer one's edge a ring of metal.
+  Her colours are the fixed `porcelain` and `porcelain_blush` (the bodice, the pointe shoes and the
+  tutu's frills, so that she reads against a light sleeve); the tiara, the bodice's trim and the
+  tutu's edge follow the look's metal. The
   script stops the run if the pedestal comes within 2 mm of the frame or 15 mm of the LED ring, if
   the garland leaves its frieze, or if the figure's height or reach is off (her reach must keep
   20 mm clear of the record's edge). `LUXE_DANCER` in `src/testing/model-measures.ts` is the box of
@@ -126,8 +128,8 @@ They write `public/assets/cd-player.glb`, `public/assets/cd-player-clear.glb`,
 `src/scene/model-contract.test.ts` checks each one's names, materials, where things are parented
 and the budget (150k triangles, 4 MB). The committed suitcase is about 100,633 triangles and
 776 KB, the Clear model about 132,715 and 965 KB, the Deck about 81,762 and 702 KB, the Luxe
-turntable about 73,019 and 584 KB with its ornament and its dancer (KB of 1024 bytes; about 28,239
-of the triangles are the ornament's and 17,100 the dancer's, her pedestal included). Luxe has a
+turntable about 73,689 and 589 KB with its ornament and its dancer (KB of 1024 bytes; about 28,239
+of the triangles are the ornament's and 17,700 the dancer's, her pedestal included). Luxe has a
 budget of its own: 650,000 bytes and 80,000 triangles. Rebuild a
 model after any change to its scripts
 (`cdkit.py` and `parts.py` are every model's, `vinyl.py` every turntable's; the Deck's build also

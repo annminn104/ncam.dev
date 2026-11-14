@@ -9,7 +9,7 @@ Blender's axes as in parts.py, millimetres.
 - The pedestal (luxe_pedestal), in the body group: a metal drum DANCER_DRUM[0] mm in radius, from
   the top (LX_TOP) DANCER_DRUM[1] mm up. A moulding at its foot and one at its top, each ringed by a
   pearl row; between them DANCER_FLUTES flutes, and over them a smooth frieze, which carries an
-  enamel garland of camellias, daisies and roses with their leaves. Its ornament is
+  enamel garland of camellias and daisies with their leaves. Its ornament is
   `<name>_deck_orn_pedestal_<material>`, so that it hangs and is checked as the deck's.
 - The turning top (`<name>_dancer`): an empty at the drum's top centre, its local Z up, under the
   player's root as the platter is (the web build names it `dancer`, and the page turns it). It holds
@@ -23,9 +23,10 @@ Blender's axes as in parts.py, millimetres.
   each chain of it) under two levels of subdivision, applied (the web build decimates it to
   DANCER_WEB_BODY triangles), then sized, so that her height is exact. It is porcelain, its bodice
   and pointe shoes porcelain_blush, with a metal trim along the bodice's neckline and a blush ribbon
-  round each ankle. Her classical plate tutu, at her hips, has three layers: a flat plate with small
-  enamel roses round its scalloped edge (`<name>_dancer_roses_<material>`), and two ruffled frills
-  under it stepping out to DANCER_TUTU (64 mm across), the outer one's edge in metal.
+  round each ankle, each over its material's seam. Her classical plate tutu, at her hips, is a flat
+  ivory plate with small enamel roses round its scalloped edge (`<name>_dancer_roses_<material>`)
+  over three ruffled blush frills (so that she reads against a light sleeve behind her), stepping
+  out to DANCER_TUTU (64 mm across), the outer one's edge a ring of metal.
 
 Each piece is checked as it is built, and the run stops if one strays: the drum inside the frame's
 inner outline and clear of the LED ring, the garland on its frieze, the figure's height and her
@@ -57,8 +58,8 @@ PED_PEARL = (1.4, 4.4)           # the pearl rows: a bead's radius, their pitch
 
 # The figure's skeleton, in her own frame before she is sized (mm: her pointe at the origin, her
 # front toward -y, so her left is +x): each joint's place and the skin's radii there (across, front
-# to back). Her left leg stands; her right is in retiré. _smooth_skeleton runs a smooth curve through
-# each chain of joints before the skin is made.
+# to back). Her left leg stands; her right is in retiré. _smooth_skeleton runs a smooth curve
+# through each chain of joints before the skin is made.
 DANCER_JOINTS = {
     "l_tip": ((0.0, 0.0, 0.7), (1.1, 1.0)),
     "l_box": ((0.0, -0.3, 3.0), (1.8, 1.6)),
@@ -123,17 +124,18 @@ DANCER_BONES = (
 )
 DANCER_SMOOTH = 3                # the skin's bones along each span of a chain, on its smooth curve
 DANCER_NECKLINE = 67.0           # the bodice's top (design mm): its trim lies along it
+DANCER_BODICE = 53.8             # the bodice's lower edge (design mm), hidden inside the tutu
 # The head (design mm): its centre, its half-width, half-depth and half-height, how much its lower
 # half narrows toward the chin, and its tilt about the nape (toward her left, then forward).
 DANCER_HEAD = ((0.3, 0.0, 83.6), (4.2, 5.0, 5.8), 0.2, (math.radians(11.0), math.radians(7.0)))
 DANCER_BUN = ((0.0, 4.1, 3.8), (2.7, 2.5, 2.3))   # the bun round the head's centre, and its radii
 # The tutu: the plate's top over her pointe (design mm, sized with her), and each layer's reach (the
-# plate, the middle frill, the outer frill, inside its metal edge), how far its top lies under the
-# plate's and its thickness (mm).
+# plate, then the three frills out to the outer one, inside its metal edge), how far its top lies
+# under the plate's and its thickness (mm).
 DANCER_PLATE_Z = 55.0
-TUTU_LAYERS = ((26.6, 0.0, 0.6), (29.4, 0.75, 0.55), (DANCER_TUTU - 0.4, 1.45, 0.55))
-TUTU_FRILL = (21.0, 32.0, 1.0, 1.8, 16)  # the frills' ruffle: from, to, its amplitude, droop, waves
-TUTU_RINGS = (3.4, 22.0, 24.2)   # the layers' inner edge (in her hips), the plate's ring, the frills'
+TUTU_LAYERS = ((26.6, 0.0, 0.6), (28.4, 0.75, 0.5), (30.0, 1.4, 0.5), (DANCER_TUTU - 0.4, 2.05, 0.5))
+TUTU_FRILL = (21.0, 32.0, 1.15, 2.6, 16)  # the frills' ruffle: from, to, amplitude, droop, waves
+TUTU_RINGS = (3.4, 22.0)         # the layers' inner edge (in her hips), the plate's middle ring
 TUTU_SCALLOPS = (10, 0.8)        # the plate's scallops: how many, how deep
 TUTU_ROSES = (23.4, 2.7)         # a rose on each scallop: how far out, its radius
 
@@ -215,10 +217,10 @@ def luxe_pedestal(name, body):
         pearl_row(orn, face, [(0.0, b), (face.round, b)], wire, radius=bead, pitch=pitch, loop=True)
         _hold_pedestal(orn, since, cx, cy, z + lo, z + hi, r + PROUD, "pearl row")
         since = len(orn.placed)
-    # The garland round the frieze's middle: camellias, daisies and roses, a leaf either side of
+    # The garland round the frieze's middle: camellias and daisies in turn, a leaf either side of
     # each.
     frieze = Tube((cx, cy, z), (cx, cy, z + h), PED_SHAFT, ref=(0.0, 1.0, 0.0))
-    garland(orn, frieze, sum(PED_FRIEZE) / 2, wire, flowers=("camellia", "daisy", "rose"), count=6, size=2.8,
+    garland(orn, frieze, sum(PED_FRIEZE) / 2, wire, flowers=("camellia", "daisy"), count=6, size=2.8,
             wave=0.5, leaf_len=2.8)
     _hold_pedestal(orn, since, cx, cy, z + PED_FRIEZE[0], z + PED_FRIEZE[1], PED_SHAFT + PROUD, "garland")
     return orn.done()
@@ -291,23 +293,71 @@ def _skin_body(joints, bones, levels, ratio):
     return bm
 
 
+def _ankle(leg):
+    """Leg `leg`'s ("l" or "r") shoe seam (design mm): the plane through its ankle joint square to
+    the leg's smooth curve there (a Catmull-Rom's tangent, from the arch toward the calf), as its
+    point and its unit normal, up the leg."""
+    ankle = Vector(DANCER_JOINTS[leg + "_ankle"][0])
+    up = Vector(DANCER_JOINTS[leg + "_calf"][0]) - Vector(DANCER_JOINTS[leg + "_arch"][0])
+    return ankle, up.normalized()
+
+
+def _seams(bm):
+    """Cuts the body (design frame, metres) along its seams, so that each material edge follows an
+    edge of it exactly, decimated or not: across the trunk at the neckline (DANCER_NECKLINE) and at
+    the bodice's lower edge (DANCER_BODICE, inside the tutu), and across each leg at its shoe's seam
+    (_ankle). Each cut takes only the faces near its seam, so that it crosses nothing else."""
+    chest = Vector(DANCER_JOINTS["chest"][0])
+    cuts = [(Vector((chest.x, chest.y, z)), Vector((0.0, 0.0, 1.0)), 10.0) for z in (DANCER_NECKLINE, DANCER_BODICE)]
+    cuts += [_ankle(leg) + (2.6,) for leg in ("l", "r")]
+    for centre, normal, radius in cuts:
+        c = centre * MM
+        # In the mesh's own order (a set's follows memory addresses), so that a rebuild is the same.
+        for seq in (bm.verts, bm.edges, bm.faces):
+            seq.index_update()
+        faces = [f for f in bm.faces if (f.calc_center_median() - c).length < radius * MM]
+        edges = sorted({e for f in faces for e in f.edges}, key=lambda e: e.index)
+        verts = sorted({v for f in faces for v in f.verts}, key=lambda v: v.index)
+        bmesh.ops.bisect_plane(bm, geom=verts + edges + faces, plane_co=c, plane_no=normal, dist=1e-7)
+
+
+def _settle(bm):
+    """Puts bm's vertices and faces in an order of their own places (a vertex by where it is, a face
+    by where its vertices are), and returns it. bisect_plane and the sphere primitive (which welds
+    its poles) leave theirs in an order that changes from one run to the next, and the GLB must
+    rebuild byte for byte the same."""
+    for seq, key in ((bm.verts, lambda v: tuple(v.co)),
+                     (bm.faces, lambda f: sorted(tuple(v.co) for v in f.verts))):
+        rank = {e: i for i, e in enumerate(sorted(seq, key=key))}
+        seq.sort(key=lambda e: rank[e])
+    return bm
+
+
 def _dress(bm, joints, bones):
-    """Gives each face of the body its material by the bone nearest it: 1 (porcelain_blush) for the
-    pointe shoes and for the bodice (the trunk from inside the tutu's layers, where its lower edge
-    is hidden, up to the neckline), else 0 (porcelain)."""
-    low = DANCER_PLATE_Z - 1.2
-    segs = [(Vector(joints[a][0]), Vector(joints[b][0]), tag) for a, b, tag in bones]
+    """Gives each face of the body its material, 1 (porcelain_blush) or 0 (porcelain), by the bone
+    nearest it: the trunk's between the bodice's lower edge (DANCER_BODICE, hidden inside the tutu)
+    and the neckline is the bodice, and a leg's on the toe's side of its shoe seam (_ankle) the
+    pointe shoe; _seams has cut the body along each of them."""
+    segs = [(Vector(joints[a][0]), Vector(joints[b][0]), a[:2], tag) for a, b, tag in bones]
+    seams = {leg + "_": _ankle(leg) for leg in ("l", "r")}
     for f in bm.faces:
         c = f.calc_center_median() / MM
         best = None
-        for pa, pb, tag in segs:
+        for pa, pb, side, tag in segs:
             ab = pb - pa
             t = min(max((c - pa).dot(ab) / ab.length_squared, 0.0), 1.0)
             d = (pa + ab * t - c).length_squared
             if best is None or d < best[0]:
-                best = (d, tag)
-        tag = best[1]
-        f.material_index = 1 if tag == "shoe" or (tag == "trunk" and low < c.z < DANCER_NECKLINE) else 0
+                best = (d, side, tag)
+        _, side, tag = best
+        if tag in ("shoe", "leg") and side in seams and (c - seams[side][0]).length < 14.0:
+            ankle, up = seams[side]
+            blush = (c - ankle).dot(up) < 0.0
+        elif tag == "shoe":
+            blush = True
+        else:
+            blush = tag == "trunk" and DANCER_BODICE < c.z < DANCER_NECKLINE
+        f.material_index = 1 if blush else 0
 
 
 def _merge(dst, src, material=0):
@@ -359,23 +409,41 @@ def _ovoid(bm, centre, radii, taper, seg):
     return made
 
 
-def _pipe(bm, pts, r, sides):
-    """A tube r mm round the polyline `pts` (mm) into bm, its ends capped."""
+def _pipe(bm, pts, r, sides, closed=False):
+    """A tube r mm round the polyline `pts` (mm) into bm, its ends capped; or, `closed`, a seamless
+    ring round the loop through them (the last point joined back to the first), its frame's twist
+    once round spread evenly along it so that its last ring meets its first."""
     pts = [Vector(p) for p in pts]
-    rings = []
-    normal = None
-    for i, p in enumerate(pts):
-        t = (pts[min(i + 1, len(pts) - 1)] - pts[max(i - 1, 0)]).normalized()
+    n = len(pts)
+
+    def tangent(i):
+        if closed:
+            return (pts[(i + 1) % n] - pts[(i - 1) % n]).normalized()
+        return (pts[min(i + 1, n - 1)] - pts[max(i - 1, 0)]).normalized()
+    frames, normal = [], None
+    for i in range(n):
+        t = tangent(i)
         normal = (t.orthogonal() if normal is None else normal - t * normal.dot(t)).normalized()
+        frames.append((t, normal))
+    twist = 0.0
+    if closed:
+        # The first normal carried once more round to the start, against the first normal itself.
+        t0, n0 = frames[0]
+        back = (normal - t0 * normal.dot(t0)).normalized()
+        twist = math.atan2(n0.cross(back).dot(t0), n0.dot(back))
+    rings = []
+    for i, (t, normal) in enumerate(frames):
+        normal = Matrix.Rotation(-twist * i / n, 3, t) @ normal
         side = t.cross(normal)
-        rings.append([bm.verts.new(p + (normal * math.cos(a) + side * math.sin(a)) * r)
+        rings.append([bm.verts.new(pts[i] + (normal * math.cos(a) + side * math.sin(a)) * r)
                       for a in (2.0 * math.pi * k / sides for k in range(sides))])
-    for ra, rb in zip(rings, rings[1:]):
+    for ra, rb in zip(rings, rings[1:] + (rings[:1] if closed else [])):
         for k in range(sides):
             m = (k + 1) % sides
             bm.faces.new((ra[k], ra[m], rb[m], rb[k]))
-    bm.faces.new(rings[0][::-1])
-    bm.faces.new(rings[-1])
+    if not closed:
+        bm.faces.new(rings[0][::-1])
+        bm.faces.new(rings[-1])
 
 
 def _cone(bm, base, direction, r, h, sides):
@@ -424,8 +492,10 @@ def _head(bm_head, bm_tiara, seg):
 
 
 def _frill(r, theta):
-    """A frill's top over its flat inner part (mm) at radius r, angle theta: its droop and its
-    ruffle, the same for every frill, so that they nest."""
+    """A frill's top at radius r, angle theta, over its height at its inner edge (mm): its droop and
+    its ruffle, the same for every frill, so that they nest. At the frills' outlines, where the
+    layers take it (from 27.9 mm out), the droop outweighs the ruffle: no frill rises over its inner
+    edge's height into the layer over it."""
     r0, r1, amp, droop, waves = TUTU_FRILL
     u = min(max((r - r0) / (r1 - r0), 0.0), 1.0)
     return -droop * u * u + amp * u ** 1.5 * math.sin(waves * theta)
@@ -444,12 +514,13 @@ def _tutu_edge(layer, theta):
 def _tutu_layer(bm, layer, z_plate):
     """Layer `layer` of TUTU_LAYERS into bm, round her axis: a closed disc from inside her hips
     (TUTU_RINGS[0]) out to its outline (_tutu_edge), its top under the plate's (z_plate) by the
-    layer's own depth, thinning toward its edge. The plate is flat; a frill droops and ruffles
-    (_frill). The frills share their rings (TUTU_RINGS[2], the middle frill's outline), so that
-    the outer one nests under the middle one. Returns the outer frill's rim (its middle all round,
+    layer's own depth, thinning toward its edge. The plate (material 0, porcelain) is flat; a frill
+    (material 1, porcelain_blush) droops and ruffles (_frill). Each frill's rings are its inner edge
+    and the outline of every frill out to its own, so that the frills share them and each nests
+    under the one over it, never crossing it. Returns the outer frill's rim (its middle all round,
     mm), else None."""
     reach, under, thick = TUTU_LAYERS[layer]
-    r_in, plate_ring, frill_ring = TUTU_RINGS
+    r_in, plate_ring = TUTU_RINGS
     waves = TUTU_FRILL[4]
     n = TUTU_SCALLOPS[0] * (6 if WEB else 12) if layer == 0 else waves * (4 if WEB else 10)
     top, bot = [], []
@@ -458,7 +529,7 @@ def _tutu_layer(bm, layer, z_plate):
         if layer == 0:
             rings = (r_in, plate_ring, _tutu_edge(0, th))
         else:
-            rings = (r_in, frill_ring) + tuple(_tutu_edge(k, th) for k in range(1, layer + 1))
+            rings = (r_in,) + tuple(_tutu_edge(k, th) for k in range(1, layer + 1))
         ct, st = math.cos(th), math.sin(th)
         trow, brow = [], []
         for rr in rings:
@@ -469,13 +540,16 @@ def _tutu_layer(bm, layer, z_plate):
         top.append(trow)
         bot.append(brow)
     last = len(top[0]) - 1
+    made = []
     for i in range(n):
         j = (i + 1) % n
         for k in range(last):
-            bm.faces.new((top[i][k], top[i][k + 1], top[j][k + 1], top[j][k]))
-            bm.faces.new((bot[i][k], bot[j][k], bot[j][k + 1], bot[i][k + 1]))
-        bm.faces.new((top[i][last], bot[i][last], bot[j][last], top[j][last]))
-        bm.faces.new((top[i][0], top[j][0], bot[j][0], bot[i][0]))
+            made.append(bm.faces.new((top[i][k], top[i][k + 1], top[j][k + 1], top[j][k])))
+            made.append(bm.faces.new((bot[i][k], bot[j][k], bot[j][k + 1], bot[i][k + 1])))
+        made.append(bm.faces.new((top[i][last], bot[i][last], bot[j][last], top[j][last])))
+        made.append(bm.faces.new((top[i][0], top[j][0], bot[j][0], bot[i][0])))
+    for f in made:
+        f.material_index = 0 if layer == 0 else 1
     if layer == len(TUTU_LAYERS) - 1:
         return [((Vector(top[i][last].co) + Vector(bot[i][last].co)) / 2) / MM for i in range(n)]
     return None
@@ -487,8 +561,9 @@ def luxe_dancer(name, root):
     metal disc (`<name>_dancer_disc`) and the figure on it, sized to DANCER_HEIGHT, her pointe at
     the disc's top centre. Her porcelain (`<name>_dancer_figure`: the body, the head and bun and
     the ankles' ribbons, in porcelain and porcelain_blush), her metal (`<name>_dancer_metal`: the
-    tiara, the bodice's trim and the tutu's edge), the tutu (`<name>_dancer_tutu`) and the roses on
-    its plate (`<name>_dancer_roses_<material>`), each one mesh in the dancer's frame."""
+    tiara, the bodice's trim and the tutu's edge), the tutu (`<name>_dancer_tutu`: its plate in
+    porcelain, its frills in porcelain_blush) and the roses on its plate
+    (`<name>_dancer_roses_<material>`), each one mesh in the dancer's frame."""
     cx, cy = LX_DANCER
     dancer = empty(name + "_dancer", L(cx, cy, LX_TOP + DANCER_DRUM[1]), parent=root)
     rd, td = DANCER_DISC
@@ -506,6 +581,7 @@ def luxe_dancer(name, root):
     zs = [v.co.z / MM for v in figure.verts]
     low, high = min(zs), max(zs)
     s = DANCER_HEIGHT / (high - low)
+    _seams(figure)
     _dress(figure, joints, bones)
     size = (Matrix.Translation((0.0, 0.0, td * MM)) @ Matrix.Rotation(DANCER_YAW, 4, "Z") @ Matrix.Scale(s, 4)
             @ Matrix.Translation((0.0, 0.0, -low * MM)))
@@ -526,9 +602,8 @@ def luxe_dancer(name, root):
           32 if WEB else 72)
     ribbons = bmesh.new()
     for leg in ("l", "r"):
-        ankle, calf = Vector(DANCER_JOINTS[leg + "_ankle"][0]), Vector(DANCER_JOINTS[leg + "_calf"][0])
-        _band(ribbons, bvh, at(ankle + (calf - ankle) * 0.08), lean @ (calf - ankle), 0.45 * s, 0.15,
-              16 if WEB else 40)
+        ankle, up = _ankle(leg)     # centred on the shoe's seam, so that it covers it
+        _band(ribbons, bvh, at(ankle), lean @ up, 0.45 * s, 0.15, 16 if WEB else 40)
     _merge(figure, ribbons, 1)
 
     # The head, its bun and the tiara, sized as the body.
@@ -549,12 +624,13 @@ def luxe_dancer(name, root):
     bmesh.ops.transform(tutu, matrix=turn, verts=tutu.verts)
     bmesh.ops.recalc_face_normals(tutu, faces=tutu.faces)
     edge = bmesh.new()
-    _pipe(edge, [turn @ p for p in rim + rim[:1]], 0.38, 5 if WEB else 10)
+    _pipe(edge, [turn @ p for p in rim], 0.38, 5 if WEB else 10, closed=True)
     bmesh.ops.transform(edge, matrix=Matrix.Scale(MM, 4), verts=edge.verts)
     _merge(metal, edge)
-    from_bm(name + "_dancer_figure", figure, [M["porcelain"], M["porcelain_blush"]], parent=dancer)
-    from_bm(name + "_dancer_metal", metal, [M["luxe_metal"]], parent=dancer)
-    edge_split(from_bm(name + "_dancer_tutu", tutu, [M["porcelain"]], parent=dancer), 40)
+    from_bm(name + "_dancer_figure", _settle(figure), [M["porcelain"], M["porcelain_blush"]], parent=dancer)
+    from_bm(name + "_dancer_metal", _settle(metal), [M["luxe_metal"]], parent=dancer)
+    edge_split(from_bm(name + "_dancer_tutu", _settle(tutu), [M["porcelain"], M["porcelain_blush"]], parent=dancer),
+               40)
 
     orn = Ornament(name + "_dancer_roses", dancer)
     plate = Plane((0.0, 0.0, z_plate), (0.0, 0.0, 1.0), turn @ Vector((0.0, 1.0, 0.0)))

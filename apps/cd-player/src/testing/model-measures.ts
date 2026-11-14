@@ -173,12 +173,12 @@ export const LUXE_PLINTH = {
  * Luxe's dancer (`dancer`, the empty the page turns, its up the world's) on her pedestal at the
  * deck's back left corner: where it stands, and the box of the pedestal, the turning disc and the
  * figure swept a full turn about its vertical axis (a cylinder's box: her reach from the axis,
- * 31.98 mm, all round), in the GLB's world frame at rest.
+ * 31.93 mm, all round), in the GLB's world frame at rest.
  */
 export const LUXE_DANCER = {
   position: [-0.188, 0.1, -0.153],
-  min: [-0.21998, 0.08, -0.18498],
-  max: [-0.15602, 0.207, -0.12102],
+  min: [-0.21993, 0.08, -0.18493],
+  max: [-0.15607, 0.207, -0.12107],
 } as const satisfies { position: Vec3; min: Vec3; max: Vec3 };
 
 /**
