@@ -59,17 +59,21 @@ hand.
   round a vertical extrusion, `Tube(p0, p1, radius, ref)` round a cylinder), the motifs (camellia,
   daisy, five-petal rose, leaf, leaf spray, acanthus, C- and S-scrolls, rocaille shell, pearl row,
   vine, a vine round a tube, a garland), each outlined in the wire material its caller passes, and
-  `lay(orn, face, items, wire)` with `mirrored(items)` for symmetric layouts. Low relief (enamel
-  0.58 mm proud at most, wire 0.78, a bead's flattened cap 0.9), every part 0.02 mm off its face,
-  and nothing past 0.9 mm (an `Ornament` stops the run on a part that would stand further);
-  `Ornament(name, parent)` merges one group's into a mesh per material hanging from it. Its
+  `lay(orn, face, items, wire)` with `mirrored(items)` for symmetric layouts and
+  `shifted(items, da, db)` to move one; a vine's flower can sit at its stem's end (`along` None).
+  Low relief (enamel 0.58 mm proud at most, wire 0.78, a bead's flattened cap 0.9), every part
+  0.02 mm off its face, and nothing past 0.9 mm (an `Ornament` stops the run on a part that would
+  stand further);
+  `Ornament(name, parent)` merges one group's into a mesh per material hanging from it, and
+  `hold(orn, since, lo, hi, what)` stops the run unless what a model laid lies in a box. Its
   docstring has the signatures.
 - `blender/scripts/suitcase_ornament.py`: the suitcase's ornament on `ornament.py`'s kit, its wire
   in `hardware` (so it follows the skin's metal) and its enamel fixed under every skin: under the
-  seam, a camellia either side of the handle between its mount and the clasp, and from each clasp a
-  vine with daisies, camellias and roses round the front corner and along the side; a bouquet
-  medallion on each side (a pearl-set oval, a camellia, roses and daisies tied with a bow, C-scrolls,
-  leaf sprays and acanthus); a small daisy spray in each corner of the deck top; and on the lid's
+  seam, either side of the handle, a short vine with a daisy, a camellia and two leaves between its
+  mount and the clasp, and from each clasp a vine with daisies, camellias and roses round the front
+  corner and along the side; a bouquet medallion on each side (a pearl-set oval, a camellia, roses
+  and daisies tied with a bow, C-scrolls, leaf sprays and acanthus); a small daisy spray in each
+  corner of the deck top; and on the lid's
   lining a thin vine border round its free edge, floral sprays in its two free corners (the bottom
   left, and the top left under the strap), a camellia between the plate and the rack and a vine
   between the strap and the case. The rack's frame takes the lining's whole right half, so its two
@@ -79,7 +83,8 @@ hand.
   mounts, the clasps, the grille's border or the corner caps; on the deck into the well, the keys,
   the knob, the display, the tonearm and its sweep, the screws or the lettering; on the lining under
   the case, its clips, the strap, the plate or the rack); every part keeps 5 mm off a disc, resting
-  or flying (`src/scene/ornament-clearance.test.ts` holds it).
+  or flying (`src/scene/ornament-clearance.test.ts` holds it). Its keep-outs are worked out from
+  `parts.py`'s constants, and from the parts it places at literal positions, which it names.
 - `blender/scripts/vinyl.py`: what every turntable shares: the 12-inch record (vinyl and its
   label), its sleeve and the LED ring round the platter.
 - `blender/scripts/luxe.py`: Luxe, on `parts.py` and `vinyl.py`: a lacquered two-tier plinth, the
@@ -144,15 +149,15 @@ They write `public/assets/cd-player.glb`, `public/assets/cd-player-clear.glb`,
 `public/assets/cd-player-deck.glb` and `public/assets/cd-player-luxe.glb` (all committed;
 `pipeline/build.mjs` hands the model to `export.py` as `CDP_MODEL`).
 `src/scene/model-contract.test.ts` checks each one's names, materials, where things are parented
-and the budget (150k triangles, 4 MB). The committed suitcase is about 124,136 triangles and
-920 KB with its ornament (about 23,503 of the triangles), the Clear model about 132,715 and 965 KB, the Deck about 81,762 and 702 KB, the Luxe
-turntable about 73,689 and 589 KB with its ornament and its dancer (KB of 1024 bytes; about 28,239
-of the triangles are the ornament's and 17,700 the dancer's, her pedestal included). Luxe has a
-budget of its own: 650,000 bytes and 80,000 triangles; the suitcase's ornament may add 200,000
-bytes at most to the 795,088 it weighed without it. Rebuild a
-model after any change to its scripts
-(`cdkit.py` and `parts.py` are every model's, `vinyl.py` every turntable's; the Deck's build also
-rewrites `src/scene/textures/deck-atlas.json`, which is committed with the GLB).
+and the budget (150k triangles, 4 MB). The committed suitcase is about 124,348 triangles and
+920 KB with its ornament (about 23,715 of the triangles), the Clear model about 132,715 and 965 KB,
+the Deck about 81,762 and 702 KB, the Luxe turntable about 73,689 and 589 KB with its ornament and
+its dancer (KB of 1024 bytes; about 28,239 of the triangles are the ornament's and 17,700 the
+dancer's, her pedestal included). Luxe has a budget of its own: 650,000 bytes and 80,000 triangles;
+the suitcase's ornament may add 200,000 bytes at most to the 795,088 it weighed without it. Rebuild
+a model after any change to its scripts (`cdkit.py` and `parts.py` are every model's, `vinyl.py`
+every turntable's; the Deck's build also rewrites `src/scene/textures/deck-atlas.json`, which is
+committed with the GLB).
 
 ## Renders
 

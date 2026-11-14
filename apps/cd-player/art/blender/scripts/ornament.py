@@ -1,7 +1,7 @@
 """ornament: cloisonné enamel for any model's faces. Motifs are drawn as metal wire outlines (the
 wire's material is the caller's: Luxe passes luxe_metal, the suitcase hardware, so the outlines
 follow the look) filled with enamel in a fixed palette, ENAMEL, which build_enamel_materials makes.
-luxe_ornament.py lays Luxe's.
+luxe_ornament.py lays Luxe's, suitcase_ornament.py the suitcase's.
 
 Exec'd after cdkit.py and parts.py, before a model's own scripts, into the same namespace: it reads
 cdkit's M, MM, WEB, mat, lin, hexrgb and from_bm, parts.py's smooth_path, and nothing of any model.
@@ -63,14 +63,15 @@ its own up), `layer` (its lowest layer) and its colours (keys of ENAMEL):
 - pearl_row(orn, face, path, wire, radius=1.4, pitch=6.0, loop=False, skip=None): beads along a
   path in (a, b);
 - vine(orn, face, path, wire, every=25.0, leaf_len=7.0, flowers=()): a stem along a path, a leaf
-  every `every` mm, tendrils, flowers on it;
+  every `every` mm, tendrils, flowers on it (a flower's `along` None puts it at the stem's end);
 - vine_round(orn, tube, wire, b0, b1, turns=3.0, window=None, ...): a vine winding up a Tube, or
   weaving within a window round it;
 - garland(orn, tube, b, wire, flowers=("camellia", "daisy", "rose"), count=6, size=4.0, ...): a wavy
   vine all the way round a Tube at height b, flowers evenly round it.
 lay(orn, face, items, wire) lays a layout (items (motif, (a, b), size, keywords)) on a face;
 mirror(items) is its mirror image across a = 0 and mirrored(items) the layout and its mirror, for a
-symmetric face.
+symmetric face; shifted(items, da, db) moves a layout. hold(orn, since, lo, hi, what) stops the run
+unless what a caller laid since a count of orn.placed lies in a box, for a model's own checks.
 """
 import bisect
 import math
@@ -851,13 +852,15 @@ def vine(orn, face, path, wire, every=25.0, leaf_len=7.0, flowers=(), tendrils=T
     stem in wire, a leaf every `every` mm along it, alternating sides and pointing `leaf_angle`
     degrees ahead, a tendril curling off the other side of every other one, and `flowers`, each
     (along, motif, size[, keywords]): that motif (a function or its name) centred on the stem
-    `along` mm from its start, the stem stopping inside its petals and no leaf rooted under it (a
-    leaf rooted just outside it tucks under it)."""
+    `along` mm from its start (None: at its end), the stem stopping inside its petals and no leaf
+    rooted under it (a leaf rooted just outside it tucks under it)."""
     pts = smooth_path(path, 6) if smooth and len(path) > 2 else list(path)
     walk = _OrnPath(pts)
     blooms = []
     for item in flowers:
         along, motif, size = item[:3]
+        if along is None:
+            along = walk.length
         (a, b), _ = walk.point_at(along)
         blooms.append((along, (a, b), size, motif, item[3] if len(item) > 3 else {}))
     # The stem in runs between the flowers, each stopping just inside a flower's petals.
@@ -954,3 +957,22 @@ def mirror(items):
 def mirrored(items):
     """The layout and its mirror image across a = 0 (a symmetric face's two halves from one)."""
     return list(items) + mirror(items)
+
+
+def shifted(items, da, db=0.0):
+    """A layout moved da along a and db along b."""
+    return [(motif, (at[0] + da, at[1] + db), size, *rest) for motif, at, size, *rest in items]
+
+
+def hold(orn, since, lo, hi, what):
+    """Stops the run, naming the group, `what` and where it reaches, unless every vertex laid since
+    `since` (a count of orn.placed taken before) lies in the box lo .. hi ((x, y, z) mm in the
+    group's frame; None leaves that side free)."""
+    least, most = orn.extent(since)
+    for axis in range(3):
+        low = lo[axis] is not None and least[axis] < lo[axis] - 1e-6
+        high = hi[axis] is not None and most[axis] > hi[axis] + 1e-6
+        if low or high:
+            raise SystemExit("ornament.py: %s: %s reaches %s .. %s, outside %s .. %s"
+                             % (orn.name, what, tuple(round(c, 2) for c in least), tuple(round(c, 2) for c in most),
+                                lo, hi))

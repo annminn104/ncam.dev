@@ -45,26 +45,9 @@ BAR_WINDOW = 1.0                 # the stand bar's vine weaves this many mm eith
 LEG_WINDOW = 0.25                # the ledge legs' vines, likewise
 
 
-def _shifted(items, da, db=0.0):
-    """A layout moved da along a and db along b."""
-    return [(motif, (at[0] + da, at[1] + db), size, *rest) for motif, at, size, *rest in items]
-
-
 def _scaled(items, k):
     """A layout grown k times about (0, 0)."""
     return [(motif, (at[0] * k, at[1] * k), size * k, *rest) for motif, at, size, *rest in items]
-
-
-def _hold(orn, since, lo, hi, what):
-    """Stops the run, naming `what` and where it reaches, unless every vertex laid since `since`
-    lies in the box lo .. hi ((x, y, z) mm in the group's frame; None leaves that side free)."""
-    least, most = orn.extent(since)
-    for axis in range(3):
-        low = lo[axis] is not None and least[axis] < lo[axis] - 1e-6
-        high = hi[axis] is not None and most[axis] > hi[axis] + 1e-6
-        if low or high:
-            raise SystemExit("luxe_ornament.py: %s reaches %s .. %s, outside %s .. %s"
-                             % (what, tuple(round(c, 2) for c in least), tuple(round(c, 2) for c in most), lo, hi))
 
 
 def side_name(sx):
@@ -110,7 +93,7 @@ def luxe_front(orn, wire):
     since = len(orn.placed)
     lay(orn, face, centre + mirrored(half), wire)
     flat = LX_W / 2 - LX_CORNER[0]
-    _hold(orn, since, (-flat, -LX_D / 2 - LX_BAND[1], ORN_BAND[0]), (flat, -LX_D / 2, ORN_BAND[1]), "the front")
+    hold(orn, since, (-flat, -LX_D / 2 - LX_BAND[1], ORN_BAND[0]), (flat, -LX_D / 2, ORN_BAND[1]), "the front")
 
 
 def luxe_sides(orn, wire):
@@ -123,9 +106,9 @@ def luxe_sides(orn, wire):
         # the right (+y).
         face = Plane((sx * LX_W / 2, 0.0, 0.0), (sx, 0.0, 0.0), (0.0, 0.0, 1.0))
         since = len(orn.placed)
-        lay(orn, face, _shifted(_medallion(colours), sx * ORN_SIDE_Y, mid), wire)
+        lay(orn, face, shifted(_medallion(colours), sx * ORN_SIDE_Y, mid), wire)
         x0, x1 = sorted((sx * LX_W / 2, sx * (LX_W / 2 + LX_BAND[1])))
-        _hold(orn, since, (x0, -flat, ORN_BAND[0]), (x1, flat, ORN_BAND[1]), "the %s side" % side_name(sx))
+        hold(orn, since, (x0, -flat, ORN_BAND[0]), (x1, flat, ORN_BAND[1]), "the %s side" % side_name(sx))
 
 
 def luxe_upper(orn, wire):
@@ -152,8 +135,8 @@ def luxe_upper(orn, wire):
             leaf(orn, wall, (c + side * 3.8, z), 6.2, wire, turn=-side * math.pi / 2, flip=side < 0)
     # Between the lower tier's band (to z 57) and the upper's (from 76), and no further than PROUD
     # off the upper tier's sides (the beads' tops; ornament.py stops anything past it anyway).
-    _hold(orn, since, (-uw / 2 - PROUD, -ud / 2 - PROUD, LX_TIER + 2.0),
-          (uw / 2 + PROUD, ud / 2 + PROUD, LX_TOP - LX_BAND[0] - 2.0), "the upper tier")
+    hold(orn, since, (-uw / 2 - PROUD, -ud / 2 - PROUD, LX_TIER + 2.0),
+         (uw / 2 + PROUD, ud / 2 + PROUD, LX_TOP - LX_BAND[0] - 2.0), "the upper tier")
 
 
 def _top_clear(orn, since):
@@ -214,7 +197,7 @@ def luxe_top(orn, wire):
          flowers=[(8.0, "rose", 4.2, {"colours": ("coral", "butter")}), (31.0, "daisy", 5.4), (60.0, "camellia", 5.6),
                   (88.0, "daisy", 4.2, {"colour": "sky"})])
     _top_clear(orn, since)
-    _hold(orn, since, (None, None, LX_TOP), (None, None, LX_TOP + LX_BAND[1]), "the top")
+    hold(orn, since, (None, None, LX_TOP), (None, None, LX_TOP + LX_BAND[1]), "the top")
 
 
 def luxe_deck_ornament(name, body):
@@ -254,7 +237,7 @@ def luxe_stand_ornament(name, stand):
         # left.
         face = Plane((sx * (LS_INNER + t), 0.0, 0.0), (sx, 0.0, 0.0), (0.0, 0.0, 1.0))
         since = len(orn.placed)
-        items = _shifted(tilted, *centre)
+        items = shifted(tilted, *centre)
         lay(orn, face, items if sx > 0 else mirror(items), wire)
         path = [(sx * y, z) for y, z in under]
         vine(orn, face, path, wire, every=11.0, leaf_len=5.0, smooth=False,
@@ -262,7 +245,7 @@ def luxe_stand_ornament(name, stand):
         # On the panel's flat, 4 mm inside its edges and 6 under its rail, and under the band's
         # 0.8 mm.
         x0, x1 = sorted((sx * (LS_INNER + t), sx * (LS_INNER + t + LX_BAND[1])))
-        _hold(orn, since, (x0, LS_FRONT + 4.0, 4.0), (x1, LS_BACK - 4.0, None), "the stand's %s panel" % side_name(sx))
+        hold(orn, since, (x0, LS_FRONT + 4.0, 4.0), (x1, LS_BACK - 4.0, None), "the stand's %s panel" % side_name(sx))
         for p in orn.placed[since:]:
             if p.z > _panel_top(p.y) - 6.0:
                 raise SystemExit("luxe_ornament.py: the stand's %s panel's ornament at (%.1f, %.1f) runs into its rail"
