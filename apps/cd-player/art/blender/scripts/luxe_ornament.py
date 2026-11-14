@@ -33,6 +33,7 @@ Every part keeps 5 mm or more clear of a record or a sleeve, resting or flying.
 """
 import math
 
+import bmesh
 from mathutils import Vector
 
 ORN_BAND = (24.0, 50.0)          # the lower tier's ornament lies between these heights
@@ -59,7 +60,9 @@ def _hold(orn, since, lo, hi, what):
     lies in the box lo .. hi ((x, y, z) mm in the group's frame; None leaves that side free)."""
     least, most = orn.extent(since)
     for axis in range(3):
-        if (lo[axis] is not None and least[axis] < lo[axis] - 1e-6) or (hi[axis] is not None and most[axis] > hi[axis] + 1e-6):
+        low = lo[axis] is not None and least[axis] < lo[axis] - 1e-6
+        high = hi[axis] is not None and most[axis] > hi[axis] + 1e-6
+        if low or high:
             raise SystemExit("luxe_ornament.py: %s reaches %s .. %s, outside %s .. %s"
                              % (what, tuple(round(c, 2) for c in least), tuple(round(c, 2) for c in most), lo, hi))
 
@@ -69,8 +72,8 @@ def side_name(sx):
 
 
 def _medallion(colours):
-    """The sides' medallion round (0, 0): a camellia in a ring of four C-scrolls, each opening toward
-    it, and a leaf spray running out either side, a daisy at its end (the right one, and its
+    """The sides' medallion round (0, 0): a camellia in a ring of four C-scrolls, each opening
+    toward it, and a leaf spray running out either side, a daisy at its end (the right one, and its
     mirror)."""
     ring = [("camellia", (0.0, 0.0), 5.8, {"colours": colours}),
             ("c_scroll", (-10.2, 0.0), 13.0, {}),
@@ -83,8 +86,8 @@ def _medallion(colours):
 
 # ------------------------------------------------------------------ the deck
 def luxe_front(orn, wire):
-    """The lower tier's front (y = -LX_D / 2, a along x, b up): the cartouche, and the scrollwork out
-    to both corners (flat to |x| 201), between ORN_BAND's heights."""
+    """The lower tier's front (y = -LX_D / 2, a along x, b up): the cartouche, and the scrollwork
+    out to both corners (flat to |x| 201), between ORN_BAND's heights."""
     face = Plane((0.0, -LX_D / 2, 0.0), (0.0, -1.0, 0.0), (0.0, 0.0, 1.0))
     mid = sum(ORN_BAND) / 2
     centre = [("rocaille", (0.0, mid + 4.6), 7.6, {"spread": 1.05}),
@@ -135,7 +138,8 @@ def luxe_upper(orn, wire):
     flat_x, flat_y = uw / 2 - LX_CORNER[1], ud / 2 - LX_CORNER[1]
     stations = [wall.a_of((every * k, -ud / 2)) for k in range(-int(flat_x // every), int(flat_x // every) + 1)]
     for sx in (-1, 1):
-        stations += [wall.a_of((sx * uw / 2, every * k)) for k in range(-int(flat_y // every), int(flat_y // every) + 1)]
+        stations += [wall.a_of((sx * uw / 2, every * k))
+                     for k in range(-int(flat_y // every), int(flat_y // every) + 1)]
 
     def near_rose(a, b):
         return any(min((a - c) % wall.length, (c - a) % wall.length) < keep for c in stations)
@@ -146,16 +150,18 @@ def luxe_upper(orn, wire):
         rose(orn, wall, (c, z), r, wire, colours=palettes[k % len(palettes)])
         for side in (-1, 1):
             leaf(orn, wall, (c + side * 3.8, z), 6.2, wire, turn=-side * math.pi / 2, flip=side < 0)
-    # Between the lower tier's band (to z 57) and the upper's (from 76), inside the lower tier.
-    _hold(orn, since, (-LX_W / 2, -LX_D / 2, LX_TIER + 2.0), (LX_W / 2, LX_D / 2, LX_TOP - LX_BAND[0] - 2.0), "the upper tier")
+    # Between the lower tier's band (to z 57) and the upper's (from 76), and no further than PROUD
+    # off the upper tier's sides (the beads' tops; ornament.py stops anything past it anyway).
+    _hold(orn, since, (-uw / 2 - PROUD, -ud / 2 - PROUD, LX_TIER + 2.0),
+          (uw / 2 + PROUD, ud / 2 + PROUD, LX_TOP - LX_BAND[0] - 2.0), "the upper tier")
 
 
 def _top_clear(orn, since):
-    """Stops the run unless every vertex the top's sprays laid since `since` keeps 3 mm off the keys'
-    gaps and the logo, 5 mm off the arm at rest (what is drawn of it: x 122 to 185, from y -131.5
-    back) and out of its sweep (within 248 mm of the pivot, which the drawn head reaches to 242,
-    from 205 to 280 degrees), ORN_RING_CLEAR off the platter's axis, inside the frame, and out of
-    the back left corner (the decor knob's)."""
+    """Stops the run unless every vertex the top's sprays laid since `since` keeps 3 mm off the
+    keys' gaps and the logo, 5 mm off the arm at rest (what is drawn of it: x 122 to 185, from y
+    -131.5 back) and out of its sweep (within 248 mm of the pivot, which the drawn head reaches to
+    242, from 205 to 280 degrees), ORN_RING_CLEAR off the platter's axis, inside the frame, and out
+    of the back left corner (the decor knob's)."""
     uw, ud = LX_UPPER
     px, py = LUXE_PIVOT
     for p in orn.placed[since:]:
@@ -188,7 +194,8 @@ def luxe_top(orn, wire):
     # Round the logo (its letters about x 142 to 158, y -173.5 to -170.5): a stem arching 14 mm over
     # them from a daisy on their left to a camellia on their right, a spray running on left past a
     # second daisy, a rose in the corner and a vine up the right edge (x 196 to 208), right of the
-    # arm's rest. Each stem starts and ends inside a flower's petals, under its heart: never over it.
+    # arm's rest. Each stem starts and ends inside a flower's petals, under its heart: never over
+    # it.
     vine(orn, top, [(123.5, -162.5), (135.0, -157.5), (150.0, -155.5), (165.0, -157.0), (177.0, -159.5)], wire,
          every=7.5, leaf_len=6.0)
     vine(orn, top, [(199.5, -136.5), (202.0, -122.0), (200.5, -100.0), (202.0, -78.0), (201.0, -58.0)], wire,
@@ -243,7 +250,8 @@ def luxe_stand_ornament(name, stand):
         tilted.append((motif, at, size, opts))
     under = [(y, _panel_top(y) - 11.0) for y in (LS_FRONT + 8.0, 0.0, LS_BACK - 8.0)]
     for sx in (-1, 1):
-        # Seen from outside, a runs toward the back on the right panel (+y), toward the front on the left.
+        # Seen from outside, a runs toward the back on the right panel (+y), toward the front on the
+        # left.
         face = Plane((sx * (LS_INNER + t), 0.0, 0.0), (sx, 0.0, 0.0), (0.0, 0.0, 1.0))
         since = len(orn.placed)
         items = _shifted(tilted, *centre)
@@ -251,7 +259,8 @@ def luxe_stand_ornament(name, stand):
         path = [(sx * y, z) for y, z in under]
         vine(orn, face, path, wire, every=11.0, leaf_len=5.0, smooth=False,
              flowers=[(k * 45.0 + 18.0, "daisy" if k % 2 else "rose", 3.6) for k in range(4)])
-        # On the panel's flat, 4 mm inside its edges and 6 under its rail, and under the band's 0.8 mm.
+        # On the panel's flat, 4 mm inside its edges and 6 under its rail, and under the band's
+        # 0.8 mm.
         x0, x1 = sorted((sx * (LS_INNER + t), sx * (LS_INNER + t + LX_BAND[1])))
         _hold(orn, since, (x0, LS_FRONT + 4.0, 4.0), (x1, LS_BACK - 4.0, None), "the stand's %s panel" % side_name(sx))
         for p in orn.placed[since:]:
@@ -272,9 +281,9 @@ def luxe_stand_ornament(name, stand):
 
 def luxe_ledge_ornament(name, ledge):
     """The ledge's ornament (`<name>_orn_<material>`), hanging from it: a vine up the back of each
-    leg, weaving within LEG_WINDOW of its back line three times, a leaf every 25 mm, and near its top
-    a metal boss behind it with a rose on it, all 5 mm or more behind the face of the sleeve that
-    leans 0.4 mm off the legs."""
+    leg, weaving within LEG_WINDOW of its back line three times, a leaf every 25 mm, and near its
+    top a metal boss behind it with a rose on it, all 5 mm or more behind the face of the sleeve
+    that leans 0.4 mm off the legs."""
     orn = Ornament(name + "_orn", ledge)
     wire = M["luxe_metal"]
     lx, ly, lr, top = LEDGE_LEG
@@ -290,8 +299,11 @@ def luxe_ledge_ornament(name, ledge):
         # The boss: a metal disc square to `back`, 2.3 to 3.5 mm behind the leg's axis (0.2 mm into
         # the leg at its back line, 5.2 behind the sleeve); the rose on its back face.
         axis = p0 + up * boss_at
-        lathe("%s_orn_boss_%s" % (name, side), [(0.01, 0.0), (3.6, 0.0), (3.6, 1.2), (0.01, 1.2)], M["luxe_metal"],
-              seg=32, parent=ledge, loc=mmv(tuple(axis + back * 2.3)), rot=(-math.radians(90.0) - LS_LEAN, 0.0, 0.0))
+        bm = bmesh.new()
+        bmesh.ops.create_cone(bm, cap_ends=True, cap_tris=False, segments=12 if WEB else 32, radius1=3.8 * MM,
+                              radius2=3.8 * MM, depth=1.2 * MM)
+        edge_split(from_bm("%s_orn_boss_%s" % (name, side), bm, [M["luxe_metal"]], parent=ledge,
+                           loc=mmv(tuple(axis + back * 2.9)), rot=(-math.radians(90.0) - LS_LEAN, 0.0, 0.0)), 40)
         face = Plane(tuple(axis + back * 3.5), tuple(back), tuple(up))
         rose(orn, face, (0.0, 0.0), 3.3, wire, colours=("rose", "coral"))
     return orn.done()

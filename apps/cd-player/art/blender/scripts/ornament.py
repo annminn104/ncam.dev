@@ -28,9 +28,11 @@ enamel's top and its wire's top over the face): the ground (leaves, sprays, acan
 the blooms (petals) and their hearts, so that a flower drawn over a leaf lies above it, its wire
 too, and nothing coplanar of two colours overlaps. A flower's cells lie side by side, sharing their
 outlines, as cloisonné's do. Stems and scrolls (wire alone) stand at STEM, over every layer. The
-enamel is at most 0.58 mm proud and the wire 0.78, under the 0.8 mm of Luxe's bands, so a face's
-ornament never stands past the band round its tier. A bead (bead, pearl_row) is the one round part:
-a sphere's cap whose foot is BEAD_FOOT into its face, so that it never floats over a faceted corner.
+enamel is at most 0.58 mm proud and the wire 0.78, under the 0.8 mm of Luxe's bands. A bead (bead,
+pearl_row) is the one round part: a flattened sphere's cap, its centre under the face and its top
+PROUD off it, the cap carried on BEAD_FOOT under the face, hidden, so that it never floats over a
+faceted corner (a 1.4 mm bead's foot is 1.31 mm round). Nothing stands more than PROUD (0.9 mm, the
+spec's cap) off its face: an Ornament stops the run on a part that would.
 
 Ornament(name, parent) collects one group's ornament (a deck's body, a stand, a ledge); done()
 merges it into one mesh per material (`<name>_<material>`, the beads `<name>_<material>_beads`,
@@ -84,7 +86,8 @@ LAYERS = ((0.14, 0.26), (0.38, 0.50), (0.58, 0.70))  # (enamel's top, wire's top
 GROUND, BLOOM = 0, 1                                 # the leaves' layer, the flowers'
 STEM = 0.78                                          # stems and scrolls, wire alone, over every layer
 WIRE_W, STEM_W = 0.5, 0.8                            # a cell's outline, a stem's or a scroll's: widths
-BEAD_FOOT = 0.25                                     # a bead's foot this far into its face
+PROUD = 0.9                                          # nothing stands further off its face (a bead's top)
+BEAD_FOOT = 0.15                                     # a bead's cap goes on this far under the face
 SAG = 0.04                                           # a flat piece strays at most this off a curved face
 
 
@@ -275,9 +278,9 @@ class Wall:
 
 
 class Tube:
-    """Round a cylinder of `radius` from p0 to p1 (x, y, z mm): a round it from `ref` (made square to
-    the axis), counter-clockwise seen from p1, b along the axis from p0, h out from it. `round` is
-    its circumference, `length` its length."""
+    """Round a cylinder of `radius` from p0 to p1 (x, y, z mm): a round it from `ref` (made square
+    to the axis), counter-clockwise seen from p1, b along the axis from p0, h out from it. `round`
+    is its circumference, `length` its length."""
 
     def __init__(self, p0, p1, radius, ref=(1.0, 0.0, 0.0)):
         self.p0 = Vector(p0)
@@ -316,7 +319,11 @@ class Ornament:
         self.meshes = {}
         self.placed = []          # every vertex laid, in the group's frame (mm), for extent()
 
-    def _vert(self, bm, co):
+    def _vert(self, bm, co, h):
+        """A vertex at `co` (mm), `h` mm off its face: it stops the run past PROUD."""
+        if h > PROUD + 1e-9:
+            raise SystemExit("ornament.py: %s lays a part %.3f mm proud of its face, past PROUD (%.1f mm)"
+                             % (self.name, h, PROUD))
         self.placed.append(co)
         return bm.verts.new(co * MM)
 
@@ -334,8 +341,8 @@ class Ornament:
 
     def fill(self, face, outline, material, top, holes=()):
         """`outline` ((a, b) mm) filled in `material`, `holes` cut out of it, its top `top` mm over
-        the face and (but in the web build) its sides down to LIFT. On a curved face it is cut finely
-        enough along a to follow it."""
+        the face and (but in the web build) its sides down to LIFT. On a curved face it is cut
+        finely enough along a to follow it."""
         loops = [_orn_ccw(_orn_clean(outline))] + [_orn_ccw(_orn_clean(h))[::-1] for h in holes]
         loops = [loop for loop in loops if len(loop) >= 3]
         if not loops:
@@ -368,7 +375,7 @@ class Ornament:
         def vert(p, h):
             key = (round(p[0], 5), round(p[1], 5), h)
             if key not in made:
-                made[key] = self._vert(bm, face.at(p[0], p[1], h))
+                made[key] = self._vert(bm, face.at(p[0], p[1], h), h)
             return made[key]
         for tri in tris:
             if abs(_orn_area(list(tri))) > 1e-9:
@@ -398,7 +405,7 @@ class Ornament:
         bm = self._bm(material)
 
         def row(side, h):
-            return [self._vert(bm, face.at(a, b, h)) for a, b in side]
+            return [self._vert(bm, face.at(a, b, h), h) for a, b in side]
         lt, rt = row(left, top), row(right, top)
         n = len(pts)
         spans = range(n if closed else n - 1)
@@ -416,20 +423,21 @@ class Ornament:
             bm.faces.new((lb[0], rb[0], rt[0], lt[0]))
             bm.faces.new((rb[-1], lb[-1], lt[-1], rt[-1]))
 
-    def bead(self, face, a, b, r, material, rise=0.25):
-        """A bead of radius r mm at (a, b): a sphere's cap, its centre rise x r over the face, its foot
-        BEAD_FOOT into it, smooth-shaded."""
+    def bead(self, face, a, b, r, material, top=PROUD):
+        """A bead of radius r mm at (a, b): a flattened sphere's cap, its top `top` mm off the face
+        (PROUD; at most r), its centre r - top under it, the cap carried on BEAD_FOOT under the
+        face, smooth-shaded."""
         p, right, up, n = _orn_frame(face, a, b)
-        c = p + n * (rise * r)
-        lowest = math.acos(max(-1.0, min(1.0, (-BEAD_FOOT - rise * r) / r)))
+        hc = top - r                                        # the centre's height over the face
+        lowest = math.acos(max(-1.0, min(1.0, (-BEAD_FOOT - hc) / r)))
         around, rings = _orn_n(16, 5), _orn_n(5, 2)
         bm = self._bm(material, smooth=True)
-        pole = self._vert(bm, c + n * r)
+        pole = self._vert(bm, p + n * top, top)
         prev = None
         for k in range(1, rings + 1):
             phi = lowest * k / rings
-            ring = [self._vert(bm, c + (right * math.cos(t) + up * math.sin(t)) * (r * math.sin(phi))
-                               + n * (r * math.cos(phi)))
+            h = hc + r * math.cos(phi)
+            ring = [self._vert(bm, p + (right * math.cos(t) + up * math.sin(t)) * (r * math.sin(phi)) + n * h, h)
                     for t in (2.0 * math.pi * i / around for i in range(around))]
             for i in range(around):
                 j = (i + 1) % around
@@ -580,8 +588,8 @@ def _orn_scroll_path(main, volute, n, s_curve=False, volute_end=None):
 
 
 def _orn_thin(pts, turn=math.radians(24.0)):
-    """A dense, evenly spaced path kept at the points that _orn_pts' spacing asks for, and wherever it
-    has turned `turn` since the last kept one (a scroll's tight curls)."""
+    """A dense, evenly spaced path kept at the points that _orn_pts' spacing asks for, and wherever
+    it has turned `turn` since the last kept one (a scroll's tight curls)."""
     longest = 1.8 if WEB else 0.5
     out, run, bend = [pts[0]], 0.0, 0.0
     for i in range(1, len(pts) - 1):
@@ -841,10 +849,10 @@ def vine(orn, face, path, wire, every=25.0, leaf_len=7.0, flowers=(), tendrils=T
          width=STEM_W, leaf_width=0.42, leaf_angle=50.0, smooth=True):
     """A vine along `path` ((a, b) mm; smoothed through its points unless `smooth` is False): its
     stem in wire, a leaf every `every` mm along it, alternating sides and pointing `leaf_angle`
-    degrees ahead, a tendril curling off the other side of every other one, and `flowers`, each (along, motif,
-    size[, keywords]): that motif (a function or its name) centred on the stem `along` mm from its
-    start, the stem stopping inside its petals and no leaf rooted under it (a leaf rooted just
-    outside it tucks under it)."""
+    degrees ahead, a tendril curling off the other side of every other one, and `flowers`, each
+    (along, motif, size[, keywords]): that motif (a function or its name) centred on the stem
+    `along` mm from its start, the stem stopping inside its petals and no leaf rooted under it (a
+    leaf rooted just outside it tucks under it)."""
     pts = smooth_path(path, 6) if smooth and len(path) > 2 else list(path)
     walk = _OrnPath(pts)
     blooms = []
@@ -888,9 +896,10 @@ def vine(orn, face, path, wire, every=25.0, leaf_len=7.0, flowers=(), tendrils=T
 
 
 def vine_round(orn, tube, wire, b0, b1, turns=3.0, window=None, a0=0.0, **kw):
-    """A vine up a Tube from b0 to b1 mm along it, from a0 round it: `turns` times round it (a helix),
-    or, given `window` (a_lo, a_hi) mm round it, `turns` times from side to side within it (where a
-    full turn would meet something: a ledge's leg, which a sleeve leans on). The rest is vine()'s."""
+    """A vine up a Tube from b0 to b1 mm along it, from a0 round it: `turns` times round it (a
+    helix), or, given `window` (a_lo, a_hi) mm round it, `turns` times from side to side within it
+    (where a full turn would meet something: a ledge's leg, which a sleeve leans on). The rest is
+    vine()'s."""
     n = max(8, int(abs(b1 - b0) / _orn_n(1.5, 3.0)))
     pts = []
     for i in range(n + 1):

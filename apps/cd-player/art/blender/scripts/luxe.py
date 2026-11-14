@@ -313,11 +313,11 @@ def luxe_decor(name, body):
 
 # ------------------------------------------------------------------ the whole Luxe
 def make_luxe(name, root, look, playing, disc_label=None):
-    """The deck under `root`: the body group (`<name>_deck_body`: the plinth, the LED ring, the keys,
-    the knob, the logo and the deck's ornament, luxe_deck_ornament), the platter and the record on
-    it (`<name>_disc`, its label in `disc_label`, the web build's art_disc unless given). `look` is
-    the swatches (luxe_look): build_luxe_materials made the materials from it; the geometry is the
-    same for every look."""
+    """The deck under `root`: the body group (`<name>_deck_body`: the plinth, the LED ring, the
+    keys, the knob, the logo and the deck's ornament, luxe_deck_ornament), the platter and the
+    record on it (`<name>_disc`, its label in `disc_label`, the web build's art_disc unless given).
+    `look` is the swatches (luxe_look): build_luxe_materials made the materials from it; the
+    geometry is the same for every look."""
     body = empty(name + "_deck_body", L(0, 0, 0), parent=root)
     luxe_plinth(name, body)
     led_ring(name, body, LX_SPINDLE, LX_RING[0], LX_RING[1], LX_RING_Z, playing)
@@ -341,7 +341,8 @@ def make_luxe_player(name, disc_label, sleeve_art, look, rack_sleeves=None, play
     root = empty(name, L(0, 0, 0))
     make_luxe(name, root, look, playing, disc_label)
     luxe_tonearm(name, root, playing)
-    luxe_stand_ornament(name + "_stand", make_stand(name + "_stand", root, rack_sleeves, playlist, WEB))
+    stand = make_stand(name + "_stand", root, rack_sleeves, playlist, WEB)
+    luxe_stand_ornament(name + "_stand", stand)
     luxe_ledge_ornament(name + "_ledge", make_ledge(name + "_ledge", root))
     # Leaning back 15 degrees on the ledge: its front face's bottom edge just behind the lip (its
     # mid-thickness 1.6 mm behind it), 0.5 mm over the bar, its back 0.4 mm off the legs; its
