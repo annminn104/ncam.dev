@@ -60,7 +60,7 @@ export function writeSkin(storage: WriteStore | null, id: SkinId): void {
   }
 }
 
-/** The visitor's model (src/models.ts): the suitcase unless they chose another. */
+/** The visitor's model (src/models.ts): the default, Luxe, unless they chose another. */
 export const MODEL_KEY = 'ncam.cd-player.model';
 /** The Clear model's colours, part by part (src/clear-looks.ts), as JSON. */
 export const CLEAR_KEY = 'ncam.cd-player.clear';
@@ -69,7 +69,7 @@ export const DECK_KEY = 'ncam.cd-player.deck';
 /** Luxe's colours, part by part (src/luxe-looks.ts), as JSON. */
 export const LUXE_KEY = 'ncam.cd-player.luxe';
 
-/** The saved model; nothing saved, an id no model has, or storage that throws is the suitcase. */
+/** The saved model; nothing saved, an id no model has, or storage that throws is Luxe. */
 export function readModel(storage: ReadStore | null): ModelId {
   try {
     return modelById(storage?.getItem(MODEL_KEY)).id;
@@ -167,7 +167,8 @@ export function writePersonal(storage: WriteStore | null, personal: Personal): v
 
 /**
  * Everything saved: the model, the suitcase's skin, the colours of the Clear model, the Deck and
- * Luxe, and the visitor's pattern and name.
+ * Luxe, and the visitor's pattern and name. A saved model wins; with none (or one no model has)
+ * the model is the default, Luxe, whatever skin is saved, and the skin is kept for the suitcase.
  */
 export function readLookState(storage: ReadStore | null): LookState {
   return {
@@ -211,28 +212,32 @@ export function scriptLiteral(value: unknown): string {
 /**
  * The accent pair of the saved look on `.cdp-root` before the first paint: the text of the inline
  * script App renders as the root's first child, which the browser runs as it parses the server's
- * markup. It paints the saved light's pair when the saved model is the Clear one, the Deck or Luxe (its
- * default light's where the saved colours name none) and the saved skin's pair otherwise. The server and
- * the first client render are in the suitcase's Blush, so the trees match, and the page's pastel
- * is made from the accent: without it a saved Sage or a saved pink light would paint Blush's whole
- * page until the remote hydrates. React leaves the attribute as it is when it hydrates (it never
- * patches a server attribute) and then applies the same saved look. A copy React renders on the
- * client never runs, so `mount()` starts App in the saved look instead. It reads only own keys of
- * its tables, so no saved value can pick a prototype's, and it never throws: what `readLookState`
- * refuses, or storage that throws, changes nothing. Its tables and keys go in through
- * `scriptLiteral`, so none of them can end the element it is written into.
+ * markup. The server and the first client render are in the default look, Luxe in its pink light,
+ * so the trees match, and the page's pastel is made from the accent: without it a saved Sage or a
+ * saved lime light would paint the pink light's whole page until the remote hydrates. It reads the
+ * model as `readLookState` does: a saved suitcase paints the saved skin's pair (Blush's where the
+ * saved value is no skin); a saved Clear model or Deck the saved light's pair (its default light's
+ * where the saved colours name none); and anything else, Luxe saved, no model saved (whatever skin
+ * is, the skin being the suitcase's alone) or one no model has, is Luxe, which paints its saved
+ * light's pair, or nothing where the saved colours name no light, the server's accent being its
+ * default light's. React leaves the attribute as it is when it hydrates (it never patches a server
+ * attribute) and then applies the same saved look. A copy React renders on the client never runs,
+ * so `mount()` starts App in the saved look instead. It reads only own keys of its tables, so no
+ * saved value can pick a prototype's, and it never throws: what `readLookState` refuses, or storage
+ * that throws, changes nothing. Its tables and keys go in through `scriptLiteral`, so none of them
+ * can end the element it is written into.
  */
 export const LOOK_SCRIPT = `(function(){try{var s=${scriptLiteral(SKIN_PAIRS)},l=${scriptLiteral(
   LIGHT_PAIRS,
 )},d=${scriptLiteral(DECK_LIGHT_PAIRS)},x=${scriptLiteral(LUXE_LIGHT_PAIRS)},t=localStorage,h=Object.prototype.hasOwnProperty,a=0,k,m=t.getItem(${scriptLiteral(
   MODEL_KEY,
-)});if(m==='clear'){try{k=JSON.parse(t.getItem(${scriptLiteral(CLEAR_KEY)})).light}catch(e){}a=typeof k==='string'&&h.call(l,k)?l[k]:l[${scriptLiteral(
+)});if(m==='suitcase'){k=t.getItem(${scriptLiteral(SKIN_KEY)});a=k&&h.call(s,k)?s[k]:s[${scriptLiteral(
+  DEFAULT_SKIN,
+)}]}else if(m==='clear'){try{k=JSON.parse(t.getItem(${scriptLiteral(CLEAR_KEY)})).light}catch(e){}a=typeof k==='string'&&h.call(l,k)?l[k]:l[${scriptLiteral(
   DEFAULT_CLEAR_LOOK.light,
 )}]}else if(m==='deck'){try{k=JSON.parse(t.getItem(${scriptLiteral(DECK_KEY)})).light}catch(e){}a=typeof k==='string'&&h.call(d,k)?d[k]:d[${scriptLiteral(
   DEFAULT_DECK_LOOK.light,
-)}]}else if(m==='luxe'){try{k=JSON.parse(t.getItem(${scriptLiteral(LUXE_KEY)})).light}catch(e){}a=typeof k==='string'&&h.call(x,k)?x[k]:x[${scriptLiteral(
-  DEFAULT_LUXE_LOOK.light,
-)}]}else{k=t.getItem(${scriptLiteral(SKIN_KEY)});a=k&&h.call(s,k)?s[k]:0}if(a){var r=document.currentScript.parentNode.style;r.setProperty('--cdp-accent',a[0]);r.setProperty('--cdp-on-accent',a[1])}}catch(e){}})();`;
+)}]}else{try{k=JSON.parse(t.getItem(${scriptLiteral(LUXE_KEY)})).light}catch(e){}a=typeof k==='string'&&h.call(x,k)?x[k]:0}if(a){var r=document.currentScript.parentNode.style;r.setProperty('--cdp-accent',a[0]);r.setProperty('--cdp-on-accent',a[1])}}catch(e){}})();`;
 
 /**
  * Where `/` should send the visitor: the collection they last loaded. Only the first time the caller

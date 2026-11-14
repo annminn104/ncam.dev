@@ -65,6 +65,13 @@ export interface Landing {
   frame: PlaceFrame;
   spins: boolean;
   reach: number;
+  /**
+   * Over which part of a way to it from a slot the way draws in over it across its `out`, so that
+   * it ends coming straight down onto it (and a way from it to a slot starts rising straight off
+   * it): the profile's `flight.plumb` for a turntable's ledge (Luxe's, beside which her dancer
+   * turns), or null, the way keeping to its Bézier.
+   */
+  plumb: readonly [number, number] | null;
 }
 
 /** A place's pose in world space, and its normal: the way a disc leaves and reaches it. */
@@ -106,6 +113,11 @@ export interface Rig<M extends PlayerModel = PlayerModel> extends StageState {
   spinRate: number;
   /** A turntable's platter: its node, and its turn as the GLB has it; it turns with the record. */
   platter: { node: Object3D; base: number } | null;
+  /**
+   * Luxe's dancer, the music-box ballerina on her pedestal: her turning top (`dancer`) and its turn
+   * as the GLB has it. She turns with the platter, by the same spin; null on a model without her.
+   */
+  dancer: { node: Object3D; base: number } | null;
   arm: { node: Object3D; baseRotationY: number; baseY: number };
   /** A turntable's tonearm (its profile's three angles); null on a CD player. */
   toneArm: M extends VinylModel ? ToneArm : null;
@@ -306,6 +318,7 @@ export function rigFor(model: PlayerModel, profile: SceneProfile = SCENE_PROFILE
       model.media === 'vinyl'
         ? { node: model.nodes.platter, base: model.nodes.platter.rotation.y }
         : null,
+    dancer: nodes.dancer ? { node: nodes.dancer, base: nodes.dancer.rotation.y } : null,
     arm: {
       node: nodes.arm_pivot,
       baseRotationY: nodes.arm_pivot.rotation.y,
@@ -328,8 +341,15 @@ export function rigFor(model: PlayerModel, profile: SceneProfile = SCENE_PROFILE
     seat,
     sleeveSeat,
     landings: {
-      disc: { frame: seat, spins: true, reach: reach.spindle },
-      sleeve: sleeveSeat ? { frame: sleeveSeat, spins: false, reach: reach.ledge } : null,
+      disc: { frame: seat, spins: true, reach: reach.spindle, plumb: null },
+      sleeve: sleeveSeat
+        ? {
+            frame: sleeveSeat,
+            spins: false,
+            reach: reach.ledge,
+            plumb: profile.flight.plumb ?? null,
+          }
+        : null,
     },
     slots,
     flight: {
@@ -365,6 +385,7 @@ const toFrame: PlaceFrame = {
 };
 const handleA = new Vector3();
 const handleB = new Vector3();
+const across = new Vector3();
 const spinQuaternion = new Quaternion();
 const turnQuaternion = new Quaternion();
 
@@ -410,8 +431,30 @@ function reachOf(rig: Rig, place: Place | null, flies: boolean, landing: Landing
 }
 
 /**
+ * Draws `position`, `toward` (0 … 1) of the way along its way to `frame`, in over the frame across
+ * its normal over the part `draw` names: not at all before it, wholly from its end on. The ease is
+ * a quintic, flat at both ends to its second derivative, so the way bends without a jolt: its speed
+ * and its acceleration run on unbroken. Along the normal the position keeps to its way, and so the
+ * flight keeps its timing.
+ */
+function plumbOver(
+  position: Vector3,
+  frame: PlaceFrame,
+  draw: readonly [number, number],
+  toward: number,
+): void {
+  const keep = 1 - MathUtils.smootherstep(toward, draw[0], draw[1]);
+  if (keep === 1) return;
+  across.copy(position).sub(frame.position);
+  const along = across.dot(frame.out);
+  across.addScaledVector(frame.out, -along);
+  position.copy(frame.position).addScaledVector(frame.out, along).addScaledVector(across, keep);
+}
+
+/**
  * Puts `object` where `pose` has it. A turntable's sleeve runs the same way with its ledge as the
- * landing: it leaves and arrives with its record, on one timeline.
+ * landing: it leaves and arrives with its record, on one timeline, drawn in over the ledge before
+ * it comes down onto it where the profile says so (`Landing.plumb`, plumbOver).
  */
 function placeOn(rig: Rig, object: Object3D, pose: DiscPose | null, landing: Landing): void {
   if (!pose || (pose.from === null && pose.to === null)) {
@@ -459,9 +502,14 @@ function placeOn(rig: Rig, object: Object3D, pose: DiscPose | null, landing: Lan
     .addScaledVector(handleA, 3 * u * u * a)
     .addScaledVector(handleB, 3 * u * a * a)
     .addScaledVector(end.position, a * a * a);
+  const fromSlot = typeof pose.from === 'number';
+  // Between a slot and a plumb ledge a sleeve comes down onto it, or rises off it, from straight
+  // above.
+  if (landing.plumb && flies && (fromSlot || typeof pose.to === 'number')) {
+    plumbOver(object.position, landing.frame, landing.plumb, pose.to === 'spindle' ? a : 1 - a);
+  }
   // A disc lifted straight out of a crate's slot stays upright until it is clear of the foam and
   // lays flat on the way across, as it stands up again before it goes down into a slot.
-  const fromSlot = typeof pose.from === 'number';
   const turn =
     rig.flight.exit === 'up' && flies
       ? fromSlot
@@ -502,6 +550,7 @@ export function applyPose(rig: Rig, pose: Pose, dt: number): void {
   rig.arm.node.position.y = rig.arm.baseY + pose.armLift * ARM_LIFT_M;
   rig.spin = (rig.spin + dt * rig.spinRate * pose.spin * rig.spinSense) % (2 * Math.PI);
   if (rig.platter) rig.platter.node.rotation.y = rig.platter.base + rig.spin;
+  if (rig.dancer) rig.dancer.node.rotation.y = rig.dancer.base + rig.spin;
   rig.last.armAngle = pose.armAngle;
   rig.last.spin = pose.spin;
   rig.last.armLift = rig.toneArm ? pose.armLift : 0;

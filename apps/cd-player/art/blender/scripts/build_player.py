@@ -1,8 +1,9 @@
 """The web scene: the suitcase player with the names the page drives (src/scene/contract.ts).
 
-Exec'd by export.py after cdkit.py and parts.py, into the same namespace. The lid is open, the
-tonearm at rest, the disc on the spindle, the five rack slots empty (the page puts discs in them):
-the page moves all of it at runtime.
+Exec'd by export.py after cdkit.py, parts.py, ornament.py and suitcase_ornament.py, into the same
+namespace. The lid is open, the tonearm at rest, the disc on the spindle, the five rack slots empty
+(the page puts discs in them): the page moves all of it at runtime. The ornament is fixed: the tub's
+and the deck's hang from the root, the lining's from the lid.
 """
 import bpy
 

@@ -1,8 +1,6 @@
 import { readFileSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { Box3, Euler, Matrix4, Quaternion, Vector3, type Mesh, type Object3D } from 'three';
-import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { beforeAll, describe, expect, it } from 'vitest';
 import {
   BOXES,
@@ -23,6 +21,7 @@ import {
   LUXE_LEDGE,
   LUXE_PANELS,
   LUXE_BAR,
+  LUXE_DANCER,
   LUXE_PLATTER,
   LUXE_PLINTH,
   LUXE_RECORD,
@@ -32,6 +31,7 @@ import {
   LUXE_STEPS,
   luxeSlot,
 } from '../testing/model-measures';
+import { loadGlb } from '../testing/clearance';
 import { RACK_SLOTS } from './stage';
 import {
   CD_MATERIALS,
@@ -43,7 +43,7 @@ import {
   VINYL_NODES,
 } from './contract';
 import { readGlbJson, triangleCount } from './glb';
-import { CLEAR_ROLES, MATERIAL_ROLES, SKIN_ROLES } from './material-roles';
+import { CLEAR_ROLES, LUXE_ROLES, MATERIAL_ROLES, SKIN_ROLES } from './material-roles';
 import deckAtlas from './textures/deck-atlas.json';
 import { JOG_OPENING, OPEN, STENCIL_ZONE } from './textures/deck-pattern';
 
@@ -172,6 +172,42 @@ describe('public/assets/cd-player.glb (art/pipeline/build.mjs)', () => {
     expect(statSync(GLB).size).toBeLessThanOrEqual(4 * 1024 * 1024);
     expect(triangleCount(json)).toBeLessThanOrEqual(150_000);
     expect(json.extensionsUsed).toContain('EXT_meshopt_compression');
+  });
+
+  // The ornament (art/blender/scripts/suitcase_ornament.py) grows the file by 200 KB at most.
+  it('stays within 200 KB of the 795,088 bytes it weighed before its ornament', () => {
+    expect(statSync(GLB).size).toBeLessThanOrEqual(795_088 + 200_000);
+  });
+
+  it('hangs its ornament from the root and the lid, in the skin’s hardware and a fixed enamel palette', () => {
+    const enamel = ['rose', 'coral', 'butter', 'leaf', 'sky', 'ivory'].map((c) => `enamel_${c}`);
+    const groups = {
+      player_tub_orn_: 'player',
+      player_deck_orn_: 'player',
+      player_lid_orn_: 'lid_hinge',
+    };
+    const seen = new Set<string>();
+    for (const [prefix, group] of Object.entries(groups)) {
+      const parts = json.nodes.filter((n) => n.name?.startsWith(prefix));
+      expect(parts.length, prefix).toBeGreaterThan(0);
+      for (const part of parts) {
+        expect(parentOf(part.name ?? ''), part.name).toBe(group);
+        expect(part.mesh, part.name).toBeDefined();
+        for (const primitive of json.meshes[part.mesh ?? -1].primitives) {
+          const material =
+            primitive.material === undefined ? '' : (json.materials[primitive.material].name ?? '');
+          expect(['hardware', ...enamel], `${part.name}: ${material}`).toContain(material);
+          seen.add(material);
+        }
+      }
+    }
+    expect([...seen].sort()).toEqual(['hardware', ...enamel].sort());
+    // The wire follows the skin's metal; the enamel is the same under every skin.
+    expect(SKIN_ROLES.hardware).toBe('hardware');
+    for (const name of enamel) {
+      expect(MATERIAL_ROLES[name], name).toBe('enamel');
+      expect(SKIN_ROLES[name], name).toBeUndefined();
+    }
   });
 
   it('keeps meshes on leaf nodes, so quantisation never scales a pivot', () => {
@@ -350,7 +386,7 @@ describe('public/assets/cd-player-deck.glb (art/pipeline/build.mjs deck)', () =>
     /** Half a pixel: the meshes are exact millimetres and the regions whole pixels. */
     const SLACK = 0.5;
     const covered = new Set<string>();
-    const set = await loadScene(DECK_GLB);
+    const set = await loadGlb(DECK_GLB);
     let primitives = 0;
     set.traverse((child) => {
       const mesh = child as Mesh;
@@ -385,7 +421,7 @@ describe('public/assets/cd-player-deck.glb (art/pipeline/build.mjs deck)', () =>
     type Point = readonly [number, number];
     const triangles: Record<string, (readonly [Point, Point, Point])[]> = {};
     const vertexList: Record<string, Point[]> = {};
-    const set = await loadScene(DECK_GLB);
+    const set = await loadGlb(DECK_GLB);
     set.traverse((child) => {
       const mesh = child as Mesh;
       if (!mesh.isMesh) return;
@@ -586,18 +622,58 @@ describe('public/assets/cd-player-luxe.glb (art/pipeline/build.mjs luxe)', () =>
     expect(json.extensionsUsed).toContain('EXT_meshopt_compression');
     for (const n of json.nodes) if (n.children?.length) expect(n.mesh, n.name).toBeUndefined();
   });
-});
 
-/** A committed GLB as the page loads it: three's GLTFLoader with the meshopt decoder. */
-async function loadScene(file: string): Promise<Object3D> {
-  const bytes = readFileSync(file);
-  const loader = new GLTFLoader();
-  loader.setMeshoptDecoder(MeshoptDecoder);
-  const data = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
-  const gltf = await loader.parseAsync(data as ArrayBuffer, '');
-  gltf.scene.updateMatrixWorld(true);
-  return gltf.scene;
-}
+  // Luxe is the default model: the page must not fetch more than the suitcase's 795 KB did.
+  it('stays inside the default model’s budget: 650 KB and 80,000 triangles as the page loads it', () => {
+    expect(statSync(LUXE_GLB).size).toBeLessThanOrEqual(650_000);
+    expect(triangleCount(json)).toBeLessThanOrEqual(80_000);
+  });
+
+  it('turns the dancer on an empty of the player’s root, apart from the deck and its pedestal, in fixed porcelain', () => {
+    expect(node('dancer').mesh).toBeUndefined();
+    expect(node('dancer').children?.length ?? 0).toBeGreaterThan(0);
+    expect(parentOf('dancer')).toBe('luxe');
+    expect(parentOf('platter')).toBe('luxe');
+    expect(under('dancer', 'luxe_deck_body')).toBe(false);
+    for (const part of ['luxe_pedestal', 'luxe_pedestal_flutes']) {
+      expect(parentOf(part), part).toBe('luxe_deck_body');
+    }
+    const materials = materialsUnder('dancer');
+    for (const name of ['porcelain', 'porcelain_blush', 'luxe_metal']) {
+      expect(materials, name).toContain(name);
+    }
+    for (const name of ['porcelain', 'porcelain_blush']) {
+      expect(MATERIAL_ROLES[name], name).toBe('porcelain');
+      expect(LUXE_ROLES[name], name).toBeUndefined();
+    }
+  });
+
+  it('hangs its ornament from the groups it decorates, in the look’s metal and a fixed enamel palette', () => {
+    const enamel = ['rose', 'coral', 'butter', 'leaf', 'sky', 'ivory'].map((c) => `enamel_${c}`);
+    const groups = {
+      luxe_deck_orn_: 'luxe_deck_body',
+      luxe_stand_orn_: 'luxe_stand',
+      luxe_ledge_orn_: 'luxe_ledge',
+    };
+    const seen = new Set<string>();
+    for (const [prefix, group] of Object.entries(groups)) {
+      const parts = json.nodes.filter((n) => n.name?.startsWith(prefix));
+      expect(parts.length, prefix).toBeGreaterThan(0);
+      for (const part of parts) {
+        expect(parentOf(part.name ?? ''), part.name).toBe(group);
+        for (const material of materialsUnder(part.name ?? '')) {
+          expect(['luxe_metal', ...enamel], `${part.name}: ${material}`).toContain(material);
+          seen.add(material);
+        }
+      }
+    }
+    expect([...seen].sort()).toEqual(['luxe_metal', ...enamel].sort());
+    for (const name of enamel) {
+      expect(MATERIAL_ROLES[name], name).toBe('enamel');
+      expect(LUXE_ROLES[name], name).toBeUndefined();
+    }
+  });
+});
 
 /**
  * Every vertex of `object`'s meshes in world space, or, given `pose`, with `object`'s own frame
@@ -653,7 +729,7 @@ describe('the GLBs as the scene tests measure them (src/testing/model-measures.t
   const scenes: Partial<Record<keyof typeof models, Object3D>> = {};
   beforeAll(async () => {
     for (const [id, file] of Object.entries(models)) {
-      scenes[id as keyof typeof models] = await loadScene(file);
+      scenes[id as keyof typeof models] = await loadGlb(file);
     }
   });
   const scene = (id: keyof typeof models): Object3D => {
@@ -1037,6 +1113,31 @@ describe('the GLBs as the scene tests measure them (src/testing/model-measures.t
     ['luxe_ledge_leg_l', 'luxe_ledge_leg_r'].forEach((name, k) =>
       expectBox(meshBox(node(set, name)), LUXE_LEDGE.legs[k], name),
     );
+  });
+
+  it('stands Luxe’s dancer on her pedestal, her up the world’s, the box of a full turn round her', () => {
+    const set = scene('luxe');
+    const dancer = node(set, 'dancer');
+    expectPosition(dancer, LUXE_DANCER.position, 'dancer');
+    expectTurn(dancer.getWorldQuaternion(new Quaternion()), new Euler(0, 0, 0), 'dancer');
+    // The disc and the figure, swept a full turn about the dancer's vertical axis: a cylinder as far
+    // out as her furthest vertex, from her lowest to her highest.
+    const centre = dancer.getWorldPosition(new Vector3());
+    const turning = vertices(dancer);
+    let reach = 0;
+    for (const point of turning) {
+      reach = Math.max(reach, Math.hypot(point.x - centre.x, point.z - centre.z));
+    }
+    const box = new Box3().setFromPoints(turning);
+    box.expandByPoint(new Vector3(centre.x - reach, box.min.y, centre.z - reach));
+    box.expandByPoint(new Vector3(centre.x + reach, box.max.y, centre.z + reach));
+    const pedestal = node(set, 'luxe_deck_body').children.filter(
+      (part) =>
+        part.name.startsWith('luxe_pedestal') || part.name.startsWith('luxe_deck_orn_pedestal'),
+    );
+    expect(pedestal.length).toBeGreaterThan(2);
+    for (const part of pedestal) box.union(meshBox(part));
+    expectBox(box, LUXE_DANCER, 'the dancer swept a full turn');
   });
 
   it('puts Luxe’s needle on the outer groove at the lead-in and by the label at the run-out', () => {

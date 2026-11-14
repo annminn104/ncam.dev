@@ -6,6 +6,6 @@ export function collectionHead(collection: Collection): SsrHead {
   const by = collection.subtitle ? ` by ${collection.subtitle}` : '';
   return {
     title: collection.name,
-    description: `${collection.name}${by}: a ${collection.tracks.length}-track ${collection.type} on a suitcase CD player. Paste your own Spotify playlist to make the page yours.`,
+    description: `${collection.name}${by}: a ${collection.tracks.length}-track ${collection.type} on a 3D turntable or CD player. Paste your own Spotify playlist to make the page yours.`,
   };
 }

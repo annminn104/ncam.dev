@@ -53,6 +53,14 @@ describe('project-registry', () => {
     expect(getProject('holodex')?.sitemapPaths).toEqual(['sets']);
   });
 
+  it('leads the CD Player with its turntable, the model its page opens on', () => {
+    const cdPlayer = getProject('cd-player');
+    expect(cdPlayer?.tagline).toBe('Any Spotify playlist on a 3D turntable or CD player');
+    const description = cdPlayer?.description ?? '';
+    expect(description.indexOf('turntable')).toBeGreaterThan(-1);
+    expect(description.indexOf('turntable')).toBeLessThan(description.indexOf('CD player'));
+  });
+
   it('ids are unique', () => {
     const ids = projects.map((p) => p.id);
     expect(new Set(ids).size).toBe(ids.length);

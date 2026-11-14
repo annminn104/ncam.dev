@@ -12,7 +12,9 @@ hand.
   its luggage tag, the deck's chrome ring, screws and VU strip, the tonearm, the quilted lid with
   its strap, the five-slot rack and the plate. `build_materials(palette)` makes every material;
   the seven the skins recolour take their colours from a palette of sRGB hex values (`BLUSH` by
-  default).
+  default). `make_player` dresses the suitcase in its ornament (`suitcase_ornament.py`), so the
+  suitcase's builds exec `ornament.py` and `suitcase_ornament.py` after this file; the Clear and the
+  Deck exec it too but never call `make_player`.
 - `blender/scripts/build_player.py`: the web scene, with the names the page drives
   (`src/scene/contract.ts`).
 - `blender/scripts/clear.py`: the Clear model, on `parts.py`'s disc and case: a clear
@@ -51,6 +53,37 @@ hand.
   and name on), and the atlas layout it writes to `src/scene/textures/deck-atlas.json`.
 - `blender/scripts/build_deck.py`: the Deck's web scene, with the names the page drives
   (`src/scene/contract.ts`), its jog plate's `door_hinge` and its `jog_ring`.
+- `blender/scripts/ornament.py`: the cloisonné ornament kit, exec'd after `parts.py`: the fixed
+  enamel palette (`build_enamel_materials()`: `enamel_rose`, `_coral`, `_butter`, `_leaf`, `_sky`,
+  `_ivory`), the faces a 2D layout in mm is laid on (`Plane(origin, normal, up)`, `Wall(outline)`
+  round a vertical extrusion, `Tube(p0, p1, radius, ref)` round a cylinder), the motifs (camellia,
+  daisy, five-petal rose, leaf, leaf spray, acanthus, C- and S-scrolls, rocaille shell, pearl row,
+  vine, a vine round a tube, a garland), each outlined in the wire material its caller passes, and
+  `lay(orn, face, items, wire)` with `mirrored(items)` for symmetric layouts and `shifted(items, da,
+db)` to move one; a vine's flower can sit at its stem's end (`along` None). Low relief (enamel
+  0.58 mm proud at most, wire 0.78, a bead's flattened cap 0.9), every part 0.02 mm off its face,
+  and nothing past 0.9 mm (an `Ornament` stops the run on a part that would stand further);
+  `Ornament(name, parent)` merges one group's into a mesh per material hanging from it, and
+  `hold(orn, since, lo, hi, what)` stops the run unless what a model laid lies in a box. Its
+  docstring has the signatures.
+- `blender/scripts/suitcase_ornament.py`: the suitcase's ornament on `ornament.py`'s kit, its wire
+  in `hardware` (so it follows the skin's metal) and its enamel fixed under every skin: under the
+  seam, either side of the handle, a short vine with a daisy, a camellia and two leaves between its
+  mount and the clasp, and from each clasp a vine with daisies, camellias and roses round the front
+  corner and along the side; a bouquet medallion on each side (a pearl-set oval, a camellia, roses
+  and daisies tied with a bow, C-scrolls, leaf sprays and acanthus); a small daisy spray in each
+  corner of the deck top; and on the lid's
+  lining a thin vine border round its free edge, floral sprays in its two free corners (the bottom
+  left, and the top left under the strap), a camellia between the plate and the rack and a vine
+  between the strap and the case. The rack's frame takes the lining's whole right half, so its two
+  corners there are bare. The tub's and the deck's ornament (`player_tub_orn_*`,
+  `player_deck_orn_*`) hang from the player's root, the lining's (`player_lid_orn_*`) from the lid.
+  It stops the run if a region's ornament strays (out of the band under the seam, into the handle's
+  mounts, the clasps, the grille's border or the corner caps; on the deck into the well, the keys,
+  the knob, the display, the tonearm and its sweep, the screws or the lettering; on the lining under
+  the case, its clips, the strap, the plate or the rack); every part keeps 5 mm off a disc, resting
+  or flying (`src/scene/ornament-clearance.test.ts` holds it). Its keep-outs are worked out from
+  `parts.py`'s constants, and from the parts it places at literal positions, which it names.
 - `blender/scripts/vinyl.py`: what every turntable shares: the 12-inch record (vinyl and its
   label), its sleeve and the LED ring round the platter.
 - `blender/scripts/luxe.py`: Luxe, on `parts.py` and `vinyl.py`: a lacquered two-tier plinth, the
@@ -60,13 +93,40 @@ hand.
   head and needle) and its two angles, `LUXE_ARM_LEAD_IN` and `LUXE_ARM_RUN_OUT`.
 - `blender/scripts/luxe_stand.py`: Luxe's record stand (five steps with the next five records in
   their sleeves) and the ledge behind the platter.
+- `blender/scripts/luxe_ornament.py`: Luxe's ornament on `ornament.py`'s kit, its wire in
+  `luxe_metal` (so it follows the look's metal): the lower tier's front cartouche and scrollwork and
+  a medallion on each side, a pearl row with roses round the upper tier, two sprays on the top (round
+  the logo, behind the keys), medallions and vines on the stand's side panels, a vine on its back bar
+  and on the ledge's legs, each hanging from the group it decorates. It stops the run if a region's
+  ornament strays (past the tier's band heights, into the keys, the logo, the LED ring or the arm's
+  rest and sweep); every part keeps 5 mm off a record or a sleeve, resting or flying
+  (`src/scene/ornament-clearance.test.ts` holds it).
+- `blender/scripts/luxe_dancer.py`: Luxe's music-box ballerina at the deck top's back left corner
+  (`LX_DANCER`). Her pedestal hangs from the body group: a fluted metal drum 19 mm in radius and
+  20 mm tall, with a pearl row round each moulding and an enamel garland round its frieze (its
+  ornament is `luxe_deck_orn_pedestal_*`). The figure stands on a 2 mm metal disc under the empty
+  `luxe_dancer`, which the web build names `dancer` and the page turns. She is porcelain, 105 mm
+  from her pointe to her fingertips: en pointe on her left leg, her right in retiré, her arms en
+  haut, a bun and a tiara, no face. Her body is a skin modifier's hull round a skeleton under two
+  levels of subdivision, applied, and decimated in the web build, cut along its seams first so
+  that each material edge is exact. Her plate tutu is 64 mm across: a flat plate with enamel roses
+  round its scalloped edge over three nested ruffled frills, the outer one's edge a ring of metal.
+  Her colours are the fixed `porcelain` and `porcelain_blush` (the bodice, the pointe shoes and the
+  tutu's frills, so that she reads against a light sleeve); the tiara, the bodice's trim and the
+  tutu's edge follow the look's metal. The
+  script stops the run if the pedestal comes within 2 mm of the frame or 15 mm of the LED ring, if
+  the garland leaves its frieze, or if the figure's height or reach is off (her reach must keep
+  20 mm clear of the record's edge). `LUXE_DANCER` in `src/testing/model-measures.ts` is the box of
+  her pedestal and of her swept a full turn.
 - `blender/scripts/build_luxe.py`: Luxe's web scene, with the names a turntable needs
   (`src/scene/contract.ts`) and the arm's angles printed for the page's profile.
 - `blender/scripts/export.py`: the background entry. It builds the model `CDP_MODEL` names
-  (`suitcase`, the default, `clear`, `deck` or `luxe`), meshes curves and text, adds UVs, and writes the raw GLB.
+  (`suitcase` when it is unset, which is the script's default and not the page's, `clear`, `deck`
+  or `luxe`), meshes curves and text, adds UVs, and writes the raw GLB.
 - `blender/scripts/hero.py`: the Cycles stills, headless: `CDP_MODEL=suitcase|clear|deck|luxe`,
   `CDP_HERO_VIEW=hero|lid` (the suitcase), `hero|inside` (the Clear model), `hero|top` (the Deck)
-  or `hero|platter` (Luxe; `CDP_LUXE_LOOK=<body>,<metal>,<light>` picks its look),
+  or `hero|platter|dancer` (Luxe; `dancer` is a close-up of the dancer on her pedestal;
+  `CDP_LUXE_LOOK=<body>,<metal>,<light>` picks its look),
   `CDP_HERO_QUALITY=preview|final`, into `.out/v2-<view>-<quality>.png`, or
   `.out/clear/<shell>-<frame>-<board>-<light>/clear-<view>-<quality>.png` for the Clear model
   (`CDP_CLEAR_LOOK`, below), whose studio also sees the backdrop through the shell
@@ -89,11 +149,15 @@ They write `public/assets/cd-player.glb`, `public/assets/cd-player-clear.glb`,
 `public/assets/cd-player-deck.glb` and `public/assets/cd-player-luxe.glb` (all committed;
 `pipeline/build.mjs` hands the model to `export.py` as `CDP_MODEL`).
 `src/scene/model-contract.test.ts` checks each one's names, materials, where things are parented
-and the budget (150k triangles, 4 MB). The committed suitcase is about 100,633 triangles and
-776 KB, the Clear model about 132,715 and 965 KB, the Deck about 81,762 and 702 KB, the Luxe
-turntable about 28,668 and 250 KB (KB of 1024 bytes). Rebuild a model after any change to its scripts
-(`cdkit.py` and `parts.py` are every model's, `vinyl.py` every turntable's; the Deck's build also
-rewrites `src/scene/textures/deck-atlas.json`, which is committed with the GLB).
+and the budget (150k triangles, 4 MB). The committed suitcase is about 124,348 triangles and
+918 KB with its ornament (about 23,715 of the triangles), the Clear model about 132,715 and 965 KB,
+the Deck about 81,762 and 702 KB, the Luxe turntable about 73,689 and 589 KB with its ornament and
+its dancer (KB of 1024 bytes; about 28,239 of the triangles are the ornament's and 17,700 the
+dancer's, her pedestal included). Luxe has a budget of its own: 650,000 bytes and 80,000 triangles;
+the suitcase's ornament may add 200,000 bytes at most to the 795,088 it weighed without it. Rebuild
+a model after any change to its scripts (`cdkit.py` and `parts.py` are every model's, `vinyl.py`
+every turntable's; the Deck's build also rewrites `src/scene/textures/deck-atlas.json`, which is
+committed with the GLB).
 
 ## Renders
 
@@ -115,7 +179,8 @@ renders another skin with `hero.py`, into `.out/skins/<id>/v2-<view>-<quality>.p
       --python-exit-code 1 --python blender/scripts/hero.py
 
 The skins change only the seven materials named after the skin roles; every other material keeps
-the colour `build_materials()` gives it.
+the colour `build_materials()` gives it. The ornament's wire is `hardware`, so it follows the skin;
+its enamel (`enamel_*`) keeps its colour under every skin.
 
 ## The Clear model
 

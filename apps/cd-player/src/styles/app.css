@@ -15,8 +15,9 @@
   --cdp-shadow: rgb(90 40 60 / 0.16);
   /* Dark enough for 4.5:1 on the glass over the darkest art, not only on white. */
   --cdp-error: #a1211a;
-  --cdp-accent: #e8a3b0;
-  --cdp-on-accent: #2a1a1e;
+  /* The default look's pair (Luxe's pink light), under the one App sets inline. */
+  --cdp-accent: #efa3c0;
+  --cdp-on-accent: #2c111d;
   /* The accent's marks where they stand on the white glass (the ring, the playing row, the
      progress, the switches on): half the accent, half black, for 3:1 and more on white. */
   --cdp-accent-ink: color-mix(in srgb, var(--cdp-accent) 50%, rgb(0 0 0));

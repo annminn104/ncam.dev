@@ -5,10 +5,10 @@ import { describe, expect, it } from 'vitest';
 import App from './App';
 import { DEFAULT_CLEAR_LOOK } from './clear-looks';
 import { DEFAULT_LOOK_STATE, lookAccent, lookOf, type LookState } from './looks';
+import { DEFAULT_LUXE_LOOK, luxeSwatch } from './luxe-looks';
 import { LOOK_SCRIPT } from './persist';
 import type { InitialData } from './playback/engine';
 import { createRouteController } from './route-controller';
-import { DEFAULT_SKIN, skinById } from './skins';
 import { textOf } from './testing/markup';
 
 const initial: InitialData = {
@@ -222,17 +222,39 @@ describe('App (the loader and the scene layer)', () => {
 });
 
 describe('App and the skins', () => {
-  it('renders the default skin accent inline on the root, and Player closed', () => {
+  it('renders Luxe’s pink light inline on the root as the accent, and Player closed', () => {
     const html = renderToString(
       createElement(App, { controller: createRouteController({ route: '/' }), initial }),
     );
-    const { accent, onAccent } = skinById(DEFAULT_SKIN);
+    const { accent, onAccent } = luxeSwatch(DEFAULT_LUXE_LOOK, 'light');
+    expect(DEFAULT_LUXE_LOOK.light).toBe('pink');
+    expect({ accent, onAccent }).toEqual(lookAccent(lookOf(DEFAULT_LOOK_STATE)));
     expect(html).toMatch(
       new RegExp(
         `<div class="cdp-root"[^>]*style="--cdp-accent:${accent};--cdp-on-accent:${onAccent}"`,
       ),
     );
     expect(html).toContain('class="cdp-button cdp-skin__button" aria-expanded="false"');
+  });
+
+  it('draws Luxe in its default look on the server, the one the Player menu marks current', () => {
+    const html = renderToString(
+      createElement(App, { controller: createRouteController({ route: '/' }), initial }),
+    );
+    expect(html).toContain('<span class="cdp-sr">: Luxe, Pink light</span>');
+    const menu = html.slice(html.indexOf('id="cdp-skin-menu"'));
+    expect([...menu.matchAll(/role="radiogroup" aria-label="([^"]+)"/g)].map((m) => m[1])).toEqual([
+      'Model',
+      'Body',
+      'Metal',
+      'Light',
+    ]);
+    const models = menu.slice(
+      menu.indexOf('aria-label="Model"'),
+      menu.indexOf('aria-label="Body"'),
+    );
+    const checked = [...models.matchAll(/aria-checked="true"[^>]*>(?:<[^>]+>)*([^<]+)</g)];
+    expect(checked.map((m) => m[1])).toEqual(['Luxe']);
   });
 
   it('opens the root with LOOK_SCRIPT, so the saved accent is painted before the rest parses', () => {

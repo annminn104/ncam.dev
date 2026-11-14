@@ -207,7 +207,7 @@ describe('llmsTxt', () => {
       '- [Garden Home](https://ncam.dev/projects/garden-home): A glass villa and its garden island, cut away floor by floor',
     );
     expect(text).toContain(
-      '- [CD Player](https://ncam.dev/projects/cd-player): Any Spotify playlist on a suitcase CD player',
+      '- [CD Player](https://ncam.dev/projects/cd-player): Any Spotify playlist on a 3D turntable or CD player',
     );
     expect(text.match(/^- \[.+\]\(https:\/\/ncam\.dev\/projects\//gm)).toHaveLength(5);
   });

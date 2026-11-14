@@ -30,6 +30,8 @@ export type MaterialRole =
   | 'gold'
   | 'decal'
   | 'lacquer'
+  | 'enamel'
+  | 'porcelain'
   | 'hit';
 
 export const MATERIAL_ROLES: Readonly<Record<string, MaterialRole>> = {
@@ -101,6 +103,16 @@ export const MATERIAL_ROLES: Readonly<Record<string, MaterialRole>> = {
   sleeve_paper: 'matte',
   arm_hit: 'hit',
   art_sleeve: 'print',
+  // The ornament's enamel (art/blender/scripts/ornament.py): a fixed palette, no look recolours it.
+  enamel_rose: 'enamel',
+  enamel_coral: 'enamel',
+  enamel_butter: 'enamel',
+  enamel_leaf: 'enamel',
+  enamel_sky: 'enamel',
+  enamel_ivory: 'enamel',
+  // Luxe's dancer (art/blender/scripts/luxe_dancer.py): glazed porcelain, ivory and blush, fixed.
+  porcelain: 'porcelain',
+  porcelain_blush: 'porcelain',
 };
 
 /**

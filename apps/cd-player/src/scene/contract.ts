@@ -71,10 +71,11 @@ export const NODES_BY_MEDIA: Readonly<Record<Media, readonly string[]>> = {
 };
 
 /**
- * Nodes a model may have: the Clear's and the deck's door, the deck's LED ring. The page drives
- * them when they are there (src/scene/profiles.ts names each model's).
+ * Nodes a model may have: the Clear's and the deck's door, the deck's LED ring, and Luxe's dancer
+ * (the porcelain ballerina's turning top, which turns with the platter). The page drives them when
+ * they are there (src/scene/profiles.ts names each model's door; the rig turns a dancer).
  */
-export const OPTIONAL_NODES = ['door_hinge', 'jog_ring'] as const;
+export const OPTIONAL_NODES = ['door_hinge', 'jog_ring', 'dancer'] as const;
 export type OptionalNode = (typeof OPTIONAL_NODES)[number];
 
 /**

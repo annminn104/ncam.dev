@@ -7,20 +7,31 @@ import { DEFAULT_LOOK_STATE, exhaustive, lookAccent, lookLabel, lookOf, lookSwat
 import { skinById } from './skins';
 
 describe('looks', () => {
-  it('starts on the suitcase in Blush, the Clear model in its defaults', () => {
+  it('starts on Luxe in its default look, the suitcase in Blush and the others in theirs', () => {
     expect(DEFAULT_LOOK_STATE).toEqual({
-      model: 'suitcase',
+      model: 'luxe',
       skin: 'blush',
       clear: DEFAULT_CLEAR_LOOK,
       deck: DEFAULT_DECK_LOOK,
       luxe: DEFAULT_LUXE_LOOK,
       personal: DEFAULT_PERSONAL,
     });
-    expect(lookOf(DEFAULT_LOOK_STATE)).toEqual({ model: 'suitcase', skin: 'blush' });
+    expect(lookOf(DEFAULT_LOOK_STATE)).toEqual({ model: 'luxe', luxe: DEFAULT_LUXE_LOOK });
+    expect(lookOf({ ...DEFAULT_LOOK_STATE, model: 'suitcase' })).toEqual({
+      model: 'suitcase',
+      skin: 'blush',
+    });
     expect(lookOf({ ...DEFAULT_LOOK_STATE, model: 'clear' })).toEqual({
       model: 'clear',
       clear: DEFAULT_CLEAR_LOOK,
     });
+  });
+
+  it('makes Luxe’s pink light the default look’s accent, named on the Player button', () => {
+    const look = lookOf(DEFAULT_LOOK_STATE);
+    expect(DEFAULT_LUXE_LOOK.light).toBe('pink');
+    expect(lookAccent(look)).toEqual({ accent: '#efa3c0', onAccent: '#2c111d' });
+    expect(lookLabel(look)).toBe('Player: Luxe, Pink light');
   });
 
   it('takes the accent from the skin, or from the Clear model’s light', () => {

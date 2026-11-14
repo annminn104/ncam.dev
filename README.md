@@ -33,7 +33,7 @@ deployed on its own.
     </td>
     <td align="center" width="33%">
       <a href="https://ncam-profile.vercel.app/projects/cd-player"><img src="apps/portfolio/public/thumbnails/cd-player.jpg" alt="CD Player"></a>
-      <br><sub><b>CD Player</b> · Any Spotify playlist on a suitcase CD player</sub>
+      <br><sub><b>CD Player</b> · Any Spotify playlist on a 3D turntable or CD player</sub>
     </td>
   </tr>
 </table>
@@ -64,7 +64,7 @@ A Turborepo monorepo on pnpm workspaces, TypeScript everywhere.
 | `apps/chess`       | Cultivation Chess: chess with cultivation-treasure pieces in three 3D arenas, vs a friend or Stockfish. React 19, React Three Fiber, chess.js.                             | 9003     |
 | `apps/mini-store`  | Mini Store: a rainy-night corner store diorama with a hand-written WebGL2 renderer (no three.js), booted on the first interaction. React 19.                               | 9004     |
 | `apps/garden-home` | Garden Home: a glass villa and its garden island from Blender modules, cut away floor by floor, behind a server-rendered poster. React 19, React Three Fiber.              | 9005     |
-| `apps/cd-player`   | CD Player: any Spotify playlist or album on a 3D suitcase or a see-through CD player, played in Spotify's embed; route-aware; Blender models. React 19, React Three Fiber. | 9006     |
+| `apps/cd-player`   | CD Player: any Spotify playlist or album on a 3D turntable or one of three CD players, heard in Spotify's embed; route-aware; Blender models. React 19, React Three Fiber. | 9006     |
 | `apps/strapi`      | Strapi 5 headless CMS for the blog, with a public read-only REST API. A backend service, not a remote.                                                                     | 1337     |
 
 | Package                  | What it is                                                                                                   |

@@ -1,4 +1,5 @@
 import {
+  Box3,
   BoxGeometry,
   Group,
   Matrix4,
@@ -9,9 +10,20 @@ import {
   Texture,
   Vector3,
 } from 'three';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { EMPTY_VIEW, type SceneView, type TrackView } from '../bridge';
+import type { ModelId } from '../models';
 import type { Status } from '../playback/sequencer';
+import {
+  CLEARANCE,
+  closestToCylinder,
+  glbModel,
+  glbOf,
+  loadGlb,
+  toRecord,
+  toSleeve,
+  type Cylinder,
+} from '../testing/clearance';
 import { fakeTurntable, TEST_TURNTABLE } from '../testing/fake-turntable';
 import {
   BOXES,
@@ -26,6 +38,7 @@ import {
   DECK_WELL,
   LUXE_ARM,
   LUXE_BAR,
+  LUXE_DANCER,
   LUXE_LEDGE,
   LUXE_PANELS,
   LUXE_PLATTER,
@@ -53,6 +66,7 @@ import {
 } from './director';
 import type { Slots } from './materials';
 import type { CdModel, VinylModel } from './model';
+import { createPlayhead } from './playhead';
 import { SCENE_PROFILES } from './profiles';
 import {
   applyPose,
@@ -1017,24 +1031,26 @@ describe('Luxe’s flights', () => {
     expect(rig.sleeveSeat?.out.toArray()).toEqual([0, 1, 0]);
   });
 
+  /** Every way a record and its sleeve fly on Luxe. */
+  const WAYS: [string, DiscPose['from'], DiscPose['to']][] = [
+    ...[0, 1, 2, 3, 4].map((slot): [string, DiscPose['from'], DiscPose['to']] => [
+      `slot ${slot} onto the platter`,
+      slot,
+      'spindle',
+    ]),
+    ['the platter back into slot 0', 'spindle', 0],
+    ...[1, 2, 3, 4].map((slot): [string, DiscPose['from'], DiscPose['to']] => [
+      `slot ${slot} down to slot ${slot - 1}`,
+      slot,
+      slot - 1,
+    ]),
+    ['the platter out of sight', 'spindle', null],
+    ['out of sight onto the platter', null, 'spindle'],
+  ];
+
   it('flies every record and its sleeve clear of the plinth, the platter, the arm, the stand and the ledge', () => {
     const { rig, toStand } = luxeSet();
-    const ways: [string, DiscPose['from'], DiscPose['to']][] = [
-      ...[0, 1, 2, 3, 4].map((slot): [string, DiscPose['from'], DiscPose['to']] => [
-        `slot ${slot} onto the platter`,
-        slot,
-        'spindle',
-      ]),
-      ['the platter back into slot 0', 'spindle', 0],
-      ...[1, 2, 3, 4].map((slot): [string, DiscPose['from'], DiscPose['to']] => [
-        `slot ${slot} down to slot ${slot - 1}`,
-        slot,
-        slot - 1,
-      ]),
-      ['the platter out of sight', 'spindle', null],
-      ['out of sight onto the platter', null, 'spindle'],
-    ];
-    for (const [way, from, to] of ways) {
+    for (const [way, from, to] of WAYS) {
       for (let step = 0; step <= 200; step++) {
         const along = step / 200;
         applyPose(rig, only(1, { from, to, along }), 0);
@@ -1049,6 +1065,85 @@ describe('Luxe’s flights', () => {
           ).toEqual([]);
         }
       }
+    }
+  });
+
+  /**
+   * The dancer turns on her pedestal at the deck's back left, beside the ledge: what she sweeps is
+   * the upright cylinder that LUXE_DANCER's box bounds, as far round her axis as she reaches. Her
+   * box itself would not do: a record rising off the platter out of sight passes over its corner
+   * nearest the platter, which she never reaches.
+   */
+  const DANCER_TURN: Cylinder = {
+    axis: [LUXE_DANCER.position[0], LUXE_DANCER.position[2]],
+    radius: (LUXE_DANCER.max[0] - LUXE_DANCER.min[0]) / 2,
+    bottom: LUXE_DANCER.min[1],
+    top: LUXE_DANCER.max[1],
+  };
+
+  /**
+   * The record measured as a solid disc and the sleeve as a box in their own frames, to within half
+   * a millimetre (src/testing/clearance.ts).
+   */
+  it('keeps every record and sleeve 5 mm off the dancer’s turn, at rest and at every step of every way', () => {
+    const { rig } = luxeSet();
+    let least = Infinity;
+    const measure = (copy: DiscCopy, at: string) => {
+      if (copy.object.visible) {
+        const record = closestToCylinder(DANCER_TURN, copy.object, toRecord);
+        expect(record, `the record, ${at}`).toBeGreaterThan(CLEARANCE);
+        least = Math.min(least, record);
+      }
+      if (copy.sleeve?.object.visible) {
+        const sleeve = closestToCylinder(DANCER_TURN, copy.sleeve.object, toSleeve);
+        expect(sleeve, `the sleeve, ${at}`).toBeGreaterThan(CLEARANCE);
+        least = Math.min(least, sleeve);
+      }
+    };
+    applyPose(
+      rig,
+      restingPose(fillShelf(targetOf(lineup('a', 'b', 'c', 'd', 'e', 'f'))), true, false),
+      0,
+    );
+    rig.discs.slice(0, 6).forEach((copy, index) => measure(copy, `at rest, ${index}`));
+    for (const [way, from, to] of WAYS) {
+      for (let step = 0; step <= 200; step++) {
+        const along = step / 200;
+        applyPose(rig, only(1, { from, to, along }), 0);
+        measure(rig.discs[1], `${way}, along ${along}`);
+      }
+    }
+    // It measured something: the closest today is a record rising off the platter out of sight,
+    // about 8 mm off her turn; a sleeve, drawn in over the ledge before it comes down, keeps about
+    // 20 mm. The asserts above ask 5 mm of each.
+    expect(Number.isFinite(least)).toBe(true);
+  });
+
+  it('draws a sleeve in over the ledge while it is high, so it comes straight down onto it and rises straight off it', () => {
+    const { rig } = luxeSet();
+    const ledge = rig.sleeveSeat!.position;
+    const sleeve = rig.discs[1].sleeve!.object;
+    const offsetAt = (from: DiscPose['from'], to: DiscPose['to'], along: number) => {
+      applyPose(rig, only(1, { from, to, along }), 0);
+      return sleeve.position.clone().sub(ledge);
+    };
+    for (const slot of [0, 1, 2, 3, 4]) {
+      // At 0.8 of the way it is all but over its place, its lowest edge still over the dancer.
+      const late = offsetAt(slot, 'spindle', 0.8);
+      expect(Math.hypot(late.x, late.z), `slot ${slot}`).toBeLessThan(0.005);
+      expect(new Box3().setFromObject(sleeve).min.y, `slot ${slot}`).toBeGreaterThan(
+        LUXE_DANCER.max[1] + CLEARANCE,
+      );
+      for (const along of [0.92, 0.96, 0.99]) {
+        const down = offsetAt(slot, 'spindle', along);
+        expect(Math.hypot(down.x, down.z), `slot ${slot}, along ${along}`).toBeLessThan(1e-12);
+        expect(down.y, `slot ${slot}, along ${along}`).toBeGreaterThan(0);
+      }
+    }
+    for (const along of [0.01, 0.04, 0.08]) {
+      const up = offsetAt('spindle', 0, along);
+      expect(Math.hypot(up.x, up.z), `along ${along}`).toBeLessThan(1e-12);
+      expect(up.y, `along ${along}`).toBeGreaterThan(0);
     }
   });
 
@@ -1101,6 +1196,124 @@ describe('the spin', () => {
       .clone()
       .multiply(new Quaternion().setFromAxisAngle(new Vector3(0, 1, 0), -Math.PI / 2));
     expect(rig.discs[0].object.quaternion.angleTo(expected)).toBeLessThan(1e-6);
+  });
+});
+
+describe('Luxe’s dancer', () => {
+  /** A committed GLB's model and its rig, as the page builds them. */
+  async function glbRig(id: ModelId): Promise<Rig> {
+    return rigFor(glbModel(await loadGlb(glbOf(id)), id));
+  }
+  /** Where `node` stands turned in the world now. */
+  const worldTurn = (node: Object3D) => node.getWorldQuaternion(new Quaternion());
+  /** How `node` has turned in the world since it stood at `from`. */
+  const turnSince = (node: Object3D, from: Quaternion) =>
+    worldTurn(node).multiply(from.clone().invert());
+
+  /**
+   * The turn the dancer's node is given before Luxe's rig is built. The GLB stands her facing the
+   * viewer, a turn of 0, which a rig that ignored her node's turn would match by chance.
+   */
+  const TURNED = 0.7;
+  let glbTurn = Number.NaN;
+  let luxe: Rig;
+  // One parse of cd-player-luxe.glb and one rig for the tests below, each starting it at rest.
+  beforeAll(async () => {
+    const root = await loadGlb(glbOf('luxe'));
+    const node = root.getObjectByName('dancer');
+    if (!node) throw new Error('cd-player-luxe.glb has no dancer');
+    glbTurn = node.rotation.y;
+    node.rotation.y = TURNED;
+    luxe = rigFor(glbModel(root, 'luxe'));
+  });
+  /** Luxe's rig at rest: no spin, the arm on its post, no drag, a record on the platter. */
+  function luxeAtRest(): Rig {
+    luxe.spin = 0;
+    luxe.last = { armAngle: ARM_REST, spin: 0, armLift: 0 };
+    luxe.armDrag = null;
+    luxe.playhead = createPlayhead();
+    luxe.shelf = fillShelf(targetOf(lineup('a')));
+    applyPose(luxe, restingPose(luxe.shelf, true, false), 0);
+    return luxe;
+  }
+
+  it('stands on Luxe: the GLB’s dancer, her turn taken from her node', () => {
+    const rig = luxeAtRest();
+    expect(glbTurn).toBe(0);
+    expect(rig.dancer?.node.name).toBe('dancer');
+    expect(rig.dancer?.base).toBe(TURNED);
+    // At rest she stands as her node stood, not as the GLB had her.
+    expect(rig.dancer?.node.rotation.y).toBe(TURNED);
+  });
+
+  it('turns with the platter as the record plays: the same spin, the same sense', () => {
+    const rig = luxeAtRest();
+    const { dancer, platter } = rig;
+    if (!dancer || !platter) throw new Error('no dancer or no platter');
+    const from = { dancer: worldTurn(dancer.node), platter: worldTurn(platter.node) };
+    for (let frame = 1; frame <= 90; frame++) {
+      applyPose(rig, restingPose(rig.shelf, true, true), 1 / 60);
+      expect(dancer.node.rotation.y - dancer.base, `frame ${frame}`).toBeCloseTo(
+        platter.node.rotation.y - platter.base,
+        12,
+      );
+      // The same turn in the world, about the same axis and the same way round.
+      const turned = turnSince(dancer.node, from.dancer);
+      expect(turned.angleTo(turnSince(platter.node, from.platter)), `frame ${frame}`).toBeLessThan(
+        1e-6,
+      );
+    }
+    // A second and a half at 33⅓ rpm, clockwise seen from above: five-sixths of a turn.
+    expect(dancer.node.rotation.y - dancer.base).toBeCloseTo((-5 / 6) * 2 * Math.PI, 9);
+  });
+
+  it('stops on Pause as the platter stops, by the same ease', () => {
+    const rig = luxeAtRest();
+    if (!isTurntableRig(rig) || !rig.dancer || !rig.platter) throw new Error('no dancer');
+    const { dancer, platter } = rig;
+    const view = (status: Status): SceneView => ({
+      ...EMPTY_VIEW,
+      current: track('a'),
+      status,
+      positionMs: 10_000,
+      durationMs: 200_000,
+    });
+    let nowMs = 0;
+    /** One frame of `status`: the dancer's step and the platter's, each in (-π, π]. */
+    const frame = (status: Status) => {
+      const before = { dancer: dancer.node.rotation.y, platter: platter.node.rotation.y };
+      nowMs += 1000 / 60;
+      const arm = turntableRestFor(rig, view(status), 1 / 60, nowMs);
+      applyPose(rig, restingPose(rig.shelf, true, true, arm), 1 / 60);
+      const step = (now: number, was: number) =>
+        Math.atan2(Math.sin(now - was), Math.cos(now - was));
+      return {
+        dancer: step(dancer.node.rotation.y, before.dancer),
+        platter: step(platter.node.rotation.y, before.platter),
+      };
+    };
+    for (let k = 0; k < 120; k++) frame('playing');
+    const playing = frame('playing');
+    expect(playing.dancer).toBeCloseTo(-(100 / 3 / 60) * 2 * Math.PI * (1 / 60), 6);
+    let last = Math.abs(playing.dancer);
+    for (let k = 1; k <= 180; k++) {
+      const step = frame('paused');
+      expect(step.dancer, `paused frame ${k}`).toBeCloseTo(step.platter, 12);
+      expect(Math.abs(step.dancer), `paused frame ${k}`).toBeLessThanOrEqual(last);
+      // She slows with the platter rather than stopping dead.
+      if (k === 1) expect(Math.abs(step.dancer)).toBeGreaterThan(Math.abs(playing.dancer) / 2);
+      last = Math.abs(step.dancer);
+    }
+    // Three seconds on she stands still, as the platter does.
+    expect(rig.last.spin).toBe(0);
+    expect(frame('paused')).toEqual({ dancer: 0, platter: 0 });
+  });
+
+  it('is none on the suitcase, the Clear and the Deck, nor on a turntable without one', async () => {
+    for (const id of ['suitcase', 'clear', 'deck'] as const) {
+      expect((await glbRig(id)).dancer, id).toBeNull();
+    }
+    expect(rigFor(fakeTurntable().model, TEST_TURNTABLE).dancer).toBeNull();
   });
 });
 

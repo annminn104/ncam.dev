@@ -160,11 +160,26 @@ export const LUXE_PLATTER = {
   top: 0.1008,
 } as const satisfies { centre: Vec3; radius: number; bottom: number; top: number };
 
-/** Luxe's plinth (`luxe_deck_body`): the tiers, bands, frame, feet, keys, LED ring and decor. */
+/**
+ * Luxe's plinth (`luxe_deck_body`): the tiers, bands, frame, feet, keys, LED ring, logo, ornament
+ * and the dancer's pedestal, whose top is its highest point.
+ */
 export const LUXE_PLINTH = {
   min: [-0.2258, 0, -0.1908],
-  max: [0.2258, 0.094, 0.1908],
+  max: [0.2258, 0.1, 0.1908],
 } as const satisfies { min: Vec3; max: Vec3 };
+
+/**
+ * Luxe's dancer (`dancer`, the empty the page turns, its up the world's) on her pedestal at the
+ * deck's back left corner: where it stands, and the box of the pedestal, the turning disc and the
+ * figure swept a full turn about its vertical axis (a cylinder's box: her reach from the axis,
+ * 31.93 mm, all round), in the GLB's world frame at rest.
+ */
+export const LUXE_DANCER = {
+  position: [-0.188, 0.1, -0.153],
+  min: [-0.21993, 0.08, -0.18493],
+  max: [-0.15607, 0.207, -0.12107],
+} as const satisfies { position: Vec3; min: Vec3; max: Vec3 };
 
 /**
  * Luxe's tonearm: its pivot, the box of the arm and its fixed base at rest (on its rest post), and

@@ -43,7 +43,9 @@ describe('renderHeroSSR', () => {
     expect(result.html).toContain('Housewife');
     expect(result.head).toEqual({
       title: 'Top 50 - Global',
-      description: expect.stringMatching(/Top 50 - Global by Spotify: a 2-track playlist/),
+      description: expect.stringMatching(
+        /^Top 50 - Global by Spotify: a 2-track playlist on a 3D turntable or CD player\. /,
+      ),
     });
     expect(stateOf(result.html)?.firstArtist?.name).toBe('Tate McRae');
     // ./hydrate renders the script back from the state it parsed: the very same text, so the
