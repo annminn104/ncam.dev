@@ -1,10 +1,13 @@
+import { Object3D } from 'three';
 import { describe, expect, it } from 'vitest';
+import { fakeTurntable } from '../testing/fake-turntable';
 import {
   CD_MATERIALS,
   CD_NODES,
   DYNAMIC_MATERIALS,
   MATERIALS_BY_MEDIA,
   NODES_BY_MEDIA,
+  OPTIONAL_NODES,
   PRINTED_MATERIALS,
   REQUIRED_NODES,
   SHARED_MATERIALS,
@@ -14,6 +17,7 @@ import {
   VINYL_MATERIALS,
   VINYL_NODES,
 } from './contract';
+import { readContract } from './model';
 
 /** The CD player's contract as it stood before the split (2026-11-13): it must not move. */
 const CD_CONTRACT = [
@@ -79,5 +83,22 @@ describe('the contract by media', () => {
     expect([...TURNTABLE_MATERIALS].sort()).toEqual(['art_disc', 'art_sleeve', 'card_print']);
     expect(NODES_BY_MEDIA.vinyl).toBe(TURNTABLE_NODES);
     expect(MATERIALS_BY_MEDIA.vinyl).toBe(TURNTABLE_MATERIALS);
+  });
+
+  it('lets a model have Luxe’s dancer or not: an optional node, which no media needs', () => {
+    expect(OPTIONAL_NODES).toContain('dancer');
+    expect(NODES_BY_MEDIA.cd).not.toContain('dancer');
+    expect(NODES_BY_MEDIA.vinyl).not.toContain('dancer');
+    // A turntable without one is whole; one with it hands it to the page.
+    const { model } = fakeTurntable();
+    const without = readContract(model.root, model.slots, 'vinyl');
+    expect(without.missing).toEqual([]);
+    expect(without.nodes.dancer).toBeUndefined();
+    const dancer = new Object3D();
+    dancer.name = 'dancer';
+    model.root.add(dancer);
+    const withIt = readContract(model.root, model.slots, 'vinyl');
+    expect(withIt.missing).toEqual([]);
+    expect(withIt.nodes.dancer).toBe(dancer);
   });
 });

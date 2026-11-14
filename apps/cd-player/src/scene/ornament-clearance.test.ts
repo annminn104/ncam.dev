@@ -1,23 +1,24 @@
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import { Matrix4, Vector3, type Group, type Mesh, type Object3D } from 'three';
-import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import type { Vector3 } from 'three';
 import { beforeAll, describe, expect, it } from 'vitest';
 import type { TrackView } from '../bridge';
-import { fakeTurntable } from '../testing/fake-turntable';
 import {
-  LUXE_LEDGE,
-  LUXE_RECORD,
-  LUXE_SEAT,
-  LUXE_SLEEVE,
-  LUXE_STAND,
-  luxeSlot,
-} from '../testing/model-measures';
-import { REQUIRED_NODES, type RequiredNode } from './contract';
+  CLEARANCE,
+  closest,
+  discShape,
+  glbModel,
+  glbOf,
+  loadGlb,
+  ornamentOf,
+  toDisc,
+  toRecord,
+  toSleeve,
+  type DiscShape,
+  type Measure,
+} from '../testing/clearance';
+import { fakeTurntable } from '../testing/fake-turntable';
+import { LUXE_LEDGE, LUXE_SEAT, LUXE_STAND, luxeSlot } from '../testing/model-measures';
 import { restingPose, type DiscPose, type Pose } from './director';
-import type { Slots } from './materials';
-import type { CdModel, VinylModel } from './model';
+import type { VinylModel } from './model';
 import { applyPose, rigFor, type Rig } from './rig';
 import { emptyShelf, fillShelf, targetOf, type Lineup } from './stage';
 
@@ -37,24 +38,12 @@ import { emptyShelf, fillShelf, targetOf, type Lineup } from './stage';
  * page loads it, its rig built from its own nodes, and each disc is measured as a solid disc of the
  * GLB's own disc's radius and faces.
  *
- * Vertex-exact: each ornament vertex is taken into the item's own frame and measured there, and the
- * distance is brought back to the world's by the item's scale, which the rig sets on a copy as it
- * shrinks away or grows in (uniformly, so the one factor is exact).
+ * Vertex-exact: each ornament vertex is taken into the item's own frame and measured there, the
+ * distance brought back to the world's by the item's scale (src/testing/clearance.ts).
  */
 
-const LUXE_GLB = fileURLToPath(new URL('../../public/assets/cd-player-luxe.glb', import.meta.url));
-const SUITCASE_GLB = fileURLToPath(new URL('../../public/assets/cd-player.glb', import.meta.url));
-/** The clearance every flight keeps off the ornament: 5 mm. */
-const CLEARANCE = 0.005;
 /** Steps along each flight (rig.test.ts takes 200). */
 const STEPS = 120;
-/** A sleeve's half thickness (vinyl.py's SLEEVE_T, 3 mm). */
-const SLEEVE_HALF_T = 0.0015;
-/**
- * How far past an item's own reach the ornament is measured: further off, it cannot be the closest
- * that counts, and within it the least distance at rest is a number, not Infinity.
- */
-const REACH = 0.03;
 
 const track = (id: string): TrackView => ({
   id,
@@ -73,101 +62,6 @@ const lineup = (current: string | null, ...upcoming: string[]): Lineup => ({
 function only(disc: number, pose: DiscPose): Pose {
   const rest = restingPose(emptyShelf(), false, false);
   return { ...rest, discs: rest.discs.map((_, index) => (index === disc ? pose : null)) };
-}
-
-/** A committed GLB as the page loads it: three's GLTFLoader with the meshopt decoder. */
-async function loadGlb(file: string): Promise<Group> {
-  const bytes = readFileSync(file);
-  const loader = new GLTFLoader();
-  loader.setMeshoptDecoder(MeshoptDecoder);
-  const data = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
-  const gltf = await loader.parseAsync(data as ArrayBuffer, '');
-  gltf.scene.updateMatrixWorld(true);
-  return gltf.scene;
-}
-
-/** The world-space vertices of every ornament mesh (`*_orn_*`) under `root`. */
-function ornamentOf(root: Object3D): Vector3[] {
-  const out: Vector3[] = [];
-  root.traverse((child: Object3D) => {
-    const mesh = child as Mesh;
-    if (!mesh.isMesh || !mesh.name.includes('_orn_')) return;
-    const position = mesh.geometry.getAttribute('position');
-    for (let i = 0; i < position.count; i++) {
-      out.push(new Vector3().fromBufferAttribute(position, i).applyMatrix4(mesh.matrixWorld));
-    }
-  });
-  return out;
-}
-
-/**
- * An item measured in its own frame: a point's distance to it, and its reach (the radius round its
- * origin that holds all of it).
- */
-interface Measure {
-  distance: (p: Vector3) => number;
-  reach: number;
-}
-
-/** A record (its face local XZ): a solid disc. */
-const toRecord: Measure = {
-  distance: (p) =>
-    Math.hypot(
-      Math.max(Math.hypot(p.x, p.z) - LUXE_RECORD.radius, 0),
-      Math.max(Math.abs(p.y) - LUXE_RECORD.half, 0),
-    ),
-  reach: Math.hypot(LUXE_RECORD.radius, LUXE_RECORD.half),
-};
-
-/** A sleeve (its face local XZ): a box. */
-const toSleeve: Measure = {
-  distance: (p) =>
-    Math.hypot(
-      Math.max(Math.abs(p.x) - LUXE_SLEEVE.half, 0),
-      Math.max(Math.abs(p.y) - SLEEVE_HALF_T, 0),
-      Math.max(Math.abs(p.z) - LUXE_SLEEVE.half, 0),
-    ),
-  reach: Math.hypot(LUXE_SLEEVE.half, SLEEVE_HALF_T, LUXE_SLEEVE.half),
-};
-
-/** The GLB's disc in its own frame (its face local XZ): its radius and its two faces' heights. */
-interface DiscShape {
-  radius: number;
-  bottom: number;
-  top: number;
-}
-
-/** A CD of `shape`: a solid disc. */
-function toDisc(shape: DiscShape): Measure {
-  return {
-    distance: (p) =>
-      Math.hypot(
-        Math.max(Math.hypot(p.x, p.z) - shape.radius, 0),
-        Math.max(shape.bottom - p.y, p.y - shape.top, 0),
-      ),
-    reach: Math.hypot(shape.radius, Math.max(Math.abs(shape.bottom), Math.abs(shape.top))),
-  };
-}
-
-/**
- * The least world distance from `ornament` to the item `object` poses, as `measure` takes it in
- * the item's own frame, or Infinity when none of it lies within REACH of the item. A copy the rig
- * shrinks carries a scale (`setScalar`, the same on every axis): a distance in its frame is the
- * world's over that scale, so the scale brings it back.
- */
-function closest(ornament: readonly Vector3[], object: Object3D, measure: Measure): number {
-  object.updateMatrixWorld(true);
-  const toItem = new Matrix4().copy(object.matrixWorld).invert();
-  const scale = object.matrixWorld.getMaxScaleOnAxis();
-  const centre = new Vector3().setFromMatrixPosition(object.matrixWorld);
-  const reach = (measure.reach * scale + REACH) ** 2;
-  const local = new Vector3();
-  let least = Infinity;
-  for (const p of ornament) {
-    if (p.distanceToSquared(centre) > reach) continue;
-    least = Math.min(least, measure.distance(local.copy(p).applyMatrix4(toItem)));
-  }
-  return least * scale;
 }
 
 /** The fake turntable posed as cd-player-luxe.glb (as rig.test.ts's Luxe set). */
@@ -196,7 +90,7 @@ function luxeRig(): Rig {
 describe('Luxe’s ornament and its records and sleeves', () => {
   let ornament: Vector3[] = [];
   beforeAll(async () => {
-    ornament = ornamentOf(await loadGlb(LUXE_GLB));
+    ornament = ornamentOf(await loadGlb(glbOf('luxe')));
   });
 
   it('loads the deck’s, the stand’s and the ledge’s ornament', () => {
@@ -261,50 +155,15 @@ describe('Luxe’s ornament and its records and sleeves', () => {
   });
 });
 
-/** `disc`'s meshes measured in its own frame. */
-function discShape(disc: Object3D): DiscShape {
-  const toFrame = new Matrix4().copy(disc.matrixWorld).invert();
-  const shape = { radius: 0, bottom: Infinity, top: -Infinity };
-  const p = new Vector3();
-  disc.traverse((child: Object3D) => {
-    const mesh = child as Mesh;
-    if (!mesh.isMesh) return;
-    const position = mesh.geometry.getAttribute('position');
-    const matrix = toFrame.clone().multiply(mesh.matrixWorld);
-    for (let i = 0; i < position.count; i++) {
-      p.fromBufferAttribute(position, i).applyMatrix4(matrix);
-      shape.radius = Math.max(shape.radius, Math.hypot(p.x, p.z));
-      shape.bottom = Math.min(shape.bottom, p.y);
-      shape.top = Math.max(shape.top, p.y);
-    }
-  });
-  return shape;
-}
-
 /**
  * cd-player.glb as the page loads it, with its ornament and its disc measured before the rig takes
  * the disc for its copies, and the rig built from its own nodes.
  */
 async function suitcaseSet(): Promise<{ rig: Rig; ornament: Vector3[]; disc: DiscShape }> {
-  const root = await loadGlb(SUITCASE_GLB);
-  const nodes: Partial<Record<RequiredNode, Object3D>> = {};
-  for (const name of REQUIRED_NODES) {
-    const node = root.getObjectByName(name);
-    if (!node) throw new Error(`cd-player.glb has no ${name}`);
-    nodes[name] = node;
-  }
+  const root = await loadGlb(glbOf('suitcase'));
+  const model = glbModel(root, 'suitcase');
   const ornament = ornamentOf(root);
-  const disc = discShape(nodes.disc!);
-  const model: CdModel = {
-    id: 'suitcase',
-    media: 'cd',
-    root,
-    nodes: nodes as CdModel['nodes'],
-    slots: {} as Slots,
-    optionalSlots: {},
-    dispose: () => {},
-    applyLook: () => {},
-  };
+  const disc = discShape(model.nodes.disc);
   return { rig: rigFor(model), ornament, disc };
 }
 

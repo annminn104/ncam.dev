@@ -65,6 +65,12 @@ export interface Landing {
   frame: PlaceFrame;
   spins: boolean;
   reach: number;
+  /**
+   * Whether a way to it from a slot ends coming straight down onto it along its `out`, drawn in over
+   * it while still high (PLUMB_DRAW), as a way from it to a slot starts rising straight off it: the
+   * sleeve's ledge, beside which Luxe's dancer turns, so a sleeve never sweeps low past her.
+   */
+  plumb: boolean;
 }
 
 /** A place's pose in world space, and its normal: the way a disc leaves and reaches it. */
@@ -106,6 +112,11 @@ export interface Rig<M extends PlayerModel = PlayerModel> extends StageState {
   spinRate: number;
   /** A turntable's platter: its node, and its turn as the GLB has it; it turns with the record. */
   platter: { node: Object3D; base: number } | null;
+  /**
+   * Luxe's dancer, the music-box ballerina on her pedestal: her turning top (`dancer`) and its turn
+   * as the GLB has it. She turns with the platter, by the same spin; null on a model without her.
+   */
+  dancer: { node: Object3D; base: number } | null;
   arm: { node: Object3D; baseRotationY: number; baseY: number };
   /** A turntable's tonearm (its profile's three angles); null on a CD player. */
   toneArm: M extends VinylModel ? ToneArm : null;
@@ -210,6 +221,17 @@ export function turnDoor(door: NonNullable<Rig['door']>, open: number): void {
  */
 const LIFT_TURN = [0.1, 0.5] as const;
 
+/**
+ * Over this part of its way from a slot to a plumb landing (mirrored: from the landing to a slot) a
+ * copy draws in over the landing, across the landing's normal, while along it it keeps to its way.
+ * It begins once a sleeve has left the stand, high over the deck, and has all but done by 0.8 of the
+ * way: a sleeve from any slot then stands within 5 mm of its place over the ledge, its lowest edge
+ * still 7 mm or more over the top of Luxe's dancer, so it comes down onto the ledge from straight
+ * above, never sweeping low past her (src/scene/rig.test.ts flies every way: a sleeve keeps 20 mm
+ * or more off her turn).
+ */
+const PLUMB_DRAW = [0.3, 0.92] as const;
+
 const rigs = new WeakMap<PlayerModel, Rig>();
 
 /** Which way a model's disc plays about its seat's up: 1 counter-clockwise, -1 clockwise. */
@@ -306,6 +328,7 @@ export function rigFor(model: PlayerModel, profile: SceneProfile = SCENE_PROFILE
       model.media === 'vinyl'
         ? { node: model.nodes.platter, base: model.nodes.platter.rotation.y }
         : null,
+    dancer: nodes.dancer ? { node: nodes.dancer, base: nodes.dancer.rotation.y } : null,
     arm: {
       node: nodes.arm_pivot,
       baseRotationY: nodes.arm_pivot.rotation.y,
@@ -328,8 +351,10 @@ export function rigFor(model: PlayerModel, profile: SceneProfile = SCENE_PROFILE
     seat,
     sleeveSeat,
     landings: {
-      disc: { frame: seat, spins: true, reach: reach.spindle },
-      sleeve: sleeveSeat ? { frame: sleeveSeat, spins: false, reach: reach.ledge } : null,
+      disc: { frame: seat, spins: true, reach: reach.spindle, plumb: false },
+      sleeve: sleeveSeat
+        ? { frame: sleeveSeat, spins: false, reach: reach.ledge, plumb: true }
+        : null,
     },
     slots,
     flight: {
@@ -365,6 +390,7 @@ const toFrame: PlaceFrame = {
 };
 const handleA = new Vector3();
 const handleB = new Vector3();
+const across = new Vector3();
 const spinQuaternion = new Quaternion();
 const turnQuaternion = new Quaternion();
 
@@ -410,8 +436,25 @@ function reachOf(rig: Rig, place: Place | null, flies: boolean, landing: Landing
 }
 
 /**
+ * Draws `position`, `toward` (0 … 1) of the way along its way to a plumb `landing`, in over the
+ * landing across its normal: not at all before PLUMB_DRAW, wholly from its end on. The ease is a
+ * quintic, flat at both ends to its second derivative, so the way bends without a jolt: its speed
+ * and its acceleration run on unbroken. Along the normal the position keeps to its way, and so the
+ * flight keeps its timing.
+ */
+function plumbOver(position: Vector3, landing: PlaceFrame, toward: number): void {
+  const keep = 1 - MathUtils.smootherstep(toward, PLUMB_DRAW[0], PLUMB_DRAW[1]);
+  if (keep === 1) return;
+  across.copy(position).sub(landing.position);
+  const along = across.dot(landing.out);
+  across.addScaledVector(landing.out, -along);
+  position.copy(landing.position).addScaledVector(landing.out, along).addScaledVector(across, keep);
+}
+
+/**
  * Puts `object` where `pose` has it. A turntable's sleeve runs the same way with its ledge as the
- * landing: it leaves and arrives with its record, on one timeline.
+ * landing: it leaves and arrives with its record, on one timeline, drawn in over the ledge before
+ * it comes down onto it (plumbOver).
  */
 function placeOn(rig: Rig, object: Object3D, pose: DiscPose | null, landing: Landing): void {
   if (!pose || (pose.from === null && pose.to === null)) {
@@ -459,9 +502,13 @@ function placeOn(rig: Rig, object: Object3D, pose: DiscPose | null, landing: Lan
     .addScaledVector(handleA, 3 * u * u * a)
     .addScaledVector(handleB, 3 * u * a * a)
     .addScaledVector(end.position, a * a * a);
+  const fromSlot = typeof pose.from === 'number';
+  // Between a slot and the ledge a sleeve comes down onto it, or rises off it, from straight above.
+  if (landing.plumb && flies && (fromSlot || typeof pose.to === 'number')) {
+    plumbOver(object.position, landing.frame, pose.to === 'spindle' ? a : 1 - a);
+  }
   // A disc lifted straight out of a crate's slot stays upright until it is clear of the foam and
   // lays flat on the way across, as it stands up again before it goes down into a slot.
-  const fromSlot = typeof pose.from === 'number';
   const turn =
     rig.flight.exit === 'up' && flies
       ? fromSlot
@@ -502,6 +549,7 @@ export function applyPose(rig: Rig, pose: Pose, dt: number): void {
   rig.arm.node.position.y = rig.arm.baseY + pose.armLift * ARM_LIFT_M;
   rig.spin = (rig.spin + dt * rig.spinRate * pose.spin * rig.spinSense) % (2 * Math.PI);
   if (rig.platter) rig.platter.node.rotation.y = rig.platter.base + rig.spin;
+  if (rig.dancer) rig.dancer.node.rotation.y = rig.dancer.base + rig.spin;
   rig.last.armAngle = pose.armAngle;
   rig.last.spin = pose.spin;
   rig.last.armLift = rig.toneArm ? pose.armLift : 0;

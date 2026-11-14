@@ -175,10 +175,12 @@ export const SCENE_PROFILES: Readonly<Record<ModelId, SceneProfile>> = {
     // viewer, open at the front), 50 cm of handle: a sleeve has 10 mm to each of the stand's low
     // sides, and the way's pull toward the ledge draws it that far sideways before it is out of the
     // stand, then it must pass over the plinth and the arm. The record comes down onto the platter
-    // from 15 cm above it, the sleeve onto the ledge from 50 cm, high over the arm. Out of sight
-    // they go up, left and a centimetre back: further back, a sleeve rising off the ledge would cut
-    // its legs (src/scene/rig.test.ts flies every way against the plinth, the platter, the arm, the
-    // stand and the ledge).
+    // from 15 cm above it, the sleeve onto the ledge from 50 cm, high over the arm, drawn in over
+    // the ledge while it is high (the rig's PLUMB_DRAW) so that it comes down onto it from straight
+    // above, never sweeping low past the dancer beside it. Out of sight they go up, left and a
+    // centimetre back: further back, a sleeve rising off the ledge would cut its legs
+    // (src/scene/rig.test.ts flies every way against the plinth, the platter, the arm, the stand,
+    // the ledge and the dancer's turn).
     flight: { reach: { slot: 0.5, spindle: 0.15, ledge: 0.5 }, aside: [-0.1, 0.15, -0.01] },
   },
 };
