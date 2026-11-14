@@ -60,6 +60,14 @@ export interface SceneProfile {
      * front, so the face is the way into the foam and the front wall; they lift out of the crate.
      */
     exit?: 'normal' | 'up';
+    /**
+     * A turntable's: over which part of its way from a slot to the ledge (from … to, a share of
+     * the way; mirrored for a way off the ledge) a sleeve draws in over the ledge across the
+     * ledge's `out`, keeping to its way along it, so that it comes down onto the ledge from
+     * straight above and rises straight off it (the rig's `plumbOver`). Absent: it keeps to its
+     * Bézier all the way.
+     */
+    plumb?: readonly [number, number];
   };
 }
 
@@ -175,12 +183,19 @@ export const SCENE_PROFILES: Readonly<Record<ModelId, SceneProfile>> = {
     // viewer, open at the front), 50 cm of handle: a sleeve has 10 mm to each of the stand's low
     // sides, and the way's pull toward the ledge draws it that far sideways before it is out of the
     // stand, then it must pass over the plinth and the arm. The record comes down onto the platter
-    // from 15 cm above it, the sleeve onto the ledge from 50 cm, high over the arm, drawn in over
-    // the ledge while it is high (the rig's PLUMB_DRAW) so that it comes down onto it from straight
-    // above, never sweeping low past the dancer beside it. Out of sight they go up, left and a
-    // centimetre back: further back, a sleeve rising off the ledge would cut its legs
-    // (src/scene/rig.test.ts flies every way against the plinth, the platter, the arm, the stand,
-    // the ledge and the dancer's turn).
-    flight: { reach: { slot: 0.5, spindle: 0.15, ledge: 0.5 }, aside: [-0.1, 0.15, -0.01] },
+    // from 15 cm above it, the sleeve onto the ledge from 50 cm, high over the arm. On its way
+    // between a slot and the ledge the sleeve draws in over the ledge (`plumb`) from 30 % of the
+    // way, once it has left the stand and is high over the deck, to 92 %, all but done by 80 %
+    // (the shape test holds it within 5 mm of its place there, its lowest edge 5 mm or more over
+    // the dancer's top), so it comes down onto the ledge from straight above, never sweeping low
+    // past the dancer beside it: the plain Bézier swept a sleeve's corner through her tutu. Out of
+    // sight they go up, left and a centimetre back: further back, a sleeve rising off the ledge
+    // would cut its legs (src/scene/rig.test.ts flies every way against the plinth, the platter,
+    // the arm, the stand, the ledge and the dancer's turn, each sleeve 5 mm or more off her turn).
+    flight: {
+      reach: { slot: 0.5, spindle: 0.15, ledge: 0.5 },
+      aside: [-0.1, 0.15, -0.01],
+      plumb: [0.3, 0.92],
+    },
   },
 };

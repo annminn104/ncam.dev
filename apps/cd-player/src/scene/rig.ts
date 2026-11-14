@@ -66,11 +66,12 @@ export interface Landing {
   spins: boolean;
   reach: number;
   /**
-   * Whether a way to it from a slot ends coming straight down onto it along its `out`, drawn in over
-   * it while still high (PLUMB_DRAW), as a way from it to a slot starts rising straight off it: the
-   * sleeve's ledge, beside which Luxe's dancer turns, so a sleeve never sweeps low past her.
+   * Over which part of a way to it from a slot the way draws in over it across its `out`, so that
+   * it ends coming straight down onto it (and a way from it to a slot starts rising straight off
+   * it): the profile's `flight.plumb` for a turntable's ledge (Luxe's, beside which her dancer
+   * turns), or null, the way keeping to its Bézier.
    */
-  plumb: boolean;
+  plumb: readonly [number, number] | null;
 }
 
 /** A place's pose in world space, and its normal: the way a disc leaves and reaches it. */
@@ -221,17 +222,6 @@ export function turnDoor(door: NonNullable<Rig['door']>, open: number): void {
  */
 const LIFT_TURN = [0.1, 0.5] as const;
 
-/**
- * Over this part of its way from a slot to a plumb landing (mirrored: from the landing to a slot) a
- * copy draws in over the landing, across the landing's normal, while along it it keeps to its way.
- * It begins once a sleeve has left the stand, high over the deck, and has all but done by 0.8 of the
- * way: a sleeve from any slot then stands within 5 mm of its place over the ledge, its lowest edge
- * still 7 mm or more over the top of Luxe's dancer, so it comes down onto the ledge from straight
- * above, never sweeping low past her (src/scene/rig.test.ts flies every way: a sleeve keeps 20 mm
- * or more off her turn).
- */
-const PLUMB_DRAW = [0.3, 0.92] as const;
-
 const rigs = new WeakMap<PlayerModel, Rig>();
 
 /** Which way a model's disc plays about its seat's up: 1 counter-clockwise, -1 clockwise. */
@@ -351,9 +341,14 @@ export function rigFor(model: PlayerModel, profile: SceneProfile = SCENE_PROFILE
     seat,
     sleeveSeat,
     landings: {
-      disc: { frame: seat, spins: true, reach: reach.spindle, plumb: false },
+      disc: { frame: seat, spins: true, reach: reach.spindle, plumb: null },
       sleeve: sleeveSeat
-        ? { frame: sleeveSeat, spins: false, reach: reach.ledge, plumb: true }
+        ? {
+            frame: sleeveSeat,
+            spins: false,
+            reach: reach.ledge,
+            plumb: profile.flight.plumb ?? null,
+          }
         : null,
     },
     slots,
@@ -436,25 +431,30 @@ function reachOf(rig: Rig, place: Place | null, flies: boolean, landing: Landing
 }
 
 /**
- * Draws `position`, `toward` (0 … 1) of the way along its way to a plumb `landing`, in over the
- * landing across its normal: not at all before PLUMB_DRAW, wholly from its end on. The ease is a
- * quintic, flat at both ends to its second derivative, so the way bends without a jolt: its speed
+ * Draws `position`, `toward` (0 … 1) of the way along its way to `frame`, in over the frame across
+ * its normal over the part `draw` names: not at all before it, wholly from its end on. The ease is
+ * a quintic, flat at both ends to its second derivative, so the way bends without a jolt: its speed
  * and its acceleration run on unbroken. Along the normal the position keeps to its way, and so the
  * flight keeps its timing.
  */
-function plumbOver(position: Vector3, landing: PlaceFrame, toward: number): void {
-  const keep = 1 - MathUtils.smootherstep(toward, PLUMB_DRAW[0], PLUMB_DRAW[1]);
+function plumbOver(
+  position: Vector3,
+  frame: PlaceFrame,
+  draw: readonly [number, number],
+  toward: number,
+): void {
+  const keep = 1 - MathUtils.smootherstep(toward, draw[0], draw[1]);
   if (keep === 1) return;
-  across.copy(position).sub(landing.position);
-  const along = across.dot(landing.out);
-  across.addScaledVector(landing.out, -along);
-  position.copy(landing.position).addScaledVector(landing.out, along).addScaledVector(across, keep);
+  across.copy(position).sub(frame.position);
+  const along = across.dot(frame.out);
+  across.addScaledVector(frame.out, -along);
+  position.copy(frame.position).addScaledVector(frame.out, along).addScaledVector(across, keep);
 }
 
 /**
  * Puts `object` where `pose` has it. A turntable's sleeve runs the same way with its ledge as the
  * landing: it leaves and arrives with its record, on one timeline, drawn in over the ledge before
- * it comes down onto it (plumbOver).
+ * it comes down onto it where the profile says so (`Landing.plumb`, plumbOver).
  */
 function placeOn(rig: Rig, object: Object3D, pose: DiscPose | null, landing: Landing): void {
   if (!pose || (pose.from === null && pose.to === null)) {
@@ -503,9 +503,10 @@ function placeOn(rig: Rig, object: Object3D, pose: DiscPose | null, landing: Lan
     .addScaledVector(handleB, 3 * u * a * a)
     .addScaledVector(end.position, a * a * a);
   const fromSlot = typeof pose.from === 'number';
-  // Between a slot and the ledge a sleeve comes down onto it, or rises off it, from straight above.
+  // Between a slot and a plumb ledge a sleeve comes down onto it, or rises off it, from straight
+  // above.
   if (landing.plumb && flies && (fromSlot || typeof pose.to === 'number')) {
-    plumbOver(object.position, landing.frame, pose.to === 'spindle' ? a : 1 - a);
+    plumbOver(object.position, landing.frame, landing.plumb, pose.to === 'spindle' ? a : 1 - a);
   }
   // A disc lifted straight out of a crate's slot stays upright until it is clear of the foam and
   // lays flat on the way across, as it stands up again before it goes down into a slot.

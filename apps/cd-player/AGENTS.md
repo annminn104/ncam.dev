@@ -466,13 +466,13 @@ door and turns `dancer` with the platter (below); a model without them is whole.
 `deck_pattern`), which the loader hands the rig as `PlayerModel.optionalSlots`.
 `loadPlayerModel(profile, url, …)` (`src/scene/model.ts`, GLTFLoader with the meshopt decoder)
 throws `ModelContractError` naming what is missing. `src/scene/model-contract.test.ts` reads the
-four committed GLBs. The suitcase's: every required node, every printed material and a role for every
-material, a material for every skin role, UVs on every printed and tiled primitive, the rack slots
-as empties under the lid, the tag's and the VU segments' materials, the deck's printed marks off
-the keys and the knob, the tonearm's moving parts under `arm_pivot` and its rest on the deck, none
-of the retired names its `GONE` list holds (the polaroids, the paper and pins, the gold), the
-budget, and meshes on leaf nodes only. The Clear's: every required node and the door, every
-printed material, a role for every material and the four materials a look colours
+four committed GLBs. The suitcase's: every required node, every printed material and a role for
+every material, a material for every skin role, UVs on every printed and tiled primitive, the
+rack slots as empties under the lid, the tag's and the VU segments' materials, the deck's printed
+marks off the keys and the knob, the tonearm's moving parts under `arm_pivot` and its rest on the
+deck, none of the retired names its `GONE` list holds (the polaroids, the paper and pins, the
+gold), the budget, and meshes on leaf nodes only. The Clear's: every required node and the door,
+every printed material, a role for every material and the four materials a look colours
 (`CLEAR_ROLES`), the rack slots as empties under `lid_hinge`, the tag's and the VU segments'
 materials, the budget, and meshes on leaf nodes only. The Deck's: every required node, its door
 and its ring, the five slots in the flight case under `lid_hinge`, the plate (`door_hinge`)
@@ -643,16 +643,17 @@ booklet's track, the collection) and where the last pose left the arm.
   `sleeve`). The ledge stands behind the deck, so a sleeve reaching it along the ledge's face would
   cut through the plinth: the sleeve's seat keeps its pose but its `out` is the world's up, its
   handle `flight.reach.ledge`, so it comes down onto the ledge from above (and rises off it the same
-  way). The ledge's landing is also `plumb` (`Landing.plumb`): on a way between a slot and the
-  ledge the sleeve draws in over the ledge across its `out` while it is still high (`plumbOver`,
-  over `PLUMB_DRAW`, 30 % to 92 % of the way, mirrored for a way off the ledge, a quintic ease so
-  its speed and acceleration run on unbroken; along `out` it keeps to its Bézier, and the flight
-  to its timing). By 80 % of the way it stands within 5 mm of its place over the ledge, its lowest
-  edge still over the dancer's top, so it comes down from straight above: the plain Bézier swept
-  its lower left corner through the dancer's tutu. The ways out of sight and back keep their
-  Bézier, which clears her. The record's way to the platter is the CD disc's. A sleeve is printed
-  with its record (`disc-printer.ts`: the album art, cropped square, or a blank cover), and a
-  record without its art prints "33⅓ RPM · LONG PLAY" where a CD prints "CD·01 · COMPACT DISC".
+  way). Luxe's ledge is also plumb (`Landing.plumb`, from the profile's `flight.plumb`; a profile
+  without it keeps the plain Bézier): on a way between a slot and the ledge the sleeve draws in
+  over the ledge across its `out` while it is still high (`plumbOver`, over Luxe's 30 % to 92 % of
+  the way, mirrored for a way off the ledge, a quintic ease so its speed and acceleration run on
+  unbroken; along `out` it keeps to its Bézier, and the flight to its timing). By 80 % of the way
+  it stands within 5 mm of its place over the ledge, its lowest edge 5 mm or more over the
+  dancer's top, so it comes down from straight above: the plain Bézier swept its lower left corner
+  through the dancer's tutu. The ways out of sight and back keep their Bézier, which clears her.
+  The record's way to the platter is the CD disc's. A sleeve is printed with its record
+  (`disc-printer.ts`: the album art, cropped square, or a blank cover), and a record without its
+  art prints "33⅓ RPM · LONG PLAY" where a CD prints "CD·01 · COMPACT DISC".
 - **The dancer.** `Rig.dancer` is Luxe's `dancer` (the optional node: the empty that carries the
   ballerina's turning disc and figure, its up the world's) and its turn as the GLB has it, or null
   on a model without one (the suitcase, the Clear, the Deck). `applyPose` turns it by the platter's
@@ -661,10 +662,11 @@ booklet's track, the collection) and where the last pose left the arm.
   `rig.test.ts` checks it on the committed GLBs (`src/testing/clearance.ts`'s `glbModel` builds a
   model as the loader does) and flies every Luxe way and resting pose against her turn: no record
   or sleeve comes within 5 mm of the upright cylinder `LUXE_DANCER`'s box bounds (radius 31.93 mm
-  round her axis, 80 to 207 mm up), measured to within half a millimetre (`closestToCylinder`).
-  The cylinder, not the box: a record rising off the platter out of sight passes over the box's
-  corner nearest the platter, which she never reaches. The closest is that record, 8.6 mm off; a
-  sleeve keeps 20.6 mm.
+  round her axis, 80 to 207 mm up). `closestToCylinder` measures it never above the true distance
+  and at most half a millimetre below it, and reads 0 for an item whose centre is inside the
+  cylinder. The cylinder, not the box: a record rising off the platter out of sight passes over
+  the box's corner nearest the platter, which she never reaches. That record is the closest today,
+  about 8 mm off, and a sleeve keeps about 20 mm; the test asks 5 mm of each.
 - **The tonearm** (`scene/tonearm.ts`, `scene/playhead.ts`, three-free). `toneArmOf(profile)` is
   the arm's three angles (`rest`, `leadIn`, `runOut`); `grooveShare`, `grooveAngle`, `inGrooves`,
   `grooveMs` and `directorAngle` turn a position into an angle and back. The playhead
@@ -1593,8 +1595,9 @@ the empty pivots, and the UVs that no texture in the file uses yet) and meshopt-
 `public/assets/cd-player-deck.glb` or `public/assets/cd-player-luxe.glb`, all **committed**
 (about 124,348 triangles and 940,104 bytes for the suitcase with its ornament, 132,715 and 965 KB
 for the Clear, 719 KB for the Deck, and 73,689 triangles and 602,816 bytes for Luxe with its
-ornament and its dancer, at the time of writing). **The budget** (`model-contract.test.ts`, for each): 4 MB, 150k triangles,
-`EXT_meshopt_compression`, and meshes only on leaf nodes, so quantisation never scales a pivot.
+ornament and its dancer, at the time of writing). **The budget** (`model-contract.test.ts`, for
+each): 4 MB, 150k triangles, `EXT_meshopt_compression`, and meshes only on leaf nodes, so
+quantisation never scales a pivot.
 Luxe has one of its own, 650,000 bytes and 80,000 triangles, and the suitcase's ornament may add
 200,000 bytes at most to the 795,088 it weighed without it. Rebuild a model after any change to
 its scripts (`cdkit.py` and `parts.py` are every model's, `ornament.py` the suitcase's and

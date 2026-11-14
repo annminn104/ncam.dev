@@ -193,7 +193,7 @@ export function closest(points: readonly Vector3[], object: Object3D, measure: M
 }
 
 /** How close closestOn comes to the true distance: half a millimetre. */
-const SURFACE_TOLERANCE = 0.0005;
+export const SURFACE_TOLERANCE = 0.0005;
 
 /**
  * A surface mapped from a rectangle of two parameters, `s` and `t`: its point at (s, t), and the most
@@ -248,13 +248,23 @@ export interface Cylinder {
 }
 
 /**
- * The least world distance from the solid `cylinder` to the item `object` poses (distanceTo), to
- * within half a millimetre. No item here can hold the whole cylinder, so it is the least distance
- * to its surface (0 where they cross): its side, by turn and height, and its two ends, by turn and
- * radius. Along an arc a point stands no further than the arc's length.
+ * The least world distance from the solid `cylinder` to the item `object` poses (distanceTo), on
+ * the safe side: never above the true one and at most SURFACE_TOLERANCE below it (closestOn's
+ * reading less its tolerance), so `> CLEARANCE` holds the true distance to more than CLEARANCE.
+ * It is the least distance to the cylinder's surface (its side, by turn and height, and its two
+ * ends, by turn and radius; along an arc a point stands no further than the arc's length), 0 where
+ * the item crosses it, unless the item lies wholly inside, where the surface stands off it: every
+ * item here holds its own origin, so an item whose origin is inside the cylinder reads 0.
  */
 export function closestToCylinder(cylinder: Cylinder, object: Object3D, measure: Measure): number {
   const { axis, radius, bottom, top } = cylinder;
+  object.updateMatrixWorld(true);
+  const origin = new Vector3().setFromMatrixPosition(object.matrixWorld);
+  const inside =
+    Math.hypot(origin.x - axis[0], origin.z - axis[1]) <= radius &&
+    origin.y >= bottom &&
+    origin.y <= top;
+  if (inside) return 0;
   const turn = [0, 2 * Math.PI] as const;
   const side: Surface = {
     s: turn,
@@ -269,5 +279,5 @@ export function closestToCylinder(cylinder: Cylinder, object: Object3D, measure:
     point: (s, t, into) => into.set(axis[0] + t * Math.cos(s), y, axis[1] + t * Math.sin(s)),
     spread: (s0, s1, t0, t1) => Math.hypot((t1 - t0) / 2, (t1 * (s1 - s0)) / 2),
   });
-  return closestOn([side, end(bottom), end(top)], object, measure);
+  return Math.max(0, closestOn([side, end(bottom), end(top)], object, measure) - SURFACE_TOLERANCE);
 }

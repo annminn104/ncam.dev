@@ -10,7 +10,7 @@ import {
   Texture,
   Vector3,
 } from 'three';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { EMPTY_VIEW, type SceneView, type TrackView } from '../bridge';
 import type { ModelId } from '../models';
 import type { Status } from '../playback/sequencer';
@@ -66,6 +66,7 @@ import {
 } from './director';
 import type { Slots } from './materials';
 import type { CdModel, VinylModel } from './model';
+import { createPlayhead } from './playhead';
 import { SCENE_PROFILES } from './profiles';
 import {
   applyPose,
@@ -1112,8 +1113,9 @@ describe('Luxe’s flights', () => {
         measure(rig.discs[1], `${way}, along ${along}`);
       }
     }
-    // It measured something: the closest is a record rising off the platter out of sight, which
-    // passes 8.6 mm off her turn; a sleeve, drawn in over the ledge before it comes down, keeps 20.6.
+    // It measured something: the closest today is a record rising off the platter out of sight,
+    // about 8 mm off her turn; a sleeve, drawn in over the ledge before it comes down, keeps about
+    // 20 mm. The asserts above ask 5 mm of each.
     expect(Number.isFinite(least)).toBe(true);
   });
 
@@ -1208,18 +1210,47 @@ describe('Luxe’s dancer', () => {
   const turnSince = (node: Object3D, from: Quaternion) =>
     worldTurn(node).multiply(from.clone().invert());
 
-  it('stands on Luxe: the GLB’s dancer, turned as the GLB has her', async () => {
-    const rig = await glbRig('luxe');
+  /**
+   * The turn the dancer's node is given before Luxe's rig is built. The GLB stands her facing the
+   * viewer, a turn of 0, which a rig that ignored her node's turn would match by chance.
+   */
+  const TURNED = 0.7;
+  let glbTurn = Number.NaN;
+  let luxe: Rig;
+  // One parse of cd-player-luxe.glb and one rig for the tests below, each starting it at rest.
+  beforeAll(async () => {
+    const root = await loadGlb(glbOf('luxe'));
+    const node = root.getObjectByName('dancer');
+    if (!node) throw new Error('cd-player-luxe.glb has no dancer');
+    glbTurn = node.rotation.y;
+    node.rotation.y = TURNED;
+    luxe = rigFor(glbModel(root, 'luxe'));
+  });
+  /** Luxe's rig at rest: no spin, the arm on its post, no drag, a record on the platter. */
+  function luxeAtRest(): Rig {
+    luxe.spin = 0;
+    luxe.last = { armAngle: ARM_REST, spin: 0, armLift: 0 };
+    luxe.armDrag = null;
+    luxe.playhead = createPlayhead();
+    luxe.shelf = fillShelf(targetOf(lineup('a')));
+    applyPose(luxe, restingPose(luxe.shelf, true, false), 0);
+    return luxe;
+  }
+
+  it('stands on Luxe: the GLB’s dancer, her turn taken from her node', () => {
+    const rig = luxeAtRest();
+    expect(glbTurn).toBe(0);
     expect(rig.dancer?.node.name).toBe('dancer');
-    expect(rig.dancer?.base).toBe(rig.model.nodes.dancer?.rotation.y);
+    expect(rig.dancer?.base).toBe(TURNED);
+    // At rest she stands as her node stood, not as the GLB had her.
+    expect(rig.dancer?.node.rotation.y).toBe(TURNED);
   });
 
-  it('turns with the platter as the record plays: the same spin, the same sense', async () => {
-    const rig = await glbRig('luxe');
+  it('turns with the platter as the record plays: the same spin, the same sense', () => {
+    const rig = luxeAtRest();
     const { dancer, platter } = rig;
     if (!dancer || !platter) throw new Error('no dancer or no platter');
     const from = { dancer: worldTurn(dancer.node), platter: worldTurn(platter.node) };
-    rig.shelf = fillShelf(targetOf(lineup('a')));
     for (let frame = 1; frame <= 90; frame++) {
       applyPose(rig, restingPose(rig.shelf, true, true), 1 / 60);
       expect(dancer.node.rotation.y - dancer.base, `frame ${frame}`).toBeCloseTo(
@@ -1236,11 +1267,10 @@ describe('Luxe’s dancer', () => {
     expect(dancer.node.rotation.y - dancer.base).toBeCloseTo((-5 / 6) * 2 * Math.PI, 9);
   });
 
-  it('stops on Pause as the platter stops, by the same ease', async () => {
-    const rig = await glbRig('luxe');
+  it('stops on Pause as the platter stops, by the same ease', () => {
+    const rig = luxeAtRest();
     if (!isTurntableRig(rig) || !rig.dancer || !rig.platter) throw new Error('no dancer');
     const { dancer, platter } = rig;
-    rig.shelf = fillShelf(targetOf(lineup('a')));
     const view = (status: Status): SceneView => ({
       ...EMPTY_VIEW,
       current: track('a'),
