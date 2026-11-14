@@ -38,6 +38,7 @@ const walk = (node: unknown, out: { props: Record<string, unknown> }[] = []) => 
   }
   return out;
 };
+const SUITCASE: LookState = { ...DEFAULT_LOOK_STATE, model: 'suitcase' };
 const CLEAR: LookState = { ...DEFAULT_LOOK_STATE, model: 'clear' };
 const DECK: LookState = { ...DEFAULT_LOOK_STATE, model: 'deck' };
 const LUXE: LookState = { ...DEFAULT_LOOK_STATE, model: 'luxe' };
@@ -60,25 +61,47 @@ describe('LookPicker (server markup)', () => {
     expect(picker(CLEAR)).toContain(`background-color:${lookSwatch(lookOf(CLEAR))}`);
   });
 
+  it('names Luxe in its pink light on the default look', () => {
+    expect(picker(DEFAULT_LOOK_STATE)).toContain('<span class="cdp-sr">: Luxe, Pink light</span>');
+  });
+
   it('shows the skin it is given', () => {
-    expect(picker({ ...DEFAULT_LOOK_STATE, skin: 'cherry' })).toContain(': Suitcase, Cherry');
+    expect(picker({ ...SUITCASE, skin: 'cherry' })).toContain(': Suitcase, Cherry');
   });
 
   it('renders the same markup every time, so the server and the first client render agree', () => {
-    const look = { ...DEFAULT_LOOK_STATE, skin: 'sage' } as const;
+    const look = { ...SUITCASE, skin: 'sage' } as const;
     expect(picker(look)).toBe(picker(look));
+    expect(picker(DEFAULT_LOOK_STATE)).toBe(picker(DEFAULT_LOOK_STATE));
   });
 });
 
 describe('LookMenu', () => {
-  it('offers the model first, then the suitcase’s four skins', () => {
+  it('keeps the models in their order on the default look, Luxe the one marked current', () => {
     const html = menu(DEFAULT_LOOK_STATE);
+    expect(groups(html)).toEqual(['Model', 'Body', 'Metal', 'Light']);
+    const models = html.slice(
+      html.indexOf('aria-label="Model"'),
+      html.indexOf('aria-label="Body"'),
+    );
+    const radios = [...models.matchAll(RADIO)];
+    expect(radios.map((m) => text(m[3]))).toEqual(['Suitcase', 'Clear', 'Deck', 'Luxe']);
+    expect(radios.map((m) => `${m[1]} ${m[2]}`)).toEqual([
+      'false -1',
+      'false -1',
+      'false -1',
+      'true 0',
+    ]);
+  });
+
+  it('offers the model first, then the suitcase’s four skins', () => {
+    const html = menu(SUITCASE);
     expect(groups(html)).toEqual(['Model', 'Player colour']);
     expect(html).toMatch(/role="radio" aria-checked="true" tabindex="0"[^>]*>(<[^>]+>)*Suitcase/);
   });
 
   it('lists the skins in order, the current one checked and its group’s only tab stop', () => {
-    const html = menu({ ...DEFAULT_LOOK_STATE, skin: 'sage' });
+    const html = menu({ ...SUITCASE, skin: 'sage' });
     const skins = html.slice(html.indexOf('aria-label="Player colour"'));
     const radios = [...skins.matchAll(RADIO)];
     expect(radios.map((m) => text(m[3]))).toEqual(SKINS.map((skin) => skin.name));
@@ -91,7 +114,7 @@ describe('LookMenu', () => {
   });
 
   it('marks the choice with a tick, not colour alone', () => {
-    const html = menu({ ...DEFAULT_LOOK_STATE, skin: 'cream' });
+    const html = menu({ ...SUITCASE, skin: 'cream' });
     const skins = html.slice(html.indexOf('aria-label="Player colour"'));
     const radios = [...skins.matchAll(RADIO)];
     expect(radios.map((m) => m[3].includes('<svg'))).toEqual([false, false, true, false]);
@@ -160,7 +183,7 @@ describe('LookMenu', () => {
   });
 
   it('shows neither Pattern nor the name field on the suitcase or the Clear', () => {
-    for (const look of [DEFAULT_LOOK_STATE, CLEAR]) {
+    for (const look of [SUITCASE, CLEAR]) {
       const html = menu(look);
       expect(groups(html)).not.toContain('Pattern');
       expect(html).not.toContain('<input');

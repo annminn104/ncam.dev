@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { skinById } from '../skins';
+import { DEFAULT_LOOK_STATE, lookAccent, lookOf } from '../looks';
 import css from './app.css?inline';
 
 /** The declarations of the first rule whose whole selector is `selector`, at the start of a line. */
@@ -77,8 +77,8 @@ describe('app.css: the glass panel', () => {
     expect(token('edge')).toBe('rgb(255 255 255 / 0.75)');
     expect(token('line')).toBe('rgb(36 22 28 / 0.14)');
     expect(token('mono')).toBe('ui-monospace, SFMono-Regular, Menlo, Consolas, monospace');
-    expect(token('accent')).toBe('#e8a3b0');
-    expect(token('on-accent')).toBe('#2a1a1e');
+    expect(token('accent')).toBe('#efa3c0');
+    expect(token('on-accent')).toBe('#2c111d');
     // Derived from the skin's accent, so every skin gets its own (src/skins.test.ts checks the ink).
     expect(token('accent-ink')).toBe('color-mix(in srgb, var(--cdp-accent) 50%, rgb(0 0 0))');
     expect(token('wash')).toBe('color-mix(in srgb, var(--cdp-accent) 38%, rgb(255 255 255))');
@@ -144,10 +144,10 @@ describe('app.css: the glass panel', () => {
     );
   });
 
-  it("falls back to Blush's own accent pair from src/skins.json, under the inline skin's", () => {
-    const blush = skinById('blush');
-    expect(token('accent')).toBe(blush.accent);
-    expect(token('on-accent')).toBe(blush.onAccent);
+  it("falls back to the default look's own accent pair, Luxe's pink light's, under the inline one", () => {
+    const { accent, onAccent } = lookAccent(lookOf(DEFAULT_LOOK_STATE));
+    expect(token('accent')).toBe(accent);
+    expect(token('on-accent')).toBe(onAccent);
   });
 
   it('names no colour outside the tokens but neutral greys', () => {

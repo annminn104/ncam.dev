@@ -29,6 +29,7 @@ import {
   writeSkin,
 } from './persist';
 import { DECK_SWATCHES, DEFAULT_DECK_LOOK } from './deck-looks';
+import { DEFAULT_LOOK_STATE, lookAccent, lookOf } from './looks';
 import { DEFAULT_LUXE_LOOK, LUXE_SWATCHES } from './luxe-looks';
 import { DEFAULT_PERSONAL } from './personal';
 import { DEFAULT_COLLECTION, type CollectionRef } from './routes';
@@ -114,16 +115,19 @@ describe('the saved model and the Clear model’s colours', () => {
     },
   };
 
-  it('round-trips the model under ncam.cd-player.model, the suitcase for anything else', () => {
+  it('round-trips the model under ncam.cd-player.model, Luxe for anything else', () => {
     const storage = memory();
     writeModel(storage, 'clear');
     expect(MODEL_KEY).toBe('ncam.cd-player.model');
     expect(readModel(storage)).toBe('clear');
-    for (const junk of ['glass', '', 'Clear']) {
-      expect(readModel(memory({ [MODEL_KEY]: junk })), junk).toBe('suitcase');
+    writeModel(storage, 'suitcase');
+    expect(readModel(storage)).toBe('suitcase');
+    for (const junk of ['glass', '', 'Clear', 'Suitcase', 'toString', '__proto__']) {
+      expect(readModel(memory({ [MODEL_KEY]: junk })), junk).toBe('luxe');
     }
-    expect(readModel(null)).toBe('suitcase');
-    expect(readModel(broken)).toBe('suitcase');
+    expect(readModel(memory())).toBe('luxe');
+    expect(readModel(null)).toBe('luxe');
+    expect(readModel(broken)).toBe('luxe');
     expect(() => writeModel(broken, 'clear')).not.toThrow();
   });
 
@@ -212,6 +216,38 @@ describe('the saved model and the Clear model’s colours', () => {
       personal: { pattern: 'waves', name: 'Lan' },
     });
   });
+
+  it('reads Luxe in its default look when nothing is saved or storage fails', () => {
+    expect(readLookState(memory())).toEqual(DEFAULT_LOOK_STATE);
+    expect(readLookState(null)).toEqual(DEFAULT_LOOK_STATE);
+    expect(readLookState(broken)).toEqual(DEFAULT_LOOK_STATE);
+    expect(DEFAULT_LOOK_STATE.model).toBe('luxe');
+  });
+
+  it('shows Luxe when no model is saved, whatever skin is, and keeps the skin for the suitcase', () => {
+    const state = readLookState(
+      memory({ [SKIN_KEY]: 'sage', [LUXE_KEY]: '{"light":"amber"}', [MODEL_KEY]: 'glass' }),
+    );
+    expect(state.model).toBe('luxe');
+    expect(state.skin).toBe('sage');
+    expect(state.luxe).toEqual({ ...DEFAULT_LUXE_LOOK, light: 'amber' });
+    expect(readLookState(memory({ [SKIN_KEY]: 'cherry' }))).toEqual({
+      ...DEFAULT_LOOK_STATE,
+      skin: 'cherry',
+    });
+  });
+
+  it('lets a saved model win over the default', () => {
+    for (const model of ['suitcase', 'clear', 'deck', 'luxe'] as const) {
+      const state = readLookState(memory({ [MODEL_KEY]: model, [SKIN_KEY]: 'cream' }));
+      expect(state.model, model).toBe(model);
+      expect(state.skin, model).toBe('cream');
+    }
+    expect(lookOf(readLookState(memory({ [MODEL_KEY]: 'suitcase' })))).toEqual({
+      model: 'suitcase',
+      skin: 'blush',
+    });
+  });
 });
 
 describe('LOOK_SCRIPT', () => {
@@ -226,19 +262,59 @@ describe('LOOK_SCRIPT', () => {
     return set;
   }
 
-  it('paints the saved skin’s pair on the suitcase, as App renders it after hydrating', () => {
-    for (const skin of SKINS) {
-      expect(paint(memory({ [SKIN_KEY]: skin.id })), skin.id).toEqual({
-        '--cdp-accent': skin.accent,
-        '--cdp-on-accent': skin.onAccent,
-      });
-    }
+  const skinPair = (id: string) => {
+    const skin = SKINS.find((s) => s.id === id)!;
+    return { '--cdp-accent': skin.accent, '--cdp-on-accent': skin.onAccent };
+  };
+  const luxePair = (id: string) => {
+    const light = LUXE_SWATCHES.light.find((l) => l.id === id)!;
+    return { '--cdp-accent': light.accent, '--cdp-on-accent': light.onAccent };
+  };
+
+  it('paints nothing when nothing is saved: the server’s accent is already Luxe’s pink light’s', () => {
     expect(paint(memory())).toEqual({});
+    expect(lookAccent(lookOf(DEFAULT_LOOK_STATE))).toEqual({
+      accent: luxePair(DEFAULT_LUXE_LOOK.light)['--cdp-accent'],
+      onAccent: luxePair(DEFAULT_LUXE_LOOK.light)['--cdp-on-accent'],
+    });
   });
 
-  it('paints nothing where readSkin finds no skin', () => {
-    for (const junk of ['midnight', '', 'SAGE', 'toString', '__proto__', 'constructor']) {
-      expect(paint(memory({ [SKIN_KEY]: junk })), junk).toEqual({});
+  it('paints the saved skin’s pair on a saved suitcase, as App renders it after hydrating', () => {
+    for (const skin of SKINS) {
+      expect(paint(memory({ [MODEL_KEY]: 'suitcase', [SKIN_KEY]: skin.id })), skin.id).toEqual(
+        skinPair(skin.id),
+      );
+    }
+  });
+
+  it('paints Blush’s pair on a saved suitcase where readSkin finds no skin', () => {
+    for (const junk of [
+      undefined,
+      'midnight',
+      '',
+      'SAGE',
+      'toString',
+      '__proto__',
+      'constructor',
+    ]) {
+      const store: Record<string, string> = { [MODEL_KEY]: 'suitcase' };
+      if (junk !== undefined) store[SKIN_KEY] = junk;
+      expect(paint(memory(store)), String(junk)).toEqual(skinPair('blush'));
+    }
+  });
+
+  it('takes Luxe’s branch for no saved model, whatever skin is saved, or one no model has', () => {
+    for (const model of [undefined, 'glass', '', 'Clear', 'Suitcase', 'toString', '__proto__']) {
+      const store: Record<string, string> = {
+        [SKIN_KEY]: 'sage',
+        [CLEAR_KEY]: '{"light":"pink"}',
+        [DECK_KEY]: '{"light":"red"}',
+        [LUXE_KEY]: '{"light":"amber"}',
+      };
+      if (model !== undefined) store[MODEL_KEY] = model;
+      expect(paint(memory(store)), String(model)).toEqual(luxePair('amber'));
+      delete store[LUXE_KEY];
+      expect(paint(memory(store)), `${String(model)}, no Luxe colours`).toEqual({});
     }
   });
 
@@ -257,17 +333,6 @@ describe('LOOK_SCRIPT', () => {
     }
   });
 
-  it('paints the saved skin’s pair for any saved model but the Clear one', () => {
-    const sage = SKINS.find((skin) => skin.id === 'sage')!;
-    for (const model of ['glass', '', 'Clear', 'suitcase']) {
-      const store = { [MODEL_KEY]: model, [SKIN_KEY]: 'sage', [CLEAR_KEY]: '{"light":"pink"}' };
-      expect(paint(memory(store)), model).toEqual({
-        '--cdp-accent': sage.accent,
-        '--cdp-on-accent': sage.onAccent,
-      });
-    }
-  });
-
   it('paints the saved light’s pair on the Clear model, its default light’s for junk', () => {
     const pair = (id: string) => {
       const light = CLEAR_SWATCHES.light.find((l) => l.id === id)!;
@@ -283,24 +348,52 @@ describe('LOOK_SCRIPT', () => {
     }
   });
 
-  it('paints the saved light’s pair on Luxe, its default light’s for junk', () => {
-    const pair = (id: string) => {
-      const light = LUXE_SWATCHES.light.find((l) => l.id === id)!;
-      return { '--cdp-accent': light.accent, '--cdp-on-accent': light.onAccent };
-    };
-    expect(paint(memory({ [MODEL_KEY]: 'luxe', [LUXE_KEY]: '{"light":"amber"}' }))).toEqual(
-      pair('amber'),
-    );
+  it('paints the saved light’s pair on Luxe, and nothing for junk: the server’s is its default', () => {
+    for (const light of LUXE_SWATCHES.light) {
+      const store = { [MODEL_KEY]: 'luxe', [LUXE_KEY]: JSON.stringify({ light: light.id }) };
+      expect(paint(memory(store)), light.id).toEqual(luxePair(light.id));
+    }
     for (const junk of [
       undefined,
       '{nope',
+      'null',
       '{"light":"neon"}',
       '{"light":"__proto__"}',
+      '{"light":"toString"}',
       '{"light":"lime"}',
     ]) {
-      const store: Record<string, string> = { [MODEL_KEY]: 'luxe' };
+      const store: Record<string, string> = { [MODEL_KEY]: 'luxe', [SKIN_KEY]: 'sage' };
       if (junk !== undefined) store[LUXE_KEY] = junk;
-      expect(paint(memory(store)), String(junk)).toEqual(pair(DEFAULT_LUXE_LOOK.light));
+      expect(paint(memory(store)), String(junk)).toEqual({});
+    }
+  });
+
+  it('leaves the root in the accent App renders once it reads the saved look', () => {
+    // What the script paints, or the server's own accent where it paints nothing, is the pair of
+    // the look `readLookState` reads, for every mix of saved values.
+    const server = lookAccent(lookOf(DEFAULT_LOOK_STATE));
+    const options: Record<string, (string | undefined)[]> = {
+      [MODEL_KEY]: [undefined, 'suitcase', 'clear', 'deck', 'luxe', 'glass', ''],
+      [SKIN_KEY]: [undefined, 'sage', 'midnight'],
+      [CLEAR_KEY]: [undefined, '{"light":"lime"}', '{nope'],
+      [DECK_KEY]: [undefined, '{"light":"red"}', '{"light":"neon"}'],
+      [LUXE_KEY]: [undefined, '{"light":"violet"}', '{"light":"__proto__"}', '{nope'],
+    };
+    let stores: Record<string, string>[] = [{}];
+    for (const [key, values] of Object.entries(options)) {
+      stores = stores.flatMap((store) =>
+        values.map((value) => (value === undefined ? store : { ...store, [key]: value })),
+      );
+    }
+    expect(stores).toHaveLength(7 * 3 * 3 * 3 * 4);
+    for (const store of stores) {
+      const painted = paint(memory(store));
+      const shown = painted['--cdp-accent']
+        ? { accent: painted['--cdp-accent'], onAccent: painted['--cdp-on-accent'] }
+        : server;
+      expect(shown, JSON.stringify(store)).toEqual(
+        lookAccent(lookOf(readLookState(memory(store)))),
+      );
     }
   });
 

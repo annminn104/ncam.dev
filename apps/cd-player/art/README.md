@@ -122,7 +122,8 @@ hand.
 - `blender/scripts/build_luxe.py`: Luxe's web scene, with the names a turntable needs
   (`src/scene/contract.ts`) and the arm's angles printed for the page's profile.
 - `blender/scripts/export.py`: the background entry. It builds the model `CDP_MODEL` names
-  (`suitcase`, the default, `clear`, `deck` or `luxe`), meshes curves and text, adds UVs, and writes the raw GLB.
+  (`suitcase` when it is unset, which is the script's default and not the page's, `clear`, `deck`
+  or `luxe`), meshes curves and text, adds UVs, and writes the raw GLB.
 - `blender/scripts/hero.py`: the Cycles stills, headless: `CDP_MODEL=suitcase|clear|deck|luxe`,
   `CDP_HERO_VIEW=hero|lid` (the suitcase), `hero|inside` (the Clear model), `hero|top` (the Deck)
   or `hero|platter|dancer` (Luxe; `dancer` is a close-up of the dancer on her pedestal;

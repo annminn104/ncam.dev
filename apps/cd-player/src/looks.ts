@@ -23,6 +23,11 @@ export interface LookState {
   personal: Personal;
 }
 
+/**
+ * The look nothing saved changes, which the server renders and a hydration's first render draws:
+ * the default model (Luxe) in its default colours, its pink light the page's accent, and every
+ * other model in its own defaults, the suitcase in Blush.
+ */
 export const DEFAULT_LOOK_STATE: LookState = {
   model: DEFAULT_MODEL,
   skin: DEFAULT_SKIN,

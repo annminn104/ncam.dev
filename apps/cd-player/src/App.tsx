@@ -86,10 +86,10 @@ export interface AppProps {
   assetBase?: string;
   /**
    * The look of the first render, where it is known: `mount()` reads the saved one, since a client
-   * render has no server markup to match. Without it the first render is the suitcase in Blush, as
-   * the server's markup and its hydration must agree, and the root opens with LOOK_SCRIPT, which
-   * paints the saved look's accent on that markup as the browser parses it (a copy React renders
-   * on the client would never run, and React warns of one).
+   * render has no server markup to match. Without it the first render is the default look, Luxe in
+   * its pink light, as the server's markup and its hydration must agree, and the root opens with
+   * LOOK_SCRIPT, which paints the saved look's accent on that markup as the browser parses it (a
+   * copy React renders on the client would never run, and React warns of one).
    */
   initialLook?: LookState;
 }
@@ -120,13 +120,13 @@ export default function App({ controller, initial = null, assetBase = '', initia
   // out. Nothing hears a command while no scene runs.
   const [camera] = useState(createCameraChannel);
   const [boot, dispatchBoot] = useReducer(bootReducer, INITIAL_BOOT);
-  // The player's look (src/looks.ts): the model, the suitcase's skin and the Clear model's colours.
-  // The suitcase in Blush on the server and on the first render of a hydration, so the markup
-  // matches; the visitor's saved one right after it (LOOK_SCRIPT has already painted its accent on
-  // the server's markup; the scene mounts later and boots in it); saved on each change, but a model
-  // chosen once a model is on the scene's stage only when it comes on show (the keeper, below). The
-  // scene gets the chosen look, so the next model swaps in in its own colours; the page wears the
-  // colours of the model on show (`accent`, below). A look is never in the URL.
+  // The player's look (src/looks.ts): the model, the suitcase's skin and the colours of the others.
+  // The default look (Luxe in its pink light) on the server and on the first render of a hydration,
+  // so the markup matches; the visitor's saved one right after it (LOOK_SCRIPT has already painted
+  // its accent on the server's markup; the scene mounts later and boots in it); saved on each
+  // change, but a model chosen once a model is on the scene's stage only when it comes on show (the
+  // keeper, below). The scene gets the chosen look, so the next model swaps in in its own colours;
+  // the page wears the colours of the model on show (`accent`, below). A look is never in the URL.
   const [lookState, setLookState] = useState<LookState>(initialLook ?? DEFAULT_LOOK_STATE);
   useEffect(() => {
     setLookState(readLookState(safeStorage()));

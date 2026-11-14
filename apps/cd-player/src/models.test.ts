@@ -14,13 +14,14 @@ describe('models', () => {
     expect(MODELS.map((m) => m.looks)).toEqual(['skins', 'parts', 'parts', 'parts']);
   });
 
-  it('answers the suitcase for an id it does not know', () => {
-    expect(DEFAULT_MODEL).toBe('suitcase');
+  it('makes Luxe the default and answers it for an id it does not know', () => {
+    expect(DEFAULT_MODEL).toBe('luxe');
+    expect(modelById('suitcase').name).toBe('Suitcase');
     expect(modelById('clear').id).toBe('clear');
     expect(modelById('deck').name).toBe('Deck');
     expect(modelById('luxe').name).toBe('Luxe');
-    for (const id of ['glass', '', null, undefined, 'toString', '__proto__']) {
-      expect(modelById(id).id, String(id)).toBe('suitcase');
+    for (const id of ['glass', '', 'Suitcase', null, undefined, 'toString', '__proto__']) {
+      expect(modelById(id).id, String(id)).toBe('luxe');
     }
   });
 });

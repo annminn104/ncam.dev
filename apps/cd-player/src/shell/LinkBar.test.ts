@@ -76,7 +76,7 @@ describe('LinkBar and Popular on Spotify', () => {
 
 describe('LinkBar and Player', () => {
   it('puts Player after Share, inside the link form', () => {
-    const html = render({ look: { ...DEFAULT_LOOK_STATE, skin: 'sage' } });
+    const html = render({ look: { ...DEFAULT_LOOK_STATE, model: 'suitcase', skin: 'sage' } });
     const share = html.indexOf('>Share</button>');
     const picker = html.indexOf('<div class="cdp-skin">');
     expect(share).toBeGreaterThan(-1);
