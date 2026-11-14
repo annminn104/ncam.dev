@@ -79,13 +79,29 @@ hand.
   ornament strays (past the tier's band heights, into the keys, the logo, the LED ring or the arm's
   rest and sweep); every part keeps 5 mm off a record or a sleeve, resting or flying
   (`src/scene/ornament-clearance.test.ts` holds it).
+- `blender/scripts/luxe_dancer.py`: Luxe's music-box ballerina at the deck top's back left corner
+  (`LX_DANCER`). Her pedestal hangs from the body group: a fluted metal drum 19 mm in radius and
+  20 mm tall, with a pearl row round each moulding and an enamel garland round its frieze (its
+  ornament is `luxe_deck_orn_pedestal_*`). The figure stands on a 2 mm metal disc under the empty
+  `luxe_dancer`, which the web build names `dancer` and the page turns. She is porcelain, 105 mm
+  from her pointe to her fingertips: en pointe on her left leg, her right in retiré, her arms en
+  haut, a bun and a tiara, no face. Her body is a skin modifier's hull round a skeleton under two
+  levels of subdivision, applied, and decimated in the web build. Her plate tutu is 64 mm across:
+  a flat plate with enamel roses round its scalloped edge over two ruffled frills, the outer one's
+  edge in metal. Her colours are the fixed `porcelain` and `porcelain_blush` (the bodice and the
+  pointe shoes); the tiara, the bodice's trim and the tutu's edge follow the look's metal. The
+  script stops the run if the pedestal comes within 2 mm of the frame or 15 mm of the LED ring, if
+  the garland leaves its frieze, or if the figure's height or reach is off (her reach must keep
+  20 mm clear of the record's edge). `LUXE_DANCER` in `src/testing/model-measures.ts` is the box of
+  her pedestal and of her swept a full turn.
 - `blender/scripts/build_luxe.py`: Luxe's web scene, with the names a turntable needs
   (`src/scene/contract.ts`) and the arm's angles printed for the page's profile.
 - `blender/scripts/export.py`: the background entry. It builds the model `CDP_MODEL` names
   (`suitcase`, the default, `clear`, `deck` or `luxe`), meshes curves and text, adds UVs, and writes the raw GLB.
 - `blender/scripts/hero.py`: the Cycles stills, headless: `CDP_MODEL=suitcase|clear|deck|luxe`,
   `CDP_HERO_VIEW=hero|lid` (the suitcase), `hero|inside` (the Clear model), `hero|top` (the Deck)
-  or `hero|platter` (Luxe; `CDP_LUXE_LOOK=<body>,<metal>,<light>` picks its look),
+  or `hero|platter|dancer` (Luxe; `dancer` is a close-up of the dancer on her pedestal;
+  `CDP_LUXE_LOOK=<body>,<metal>,<light>` picks its look),
   `CDP_HERO_QUALITY=preview|final`, into `.out/v2-<view>-<quality>.png`, or
   `.out/clear/<shell>-<frame>-<board>-<light>/clear-<view>-<quality>.png` for the Clear model
   (`CDP_CLEAR_LOOK`, below), whose studio also sees the backdrop through the shell
@@ -110,8 +126,9 @@ They write `public/assets/cd-player.glb`, `public/assets/cd-player-clear.glb`,
 `src/scene/model-contract.test.ts` checks each one's names, materials, where things are parented
 and the budget (150k triangles, 4 MB). The committed suitcase is about 100,633 triangles and
 776 KB, the Clear model about 132,715 and 965 KB, the Deck about 81,762 and 702 KB, the Luxe
-turntable about 56,907 and 435 KB with its ornament (KB of 1024 bytes; 28,668 of the triangles are
-the turntable's own). Luxe has a budget of its own: 650,000 bytes and 80,000 triangles. Rebuild a
+turntable about 73,019 and 584 KB with its ornament and its dancer (KB of 1024 bytes; about 28,239
+of the triangles are the ornament's and 17,100 the dancer's, her pedestal included). Luxe has a
+budget of its own: 650,000 bytes and 80,000 triangles. Rebuild a
 model after any change to its scripts
 (`cdkit.py` and `parts.py` are every model's, `vinyl.py` every turntable's; the Deck's build also
 rewrites `src/scene/textures/deck-atlas.json`, which is committed with the GLB).

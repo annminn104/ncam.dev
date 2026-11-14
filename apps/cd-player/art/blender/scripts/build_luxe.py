@@ -2,9 +2,10 @@
 ring (`jog_ring`) and the needle's tip (`stylus`, which the measures test reads).
 
 Exec'd by export.py (CDP_MODEL=luxe) after cdkit.py, parts.py, ornament.py, vinyl.py, luxe.py,
-luxe_arm.py, luxe_stand.py and luxe_ornament.py, into the same namespace. The arm rests on its
-post, the record lies on the platter and its sleeve stands on the ledge, the five rack slots in the
-stand are empty (the page puts records and sleeves in them): the page moves all of it at runtime.
+luxe_arm.py, luxe_stand.py, luxe_ornament.py and luxe_dancer.py, into the same namespace. The arm
+rests on its post, the record lies on the platter and its sleeve stands on the ledge, the five rack
+slots in the stand are empty (the page puts records and sleeves in them), and the dancer
+(`dancer`) faces the viewer: the page moves all of it at runtime.
 """
 
 import bpy
@@ -26,6 +27,7 @@ PIVOTS = {
     "luxe_sleeve": "sleeve",
     "luxe_stand_card": "card",
     "luxe_jog_ring": "jog_ring",
+    "luxe_dancer": "dancer",
 }
 PIVOTS.update({"luxe_stand_rack_slot_%d" % i: "rack_slot_%d" % i for i in range(5)})
 

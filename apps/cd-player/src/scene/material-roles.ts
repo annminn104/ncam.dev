@@ -31,6 +31,7 @@ export type MaterialRole =
   | 'decal'
   | 'lacquer'
   | 'enamel'
+  | 'porcelain'
   | 'hit';
 
 export const MATERIAL_ROLES: Readonly<Record<string, MaterialRole>> = {
@@ -109,6 +110,9 @@ export const MATERIAL_ROLES: Readonly<Record<string, MaterialRole>> = {
   enamel_leaf: 'enamel',
   enamel_sky: 'enamel',
   enamel_ivory: 'enamel',
+  // Luxe's dancer (art/blender/scripts/luxe_dancer.py): glazed porcelain, ivory and blush, fixed.
+  porcelain: 'porcelain',
+  porcelain_blush: 'porcelain',
 };
 
 /**

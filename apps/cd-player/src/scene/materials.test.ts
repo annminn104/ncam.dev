@@ -20,7 +20,7 @@ import { luxeSwatch } from '../luxe-looks';
 import { SKINS, skinById, type Skin } from '../skins';
 import { DYNAMIC_MATERIALS } from './contract';
 import { etchColour, traceColour } from './decor-colours';
-import { SKIN_ROLES } from './material-roles';
+import { MATERIAL_ROLES, SKIN_ROLES } from './material-roles';
 import {
   applyLook,
   applySkin,
@@ -121,6 +121,22 @@ describe('makeMaterial', () => {
     expect(enamel.metalness).toBe(0);
     expect(enamel.clearcoat).toBe(0.7);
     expect(enamel.clearcoatRoughness).toBe(0.08);
+  });
+
+  it('glazes the dancer’s porcelain over its own colour and roughness, ivory and blush alike', () => {
+    for (const [name, color] of [
+      ['porcelain', '#f0ece6'],
+      ['porcelain_blush', '#ecc8cc'],
+    ] as const) {
+      const source = new MeshStandardMaterial({ name, color, roughness: 0.3 });
+      expect(MATERIAL_ROLES[name], name).toBe('porcelain');
+      const porcelain = makeMaterial('porcelain', source, maps) as MeshPhysicalMaterial;
+      expect(porcelain.color.getHex(), name).toBe(source.color.getHex());
+      expect(porcelain.roughness, name).toBe(0.3);
+      expect(porcelain.metalness, name).toBe(0);
+      expect(porcelain.clearcoat, name).toBe(0.8);
+      expect(porcelain.clearcoatRoughness, name).toBe(0.08);
+    }
   });
 
   it('makes a hit shape drawn nowhere, and keeps it out of the shadow map', () => {

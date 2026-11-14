@@ -264,6 +264,9 @@ export function makeMaterial(
     case 'enamel':
       // The ornament's cloisonné enamel: the GLB's colour and roughness under a glaze's coat.
       return physical(source, { clearcoat: 0.7, clearcoatRoughness: 0.08 });
+    case 'porcelain':
+      // Luxe's dancer: the GLB's colour and roughness under a thicker glaze than the enamel's.
+      return physical(source, { clearcoat: 0.8, clearcoatRoughness: 0.08 });
     case 'hit':
       // A larger, invisible shape a finger can take (a turntable's arm head): raycast, never drawn.
       return new MeshBasicMaterial({ name: source.name, visible: false });

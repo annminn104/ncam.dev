@@ -20,7 +20,7 @@ SCRIPTS = {"suitcase": ("cdkit.py", "parts.py", "build_player.py"),
            "deck": ("cdkit.py", "parts.py", "deck.py", "deck_panel.py", "deck_case.py", "deck_print.py",
                     "build_deck.py"),
            "luxe": ("cdkit.py", "parts.py", "ornament.py", "vinyl.py", "luxe.py", "luxe_arm.py", "luxe_stand.py",
-                    "luxe_ornament.py", "build_luxe.py")}
+                    "luxe_ornament.py", "luxe_dancer.py", "build_luxe.py")}
 if MODEL not in SCRIPTS:
     raise SystemExit("export.py: CDP_MODEL must be suitcase, clear, deck or luxe, not %r" % MODEL)
 for _file in SCRIPTS[MODEL]:

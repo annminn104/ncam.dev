@@ -1,6 +1,6 @@
 """Cycles stills of the CD players and the turntable, headless:
 
-    CDP_MODEL=suitcase|clear|deck|luxe CDP_HERO_VIEW=hero|lid|inside|top|platter \\
+    CDP_MODEL=suitcase|clear|deck|luxe CDP_HERO_VIEW=hero|lid|inside|top|platter|dancer \\
       CDP_HERO_QUALITY=preview|final \\
       /Applications/Blender.app/Contents/MacOS/Blender --background --factory-startup \\
       --python-exit-code 1 --python apps/cd-player/art/blender/scripts/hero.py
@@ -9,8 +9,9 @@ CDP_MODEL picks the player: `suitcase` (the default), `clear` (clear.py, with it
 clear_board.py and its decorations in clear_decor.py), `deck` (deck.py, with its screen, decor
 and body detail in deck_panel.py, its flight case in deck_case.py and its print layer in
 deck_print.py) or `luxe`, the turntable (luxe.py on vinyl.py's record, sleeve and LED ring, with
-its tonearm in luxe_arm.py, its record stand and ledge in luxe_stand.py and its ornament in
-luxe_ornament.py, on ornament.py's kit). The Deck's print layer is the page's to paint, never
+its tonearm in luxe_arm.py, its record stand and ledge in luxe_stand.py, its ornament in
+luxe_ornament.py, on ornament.py's kit, and its dancer and her pedestal in luxe_dancer.py). The
+Deck's print layer is the page's to paint, never
 Cycles': the owner's stills hide it. CDP_DECK_ATLAS=checker maps a debug atlas onto it instead
 (each region in its own colour, a 10 mm grid, a white corner where its row 0 and column 0 meet, its
 id), into art/.out/deck/debug/.
@@ -22,8 +23,9 @@ and `inside`, a close-up of the board, the LCD and the mechanism through the she
 `hero`, the three-quarter still of the deck and its flight case from the front left, and `top`,
 over the jog (the disc through the acrylic, the LED ring, the pads, the keys and the screen). Luxe's:
 `hero`, the three-quarter still of the deck and its record stand from the front left, a little
-above, and `platter`, over the platter (the record and its label, the strobe dots, the LED ring,
-the tonearm on the record, the keys). `preview` is
+above, `platter`, over the platter (the record and its label, the strobe dots, the LED ring, the
+tonearm on the record, the keys), and `dancer`, a close-up of the dancer on her pedestal from the
+hero camera's side (Luxe's alone). `preview` is
 800 x 600 at 24 samples, `final` 1600 x 1200 at 160; any other value of the model, the view or the
 quality stops the run with exit 1, naming the valid ones. The art it prints is the gallery's
 thumbnails (apps/portfolio/public/thumbnails), so anyone can rerun it. The suitcase's PNG lands in
@@ -61,7 +63,7 @@ def setting(name, default, valid):
 
 
 VIEWS = {"suitcase": ("hero", "lid"), "clear": ("hero", "inside"), "deck": ("hero", "top"),
-         "luxe": ("hero", "platter")}
+         "luxe": ("hero", "platter", "dancer")}
 MODEL = setting("CDP_MODEL", "suitcase", tuple(VIEWS))
 VIEW = setting("CDP_HERO_VIEW", "hero", VIEWS[MODEL])
 QUALITY = setting("CDP_HERO_QUALITY", "preview", ("preview", "final"))
@@ -355,7 +357,7 @@ def deck_scene():
 
 def luxe_scene():
     for f in ("ornament.py", "vinyl.py", "luxe.py", "luxe_arm.py", "luxe_stand.py",
-              "luxe_ornament.py"):
+              "luxe_ornament.py", "luxe_dancer.py"):
         exec(compile(open(BASE + "/" + f).read(), f, "exec"), globals())
     look, ids = luxe_look(LUXE_LOOK)
     new_scene("cd_player_luxe", res=(1600, 1200), samples=128)
@@ -374,6 +376,11 @@ def luxe_scene():
         # Over the platter from in front: the record and its label, the LED ring, the tonearm on
         # the record, the keys along the frame's bottom edge.
         camera("cam", L(-45, -360, 720), L(-45, 15, 100), lens=50, fstop=8.0, focus=L(-45, 10, 100))
+    elif VIEW == "dancer":
+        # A close-up of the dancer and her pedestal at the back left, from the hero camera's side,
+        # a little lower: her pose, the tutu's frills and roses, the pedestal's garland.
+        cx, cy = LX_DANCER
+        camera("cam", L(cx - 125, cy - 450, 220), L(cx, cy, 144), lens=85, fstop=11.0, focus=L(cx, cy - 10, 145))
     else:
         # Front left, a little above: the deck, its record stand and the ledge behind it.
         camera("cam", L(-520, -1250, 620), L(150, 40, 110), lens=50, fstop=7.1, focus=L(0, -40, 110))

@@ -21,8 +21,8 @@ parts.py, millimetres.
   the letters from a daisy to a camellia, a rose and a vine up the right edge), and a small one at
   the front left behind the keys. Both keep clear of the keys and their gaps, the logo, the LED ring
   (ORN_RING_CLEAR), and the arm: in front of its rest (in front of the head at rest) and right of
-  it (the arm sweeps left onto the record). The back left corner, where the decor knob stands, is
-  bare.
+  it (the arm sweeps left onto the record). The back left corner, where the dancer's pedestal
+  stands (luxe_dancer.py, which dresses it), is bare.
 - The stand: each side panel's outer face carries the plinth sides' medallion and its sprays,
   which follow the panel's sloping top, and a vine under the rail; the back bar a vine along its
   back. Slot 4's sleeve leans on the bar's front, so the vine keeps within BAR_WINDOW of its back.
@@ -161,7 +161,7 @@ def _top_clear(orn, since):
     keys' gaps and the logo, 5 mm off the arm at rest (what is drawn of it: x 122 to 185, from y
     -131.5 back) and out of its sweep (within 248 mm of the pivot, which the drawn head reaches to
     242, from 205 to 280 degrees), ORN_RING_CLEAR off the platter's axis, inside the frame, and out
-    of the back left corner (the decor knob's)."""
+    of the back left corner (the dancer's pedestal's)."""
     uw, ud = LX_UPPER
     px, py = LUXE_PIVOT
     for p in orn.placed[since:]:

@@ -23,6 +23,7 @@ import {
   LUXE_LEDGE,
   LUXE_PANELS,
   LUXE_BAR,
+  LUXE_DANCER,
   LUXE_PLATTER,
   LUXE_PLINTH,
   LUXE_RECORD,
@@ -593,6 +594,25 @@ describe('public/assets/cd-player-luxe.glb (art/pipeline/build.mjs luxe)', () =>
     expect(triangleCount(json)).toBeLessThanOrEqual(80_000);
   });
 
+  it('turns the dancer on an empty of the player’s root, apart from the deck and its pedestal, in fixed porcelain', () => {
+    expect(node('dancer').mesh).toBeUndefined();
+    expect(node('dancer').children?.length ?? 0).toBeGreaterThan(0);
+    expect(parentOf('dancer')).toBe('luxe');
+    expect(parentOf('platter')).toBe('luxe');
+    expect(under('dancer', 'luxe_deck_body')).toBe(false);
+    for (const part of ['luxe_pedestal', 'luxe_pedestal_flutes']) {
+      expect(parentOf(part), part).toBe('luxe_deck_body');
+    }
+    const materials = materialsUnder('dancer');
+    for (const name of ['porcelain', 'porcelain_blush', 'luxe_metal']) {
+      expect(materials, name).toContain(name);
+    }
+    for (const name of ['porcelain', 'porcelain_blush']) {
+      expect(MATERIAL_ROLES[name], name).toBe('porcelain');
+      expect(LUXE_ROLES[name], name).toBeUndefined();
+    }
+  });
+
   it('hangs its ornament from the groups it decorates, in the look’s metal and a fixed enamel palette', () => {
     const enamel = ['rose', 'coral', 'butter', 'leaf', 'sky', 'ivory'].map((c) => `enamel_${c}`);
     const groups = {
@@ -1069,6 +1089,31 @@ describe('the GLBs as the scene tests measure them (src/testing/model-measures.t
     ['luxe_ledge_leg_l', 'luxe_ledge_leg_r'].forEach((name, k) =>
       expectBox(meshBox(node(set, name)), LUXE_LEDGE.legs[k], name),
     );
+  });
+
+  it('stands Luxe’s dancer on her pedestal, her up the world’s, the box of a full turn round her', () => {
+    const set = scene('luxe');
+    const dancer = node(set, 'dancer');
+    expectPosition(dancer, LUXE_DANCER.position, 'dancer');
+    expectTurn(dancer.getWorldQuaternion(new Quaternion()), new Euler(0, 0, 0), 'dancer');
+    // The disc and the figure, swept a full turn about the dancer's vertical axis: a cylinder as far
+    // out as her furthest vertex, from her lowest to her highest.
+    const centre = dancer.getWorldPosition(new Vector3());
+    const turning = vertices(dancer);
+    let reach = 0;
+    for (const point of turning) {
+      reach = Math.max(reach, Math.hypot(point.x - centre.x, point.z - centre.z));
+    }
+    const box = new Box3().setFromPoints(turning);
+    box.expandByPoint(new Vector3(centre.x - reach, box.min.y, centre.z - reach));
+    box.expandByPoint(new Vector3(centre.x + reach, box.max.y, centre.z + reach));
+    const pedestal = node(set, 'luxe_deck_body').children.filter(
+      (part) =>
+        part.name.startsWith('luxe_pedestal') || part.name.startsWith('luxe_deck_orn_pedestal'),
+    );
+    expect(pedestal.length).toBeGreaterThan(2);
+    for (const part of pedestal) box.union(meshBox(part));
+    expectBox(box, LUXE_DANCER, 'the dancer swept a full turn');
   });
 
   it('puts Luxe’s needle on the outer groove at the lead-in and by the label at the run-out', () => {
