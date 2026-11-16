@@ -13,7 +13,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@module-federation/vite": "1.23.10",
+    "@module-federation/vite": "1.23.11",
     "dotenv": "^18.0.7"
   },
   "peerDependencies": {
